@@ -107,7 +107,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Send OTP via API
+      // TODO: Send OTP via API - requires auth provider integration
       // POST /api/auth/send-password-reset-otp
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
@@ -143,12 +143,12 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Verify OTP via API
+      // TODO: Verify OTP via API - requires auth provider integration
       // POST /api/auth/verify-password-reset-otp
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
         setState(() {
-          _resetToken = 'token_from_api'; // TODO: Get from API response
+          _resetToken = 'token_from_api'; // TODO: Get token from API response - requires API integration
         });
         _nextStep();
       }
@@ -179,7 +179,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Resend OTP via API
+      // TODO: Resend OTP via API - requires auth provider integration
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         _startResendCountdown(120);
@@ -229,7 +229,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Reset password via API
+      // TODO: Reset password via API - requires auth provider integration
       // POST /api/auth/reset-password
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {

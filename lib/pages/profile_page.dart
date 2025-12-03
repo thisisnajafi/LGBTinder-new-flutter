@@ -1,6 +1,10 @@
 ﻿// Screen: ProfilePage
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/navbar/app_bar_custom.dart';
 import '../widgets/profile/profile_header.dart';
@@ -13,6 +17,7 @@ import '../core/widgets/loading_indicator.dart';
 import '../core/widgets/profile_stats_card.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
+import '../widgets/match/match_screen.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../features/matching/providers/likes_providers.dart';
@@ -226,11 +231,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _showMatchDialog(dynamic match) {
-    // TODO: Show match screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('It\'s a match!'),
-        backgroundColor: AppColors.accentPurple,
+    // Navigate to match screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => MatchScreen(
+          match: match,
+          onSendMessage: () {
+            Navigator.pop(context); // Close match screen
+            // Navigate to chat
+            context.push('/chat/${match.userId}');
+          },
+          onKeepSwiping: () {
+            Navigator.pop(context); // Close match screen
+            // Navigate back to discovery
+            context.go('/discover');
+          },
+        ),
       ),
     );
   }
@@ -535,12 +553,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             age: _calculateAge(),
                             location: _getLocation(),
                             avatarUrl: _getImageUrls().isNotEmpty ? _getImageUrls().first : null,
-                            isVerified: false, // TODO: Add verification status to UserProfile
-                            isPremium: false, // TODO: Add premium status to UserProfile
-                            isOnline: false, // TODO: Add online status to UserProfile
+                            isVerified: _profile?.isVerified ?? false,
+                            isPremium: _profile?.isPremium ?? false,
+                            isOnline: _profile?.isOnline ?? false,
                             onAvatarTap: _isOwnProfile
                                 ? () {
-                                    // TODO: Open image picker
+                                    // Open image picker - implementation needed
+                                    _openImagePicker();
                                   }
                                 : null,
                             onEdit: _isOwnProfile
@@ -564,7 +583,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ProfileStatsCard(
                               matchesCount: _matchesCount,
                               likesCount: _pendingLikesCount,
-                              viewsCount: 0, // TODO: Add views count if available
+                              viewsCount: _profile?.viewsCount ?? 0,
                             ),
                           ProfileBio(
                             bio: _profile!.profileBio,
@@ -585,12 +604,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               imageUrls: _getImageUrls(),
                               isEditable: _isOwnProfile,
                               onImageTap: (index, url) {
-                                // TODO: Open image viewer
+                                // Open image viewer - implementation needed
+                                _openImageViewer(index);
                               },
                               onAddPhoto: _isOwnProfile
-                                  ? () {
-                                      // TODO: Open image picker
-                                    }
+                                  ? () => _openImagePicker()
                                   : null,
                             ),
                           ProfileInfoSections(
@@ -624,11 +642,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                           if (_isOwnProfile)
                             SafetyVerificationSection(
-                              isVerified: false, // TODO: Add verification status
-                              isPhoneVerified: false, // TODO: Add phone verification status
-                              isEmailVerified: true, // TODO: Get from user info
+                              isVerified: _profile?.isVerified ?? false,
+                              isPhoneVerified: _profile?.isPhoneVerified ?? false,
+                              isEmailVerified: _profile?.isEmailVerified ?? true,
                               onVerifyTap: () {
-                                // TODO: Navigate to verification
+                                // Navigate to verification
+                                context.go('/profile/verification');
                               },
                             ),
                           if (!_isOwnProfile)
@@ -656,6 +675,165 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       ),
                     ),
+    );
+  }
+
+  Future<void> _openImagePicker() async {
+    final ImagePicker picker = ImagePicker();
+
+    // Show bottom sheet with options
+    await showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Take Photo'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  try {
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.camera,
+                      maxWidth: 1920,
+                      maxHeight: 1080,
+                      imageQuality: 85,
+                    );
+                    if (image != null) {
+                      await _handlePickedImage(File(image.path));
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error taking photo: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  try {
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 1920,
+                      maxHeight: 1080,
+                      imageQuality: 85,
+                    );
+                    if (image != null) {
+                      await _handlePickedImage(File(image.path));
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error selecting image: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handlePickedImage(File imageFile) async {
+    // TODO: Upload image to backend and update profile
+    // For now, show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image selected successfully! Upload functionality will be implemented.'),
+        ),
+      );
+    }
+
+    // Here you would typically:
+    // 1. Upload the image to backend
+    // 2. Get the image URL from response
+    // 3. Update the profile with new image URL
+    // 4. Refresh the profile data
+  }
+
+  void _openImageViewer(int initialIndex) {
+    final imageUrls = _getImageUrls();
+
+    if (imageUrls.isEmpty) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          body: PhotoViewGallery.builder(
+            itemCount: imageUrls.length,
+            builder: (context, index) {
+              return PhotoViewGalleryPageOptions(
+                imageProvider: NetworkImage(imageUrls[index]),
+                initialScale: PhotoViewComputedScale.contained,
+                minScale: PhotoViewComputedScale.contained * 0.8,
+                maxScale: PhotoViewComputedScale.covered * 2,
+                heroAttributes: PhotoViewHeroAttributes(
+                  tag: 'profile_image_$index',
+                ),
+              );
+            },
+            scrollPhysics: const BouncingScrollPhysics(),
+            backgroundDecoration: const BoxDecoration(
+              color: Colors.black,
+            ),
+            pageController: PageController(initialPage: initialIndex),
+            onPageChanged: (index) {
+              // Optional: Update current page indicator
+            },
+            loadingBuilder: (context, event) => Center(
+              child: SizedBox(
+                width: 30.0,
+                height: 30.0,
+                child: CircularProgressIndicator(
+                  value: event == null
+                      ? 0
+                      : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+            errorBuilder: (context, error, stackTrace) => const Center(
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.white,
+                size: 48,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

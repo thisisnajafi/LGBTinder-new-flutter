@@ -41,7 +41,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     });
 
     try {
-      // TODO: Send password reset email via API
+      // TODO: Send password reset email via API - requires auth provider integration
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         setState(() {

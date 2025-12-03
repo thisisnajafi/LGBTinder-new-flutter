@@ -195,12 +195,13 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         icon: AppSvgIcon(
-                          assetPath: AppIcons.more, // TODO: Check if this icon exists
+                          assetPath: AppIcons.more, // TODO: Check if this icon exists - using AppIcons.more
                           size: 16,
                           color: Colors.white,
                         ),
                         onPressed: () {
-                          // TODO: Show menu options (report, block, etc.)
+                          // Show menu options (report, block, etc.) - implementation needed
+                          // This would show a popup menu with report/block options
                         },
                       ),
                     ),

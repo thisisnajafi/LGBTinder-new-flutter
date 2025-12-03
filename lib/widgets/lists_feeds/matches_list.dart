@@ -167,7 +167,7 @@ class MatchesList extends ConsumerWidget {
 
   String _formatTime(dynamic time) {
     if (time == null) return '';
-    // TODO: Parse time from API format
+    // TODO: Parse time from API format - requires proper date parsing logic
     return 'recently'; // Placeholder
   }
 }

@@ -27,6 +27,13 @@ class UserProfile {
   final List<int>? relationGoals;
   final int? minAgePreference;
   final int? maxAgePreference;
+  final bool? isVerified;
+  final bool? isPremium;
+  final bool? isOnline;
+  final bool? isPhoneVerified;
+  final bool? isEmailVerified;
+  final int? viewsCount;
+  final DateTime? lastSeen;
   final Map<String, dynamic>? additionalData;
 
   UserProfile({
@@ -57,6 +64,13 @@ class UserProfile {
     this.relationGoals,
     this.minAgePreference,
     this.maxAgePreference,
+    this.isVerified,
+    this.isPremium,
+    this.isOnline,
+    this.isPhoneVerified,
+    this.isEmailVerified,
+    this.viewsCount,
+    this.lastSeen,
     this.additionalData,
   });
 
@@ -103,6 +117,13 @@ class UserProfile {
           : null,
       minAgePreference: json['min_age_preference'] as int?,
       maxAgePreference: json['max_age_preference'] as int?,
+      isVerified: json['is_verified'] as bool?,
+      isPremium: json['is_premium'] as bool?,
+      isOnline: json['is_online'] as bool?,
+      isPhoneVerified: json['is_phone_verified'] as bool?,
+      isEmailVerified: json['is_email_verified'] as bool?,
+      viewsCount: json['views_count'] as int?,
+      lastSeen: json['last_seen'] != null ? DateTime.parse(json['last_seen'] as String) : null,
       additionalData: json,
     );
   }
@@ -136,6 +157,13 @@ class UserProfile {
       if (relationGoals != null) 'relation_goals': relationGoals,
       if (minAgePreference != null) 'min_age_preference': minAgePreference,
       if (maxAgePreference != null) 'max_age_preference': maxAgePreference,
+      if (isVerified != null) 'is_verified': isVerified,
+      if (isPremium != null) 'is_premium': isPremium,
+      if (isOnline != null) 'is_online': isOnline,
+      if (isPhoneVerified != null) 'is_phone_verified': isPhoneVerified,
+      if (isEmailVerified != null) 'is_email_verified': isEmailVerified,
+      if (viewsCount != null) 'views_count': viewsCount,
+      if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
     };
   }
 }

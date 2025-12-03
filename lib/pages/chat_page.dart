@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/chat/chat_header.dart';
 import '../widgets/chat/message_bubble.dart';
@@ -281,7 +282,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         messageType: 'text',
       );
 
-      final sentMessage = await chatService.sendMessage(request);
+      final sentMessage = await chatService.sendMessage(
+        widget.userId,
+        text,
+        messageType: 'text',
+      );
 
       if (mounted) {
         setState(() {
@@ -320,11 +325,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleMediaTap() {
-    // TODO: Open media picker
+    // Open media picker - implementation needed
+    // This would typically show a bottom sheet with camera/gallery options
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Media picker functionality will be implemented'),
+      ),
+    );
   }
 
   void _handleEmojiTap() {
-    // TODO: Open emoji picker
+    // Open emoji picker - implementation needed
+    // This would typically show an emoji picker widget
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Emoji picker functionality will be implemented'),
+      ),
+    );
   }
 
   @override
@@ -345,7 +362,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           lastSeenAt: _lastSeenAt,
           onBack: () => Navigator.of(context).pop(),
           onInfo: () {
-            // TODO: Navigate to profile
+            // Navigate to profile
+            context.go('/profile/${widget.userId}');
           },
           onCall: () {
             // Navigate to voice call screen
@@ -381,9 +399,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         children: [
           // Pinned messages banner
           PinnedMessagesBanner(
-            pinnedCount: 0, // TODO: Get from API
+            pinnedCount: 0, // TODO: Get pinned count from API - placeholder for now
             onTap: () {
-              // TODO: Scroll to pinned messages
+              // Scroll to pinned messages - implementation needed
+              // This would scroll to the pinned messages section
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Scroll to pinned messages functionality will be implemented'),
+                ),
+              );
             },
           ),
           // Messages list

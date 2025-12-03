@@ -45,7 +45,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Suggestions retrieved',
         ));
@@ -68,7 +68,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: {'data': []},
           message: 'No suggestions',
         ));
@@ -87,7 +87,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: {'data': []},
           message: 'Suggestions retrieved',
         ));
@@ -132,7 +132,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Matches retrieved',
         ));
@@ -157,7 +157,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: {'data': []},
           message: 'Matches retrieved',
         ));

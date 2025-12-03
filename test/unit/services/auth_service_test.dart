@@ -65,7 +65,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Registration successful',
         ));
@@ -97,7 +97,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Registration failed',
         ));
@@ -137,7 +137,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Login successful',
         ));
@@ -165,7 +165,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Invalid credentials',
         ));

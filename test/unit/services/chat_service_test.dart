@@ -45,7 +45,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Message sent',
         ));
@@ -77,7 +77,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Send failed',
         ));
@@ -120,7 +120,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Chat history retrieved',
         ));
@@ -145,7 +145,7 @@ void main() {
           any,
           queryParameters: anyNamed('queryParameters'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          status: true,
           data: {'data': []},
           message: 'No messages',
         ));
@@ -183,7 +183,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Chat users retrieved',
             ));

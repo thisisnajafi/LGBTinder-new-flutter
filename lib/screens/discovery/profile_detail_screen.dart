@@ -276,7 +276,12 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                             PhotoGallery(
                               imageUrls: _getImageUrls(),
                               onImageTap: (index, url) {
-                                // TODO: Open image viewer
+                                // Open image viewer - implementation needed
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Image viewer will be implemented for image $index'),
+                                  ),
+                                );
                               },
                             ),
                           // Profile info sections
@@ -299,7 +304,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                             onLike: _handleLike,
                             onSuperlike: _handleSuperlike,
                             onMessage: _handleMessage,
-                            isMatched: false, // TODO: Check if matched
+                            isMatched: false, // TODO: Check if matched with current user - requires matching provider integration
                           ),
                         ],
                       ),

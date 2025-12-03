@@ -1,6 +1,7 @@
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/notification.dart';
+import '../models/notification_preferences.dart';
 
 /// Notification service
 class NotificationService {
@@ -100,6 +101,98 @@ class NotificationService {
     try {
       final response = await _apiService.delete<Map<String, dynamic>>(
         ApiEndpoints.notificationsById(notificationId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get notification preferences
+  Future<NotificationPreferences> getPreferences() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.notificationPreferences,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return NotificationPreferences.fromJson(response.data!);
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update notification preferences
+  Future<NotificationPreferences> updatePreferences(
+    UpdateNotificationPreferencesRequest request,
+  ) async {
+    try {
+      final response = await _apiService.put<Map<String, dynamic>>(
+        ApiEndpoints.notificationPreferences,
+        data: request.toJson(),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return NotificationPreferences.fromJson(response.data!);
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Send test notification
+  Future<void> sendTestNotification() async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.notificationsTest,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Register device for push notifications
+  Future<void> registerDevice(String deviceToken, String platform) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.notificationsRegisterDevice,
+        data: {
+          'device_token': deviceToken,
+          'platform': platform,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Unregister device from push notifications
+  Future<void> unregisterDevice(String deviceToken) async {
+    try {
+      final response = await _apiService.delete<Map<String, dynamic>>(
+        ApiEndpoints.notificationsUnregisterDevice,
+        data: {'device_token': deviceToken},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

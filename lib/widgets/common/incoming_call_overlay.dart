@@ -116,8 +116,12 @@ class _IncomingCallOverlayState extends ConsumerState<IncomingCallOverlay>
 
   Future<void> _acceptCall() async {
     try {
-      final callProviderInstance = ref.read(callProvider);
-      await callProviderInstance.acceptCall(int.parse(widget.callData.callId));
+      final callProviderInstance = ref.read(callProvider.notifier);
+      final acceptRequest = CallActionRequest(
+        callId: widget.callData.callId,
+        action: 'accept',
+      );
+      await callProviderInstance.acceptCall(acceptRequest);
 
       // Navigate to appropriate call screen with call data
       if (mounted) {
@@ -183,8 +187,12 @@ class _IncomingCallOverlayState extends ConsumerState<IncomingCallOverlay>
 
   Future<void> _rejectCall() async {
     try {
-      final callProviderInstance = ref.read(callProvider);
-      await callProviderInstance.rejectCall(int.parse(widget.callData.callId));
+      final callProviderInstance = ref.read(callProvider.notifier);
+      final rejectRequest = CallActionRequest(
+        callId: widget.callData.callId,
+        action: 'decline',
+      );
+      await callProviderInstance.endCall(rejectRequest);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

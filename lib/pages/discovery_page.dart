@@ -25,6 +25,7 @@ import '../widgets/match/match_screen.dart';
 import '../pages/chat_page.dart';
 import '../core/utils/app_icons.dart';
 import '../features/notifications/providers/notification_providers.dart';
+import '../features/reference_data/providers/reference_data_providers.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
@@ -180,8 +181,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       'avatar_url': profile.primaryImageUrl ?? profile.imageUrls?.first,
       'image_urls': profile.imageUrls ?? [profile.primaryImageUrl].whereType<String>().toList(),
       'bio': profile.profileBio ?? '',
-      'is_verified': false, // TODO: Add verification status to DiscoveryProfile
-      'is_premium': false, // TODO: Add premium status to DiscoveryProfile
+      'is_verified': profile?.isVerified ?? false,
+      'is_premium': profile?.isPremium ?? false,
       'distance': profile.distance,
       'compatibility_score': profile.compatibilityScore,
       'is_superliked': profile.isSuperliked ?? false,
@@ -270,7 +271,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   /// Convert filter UI data to API format
-  Map<String, dynamic> _convertFiltersToApiFormat(Map<String, dynamic> filterData) {
+  Future<Map<String, dynamic>> _convertFiltersToApiFormat(WidgetRef ref, Map<String, dynamic> filterData) async {
     final apiFilters = <String, dynamic>{};
     
     // Age range
@@ -290,12 +291,23 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     if (filterData['genders'] != null) {
       final genders = filterData['genders'] as List<String>;
       // Remove 'All' if present and convert to gender IDs
-      // Note: This assumes gender names match API expectations
-      // You may need to map gender names to IDs using reference data
       if (!genders.contains('All') && genders.isNotEmpty) {
-        // TODO: Map gender names to IDs using reference data
-        // For now, we'll pass the names and let the backend handle it
-        apiFilters['genders'] = genders.join(',');
+        try {
+          // Fetch reference data to map gender names to IDs
+          final gendersRef = await ref.read(gendersProvider.future);
+          final genderIds = genders.map((genderName) {
+            final genderItem = gendersRef.firstWhere(
+              (item) => item.title.toLowerCase() == genderName.toLowerCase(),
+              orElse: () => throw Exception('Gender not found: $genderName'),
+            );
+            return genderItem.id.toString();
+          }).toList();
+
+          apiFilters['genders'] = genderIds.join(',');
+        } catch (e) {
+          // Fallback to passing names if reference data fails
+          apiFilters['genders'] = genders.join(',');
+        }
       }
     }
     
@@ -477,7 +489,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
                       if (result != null && result is Map<String, dynamic>) {
                         // Convert filter result to API format
-                        final filters = _convertFiltersToApiFormat(result);
+                        final filters = await _convertFiltersToApiFormat(ref, result);
                         setState(() {
                           _activeFilters = filters;
                         });

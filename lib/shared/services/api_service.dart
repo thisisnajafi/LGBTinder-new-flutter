@@ -139,7 +139,7 @@ class ApiService {
   /// POST request with offline queue support
   Future<ApiResponse<T>> post<T>(
     String endpoint, {
-    Map<String, dynamic>? data,
+    dynamic data,
     T Function(dynamic)? fromJson,
     Options? options,
     bool queueIfOffline = true,

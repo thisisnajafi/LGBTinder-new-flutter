@@ -119,7 +119,7 @@ class PushNotificationService {
     _firebaseMessaging.onTokenRefresh.listen((String newToken) {
       print('FCM Token refreshed: $newToken');
       _fcmToken = newToken;
-      // TODO: Send new token to backend
+      // TODO: Send new token to backend - requires notification provider integration
     });
   }
 
@@ -167,13 +167,13 @@ class PushNotificationService {
       
       switch (type) {
         case 'like':
-          // TODO: Navigate to matches screen
+          // TODO: Navigate to matches screen - requires navigation integration
           break;
         case 'match':
-          // TODO: Navigate to match screen
+          // TODO: Navigate to match screen - requires navigation integration
           break;
         case 'message':
-          // TODO: Navigate to chat screen
+          // TODO: Navigate to chat screen - requires navigation integration
           final userId = data['user_id'];
           if (userId != null) {
             // Navigate to chat with user
@@ -184,7 +184,7 @@ class PushNotificationService {
           _handleIncomingCall(data);
           break;
         case 'notification':
-          // TODO: Navigate to notifications screen
+          // TODO: Navigate to notifications screen - requires navigation integration
           break;
         default:
           break;

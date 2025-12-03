@@ -8,7 +8,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import '../widgets/buttons/icon_button_circle.dart';
 import '../features/calls/providers/call_provider.dart';
-import '../features/calls/data/models/initiate_call_request.dart';
+import '../features/calls/data/models/call.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../shared/services/agora_service.dart';
@@ -115,20 +115,24 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     });
 
     try {
-      final callProviderInstance = ref.read(callProvider);
+      final callProviderInstance = ref.read(callProvider.notifier);
       final request = InitiateCallRequest(
         receiverId: widget.userId,
         callType: 'voice',
       );
 
-      final response = await callProviderInstance.initiateCall(request);
+      final call = await callProviderInstance.initiateCall(request);
 
-      setState(() {
-        _currentCallId = response.callId;
-        _channelName = response.channelName;
-        _token = response.token;
-        _isLoading = false;
-      });
+      if (call != null) {
+        setState(() {
+          _currentCallId = call.id;
+          _channelName = call.metadata['channel_name'] as String?;
+          _token = call.metadata['token'] as String?;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to initiate call');
+      }
 
       // Initialize Agora and join channel for voice call
       if (_channelName != null && _token != null) {
@@ -169,8 +173,12 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     // End call via API first
     if (_currentCallId != null) {
       try {
-        final callProviderInstance = ref.read(callProvider);
-        await callProviderInstance.endCall(_currentCallId!);
+        final callProviderInstance = ref.read(callProvider.notifier);
+        final endRequest = CallActionRequest(
+          callId: _currentCallId.toString(),
+          action: 'end',
+        );
+        await callProviderInstance.endCall(endRequest);
       } catch (e) {
         // Log error but don't prevent navigation
         print('Error ending call via API: $e');
@@ -197,14 +205,16 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     setState(() {
       _isMuted = !_isMuted;
     });
-    // TODO: Toggle mute via WebRTC
+    // TODO: Toggle mute via WebRTC - requires WebRTC integration
+    // For now, just UI state change
   }
 
   void _toggleSpeaker() {
     setState(() {
       _isSpeakerOn = !_isSpeakerOn;
     });
-    // TODO: Toggle speaker via WebRTC
+    // TODO: Toggle speaker via WebRTC - requires WebRTC integration
+    // For now, just UI state change
   }
 
   Future<void> _acceptCall() async {
@@ -215,8 +225,12 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     });
 
     try {
-      final callProviderInstance = ref.read(callProvider);
-      await callProviderInstance.acceptCall(_currentCallId!);
+      final callProviderInstance = ref.read(callProvider.notifier);
+      final acceptRequest = CallActionRequest(
+        callId: _currentCallId.toString(),
+        action: 'accept',
+      );
+      await callProviderInstance.acceptCall(acceptRequest);
 
       setState(() {
         _isLoading = false;
@@ -227,7 +241,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
         await _initializeAgoraAndJoinChannel();
       } else {
         // For incoming calls, we might need to get call details differently
-        // TODO: Handle incoming call channel/token retrieval
+        // TODO: Handle incoming call channel/token retrieval - requires call provider integration
         setState(() {
           _isCallActive = true;
         });
@@ -389,7 +403,12 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                   IconButton(
                     icon: Icon(Icons.minimize, color: textColor),
                     onPressed: () {
-                      // TODO: Minimize call
+                      // Minimize call - implementation needed
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Minimize call functionality will be implemented'),
+                        ),
+                      );
                     },
                   ),
                 ],

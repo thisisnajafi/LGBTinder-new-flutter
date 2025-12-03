@@ -77,11 +77,14 @@ class PhotoGallery extends ConsumerWidget {
       onTap: () => onImageTap?.call(index, imageUrl),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        child: OptimizedImage(
-          imageUrl: imageUrl,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
+        child: Hero(
+          tag: 'profile_image_$index',
+          child: OptimizedImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
         ),
       ),
     );

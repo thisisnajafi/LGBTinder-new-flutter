@@ -1,6 +1,7 @@
 ﻿// Screen: SettingsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -17,6 +18,8 @@ import 'safety_settings_screen.dart';
 import 'accessibility_settings_screen.dart';
 import 'premium_features_screen.dart';
 import 'payment_settings_screen.dart';
+import 'legal/terms_of_service_screen.dart';
+import 'legal/privacy_policy_screen.dart';
 import '../features/payments/providers/payment_providers.dart';
 import '../features/payments/data/models/subscription_plan.dart';
 import '../features/payments/presentation/screens/subscription_management_screen.dart';
@@ -80,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
                     size: 24,
                   ),
                   onPressed: () {
-                    // TODO: Navigate to profile
+                    context.go('/profile');
                   },
                 ),
               ],
@@ -341,7 +344,7 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Help & Support',
             subtitle: 'Get help and contact support',
             onTap: () {
-              // TODO: Navigate to help
+              context.go('/help');
             },
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
@@ -351,7 +354,12 @@ class SettingsScreen extends ConsumerWidget {
             iconPath: AppIcons.document,
             title: 'Terms of Service',
             onTap: () {
-              // TODO: Show terms
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TermsOfServiceScreen(),
+                ),
+              );
             },
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
@@ -361,7 +369,12 @@ class SettingsScreen extends ConsumerWidget {
             iconPath: AppIcons.shield,
             title: 'Privacy Policy',
             onTap: () {
-              // TODO: Show privacy policy
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyScreen(),
+                ),
+              );
             },
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,

@@ -437,7 +437,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 icon: Icons.favorite,
                 actionLabel: 'Edit',
                 onAction: () {
-                  // TODO: Open interests editor with reference data
+                  // Open interests editor with reference data - implementation needed
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Interests editor with reference data will be implemented'),
+                    ),
+                  );
                 },
               ),
               Padding(

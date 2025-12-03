@@ -98,6 +98,9 @@ class ApiEndpoints {
   static const String chatMessage = '/chat/message';
   static const String chatTyping = '/chat/typing';
   static const String chatRead = '/chat/read';
+  static const String chatUnreadCount = '/chat/unread-count';
+  static const String chatAttachmentUpload = '/chat/attachment/upload';
+  static const String chatOnlineStatus = '/chat/online-status';
 
   // ==================== Notifications ====================
   static const String notifications = '/notifications';
@@ -105,15 +108,58 @@ class ApiEndpoints {
   static String notificationsRead(int id) => '/notifications/$id/read';
   static const String notificationsReadAll = '/notifications/read-all';
   static String notificationsById(int id) => '/notifications/$id';
+  static const String notificationPreferences = '/notification-preferences';
+  static const String notificationsTest = '/notifications/test';
+  static const String notificationsRegisterDevice = '/notifications/register-device';
+  static const String notificationsUnregisterDevice = '/notifications/unregister-device';
 
-  // ==================== Video/Voice Calls ====================
+  // ==================== Settings ====================
+  static const String userSettings = '/user/settings';
+  static const String privacySettings = '/privacy/settings';
+  static const String deviceSessions = '/device-sessions';
+  static String deviceSessionById(int id) => '/device-sessions/$id';
+  static String deviceSessionTrust(int id) => '/device-sessions/$id/trust';
+  static const String changePassword = '/user/change-password';
+  static const String deleteAccount = '/user/delete-account';
+  static const String exportData = '/user/export-data';
+  static const String clearCache = '/user/clear-cache';
+  static const String resetSettings = '/user/reset-settings';
+
+  // ==================== Admin ====================
+  static const String adminUsers = '/admin/users';
+  static String adminUserById(int id) => '/admin/users/$id';
+  static const String adminAnalytics = '/admin/analytics';
+  static const String adminAnalyticsExport = '/admin/analytics/export';
+  static const String adminSystemHealth = '/admin/system/health';
+  static const String adminSystemCacheClear = '/admin/system/cache/clear';
+  static const String adminSystemNotification = '/admin/system/notification';
+  static const String adminAppConfiguration = '/admin/app/configuration';
+
+  // ==================== Calls ====================
   static const String callsInitiate = '/calls/initiate';
-  static const String callsAccept = '/calls/accept';
-  static const String callsReject = '/calls/reject';
-  static const String callsEnd = '/calls/end';
+  static String callsAccept(String callId) => '/calls/$callId/accept';
+  static String callsDecline(String callId) => '/calls/$callId/decline';
+  static String callsEnd(String callId) => '/calls/$callId/end';
   static const String callsHistory = '/calls/history';
   static const String callsActive = '/calls/active';
+  static String callsById(String callId) => '/calls/$callId';
   static const String callsSettings = '/calls/settings';
+  static const String callsStatistics = '/calls/statistics';
+  static String callsEligibility(int userId) => '/calls/eligibility/$userId';
+  static const String callsReportIssue = '/calls/report-issue';
+  static const String callsParticipants = '/calls/participants';
+
+  // ==================== Onboarding ====================
+  static const String onboardingPreferences = '/onboarding/preferences';
+  static const String onboardingComplete = '/onboarding/complete';
+  static const String onboardingSkip = '/onboarding/skip';
+  static const String onboardingProgress = '/onboarding/progress';
+  static const String onboardingStep = '/onboarding/step';
+  static const String onboardingReset = '/onboarding/reset';
+  static const String onboardingStatus = '/onboarding/status';
+
+  // ==================== Video/Voice Calls ====================
+  static const String callsReject = '/calls/reject';
   static String callsSettingsUpdate = '/calls/settings';
   static const String callsQuota = '/calls/quota';
 
@@ -121,8 +167,15 @@ class ApiEndpoints {
   static const String blockUser = '/block/user';
   static const String blockList = '/block/list';
   static const String reports = '/reports';
+  static const String reportsHistory = '/reports/history';
   static const String mutesMute = '/mutes/mute';
   static const String favoritesAdd = '/favorites/add';
+  static const String favoritesRemove = '/favorites/remove';
+  static const String favoritesList = '/favorites/list';
+  static const String emergencyContactsAdd = '/emergency-contacts/add';
+  static const String emergencyContactsList = '/emergency-contacts/list';
+  static String emergencyContactById(int id) => '/emergency-contacts/$id';
+  static const String emergencyAlert = '/emergency/alert';
 
   // ==================== Payments & Subscriptions ====================
   static const String stripePaymentIntent = '/stripe/payment-intent';

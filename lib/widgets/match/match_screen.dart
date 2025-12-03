@@ -192,7 +192,7 @@ class _MatchScreenState extends State<MatchScreen>
                       children: [
                         // User's profile image (placeholder)
                         _buildProfileImage(
-                          imageUrl: null, // TODO: Get current user's image
+                          imageUrl: null, // TODO: Get current user's image - requires auth provider integration
                           isDark: isDark,
                         ),
                         SizedBox(width: AppSpacing.spacingLG),

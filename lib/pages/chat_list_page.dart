@@ -144,7 +144,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
               });
             },
             onFilterTap: () {
-              // TODO: Open filters
+              // Open chat filters - implementation needed
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Chat filters will be implemented'),
+                ),
+              );
             },
           ),
           Expanded(

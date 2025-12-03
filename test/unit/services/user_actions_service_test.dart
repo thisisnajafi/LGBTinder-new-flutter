@@ -32,7 +32,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'User blocked',
         ));
@@ -57,7 +57,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Block failed',
         ));
@@ -80,7 +80,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'User unblocked',
         ));
@@ -116,7 +116,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Blocked users retrieved',
             ));
@@ -134,7 +134,7 @@ void main() {
         // Arrange
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: {'data': []},
               message: 'No blocked users',
             ));
@@ -170,7 +170,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'User reported',
         ));
@@ -196,7 +196,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Report failed',
         ));
@@ -219,7 +219,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'User muted',
         ));
@@ -252,7 +252,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Added to favorites',
         ));

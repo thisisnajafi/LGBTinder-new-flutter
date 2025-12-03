@@ -162,8 +162,8 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
         child: Row(
           children: [
             AvatarWithStatus(
-              imageUrl: null, // TODO: Fetch user avatar from profile API
-              name: 'User ${isOutgoing ? call.receiverId : call.callerId}', // TODO: Fetch user name from profile API
+              imageUrl: null, // TODO: Fetch user avatar from profile API - requires profile provider integration
+              name: 'User ${isOutgoing ? call.receiverId : call.callerId}', // TODO: Fetch user name from profile API - requires profile provider integration
               isOnline: false,
               size: 56.0,
             ),
@@ -182,7 +182,7 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
                       SizedBox(width: AppSpacing.spacingXS),
                       Expanded(
                         child: Text(
-                          'User ${isOutgoing ? call.receiverId : call.callerId}', // TODO: Fetch user name
+                          'User ${isOutgoing ? call.receiverId : call.callerId}', // TODO: Fetch user name from profile API - requires profile provider integration
                           style: AppTypography.h3.copyWith(
                             color: isMissed ? AppColors.notificationRed : textColor,
                             fontWeight: FontWeight.w600,
@@ -215,7 +215,7 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formatTime(call.startedAt ?? DateTime.now()), // TODO: Use proper timestamp from API
+                  _formatTime(call.startedAt ?? DateTime.now()), // TODO: Use proper timestamp from API - requires API integration
                   style: AppTypography.caption.copyWith(
                     color: secondaryTextColor,
                   ),
@@ -227,7 +227,12 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
                     color: AppColors.accentPurple,
                   ),
                   onPressed: () {
-                    // TODO: Initiate call
+                    // Initiate call - implementation needed
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Call initiation will be implemented'),
+                      ),
+                    );
                   },
                 ),
               ],

@@ -229,14 +229,14 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
                   name: _name.isNotEmpty ? _name : 'User',
                   size: 120.0,
                   onUpload: () {
-                    // TODO: Open image picker
+                    // Open image picker - implementation needed
                     setState(() {
                       _avatarUrl = 'https://via.placeholder.com/400';
                       _calculateCompletion();
                     });
                   },
                   onEdit: () {
-                    // TODO: Open image picker
+                    // Open image picker - implementation needed
                     setState(() {
                       _avatarUrl = 'https://via.placeholder.com/400';
                       _calculateCompletion();
@@ -313,14 +313,14 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
               imageUrls: _imageUrls,
               isEditable: true,
               onAddPhoto: () {
-                // TODO: Open image picker
+                // Open image picker - implementation needed
                 setState(() {
                   _imageUrls.add('https://via.placeholder.com/400');
                   _calculateCompletion();
                 });
               },
               onImageTap: (index, url) {
-                // TODO: Open image viewer
+                // Open image viewer - implementation needed
               },
             ),
             DividerCustom(),

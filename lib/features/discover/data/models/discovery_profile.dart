@@ -16,6 +16,9 @@ class DiscoveryProfile {
   final double? distance;
   final int? compatibilityScore;
   final bool? isSuperliked;
+  final bool? isVerified;
+  final bool? isPremium;
+  final bool? isOnline;
   final DateTime? lastActive;
 
   DiscoveryProfile({
@@ -33,6 +36,9 @@ class DiscoveryProfile {
     this.distance,
     this.compatibilityScore,
     this.isSuperliked,
+    this.isVerified,
+    this.isPremium,
+    this.isOnline,
     this.lastActive,
   });
 
@@ -54,6 +60,9 @@ class DiscoveryProfile {
       distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
       compatibilityScore: json['compatibility_score'] as int?,
       isSuperliked: json['is_superliked'] as bool?,
+      isVerified: json['is_verified'] as bool?,
+      isPremium: json['is_premium'] as bool?,
+      isOnline: json['is_online'] as bool?,
       lastActive: json['last_active'] != null
           ? DateTime.parse(json['last_active'] as String)
           : null,
@@ -76,6 +85,9 @@ class DiscoveryProfile {
       if (distance != null) 'distance': distance,
       if (compatibilityScore != null) 'compatibility_score': compatibilityScore,
       if (isSuperliked != null) 'is_superliked': isSuperliked,
+      if (isVerified != null) 'is_verified': isVerified,
+      if (isPremium != null) 'is_premium': isPremium,
+      if (isOnline != null) 'is_online': isOnline,
       if (lastActive != null) 'last_active': lastActive!.toIso8601String(),
     };
   }

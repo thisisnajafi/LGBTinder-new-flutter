@@ -38,7 +38,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Profile retrieved',
         ));
@@ -63,7 +63,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Profile not found',
         ));
@@ -94,7 +94,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Profile retrieved',
         ));
@@ -139,7 +139,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Profile updated',
         ));
@@ -169,7 +169,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Update failed',
         ));

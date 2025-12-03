@@ -1,8 +1,10 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
-import '../models/chat_participant.dart';
+import '../models/message_attachment.dart';
 
 /// Chat service for messaging functionality
 class ChatService {
@@ -10,24 +12,6 @@ class ChatService {
 
   ChatService(this._apiService);
 
-  /// Send a message
-  Future<Message> sendMessage(SendMessageRequest request) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.chatSend,
-        data: request.toJson(),
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return Message.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
 
   /// Get chat history with a specific user
   Future<List<Message>> getChatHistory({
@@ -138,6 +122,105 @@ class ChatService {
       );
 
       if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get all chats for current user
+  Future<List<Chat>> getChats() async {
+    return await getChatUsers(); // Alias for consistency
+  }
+
+  /// Get unread message count
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.chatUnreadCount,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return response.data!['unread_count'] as int? ?? 0;
+      } else {
+        return 0;
+      }
+    } catch (e) {
+      return 0; // Return 0 on error to avoid breaking UI
+    }
+  }
+
+  /// Upload attachment for message
+  Future<MessageAttachment> uploadAttachment(String filePath, String filename) async {
+    try {
+      // Create multipart form data
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: filename,
+        ),
+      });
+
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.chatAttachmentUpload,
+        data: formData,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return MessageAttachment.fromJson(response.data!);
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Set online status
+  Future<void> setOnlineStatus(bool isOnline) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.chatOnlineStatus,
+        data: {'is_online': isOnline},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Enhanced send message with attachment support
+  Future<Message> sendMessage(int receiverId, String message, {
+    String messageType = 'text',
+    MessageAttachment? attachment,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'receiver_id': receiverId,
+        'message': message,
+        'message_type': messageType,
+      };
+
+      if (attachment != null) {
+        data['attachment_id'] = attachment.id;
+      }
+
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.chatSend,
+        data: data,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return Message.fromJson(response.data!);
+      } else {
         throw Exception(response.message);
       }
     } catch (e) {

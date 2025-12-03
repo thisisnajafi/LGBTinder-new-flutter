@@ -47,12 +47,12 @@ class EmptyState extends ConsumerWidget {
                   ? AppSvgIcon(
                       assetPath: iconPath!,
                       size: 64,
-                      color: secondaryTextColor.withOpacity(0.5),
+                      color: secondaryTextColor.withValues(alpha: 0.5),
                     )
                   : Icon(
                       icon!,
                       size: 64,
-                      color: secondaryTextColor.withOpacity(0.5),
+                      color: secondaryTextColor.withValues(alpha: 0.5),
                     ),
               SizedBox(height: AppSpacing.spacingXL),
             ],

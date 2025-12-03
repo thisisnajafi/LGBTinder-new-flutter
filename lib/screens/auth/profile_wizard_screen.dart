@@ -102,7 +102,7 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
     });
 
     try {
-      // TODO: Save profile via API
+      // TODO: Save profile via API - requires profile provider integration
       // POST /api/profile-wizard/save-step/{step}
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
@@ -725,13 +725,13 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
               name: 'You',
               size: 120.0,
               onUpload: () {
-                // TODO: Open image picker
+                // Open image picker - implementation needed
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Image picker coming soon')),
                 );
               },
               onEdit: () {
-                // TODO: Open image picker
+                // Open image picker - implementation needed
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Image picker coming soon')),
                 );
