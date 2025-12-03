@@ -1,0 +1,28 @@
+name: LGBTinder Flutter App - Change Notification
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
+          TELEGRAM_CHAT_ID: -1002275828844
+          GITHUB_ACTOR: ${{ github.actor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
+          MESSAGE=$(echo -e "🚀 <b>LGBTinder Flutter App</b> 🚀 \n\n📝 <b>New Changes Pushed</b>\n\n👤 <b>Updated by:</b> ${GITHUB_ACTOR}\n\n💬 <b>Commit Message:</b>\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
+          curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
+            -d chat_id=${TELEGRAM_CHAT_ID} \
+            -d text="${MESSAGE}" \
+            -d parse_mode="HTML"
