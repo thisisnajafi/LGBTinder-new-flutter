@@ -300,7 +300,8 @@ class _MatchCelebrationState extends ConsumerState<MatchCelebration>
                           child: ElevatedButton(
                             onPressed: widget.onSendMessage ?? () {
                               Navigator.of(context).pop();
-                              // TODO: Navigate to chat screen
+                              // Navigate to chat screen with the matched user
+                              context.go('/chat/${widget.match.matchedUser.id}');
                             },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),

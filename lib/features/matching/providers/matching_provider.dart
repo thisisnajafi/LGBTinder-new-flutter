@@ -5,6 +5,8 @@ import '../data/models/superlike.dart';
 import '../data/models/compatibility_score.dart';
 import '../domain/use_cases/like_profile_use_case.dart';
 import '../domain/use_cases/superlike_profile_use_case.dart';
+import '../domain/use_cases/get_pending_likes_use_case.dart';
+import '../domain/use_cases/get_superlike_history_use_case.dart';
 import '../domain/use_cases/get_matches_use_case.dart';
 import '../domain/use_cases/get_compatibility_score_use_case.dart';
 
@@ -14,12 +16,16 @@ final matchingProvider = StateNotifierProvider<MatchingNotifier, MatchingState>(
   final superlikeProfileUseCase = ref.watch(superlikeProfileUseCaseProvider);
   final getMatchesUseCase = ref.watch(getMatchesUseCaseProvider);
   final getCompatibilityScoreUseCase = ref.watch(getCompatibilityScoreUseCaseProvider);
+  final getPendingLikesUseCase = ref.watch(getPendingLikesUseCaseProvider);
+  final getSuperlikeHistoryUseCase = ref.watch(getSuperlikeHistoryUseCaseProvider);
 
   return MatchingNotifier(
     likeProfileUseCase: likeProfileUseCase,
     superlikeProfileUseCase: superlikeProfileUseCase,
     getMatchesUseCase: getMatchesUseCase,
     getCompatibilityScoreUseCase: getCompatibilityScoreUseCase,
+    getPendingLikesUseCase: getPendingLikesUseCase,
+    getSuperlikeHistoryUseCase: getSuperlikeHistoryUseCase,
   );
 });
 
@@ -82,16 +88,22 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
   final SuperlikeProfileUseCase _superlikeProfileUseCase;
   final GetMatchesUseCase _getMatchesUseCase;
   final GetCompatibilityScoreUseCase _getCompatibilityScoreUseCase;
+  final GetPendingLikesUseCase _getPendingLikesUseCase;
+  final GetSuperlikeHistoryUseCase _getSuperlikeHistoryUseCase;
 
   MatchingNotifier({
     required LikeProfileUseCase likeProfileUseCase,
     required SuperlikeProfileUseCase superlikeProfileUseCase,
     required GetMatchesUseCase getMatchesUseCase,
     required GetCompatibilityScoreUseCase getCompatibilityScoreUseCase,
+    required GetPendingLikesUseCase getPendingLikesUseCase,
+    required GetSuperlikeHistoryUseCase getSuperlikeHistoryUseCase,
   }) : _likeProfileUseCase = likeProfileUseCase,
        _superlikeProfileUseCase = superlikeProfileUseCase,
        _getMatchesUseCase = getMatchesUseCase,
        _getCompatibilityScoreUseCase = getCompatibilityScoreUseCase,
+       _getPendingLikesUseCase = getPendingLikesUseCase,
+       _getSuperlikeHistoryUseCase = getSuperlikeHistoryUseCase,
        super(MatchingState());
 
   /// Load all matches
@@ -118,9 +130,8 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
   /// Load pending likes (likes received)
   Future<void> loadPendingLikes() async {
     try {
-      // TODO: Implement pending likes use case
-      // final pendingLikes = await _getPendingLikesUseCase.execute();
-      // state = state.copyWith(pendingLikes: pendingLikes);
+      final pendingLikes = await _getPendingLikesUseCase.execute();
+      state = state.copyWith(pendingLikes: pendingLikes);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -129,9 +140,8 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
   /// Load superlike history
   Future<void> loadSuperlikeHistory() async {
     try {
-      // TODO: Implement superlike history use case
-      // final superlikeHistory = await _getSuperlikeHistoryUseCase.execute();
-      // state = state.copyWith(superlikeHistory: superlikeHistory);
+      final superlikeHistory = await _getSuperlikeHistoryUseCase.execute();
+      state = state.copyWith(superlikeHistory: superlikeHistory);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -268,4 +278,12 @@ final getMatchesUseCaseProvider = Provider<GetMatchesUseCase>((ref) {
 
 final getCompatibilityScoreUseCaseProvider = Provider<GetCompatibilityScoreUseCase>((ref) {
   throw UnimplementedError('GetCompatibilityScoreUseCase must be overridden in the provider scope');
+});
+
+final getPendingLikesUseCaseProvider = Provider<GetPendingLikesUseCase>((ref) {
+  throw UnimplementedError('GetPendingLikesUseCase must be overridden in the provider scope');
+});
+
+final getSuperlikeHistoryUseCaseProvider = Provider<GetSuperlikeHistoryUseCase>((ref) {
+  throw UnimplementedError('GetSuperlikeHistoryUseCase must be overridden in the provider scope');
 });

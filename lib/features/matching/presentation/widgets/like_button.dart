@@ -171,14 +171,82 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   }
 
   void _showMatchCelebration() {
-    // TODO: Show match celebration overlay/screen
-    // This could navigate to a match screen or show a celebration dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('It\'s a match! 🎉'),
-        backgroundColor: AppColors.feedbackSuccess,
-        duration: Duration(seconds: 2),
+    // Show match celebration overlay/screen
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        content: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.surfaceDark
+                : AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.feedbackSuccess,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '🎉 IT\'S A MATCH! 🎉',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.feedbackSuccess,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'You and this person liked each other!\nStart a conversation now! 💬',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Keep Swiping'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Navigate to chat screen would go here
+                      // context.go('/chat/${matchedUserId}');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.feedbackSuccess,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Send Message'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
+
+    // Also show a snackbar for additional feedback
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('It\'s a match! Both users liked each other! 🎉'),
+            backgroundColor: AppColors.feedbackSuccess,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    });
   }
 }

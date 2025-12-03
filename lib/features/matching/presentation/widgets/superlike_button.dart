@@ -217,7 +217,8 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // TODO: Navigate to premium upgrade screen
+              // Navigate to premium upgrade screen
+              context.go('/premium');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryLight,
@@ -230,13 +231,73 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   }
 
   void _showSuperMatchCelebration() {
-    // TODO: Show enhanced match celebration for superlikes
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Super Match! ⭐🎉'),
-        backgroundColor: AppColors.primaryLight,
-        duration: Duration(seconds: 3),
+    // Show enhanced match celebration for superlikes with confetti
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        content: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.surfaceDark
+                : AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primaryLight,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '⭐ SUPER MATCH! ⭐',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryLight,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'You both superliked each other!\nThis is extra special! 🎉✨',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryLight,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Awesome!'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+
+    // Also show a snackbar for additional feedback
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Super Match! Both users superliked each other! ⭐🎉'),
+            backgroundColor: AppColors.primaryLight,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 }

@@ -2,6 +2,7 @@
 // Match celebration screen with animations
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -9,9 +10,10 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/matching/data/models/match.dart';
 import '../../core/utils/app_icons.dart';
+import '../../features/auth/providers/auth_provider.dart';
 
 /// Match screen - Celebration screen when a match is detected
-class MatchScreen extends StatefulWidget {
+class MatchScreen extends ConsumerStatefulWidget {
   final Match match;
   final VoidCallback? onSendMessage;
   final VoidCallback? onKeepSwiping;
@@ -27,7 +29,7 @@ class MatchScreen extends StatefulWidget {
   State<MatchScreen> createState() => _MatchScreenState();
 }
 
-class _MatchScreenState extends State<MatchScreen>
+class _MatchScreenState extends ConsumerState<MatchScreen>
     with TickerProviderStateMixin {
   late AnimationController _heartController;
   late AnimationController _confettiController;
@@ -91,6 +93,10 @@ class _MatchScreenState extends State<MatchScreen>
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+    // Get user data from auth provider
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -190,9 +196,11 @@ class _MatchScreenState extends State<MatchScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // User's profile image (placeholder)
+                        // User's profile image
                         _buildProfileImage(
-                          imageUrl: null, // TODO: Get current user's image - requires auth provider integration
+                          imageUrl: user?.images != null && user!.images!.isNotEmpty
+                              ? user.images!.first.toString()
+                              : null,
                           isDark: isDark,
                         ),
                         SizedBox(width: AppSpacing.spacingLG),

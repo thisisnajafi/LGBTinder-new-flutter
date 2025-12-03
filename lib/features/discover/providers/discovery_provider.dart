@@ -4,17 +4,20 @@ import '../data/models/discovery_filters.dart';
 import '../domain/use_cases/get_discovery_profiles_use_case.dart';
 import '../domain/use_cases/get_nearby_suggestions_use_case.dart';
 import '../domain/use_cases/apply_filters_use_case.dart';
+import '../../matching/providers/matching_provider.dart';
 
 /// Discovery provider - manages discovery state and operations
 final discoveryProvider = StateNotifierProvider<DiscoveryNotifier, DiscoveryState>((ref) {
   final getDiscoveryProfilesUseCase = ref.watch(getDiscoveryProfilesUseCaseProvider);
   final getNearbySuggestionsUseCase = ref.watch(getNearbySuggestionsUseCaseProvider);
   final applyFiltersUseCase = ref.watch(applyFiltersUseCaseProvider);
+  final matchingNotifier = ref.watch(matchingProvider.notifier);
 
   return DiscoveryNotifier(
     getDiscoveryProfilesUseCase: getDiscoveryProfilesUseCase,
     getNearbySuggestionsUseCase: getNearbySuggestionsUseCase,
     applyFiltersUseCase: applyFiltersUseCase,
+    matchingNotifier: matchingNotifier,
   );
 });
 
@@ -64,14 +67,17 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
   final GetDiscoveryProfilesUseCase _getDiscoveryProfilesUseCase;
   final GetNearbySuggestionsUseCase _getNearbySuggestionsUseCase;
   final ApplyFiltersUseCase _applyFiltersUseCase;
+  final MatchingNotifier _matchingNotifier;
 
   DiscoveryNotifier({
     required GetDiscoveryProfilesUseCase getDiscoveryProfilesUseCase,
     required GetNearbySuggestionsUseCase getNearbySuggestionsUseCase,
     required ApplyFiltersUseCase applyFiltersUseCase,
+    required MatchingNotifier matchingNotifier,
   }) : _getDiscoveryProfilesUseCase = getDiscoveryProfilesUseCase,
        _getNearbySuggestionsUseCase = getNearbySuggestionsUseCase,
        _applyFiltersUseCase = applyFiltersUseCase,
+       _matchingNotifier = matchingNotifier,
        super(DiscoveryState());
 
   /// Load initial discovery profiles
@@ -164,8 +170,13 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
   Future<void> likeCurrentProfile() async {
     final currentProfile = _getCurrentProfile();
     if (currentProfile != null) {
-      // TODO: Implement like action
-      _moveToNextProfile();
+      try {
+        await _matchingNotifier.likeProfile(currentProfile.id);
+        _moveToNextProfile();
+      } catch (e) {
+        // Handle error - could show snackbar or keep profile
+        print('Error liking profile: $e');
+      }
     }
   }
 
@@ -173,7 +184,7 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
   Future<void> dislikeCurrentProfile() async {
     final currentProfile = _getCurrentProfile();
     if (currentProfile != null) {
-      // TODO: Implement dislike action
+      // Dislike is just moving to next profile (no backend action needed)
       _moveToNextProfile();
     }
   }
@@ -182,8 +193,13 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
   Future<void> superlikeCurrentProfile() async {
     final currentProfile = _getCurrentProfile();
     if (currentProfile != null) {
-      // TODO: Implement superlike action
-      _moveToNextProfile();
+      try {
+        await _matchingNotifier.superlikeProfile(currentProfile.id);
+        _moveToNextProfile();
+      } catch (e) {
+        // Handle error - could show snackbar or keep profile
+        print('Error superliking profile: $e');
+      }
     }
   }
 

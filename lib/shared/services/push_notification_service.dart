@@ -3,6 +3,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:io';
+import '../../core/constants/api_endpoints.dart';
+import '../services/api_service.dart';
 import 'incoming_call_handler.dart';
 
 /// Service for handling push notifications
@@ -16,6 +18,61 @@ class PushNotificationService {
 
   bool _isInitialized = false;
   String? _fcmToken;
+
+  // API service for backend communication
+  ApiService? _apiService;
+
+  // Navigation callbacks
+  void Function()? _navigateToMatches;
+  void Function()? _navigateToMatch;
+  void Function(String)? _navigateToChat;
+  void Function()? _navigateToNotifications;
+
+  /// Set API service for backend communication
+  void setApiService(ApiService apiService) {
+    _apiService = apiService;
+  }
+
+  /// Set navigation callbacks
+  void setNavigationCallbacks({
+    void Function()? navigateToMatches,
+    void Function()? navigateToMatch,
+    void Function(String)? navigateToChat,
+    void Function()? navigateToNotifications,
+  }) {
+    _navigateToMatches = navigateToMatches;
+    _navigateToMatch = navigateToMatch;
+    _navigateToChat = navigateToChat;
+    _navigateToNotifications = navigateToNotifications;
+  }
+
+  /// Send FCM token to backend
+  Future<void> _sendTokenToBackend(String token) async {
+    if (_apiService == null) {
+      print('API service not set, cannot send token to backend');
+      return;
+    }
+
+    try {
+      final platform = Platform.isIOS ? 'ios' : 'android';
+      final response = await _apiService!.post<Map<String, dynamic>>(
+        ApiEndpoints.notificationsRegisterDevice,
+        data: {
+          'device_token': token,
+          'platform': platform,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess) {
+        print('FCM token sent to backend successfully');
+      } else {
+        print('Failed to send FCM token to backend: ${response.message}');
+      }
+    } catch (e) {
+      print('Error sending FCM token to backend: $e');
+    }
+  }
 
   /// Initialize push notification service
   Future<void> initialize() async {
@@ -116,10 +173,10 @@ class PushNotificationService {
     });
 
     // Handle token refresh
-    _firebaseMessaging.onTokenRefresh.listen((String newToken) {
+    _firebaseMessaging.onTokenRefresh.listen((String newToken) async {
       print('FCM Token refreshed: $newToken');
       _fcmToken = newToken;
-      // TODO: Send new token to backend - requires notification provider integration
+      await _sendTokenToBackend(newToken);
     });
   }
 
@@ -167,16 +224,15 @@ class PushNotificationService {
       
       switch (type) {
         case 'like':
-          // TODO: Navigate to matches screen - requires navigation integration
+          _navigateToMatches?.call();
           break;
         case 'match':
-          // TODO: Navigate to match screen - requires navigation integration
+          _navigateToMatch?.call();
           break;
         case 'message':
-          // TODO: Navigate to chat screen - requires navigation integration
           final userId = data['user_id'];
-          if (userId != null) {
-            // Navigate to chat with user
+          if (userId != null && _navigateToChat != null) {
+            _navigateToChat(userId);
           }
           break;
         case 'call':
@@ -184,7 +240,7 @@ class PushNotificationService {
           _handleIncomingCall(data);
           break;
         case 'notification':
-          // TODO: Navigate to notifications screen - requires navigation integration
+          _navigateToNotifications?.call();
           break;
         default:
           break;

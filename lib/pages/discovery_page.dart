@@ -26,6 +26,7 @@ import '../pages/chat_page.dart';
 import '../core/utils/app_icons.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
+import '../features/auth/providers/auth_provider.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
@@ -347,8 +348,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               // Left side: Avatar with gradient ring + greeting and name
               Consumer(
                 builder: (context, ref, child) {
-                  // TODO: Get actual user data from providers
-                  // For now using placeholder data
+                  // Get actual user data from auth provider
+                  final authState = ref.watch(authProvider);
+                  final user = authState.user;
+
                   return Row(
                     children: [
                       // Circular avatar with gradient ring
@@ -373,22 +376,31 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                             color: backgroundColor,
                           ),
                           child: ClipOval(
-                            child: Image.network(
-                              'https://via.placeholder.com/44x44', // TODO: Replace with actual user avatar
-                              width: 44,
-                              height: 44,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                                  child: Icon(
-                                    Icons.person,
-                                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                    size: 24,
+                            child: user?.images != null && user!.images!.isNotEmpty
+                                ? Image.network(
+                                    user.images!.first.toString(),
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                        child: Icon(
+                                          Icons.person,
+                                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                          size: 24,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                    child: Icon(
+                                      Icons.person,
+                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                      size: 24,
+                                    ),
                                   ),
-                                );
-                              },
-                            ),
                           ),
                         ),
                       ),
@@ -405,7 +417,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                             ),
                           ),
                           Text(
-                            'Hello User', // TODO: Replace with actual user name
+                            user != null ? 'Hello ${user.firstName}' : 'Hello User',
                             style: AppTypography.h3.copyWith(
                               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                             ),
