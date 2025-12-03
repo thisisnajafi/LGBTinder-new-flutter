@@ -49,6 +49,18 @@ class ApiEndpoints {
   static const String profileUpdate = '/profile/update';
   static String profileByJob(int jobId) => '/profile/by-job/$jobId';
 
+  // ==================== Profile Verification ====================
+  static const String profileVerificationStatus = '/profile-verification/status';
+  static const String profileVerificationPhoto = '/profile-verification/photo';
+  static const String profileVerificationId = '/profile-verification/id';
+  static const String profileVerificationVideo = '/profile-verification/video';
+  static const String profileVerificationHistory = '/profile-verification/history';
+  static String profileVerificationCancel(int verificationId) => '/profile-verification/cancel/$verificationId';
+  static const String profileVerificationGuidelines = '/profile-verification/guidelines';
+
+  // ==================== Profile Completion ====================
+  static const String profileCompletionStatus = '/profile/completion-status';
+
   // ==================== Image Management ====================
   static const String imagesUpload = '/images/upload';
   static String imagesById(int id) => '/images/$id';
