@@ -451,7 +451,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                             ),
                             onPressed: () {
-                              // TODO: Navigate to notifications
                               context.go('/notifications');
                             },
                           ),
@@ -487,7 +486,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   // Filter button
                   IconButton(
                     icon: AppSvgIcon(
-                      assetPath: AppIcons.filter, // TODO: Check if this icon exists
+                      assetPath: AppIcons.filter,
                       size: 24,
                       color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                     ),

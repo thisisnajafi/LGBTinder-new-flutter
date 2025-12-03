@@ -7,6 +7,7 @@ import '../domain/use_cases/send_message_use_case.dart';
 import '../domain/use_cases/mark_as_read_use_case.dart';
 import '../domain/use_cases/delete_message_use_case.dart';
 import '../domain/use_cases/set_typing_use_case.dart';
+import '../domain/use_cases/get_chats_use_case.dart';
 
 /// Chat provider - manages chat state and operations
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
@@ -15,6 +16,7 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final markAsReadUseCase = ref.watch(markAsReadUseCaseProvider);
   final deleteMessageUseCase = ref.watch(deleteMessageUseCaseProvider);
   final setTypingUseCase = ref.watch(setTypingUseCaseProvider);
+  final getChatsUseCase = ref.watch(getChatsUseCaseProvider);
 
   return ChatNotifier(
     getChatHistoryUseCase: getChatHistoryUseCase,
@@ -22,6 +24,7 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
     markAsReadUseCase: markAsReadUseCase,
     deleteMessageUseCase: deleteMessageUseCase,
     setTypingUseCase: setTypingUseCase,
+    getChatsUseCase: getChatsUseCase,
   );
 });
 
@@ -89,6 +92,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final MarkAsReadUseCase _markAsReadUseCase;
   final DeleteMessageUseCase _deleteMessageUseCase;
   final SetTypingUseCase _setTypingUseCase;
+  final GetChatsUseCase _getChatsUseCase;
 
   ChatNotifier({
     required GetChatHistoryUseCase getChatHistoryUseCase,
@@ -96,11 +100,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required MarkAsReadUseCase markAsReadUseCase,
     required DeleteMessageUseCase deleteMessageUseCase,
     required SetTypingUseCase setTypingUseCase,
+    required GetChatsUseCase getChatsUseCase,
   }) : _getChatHistoryUseCase = getChatHistoryUseCase,
        _sendMessageUseCase = sendMessageUseCase,
        _markAsReadUseCase = markAsReadUseCase,
        _deleteMessageUseCase = deleteMessageUseCase,
        _setTypingUseCase = setTypingUseCase,
+       _getChatsUseCase = getChatsUseCase,
        super(ChatState());
 
   /// Load chat list
@@ -108,10 +114,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // TODO: Implement get chats use case
-      // final chats = await _getChatsUseCase.execute();
-      // state = state.copyWith(chats: chats, isLoading: false);
-      state = state.copyWith(isLoading: false);
+      final chats = await _getChatsUseCase.execute();
+      state = state.copyWith(chats: chats, isLoading: false);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -285,4 +289,8 @@ final deleteMessageUseCaseProvider = Provider<DeleteMessageUseCase>((ref) {
 
 final setTypingUseCaseProvider = Provider<SetTypingUseCase>((ref) {
   throw UnimplementedError('SetTypingUseCase must be overridden in the provider scope');
+});
+
+final getChatsUseCaseProvider = Provider<GetChatsUseCase>((ref) {
+  throw UnimplementedError('GetChatsUseCase must be overridden in the provider scope');
 });

@@ -52,8 +52,29 @@ class PaymentRepository {
 
   /// Purchase superlike pack
   Future<bool> purchaseSuperlikePack(int packId) async {
-    // TODO: Implement superlike pack purchase
-    // This would typically call a service method
-    return false;
+    return await _paymentService.purchaseSuperlikePack(packId);
+  }
+
+  /// Validate receipt
+  Future<bool> validateReceipt(String receiptData, String transactionId) async {
+    return await _paymentService.validateReceipt(receiptData, transactionId);
+  }
+
+  /// Restore purchases
+  Future<bool> restorePurchases() async {
+    return await _paymentService.restorePurchases();
+  }
+
+  /// Upgrade subscription
+  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
+    return await _paymentService.upgradeSubscription(currentPlanId, targetPlanId);
+  }
+
+  /// Get payment history
+  Future<List<PaymentHistory>> getPaymentHistory({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    return await _paymentService.getPaymentHistory(page: page, limit: limit);
   }
 }

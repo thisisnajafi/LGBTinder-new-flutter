@@ -305,10 +305,15 @@ class GooglePlayBillingService {
   /// Get current purchases
   Future<List<PurchaseDetails>> getCurrentPurchases() async {
     try {
-      // TODO: Implement with correct API for current in_app_purchase version
-      // The API has changed and needs to be updated based on documentation
-      _errorController.add('getCurrentPurchases not implemented for current API version');
-      return [];
+      // Query past purchases for both Google Play and App Store
+      final QueryPurchaseDetailsResponse response = await _inAppPurchase.queryPastPurchases();
+
+      if (response.error != null) {
+        _errorController.add('Failed to query past purchases: ${response.error}');
+        return [];
+      }
+
+      return response.pastPurchases;
     } catch (e) {
       _errorController.add('Failed to get current purchases: $e');
       return [];

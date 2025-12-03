@@ -11,10 +11,7 @@ class RestorePurchasesUseCase {
   /// Returns [bool] indicating success of restore operation
   Future<bool> execute() async {
     try {
-      // This would typically restore purchases from app stores
-      // For now, we'll just return true as it's not fully implemented
-      // TODO: Implement actual restore purchases logic
-      return true;
+      return await _paymentRepository.restorePurchases();
     } catch (e) {
       // Re-throw all exceptions to let UI handle them
       rethrow;

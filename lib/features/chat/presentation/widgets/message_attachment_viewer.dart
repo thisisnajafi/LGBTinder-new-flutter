@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:video_player/video_player.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -223,10 +229,7 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
                 color: AppColors.primaryLight,
               ),
               onPressed: () {
-                // TODO: Implement voice playback
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Voice playback coming soon!')),
-                );
+                _playVoiceMessage();
               },
             ),
           ),
@@ -344,17 +347,73 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
   }
 
   Future<void> _downloadAttachment() async {
-    // TODO: Implement file download
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Download feature coming soon!')),
-    );
+    try {
+      // Get downloads directory
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = path.basename(widget.attachment.filePath);
+      final savePath = path.join(directory.path, fileName);
+
+      // Download file
+      final response = await http.get(Uri.parse(widget.attachment.filePath));
+      final file = File(savePath);
+      await file.writeAsBytes(response.bodyBytes);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('File downloaded to: $savePath')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Download failed: $e')),
+      );
+    }
   }
 
   Future<void> _shareAttachment() async {
-    // TODO: Implement file sharing
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Share feature coming soon!')),
-    );
+    try {
+      if (widget.attachment.filePath.startsWith('http')) {
+        // Download file first if it's a URL
+        final directory = await getTemporaryDirectory();
+        final fileName = path.basename(widget.attachment.filePath);
+        final tempPath = path.join(directory.path, fileName);
+
+        final response = await http.get(Uri.parse(widget.attachment.filePath));
+        final file = File(tempPath);
+        await file.writeAsBytes(response.bodyBytes);
+
+        await Share.shareXFiles([XFile(tempPath)], text: 'Shared from LGBTinder');
+      } else {
+        // Share local file
+        await Share.shareXFiles([XFile(widget.attachment.filePath)], text: 'Shared from LGBTinder');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Share failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _playVoiceMessage() async {
+    try {
+      final player = AudioPlayer();
+
+      if (widget.attachment.filePath.startsWith('http')) {
+        // For remote files, we need to download first or use direct URL
+        await player.play(UrlSource(widget.attachment.filePath));
+      } else {
+        // For local files
+        await player.play(DeviceFileSource(widget.attachment.filePath));
+      }
+
+      // Show playback controls
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => _VoicePlaybackControls(player: player),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Playback failed: $e')),
+      );
+    }
   }
 }
 
@@ -403,6 +462,160 @@ class AttachmentPreview extends ConsumerWidget {
                 color: AppColors.primaryLight,
                 size: size * 0.6,
               ),
+      ),
+    );
+  }
+}
+
+/// Voice playback controls widget
+class _VoicePlaybackControls extends StatefulWidget {
+  final AudioPlayer player;
+
+  const _VoicePlaybackControls({required this.player});
+
+  @override
+  State<_VoicePlaybackControls> createState() => _VoicePlaybackControlsState();
+}
+
+class _VoicePlaybackControlsState extends State<_VoicePlaybackControls> {
+  bool _isPlaying = false;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Listen to player state changes
+    widget.player.onPlayerStateChanged.listen((state) {
+      setState(() {
+        _isPlaying = state == PlayerState.playing;
+      });
+    });
+
+    // Listen to duration changes
+    widget.player.onDurationChanged.listen((duration) {
+      setState(() {
+        _duration = duration;
+      });
+    });
+
+    // Listen to position changes
+    widget.player.onPositionChanged.listen((position) {
+      setState(() {
+        _position = position;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.player.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Voice Message',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Progress bar
+          Slider(
+            value: _position.inSeconds.toDouble(),
+            min: 0,
+            max: _duration.inSeconds.toDouble(),
+            onChanged: (value) {
+              widget.player.seek(Duration(seconds: value.toInt()));
+            },
+            activeColor: AppColors.primaryLight,
+            inactiveColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          ),
+
+          // Time display
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _formatDuration(_position),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                ),
+              ),
+              Text(
+                _formatDuration(_duration),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Control buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: () {
+                  if (_isPlaying) {
+                    widget.player.pause();
+                  } else {
+                    widget.player.resume();
+                  }
+                },
+                icon: Icon(
+                  _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                  size: 48,
+                  color: AppColors.primaryLight,
+                ),
+              ),
+              const SizedBox(width: 24),
+              IconButton(
+                onPressed: () {
+                  widget.player.stop();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(
+                  Icons.stop_circle,
+                  size: 36,
+                  color: AppColors.feedbackError,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }

@@ -6,6 +6,9 @@ import '../domain/use_cases/purchase_subscription_use_case.dart';
 import '../domain/use_cases/cancel_subscription_use_case.dart';
 import '../domain/use_cases/restore_purchases_use_case.dart';
 import '../domain/use_cases/validate_receipt_use_case.dart';
+import '../domain/use_cases/get_superlike_packs_use_case.dart';
+import '../domain/use_cases/get_subscription_status_use_case.dart';
+import '../domain/use_cases/create_stripe_checkout_use_case.dart';
 
 /// Payment provider - manages payment and subscription state
 final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((ref) {
@@ -14,6 +17,9 @@ final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((re
   final cancelSubscriptionUseCase = ref.watch(cancelSubscriptionUseCaseProvider);
   final restorePurchasesUseCase = ref.watch(restorePurchasesUseCaseProvider);
   final validateReceiptUseCase = ref.watch(validateReceiptUseCaseProvider);
+  final getSuperlikePacksUseCase = ref.watch(getSuperlikePacksUseCaseProvider);
+  final getSubscriptionStatusUseCase = ref.watch(getSubscriptionStatusUseCaseProvider);
+  final createStripeCheckoutUseCase = ref.watch(createStripeCheckoutUseCaseProvider);
 
   return PaymentNotifier(
     getSubscriptionPlansUseCase: getSubscriptionPlansUseCase,
@@ -21,6 +27,9 @@ final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((re
     cancelSubscriptionUseCase: cancelSubscriptionUseCase,
     restorePurchasesUseCase: restorePurchasesUseCase,
     validateReceiptUseCase: validateReceiptUseCase,
+    getSuperlikePacksUseCase: getSuperlikePacksUseCase,
+    getSubscriptionStatusUseCase: getSubscriptionStatusUseCase,
+    createStripeCheckoutUseCase: createStripeCheckoutUseCase,
   );
 });
 
@@ -84,6 +93,9 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   final CancelSubscriptionUseCase _cancelSubscriptionUseCase;
   final RestorePurchasesUseCase _restorePurchasesUseCase;
   final ValidateReceiptUseCase _validateReceiptUseCase;
+  final GetSuperlikePacksUseCase _getSuperlikePacksUseCase;
+  final GetSubscriptionStatusUseCase _getSubscriptionStatusUseCase;
+  final CreateStripeCheckoutUseCase _createStripeCheckoutUseCase;
 
   PaymentNotifier({
     required GetSubscriptionPlansUseCase getSubscriptionPlansUseCase,
@@ -91,11 +103,17 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required CancelSubscriptionUseCase cancelSubscriptionUseCase,
     required RestorePurchasesUseCase restorePurchasesUseCase,
     required ValidateReceiptUseCase validateReceiptUseCase,
+    required GetSuperlikePacksUseCase getSuperlikePacksUseCase,
+    required GetSubscriptionStatusUseCase getSubscriptionStatusUseCase,
+    required CreateStripeCheckoutUseCase createStripeCheckoutUseCase,
   }) : _getSubscriptionPlansUseCase = getSubscriptionPlansUseCase,
        _purchaseSubscriptionUseCase = purchaseSubscriptionUseCase,
        _cancelSubscriptionUseCase = cancelSubscriptionUseCase,
        _restorePurchasesUseCase = restorePurchasesUseCase,
        _validateReceiptUseCase = validateReceiptUseCase,
+       _getSuperlikePacksUseCase = getSuperlikePacksUseCase,
+       _getSubscriptionStatusUseCase = getSubscriptionStatusUseCase,
+       _createStripeCheckoutUseCase = createStripeCheckoutUseCase,
        super(PaymentState());
 
   /// Load subscription plans
@@ -119,9 +137,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   /// Load superlike packs
   Future<void> loadSuperlikePacks() async {
     try {
-      // TODO: Implement superlike packs loading
-      // final packs = await _getSuperlikePacksUseCase.execute();
-      // state = state.copyWith(superlikePacks: packs);
+      final packs = await _getSuperlikePacksUseCase.execute();
+      state = state.copyWith(superlikePacks: packs);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -130,13 +147,12 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   /// Load subscription status
   Future<void> loadSubscriptionStatus() async {
     try {
-      // TODO: Implement subscription status loading
-      // final status = await _getSubscriptionStatusUseCase.execute();
-      // final hasActive = status.isActive;
-      // state = state.copyWith(
-      //   subscriptionStatus: status,
-      //   hasActiveSubscription: hasActive,
-      // );
+      final status = await _getSubscriptionStatusUseCase.execute();
+      final hasActive = status.isActive;
+      state = state.copyWith(
+        subscriptionStatus: status,
+        hasActiveSubscription: hasActive,
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -171,15 +187,12 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     state = state.copyWith(isPurchasing: true, error: null);
 
     try {
-      // TODO: Implement Stripe checkout creation
-      // final session = await _createStripeCheckoutUseCase.execute(request);
-      // state = state.copyWith(
-      //   checkoutSession: session,
-      //   isPurchasing: false,
-      // );
-      // return session;
-      state = state.copyWith(isPurchasing: false);
-      return null;
+      final session = await _createStripeCheckoutUseCase.execute(request);
+      state = state.copyWith(
+        checkoutSession: session,
+        isPurchasing: false,
+      );
+      return session;
     } catch (e) {
       state = state.copyWith(
         isPurchasing: false,
@@ -274,4 +287,16 @@ final restorePurchasesUseCaseProvider = Provider<RestorePurchasesUseCase>((ref) 
 
 final validateReceiptUseCaseProvider = Provider<ValidateReceiptUseCase>((ref) {
   throw UnimplementedError('ValidateReceiptUseCase must be overridden in the provider scope');
+});
+
+final getSuperlikePacksUseCaseProvider = Provider<GetSuperlikePacksUseCase>((ref) {
+  throw UnimplementedError('GetSuperlikePacksUseCase must be overridden in the provider scope');
+});
+
+final getSubscriptionStatusUseCaseProvider = Provider<GetSubscriptionStatusUseCase>((ref) {
+  throw UnimplementedError('GetSubscriptionStatusUseCase must be overridden in the provider scope');
+});
+
+final createStripeCheckoutUseCaseProvider = Provider<CreateStripeCheckoutUseCase>((ref) {
+  throw UnimplementedError('CreateStripeCheckoutUseCase must be overridden in the provider scope');
 });

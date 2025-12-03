@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+import 'package:path/path.dart' as path;
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -293,7 +297,7 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
     final image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      // TODO: Upload attachment and send message
+      await _uploadAttachment(image.path, 'image');
       _toggleAttachmentOptions();
     }
   }
@@ -303,19 +307,139 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
     final video = await picker.pickVideo(source: ImageSource.gallery);
 
     if (video != null) {
-      // TODO: Upload attachment and send message
+      await _uploadAttachment(video.path, 'video');
       _toggleAttachmentOptions();
     }
   }
 
   Future<void> _recordVoice() async {
-    // TODO: Implement voice recording
-    _toggleAttachmentOptions();
+    final record = AudioRecorder();
+
+    // Check permission
+    final hasPermission = await record.hasPermission();
+    if (!hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Microphone permission required')),
+      );
+      _toggleAttachmentOptions();
+      return;
+    }
+
+    try {
+      // Start recording
+      final fileName = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final filePath = '${Directory.systemTemp.path}/$fileName';
+
+      await record.start(const RecordConfig(), path: filePath);
+
+      // Show recording dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _VoiceRecordingDialog(
+          onStop: () async {
+            final path = await record.stop();
+            if (path != null) {
+              await _uploadAttachment(path, 'voice');
+            }
+            _toggleAttachmentOptions();
+          },
+          onCancel: () async {
+            await record.stop();
+            _toggleAttachmentOptions();
+          },
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to start recording: $e')),
+      );
+      _toggleAttachmentOptions();
+    }
   }
 
   Future<void> _pickFile() async {
-    // TODO: Implement file picker
-    _toggleAttachmentOptions();
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        if (file.path != null) {
+          await _uploadAttachment(file.path!, 'file');
+        }
+      }
+      _toggleAttachmentOptions();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick file: $e')),
+      );
+      _toggleAttachmentOptions();
+    }
+  }
+
+  Future<void> _uploadAttachment(String filePath, String type) async {
+    try {
+      // Create attachment object
+      final attachment = MessageAttachment(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: type,
+        filePath: filePath,
+        fileName: path.basename(filePath),
+        fileSize: await File(filePath).length(),
+        mimeType: _getMimeType(filePath, type),
+      );
+
+      // Send message with attachment
+      if (widget.onSendMessage != null) {
+        widget.onSendMessage!(
+          '', // Empty text for attachment-only messages
+          messageType: 'attachment',
+          attachment: attachment,
+        );
+      }
+
+      // Clear text field
+      _messageController.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send attachment: $e')),
+      );
+    }
+  }
+
+  String _getMimeType(String filePath, String type) {
+    final extension = path.extension(filePath).toLowerCase();
+
+    switch (type) {
+      case 'image':
+        return 'image/${extension.replaceAll('.', '')}';
+      case 'video':
+        return 'video/${extension.replaceAll('.', '')}';
+      case 'voice':
+        return 'audio/m4a';
+      case 'file':
+        switch (extension) {
+          case '.pdf':
+            return 'application/pdf';
+          case '.doc':
+            return 'application/msword';
+          case '.docx':
+            return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          case '.txt':
+            return 'text/plain';
+          case '.zip':
+            return 'application/zip';
+          case '.rar':
+            return 'application/x-rar-compressed';
+          default:
+            return 'application/octet-stream';
+        }
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -332,5 +456,123 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
     // Update typing status
     final chatNotifier = ref.read(chatProvider.notifier);
     chatNotifier.setTyping(widget.receiverId, false);
+  }
+}
+
+/// Voice recording dialog
+class _VoiceRecordingDialog extends StatefulWidget {
+  final VoidCallback onStop;
+  final VoidCallback onCancel;
+
+  const _VoiceRecordingDialog({
+    required this.onStop,
+    required this.onCancel,
+  });
+
+  @override
+  State<_VoiceRecordingDialog> createState() => _VoiceRecordingDialogState();
+}
+
+class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return AlertDialog(
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          // Recording indicator
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.feedbackError.withOpacity(0.2),
+                  ),
+                  child: const Icon(
+                    Icons.mic,
+                    color: AppColors.feedbackError,
+                    size: 40,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Recording...',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap stop when finished',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              TextButton.icon(
+                onPressed: widget.onCancel,
+                icon: const Icon(Icons.close, color: AppColors.feedbackError),
+                label: const Text('Cancel'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.feedbackError,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: widget.onStop,
+                icon: const Icon(Icons.stop, color: Colors.white),
+                label: const Text('Stop'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.feedbackError,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

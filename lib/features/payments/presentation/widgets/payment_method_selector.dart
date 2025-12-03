@@ -162,7 +162,8 @@ class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
       ),
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to add payment method screen
+          // Navigate to add payment method screen
+          context.go('/add-payment-method');
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
