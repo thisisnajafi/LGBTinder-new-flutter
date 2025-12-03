@@ -1,0 +1,114 @@
+import '../../../../core/constants/api_endpoints.dart';
+import '../../../../shared/services/api_service.dart';
+import '../models/notification.dart';
+
+/// Notification service
+class NotificationService {
+  final ApiService _apiService;
+
+  NotificationService(this._apiService);
+
+  /// Get all notifications
+  Future<List<Notification>> getNotifications({
+    int? page,
+    int? limit,
+    bool? unreadOnly,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (page != null) queryParams['page'] = page;
+      if (limit != null) queryParams['limit'] = limit;
+      if (unreadOnly != null) queryParams['unread_only'] = unreadOnly;
+
+      final response = await _apiService.get<dynamic>(
+        ApiEndpoints.notifications,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      List<dynamic>? dataList;
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['data'] != null && data['data'] is List) {
+          dataList = data['data'] as List;
+        }
+      } else if (response.data is List) {
+        dataList = response.data as List;
+      }
+
+      if (dataList != null) {
+        return dataList
+            .map((item) => Notification.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadCount() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.notificationsUnreadCount,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return response.data!['count'] as int? ?? response.data!['unread_count'] as int? ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Mark notification as read
+  Future<void> markAsRead(int notificationId) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.notificationsRead(notificationId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Mark all notifications as read
+  Future<void> markAllAsRead() async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.notificationsReadAll,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete a notification
+  Future<void> deleteNotification(int notificationId) async {
+    try {
+      final response = await _apiService.delete<Map<String, dynamic>>(
+        ApiEndpoints.notificationsById(notificationId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
