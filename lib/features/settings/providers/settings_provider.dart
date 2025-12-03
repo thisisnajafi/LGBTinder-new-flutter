@@ -202,9 +202,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   /// Load device sessions
   Future<void> loadDeviceSessions() async {
     try {
-      // TODO: Implement device sessions loading
-      // final sessions = await _settingsRepository.getDeviceSessions();
-      // state = state.copyWith(deviceSessions: sessions);
+      final sessions = await _settingsRepository.getDeviceSessions();
+      state = state.copyWith(deviceSessions: sessions);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -213,10 +212,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   /// Revoke device session
   Future<bool> revokeDeviceSession(int sessionId) async {
     try {
-      // TODO: Implement session revocation
-      // await _settingsRepository.revokeDeviceSession(RevokeSessionRequest(sessionId: sessionId));
-      // final updatedSessions = state.deviceSessions.where((s) => s.id != sessionId).toList();
-      // state = state.copyWith(deviceSessions: updatedSessions);
+      await _settingsRepository.revokeDeviceSession(RevokeSessionRequest(sessionId: sessionId));
+      final updatedSessions = state.deviceSessions.where((s) => s.id != sessionId).toList();
+      state = state.copyWith(deviceSessions: updatedSessions);
       return true;
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -227,12 +225,25 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   /// Trust device session
   Future<bool> trustDeviceSession(int sessionId) async {
     try {
-      // TODO: Implement session trusting
-      // await _settingsRepository.trustDeviceSession(TrustDeviceRequest(sessionId: sessionId));
-      // final updatedSessions = state.deviceSessions.map((s) =>
-      //   s.id == sessionId ? s.copyWith(isTrusted: true) : s
-      // ).toList();
-      // state = state.copyWith(deviceSessions: updatedSessions);
+      await _settingsRepository.trustDeviceSession(TrustDeviceRequest(sessionId: sessionId));
+      final updatedSessions = state.deviceSessions.map((s) =>
+        s.id == sessionId ? DeviceSession(
+          id: s.id,
+          deviceId: s.deviceId,
+          deviceName: s.deviceName,
+          deviceType: s.deviceType,
+          platform: s.platform,
+          browser: s.browser,
+          ipAddress: s.ipAddress,
+          location: s.location,
+          createdAt: s.createdAt,
+          lastActiveAt: s.lastActiveAt,
+          isCurrentDevice: s.isCurrentDevice,
+          isTrusted: true, // Mark as trusted
+          deviceInfo: s.deviceInfo,
+        ) : s
+      ).toList();
+      state = state.copyWith(deviceSessions: updatedSessions);
       return true;
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -243,8 +254,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   /// Clear app cache
   Future<bool> clearCache() async {
     try {
-      // TODO: Implement cache clearing
-      // await _settingsRepository.clearCache();
+      await _settingsRepository.clearCache();
       state = state.copyWith(cacheCleared: true);
       return true;
     } catch (e) {
@@ -256,8 +266,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   /// Reset settings to defaults
   Future<bool> resetSettingsToDefaults() async {
     try {
-      // TODO: Implement settings reset
-      // await _settingsRepository.resetToDefaults();
+      await _settingsRepository.resetToDefaults();
       state = state.copyWith(settingsReset: true);
       return true;
     } catch (e) {
@@ -269,9 +278,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   /// Export user data
   Future<Map<String, dynamic>?> exportUserData() async {
     try {
-      // TODO: Implement data export
-      // return await _settingsRepository.exportUserData();
-      return {};
+      return await _settingsRepository.exportUserData();
     } catch (e) {
       state = state.copyWith(error: e.toString());
       return null;

@@ -233,11 +233,10 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   /// Update unread count
   Future<void> _updateUnreadCount() async {
     try {
-      // TODO: Implement unread count fetching
-      // final unreadCount = await _notificationRepository.getUnreadCount();
-      // state = state.copyWith(unreadCount: unreadCount);
+      final unreadCount = await _notificationRepository.getUnreadCount();
+      state = state.copyWith(unreadCount: unreadCount);
     } catch (e) {
-      // Don't set error for unread count updates
+      // Don't set error for unread count updates, just keep current state
     }
   }
 

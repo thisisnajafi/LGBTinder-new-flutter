@@ -1,19 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/onboarding_preferences.dart';
+import '../data/models/onboarding_progress.dart';
 import '../domain/use_cases/get_onboarding_preferences_use_case.dart';
 import '../domain/use_cases/save_onboarding_preferences_use_case.dart';
 import '../domain/use_cases/complete_onboarding_use_case.dart';
+import '../domain/use_cases/get_onboarding_progress_use_case.dart';
+import '../domain/use_cases/skip_onboarding_use_case.dart';
 
 /// Onboarding provider - manages onboarding flow and preferences
 final onboardingProvider = StateNotifierProvider<OnboardingNotifier, OnboardingState>((ref) {
   final getOnboardingPreferencesUseCase = ref.watch(getOnboardingPreferencesUseCaseProvider);
   final saveOnboardingPreferencesUseCase = ref.watch(saveOnboardingPreferencesUseCaseProvider);
   final completeOnboardingUseCase = ref.watch(completeOnboardingUseCaseProvider);
+  final getOnboardingProgressUseCase = ref.watch(getOnboardingProgressUseCaseProvider);
+  final skipOnboardingUseCase = ref.watch(skipOnboardingUseCaseProvider);
 
   return OnboardingNotifier(
     getOnboardingPreferencesUseCase: getOnboardingPreferencesUseCase,
     saveOnboardingPreferencesUseCase: saveOnboardingPreferencesUseCase,
     completeOnboardingUseCase: completeOnboardingUseCase,
+    getOnboardingProgressUseCase: getOnboardingProgressUseCase,
+    skipOnboardingUseCase: skipOnboardingUseCase,
   );
 });
 
@@ -72,14 +79,20 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   final GetOnboardingPreferencesUseCase _getOnboardingPreferencesUseCase;
   final SaveOnboardingPreferencesUseCase _saveOnboardingPreferencesUseCase;
   final CompleteOnboardingUseCase _completeOnboardingUseCase;
+  final GetOnboardingProgressUseCase _getOnboardingProgressUseCase;
+  final SkipOnboardingUseCase _skipOnboardingUseCase;
 
   OnboardingNotifier({
     required GetOnboardingPreferencesUseCase getOnboardingPreferencesUseCase,
     required SaveOnboardingPreferencesUseCase saveOnboardingPreferencesUseCase,
     required CompleteOnboardingUseCase completeOnboardingUseCase,
+    required GetOnboardingProgressUseCase getOnboardingProgressUseCase,
+    required SkipOnboardingUseCase skipOnboardingUseCase,
   }) : _getOnboardingPreferencesUseCase = getOnboardingPreferencesUseCase,
        _saveOnboardingPreferencesUseCase = saveOnboardingPreferencesUseCase,
        _completeOnboardingUseCase = completeOnboardingUseCase,
+       _getOnboardingProgressUseCase = getOnboardingProgressUseCase,
+       _skipOnboardingUseCase = skipOnboardingUseCase,
        super(OnboardingState());
 
   /// Load onboarding preferences and progress
@@ -88,12 +101,14 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
 
     try {
       final preferences = await _getOnboardingPreferencesUseCase.execute();
-      // TODO: Load progress when progress API is implemented
-      // final progress = await _getOnboardingProgressUseCase.execute();
+      final progress = await _getOnboardingProgressUseCase.execute();
 
       state = state.copyWith(
         preferences: preferences,
-        // progress: progress,
+        progress: progress,
+        currentStep: progress.currentStep,
+        totalSteps: progress.totalSteps,
+        isCompleted: progress.isCompleted,
         isLoading: false,
       );
     } catch (e) {
@@ -204,8 +219,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   /// Skip onboarding
   Future<bool> skipOnboarding() async {
     try {
-      // TODO: Implement skip onboarding
-      // final success = await _skipOnboardingUseCase.execute();
+      await _skipOnboardingUseCase.execute();
       state = state.copyWith(isCompleted: true);
       return true;
     } catch (e) {
@@ -285,4 +299,12 @@ final saveOnboardingPreferencesUseCaseProvider = Provider<SaveOnboardingPreferen
 
 final completeOnboardingUseCaseProvider = Provider<CompleteOnboardingUseCase>((ref) {
   throw UnimplementedError('CompleteOnboardingUseCase must be overridden in the provider scope');
+});
+
+final getOnboardingProgressUseCaseProvider = Provider<GetOnboardingProgressUseCase>((ref) {
+  throw UnimplementedError('GetOnboardingProgressUseCase must be overridden in the provider scope');
+});
+
+final skipOnboardingUseCaseProvider = Provider<SkipOnboardingUseCase>((ref) {
+  throw UnimplementedError('SkipOnboardingUseCase must be overridden in the provider scope');
 });

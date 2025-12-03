@@ -406,6 +406,20 @@ class AuthService {
     }
   }
 
+  /// Get Google OAuth authorization URL
+  Future<ApiResponse<Map<String, dynamic>>> getGoogleAuthUrl() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.googleAuthUrl,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Handle social authentication callback
   Future<SocialAuthResponse> handleSocialCallback(SocialAuthRequest request) async {
     try {

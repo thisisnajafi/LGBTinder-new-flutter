@@ -163,7 +163,11 @@ class ApiEndpoints {
   static String callsSettingsUpdate = '/calls/settings';
   static const String callsQuota = '/calls/quota';
 
-// ==================== User Actions ====================
+  // ==================== Analytics ====================
+  static const String analyticsMyAnalytics = '/analytics/my-analytics';
+  static const String analyticsTrackActivity = '/analytics/track-activity';
+
+  // ==================== User Actions ====================
   static const String blockUser = '/block/user';
   static const String blockList = '/block/list';
   static const String reports = '/reports';

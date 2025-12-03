@@ -1,5 +1,6 @@
 import '../../domain/services/onboarding_service.dart';
 import '../models/onboarding_preferences.dart';
+import '../models/onboarding_progress.dart';
 
 /// Onboarding repository - wraps OnboardingService for use in use cases
 class OnboardingRepository {

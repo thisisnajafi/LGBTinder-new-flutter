@@ -5,17 +5,20 @@ import '../data/models/system_health.dart';
 import '../domain/use_cases/get_admin_analytics_use_case.dart';
 import '../domain/use_cases/manage_admin_users_use_case.dart';
 import '../domain/use_cases/system_management_use_case.dart';
+import '../domain/use_cases/export_analytics_use_case.dart';
 
 /// Admin provider - manages admin dashboard and operations
 final adminProvider = StateNotifierProvider<AdminNotifier, AdminState>((ref) {
   final getAdminAnalyticsUseCase = ref.watch(getAdminAnalyticsUseCaseProvider);
   final manageAdminUsersUseCase = ref.watch(manageAdminUsersUseCaseProvider);
   final systemManagementUseCase = ref.watch(systemManagementUseCaseProvider);
+  final exportAnalyticsUseCase = ref.watch(exportAnalyticsUseCaseProvider);
 
   return AdminNotifier(
     getAdminAnalyticsUseCase: getAdminAnalyticsUseCase,
     manageAdminUsersUseCase: manageAdminUsersUseCase,
     systemManagementUseCase: systemManagementUseCase,
+    exportAnalyticsUseCase: exportAnalyticsUseCase,
   );
 });
 
@@ -97,14 +100,17 @@ class AdminNotifier extends StateNotifier<AdminState> {
   final GetAdminAnalyticsUseCase _getAdminAnalyticsUseCase;
   final ManageAdminUsersUseCase _manageAdminUsersUseCase;
   final SystemManagementUseCase _systemManagementUseCase;
+  final ExportAnalyticsUseCase _exportAnalyticsUseCase;
 
   AdminNotifier({
     required GetAdminAnalyticsUseCase getAdminAnalyticsUseCase,
     required ManageAdminUsersUseCase manageAdminUsersUseCase,
     required SystemManagementUseCase systemManagementUseCase,
+    required ExportAnalyticsUseCase exportAnalyticsUseCase,
   }) : _getAdminAnalyticsUseCase = getAdminAnalyticsUseCase,
        _manageAdminUsersUseCase = manageAdminUsersUseCase,
        _systemManagementUseCase = systemManagementUseCase,
+       _exportAnalyticsUseCase = exportAnalyticsUseCase,
        super(AdminState());
 
   /// Load dashboard data
@@ -239,9 +245,8 @@ class AdminNotifier extends StateNotifier<AdminState> {
   /// Export analytics
   Future<bool> exportAnalytics(ExportAnalyticsRequest request) async {
     try {
-      // TODO: Implement export functionality
-      // final url = await _getAdminAnalyticsUseCase.exportAnalytics(request);
-      // state = state.copyWith(exportUrl: url);
+      final url = await _exportAnalyticsUseCase.execute(request);
+      state = state.copyWith(exportUrl: url);
       return true;
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -374,4 +379,8 @@ final manageAdminUsersUseCaseProvider = Provider<ManageAdminUsersUseCase>((ref) 
 
 final systemManagementUseCaseProvider = Provider<SystemManagementUseCase>((ref) {
   throw UnimplementedError('SystemManagementUseCase must be overridden in the provider scope');
+});
+
+final exportAnalyticsUseCaseProvider = Provider<ExportAnalyticsUseCase>((ref) {
+  throw UnimplementedError('ExportAnalyticsUseCase must be overridden in the provider scope');
 });

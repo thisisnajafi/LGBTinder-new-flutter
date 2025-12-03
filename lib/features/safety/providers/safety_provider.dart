@@ -7,6 +7,8 @@ import '../domain/use_cases/block_user_use_case.dart';
 import '../domain/use_cases/unblock_user_use_case.dart';
 import '../domain/use_cases/report_user_use_case.dart';
 import '../domain/use_cases/add_emergency_contact_use_case.dart';
+import '../domain/use_cases/get_blocked_users_use_case.dart';
+import '../domain/use_cases/get_favorites_use_case.dart';
 
 /// Safety provider - manages safety and user interaction state
 final safetyProvider = StateNotifierProvider<SafetyNotifier, SafetyState>((ref) {
@@ -14,12 +16,16 @@ final safetyProvider = StateNotifierProvider<SafetyNotifier, SafetyState>((ref) 
   final unblockUserUseCase = ref.watch(unblockUserUseCaseProvider);
   final reportUserUseCase = ref.watch(reportUserUseCaseProvider);
   final addEmergencyContactUseCase = ref.watch(addEmergencyContactUseCaseProvider);
+  final getBlockedUsersUseCase = ref.watch(getBlockedUsersUseCaseProvider);
+  final getFavoritesUseCase = ref.watch(getFavoritesUseCaseProvider);
 
   return SafetyNotifier(
     blockUserUseCase: blockUserUseCase,
     unblockUserUseCase: unblockUserUseCase,
     reportUserUseCase: reportUserUseCase,
     addEmergencyContactUseCase: addEmergencyContactUseCase,
+    getBlockedUsersUseCase: getBlockedUsersUseCase,
+    getFavoritesUseCase: getFavoritesUseCase,
   );
 });
 
@@ -86,16 +92,22 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
   final UnblockUserUseCase _unblockUserUseCase;
   final ReportUserUseCase _reportUserUseCase;
   final AddEmergencyContactUseCase _addEmergencyContactUseCase;
+  final GetBlockedUsersUseCase _getBlockedUsersUseCase;
+  final GetFavoritesUseCase _getFavoritesUseCase;
 
   SafetyNotifier({
     required BlockUserUseCase blockUserUseCase,
     required UnblockUserUseCase unblockUserUseCase,
     required ReportUserUseCase reportUserUseCase,
     required AddEmergencyContactUseCase addEmergencyContactUseCase,
+    required GetBlockedUsersUseCase getBlockedUsersUseCase,
+    required GetFavoritesUseCase getFavoritesUseCase,
   }) : _blockUserUseCase = blockUserUseCase,
        _unblockUserUseCase = unblockUserUseCase,
        _reportUserUseCase = reportUserUseCase,
        _addEmergencyContactUseCase = addEmergencyContactUseCase,
+       _getBlockedUsersUseCase = getBlockedUsersUseCase,
+       _getFavoritesUseCase = getFavoritesUseCase,
        super(SafetyState());
 
   /// Load blocked users
@@ -103,15 +115,13 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // TODO: Implement blocked users loading
-      // final blockedUsers = await _getBlockedUsersUseCase.execute();
-      // final blockedMap = {for (var user in blockedUsers) user.blockedUserId: true};
-      // state = state.copyWith(
-      //   blockedUsers: blockedUsers,
-      //   isUserBlocked: blockedMap,
-      //   isLoading: false,
-      // );
-      state = state.copyWith(isLoading: false);
+      final blockedUsers = await _getBlockedUsersUseCase.execute();
+      final blockedMap = {for (var user in blockedUsers) user.blockedUserId: true};
+      state = state.copyWith(
+        blockedUsers: blockedUsers,
+        isUserBlocked: blockedMap,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -123,13 +133,12 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
   /// Load favorites
   Future<void> loadFavorites() async {
     try {
-      // TODO: Implement favorites loading
-      // final favorites = await _getFavoritesUseCase.execute();
-      // final favoritesMap = {for (var user in favorites) user.favoriteUserId: true};
-      // state = state.copyWith(
-      //   favoriteUsers: favorites,
-      //   isUserFavorited: favoritesMap,
-      // );
+      final favorites = await _getFavoritesUseCase.execute();
+      final favoritesMap = {for (var user in favorites) user.favoriteUserId: true};
+      state = state.copyWith(
+        favoriteUsers: favorites,
+        isUserFavorited: favoritesMap,
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -336,4 +345,12 @@ final reportUserUseCaseProvider = Provider<ReportUserUseCase>((ref) {
 
 final addEmergencyContactUseCaseProvider = Provider<AddEmergencyContactUseCase>((ref) {
   throw UnimplementedError('AddEmergencyContactUseCase must be overridden in the provider scope');
+});
+
+final getBlockedUsersUseCaseProvider = Provider<GetBlockedUsersUseCase>((ref) {
+  throw UnimplementedError('GetBlockedUsersUseCase must be overridden in the provider scope');
+});
+
+final getFavoritesUseCaseProvider = Provider<GetFavoritesUseCase>((ref) {
+  throw UnimplementedError('GetFavoritesUseCase must be overridden in the provider scope');
 });
