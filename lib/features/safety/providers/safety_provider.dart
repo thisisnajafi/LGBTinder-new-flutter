@@ -9,6 +9,7 @@ import '../domain/use_cases/report_user_use_case.dart';
 import '../domain/use_cases/add_emergency_contact_use_case.dart';
 import '../domain/use_cases/get_blocked_users_use_case.dart';
 import '../domain/use_cases/get_favorites_use_case.dart';
+import '../domain/use_cases/get_emergency_contacts_use_case.dart';
 
 /// Safety provider - manages safety and user interaction state
 final safetyProvider = StateNotifierProvider<SafetyNotifier, SafetyState>((ref) {
@@ -18,6 +19,7 @@ final safetyProvider = StateNotifierProvider<SafetyNotifier, SafetyState>((ref) 
   final addEmergencyContactUseCase = ref.watch(addEmergencyContactUseCaseProvider);
   final getBlockedUsersUseCase = ref.watch(getBlockedUsersUseCaseProvider);
   final getFavoritesUseCase = ref.watch(getFavoritesUseCaseProvider);
+  final getEmergencyContactsUseCase = ref.watch(getEmergencyContactsUseCaseProvider);
 
   return SafetyNotifier(
     blockUserUseCase: blockUserUseCase,
@@ -26,6 +28,7 @@ final safetyProvider = StateNotifierProvider<SafetyNotifier, SafetyState>((ref) 
     addEmergencyContactUseCase: addEmergencyContactUseCase,
     getBlockedUsersUseCase: getBlockedUsersUseCase,
     getFavoritesUseCase: getFavoritesUseCase,
+    getEmergencyContactsUseCase: getEmergencyContactsUseCase,
   );
 });
 
