@@ -54,11 +54,6 @@ class CallRepository {
     return await _callService.getActiveCall();
   }
 
-  /// Get call by ID
-  Future<Call> getCall(String callId) async {
-    return await _callService.getCall(callId);
-  }
-
   /// Update call settings
   Future<CallSettings> updateCallSettings(UpdateCallSettingsRequest request) async {
     return await _callService.updateCallSettings(request);

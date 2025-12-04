@@ -23,6 +23,7 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../screens/blocked_users_screen.dart';
 import '../features/matching/presentation/screens/matches_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
+import '../screens/billing_history_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';

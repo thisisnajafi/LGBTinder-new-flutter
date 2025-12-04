@@ -156,6 +156,7 @@ class ApiEndpoints {
   static const String adminAppConfiguration = '/admin/app/configuration';
 
   // ==================== Calls ====================
+  static const String calls = '/calls';
   static const String callsInitiate = '/calls/initiate';
   static String callsAccept(String callId) => '/calls/$callId/accept';
   static String callsDecline(String callId) => '/calls/$callId/decline';

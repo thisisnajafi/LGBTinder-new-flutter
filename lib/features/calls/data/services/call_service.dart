@@ -84,24 +84,6 @@ class CallService {
     }
   }
 
-  /// Get a specific call by ID
-  Future<Call> getCall(String callId) async {
-    try {
-      final response = await _apiService.get<Map<String, dynamic>>(
-        '${ApiEndpoints.calls}/${callId}',
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return Call.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   /// Get call history
   Future<List<Call>> getCallHistory({
     int? page,

@@ -14,6 +14,7 @@ import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/providers/api_providers.dart';
 import '../../features/profile/providers/profile_provider.dart';
+import '../../features/profile/providers/profile_providers.dart';
 
 /// Account management screen - Manage account settings
 class AccountManagementScreen extends ConsumerStatefulWidget {

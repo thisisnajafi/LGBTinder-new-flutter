@@ -64,5 +64,22 @@ class ProfileService {
       rethrow;
     }
   }
+
+  /// Verify email change with verification code
+  Future<void> verifyEmailChange(String verificationCode) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.verifyEmailChange,
+        data: {'verification_code': verificationCode},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 

@@ -38,30 +38,21 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
     });
 
     try {
-      final response = await ref.read(paymentServiceProvider).getPaymentHistory();
+      final historyList = await ref.read(paymentServiceProvider).getPaymentHistory();
 
-      if (response.isSuccess && response.data != null) {
-        final historyData = response.data!['history'] as List<dynamic>? ?? [];
-        setState(() {
-          _transactions = historyData.map((item) {
-            final data = item as Map<String, dynamic>;
-            return {
-              'id': data['id'] ?? '',
-              'date': DateTime.parse(data['date'] ?? DateTime.now().toIso8601String()),
-              'description': data['description'] ?? 'Payment',
-              'amount': (data['amount'] as num?)?.toDouble() ?? 0.0,
-              'currency': data['currency'] ?? 'USD',
-              'status': data['status'] ?? 'completed',
-              'method': data['method'] ?? 'card',
-            };
-          }).toList();
-        });
-      } else {
-        // Handle error - keep empty list
-        setState(() {
-          _transactions = [];
-        });
-      }
+      setState(() {
+        _transactions = historyList.map((item) {
+          return {
+            'id': item.id,
+            'date': item.createdAt,
+            'description': item.description,
+            'amount': item.amount,
+            'currency': item.currency,
+            'status': item.status,
+            'method': item.type, // Use type as method (subscription, superlike_pack, etc.)
+          };
+        }).toList();
+      });
     } catch (e) {
       // Handle error - keep empty list
       setState(() {
@@ -144,14 +135,14 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                                 Expanded(
                                   child: Text(
                                     transaction['description'],
-                                    style: AppTypography.bodyTextBold.copyWith(color: textColor),
+                                    style: AppTypography.bodyLarge.copyWith(color: textColor, fontWeight: FontWeight.w600),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 Text(
                                   _formatCurrency(transaction['amount'], transaction['currency']),
-                                  style: AppTypography.bodyTextBold.copyWith(color: textColor),
+                                  style: AppTypography.bodyLarge.copyWith(color: textColor, fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
@@ -161,11 +152,11 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                               children: [
                                 Text(
                                   _formatDate(transaction['date']),
-                                  style: AppTypography.bodyTextSmall.copyWith(color: secondaryTextColor),
+                                  style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
                                 ),
                                 Text(
                                   transaction['method'],
-                                  style: AppTypography.bodyTextSmall.copyWith(color: secondaryTextColor),
+                                  style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
                                 ),
                               ],
                             ),
@@ -180,7 +171,7 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                                 ),
                                 child: Text(
                                   transaction['status'],
-                                  style: AppTypography.bodyTextSmall.copyWith(color: _getStatusColor(transaction['status'])),
+                                  style: AppTypography.bodySmall.copyWith(color: _getStatusColor(transaction['status'])),
                                 ),
                               ),
                             ),
