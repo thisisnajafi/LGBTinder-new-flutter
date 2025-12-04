@@ -239,6 +239,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<int> _getPinnedMessagesCount() async {
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      final count = await chatService.getPinnedMessagesCount(widget.userId);
+      return count;
+    } catch (e) {
+      // Return 0 on error - pinned count is not critical
+      return 0;
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -398,15 +409,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       body: Column(
         children: [
           // Pinned messages banner
-          PinnedMessagesBanner(
-            pinnedCount: 0, // TODO: Get pinned count from API - placeholder for now
-            onTap: () {
-              // Scroll to pinned messages - implementation needed
-              // This would scroll to the pinned messages section
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Scroll to pinned messages functionality will be implemented'),
-                ),
+          FutureBuilder<int>(
+            future: _getPinnedMessagesCount(),
+            builder: (context, snapshot) {
+              final pinnedCount = snapshot.data ?? 0;
+              if (pinnedCount == 0) {
+                return const SizedBox.shrink();
+              }
+              return PinnedMessagesBanner(
+                pinnedCount: pinnedCount,
+                onTap: () {
+                  // Scroll to pinned messages - implementation needed
+                  // This would scroll to the pinned messages section
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Scroll to pinned messages functionality will be implemented'),
+                    ),
+                  );
+                },
               );
             },
           ),

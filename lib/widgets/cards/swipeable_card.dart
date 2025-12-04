@@ -195,7 +195,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         icon: AppSvgIcon(
-                          assetPath: AppIcons.more, // TODO: Check if this icon exists - using AppIcons.more
+                          assetPath: AppIcons.more, // ✅ Verified: AppIcons.more exists
                           size: 16,
                           color: Colors.white,
                         ),

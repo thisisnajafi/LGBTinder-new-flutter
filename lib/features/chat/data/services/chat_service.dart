@@ -227,5 +227,25 @@ class ChatService {
       rethrow;
     }
   }
+
+  /// Get pinned messages count for a conversation
+  Future<int> getPinnedMessagesCount(int userId) async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.chatPinnedCount,
+        queryParameters: {'user_id': userId},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        return data?['pinned_count'] as int? ?? 0;
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 

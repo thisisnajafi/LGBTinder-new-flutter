@@ -398,7 +398,15 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
         _isLoading = false;
       });
 
-      // TODO: Initialize WebRTC connection for accepted call - requires WebRTC integration
+      // Initialize Agora for accepted call
+      if (_channelName != null && _token != null) {
+        await _initializeAgoraAndJoinChannel();
+      } else {
+        // For incoming calls, fetch call details to get channel/token
+        if (_currentCallId != null) {
+          await _fetchCallDetailsAndJoin();
+        }
+      }
 
     } on ApiError catch (e) {
       setState(() {
@@ -440,6 +448,133 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _fetchCallDetailsAndJoin() async {
+    try {
+      final callRepository = ref.read(callRepositoryProvider);
+      final call = await callRepository.getCall(_currentCallId.toString());
+
+      if (call.callId.isNotEmpty) {
+        _channelName = call.callId;
+        _token = call.metadata['agora_token'] as String?;
+        _agoraToken = _token;
+
+        if (_channelName != null && _token != null) {
+          await _initializeAgoraAndJoinChannel();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get call details: $e'),
+            backgroundColor: AppColors.notificationRed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _minimizeCall() {
+    // Create a floating call overlay
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 50,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 280,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                AvatarWithStatus(
+                  imageUrl: widget.profileImage,
+                  name: widget.userName,
+                  isOnline: _isCallActive,
+                  size: 40,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.userName,
+                        style: AppTypography.labelLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _isCallActive ? 'Video call in progress' : 'Connecting...',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isMuted ? Icons.mic_off : Icons.mic,
+                    color: _isMuted ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: _toggleAudio,
+                  iconSize: 20,
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isVideoOff ? Icons.videocam_off : Icons.videocam,
+                    color: _isVideoOff ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: _toggleVideo,
+                  iconSize: 20,
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.call_end,
+                    color: AppColors.notificationRed,
+                  ),
+                  onPressed: () {
+                    overlayEntry.remove();
+                    _endCall();
+                  },
+                  iconSize: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Insert the overlay
+    Overlay.of(context).insert(overlayEntry);
+
+    // Navigate back to previous screen (usually chat)
+    Navigator.of(context).pop();
+
+    // Auto-remove overlay after 30 seconds if call ends
+    Future.delayed(const Duration(seconds: 30), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
   }
 
   @override
@@ -574,14 +709,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                   ),
                   IconButton(
                     icon: Icon(Icons.minimize, color: textColor),
-                    onPressed: () {
-                      // Minimize call - implementation needed
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Minimize call functionality will be implemented'),
-                        ),
-                      );
-                    },
+                    onPressed: _minimizeCall,
                   ),
                 ],
               ),

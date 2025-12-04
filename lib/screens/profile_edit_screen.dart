@@ -12,6 +12,8 @@ import '../widgets/profile/avatar_upload.dart';
 import '../widgets/profile/photo_gallery.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
+import '../features/reference_data/providers/reference_data_providers.dart';
+import '../features/reference_data/data/models/reference_item.dart';
 
 /// Profile edit screen - Full profile editing interface
 class ProfileEditScreen extends ConsumerStatefulWidget {
@@ -128,6 +130,209 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     }
   }
 
+  // Helper methods to convert selected string titles to IDs
+  List<int> _convertTitlesToIds(List<String> selectedTitles, List<ReferenceItem> referenceItems) {
+    return selectedTitles.map((title) {
+      final item = referenceItems.firstWhere(
+        (item) => item.title == title,
+        orElse: () => ReferenceItem(id: 0, title: ''),
+      );
+      return item.id;
+    }).where((id) => id != 0).toList();
+  }
+
+  int? _convertTitleToId(String? selectedTitle, List<ReferenceItem> referenceItems) {
+    if (selectedTitle == null || selectedTitle.isEmpty) return null;
+
+    final item = referenceItems.firstWhere(
+      (item) => item.title == selectedTitle,
+      orElse: () => ReferenceItem(id: 0, title: ''),
+    );
+    return item.id == 0 ? null : item.id;
+  }
+
+  List<String> _convertIdsToTitles(List<int> ids, List<ReferenceItem> referenceItems) {
+    return ids.map((id) {
+      final item = referenceItems.firstWhere(
+        (item) => item.id == id,
+        orElse: () => ReferenceItem(id: 0, title: ''),
+      );
+      return item.title.isNotEmpty ? item.title : '';
+    }).where((title) => title.isNotEmpty).toList();
+  }
+
+  String? _convertIdToTitle(int? id, List<ReferenceItem> referenceItems) {
+    if (id == null) return null;
+
+    final item = referenceItems.firstWhere(
+      (item) => item.id == id,
+      orElse: () => ReferenceItem(id: 0, title: ''),
+    );
+    return item.title.isNotEmpty ? item.title : null;
+  }
+
+  Future<void> _loadProfileFromApi() async {
+    // TODO: Load profile from API and convert IDs to titles
+    // GET /api/profile
+    // This method will load profile data and convert IDs back to display titles
+
+    // Load all reference data
+    final interestsAsync = ref.read(interestsProvider);
+    final jobsAsync = ref.read(jobsProvider);
+    final educationAsync = ref.read(educationLevelsProvider);
+    final languagesAsync = ref.read(languagesProvider);
+    final musicGenresAsync = ref.read(musicGenresProvider);
+    final relationshipGoalsAsync = ref.read(relationshipGoalsProvider);
+    final gendersAsync = ref.read(gendersProvider);
+    final preferredGendersAsync = ref.read(preferredGendersProvider);
+
+    // Wait for all data to load
+    final results = await Future.wait([
+      interestsAsync,
+      jobsAsync,
+      educationAsync,
+      languagesAsync,
+      musicGenresAsync,
+      relationshipGoalsAsync,
+      gendersAsync,
+      preferredGendersAsync,
+    ]);
+
+    final interests = results[0] as List<ReferenceItem>;
+    final jobs = results[1] as List<ReferenceItem>;
+    final educationLevels = results[2] as List<ReferenceItem>;
+    final languages = results[3] as List<ReferenceItem>;
+    final musicGenres = results[4] as List<ReferenceItem>;
+    final relationshipGoals = results[5] as List<ReferenceItem>;
+    final genders = results[6] as List<ReferenceItem>;
+    final preferredGenders = results[7] as List<ReferenceItem>;
+
+    // TODO: Fetch profile data from API
+    // For now, simulate API response with IDs
+    final apiProfileData = {
+      'first_name': 'John',
+      'last_name': 'Doe',
+      'profile_bio': 'Love music and travel',
+      'city': 'New York',
+      'country': 'United States',
+      'birth_date': '1990-01-01',
+      'interest_ids': [1, 2], // IDs from API
+      'job_ids': [1], // IDs from API
+      'education_ids': [1], // IDs from API
+      'language_ids': [1, 2], // IDs from API
+      'music_genre_ids': [1, 2], // IDs from API
+      'relationship_goal_ids': [1], // IDs from API
+      'gender_id': 1, // ID from API
+      'preferred_gender_ids': [1, 2], // IDs from API
+      'height': 180,
+      'weight': 75,
+    };
+
+    // Convert IDs back to titles for display
+    final interestTitles = _convertIdsToTitles(apiProfileData['interest_ids'] as List<int>, interests);
+    final jobTitles = _convertIdsToTitles(apiProfileData['job_ids'] as List<int>, jobs);
+    final educationTitles = _convertIdsToTitles(apiProfileData['education_ids'] as List<int>, educationLevels);
+    final languageTitles = _convertIdsToTitles(apiProfileData['language_ids'] as List<int>, languages);
+    final musicGenreTitles = _convertIdsToTitles(apiProfileData['music_genre_ids'] as List<int>, musicGenres);
+    final relationshipGoalTitles = _convertIdsToTitles(apiProfileData['relationship_goal_ids'] as List<int>, relationshipGoals);
+    final genderTitle = _convertIdToTitle(apiProfileData['gender_id'] as int?, genders);
+    final preferredGenderTitles = _convertIdsToTitles(apiProfileData['preferred_gender_ids'] as List<int>, preferredGenders);
+
+    // Update state with converted titles
+    setState(() {
+      _firstNameController.text = apiProfileData['first_name'] as String? ?? '';
+      _lastNameController.text = apiProfileData['last_name'] as String? ?? '';
+      _bioController.text = apiProfileData['profile_bio'] as String? ?? '';
+      _cityController.text = apiProfileData['city'] as String? ?? '';
+      _countryController.text = apiProfileData['country'] as String? ?? '';
+      _birthDate = apiProfileData['birth_date'] != null
+          ? DateTime.parse(apiProfileData['birth_date'] as String)
+          : null;
+      _selectedInterests = interestTitles;
+      _selectedJobs = jobTitles;
+      _selectedEducations = educationTitles;
+      _selectedLanguages = languageTitles;
+      _selectedMusicGenres = musicGenreTitles;
+      _selectedRelationGoals = relationshipGoalTitles;
+      _selectedGender = genderTitle;
+      _selectedPreferredGenders = preferredGenderTitles;
+      _height = apiProfileData['height'] as int?;
+      _weight = apiProfileData['weight'] as int?;
+    });
+  }
+
+  Future<Map<String, dynamic>> _prepareProfileData() async {
+    // Load all reference data
+    final interestsAsync = ref.read(interestsProvider);
+    final jobsAsync = ref.read(jobsProvider);
+    final educationAsync = ref.read(educationLevelsProvider);
+    final languagesAsync = ref.read(languagesProvider);
+    final musicGenresAsync = ref.read(musicGenresProvider);
+    final relationshipGoalsAsync = ref.read(relationshipGoalsProvider);
+    final gendersAsync = ref.read(gendersProvider);
+    final preferredGendersAsync = ref.read(preferredGendersProvider);
+
+    // Wait for all data to load
+    final results = await Future.wait([
+      interestsAsync,
+      jobsAsync,
+      educationAsync,
+      languagesAsync,
+      musicGenresAsync,
+      relationshipGoalsAsync,
+      gendersAsync,
+      preferredGendersAsync,
+    ]);
+
+    final interests = results[0] as List<ReferenceItem>;
+    final jobs = results[1] as List<ReferenceItem>;
+    final educationLevels = results[2] as List<ReferenceItem>;
+    final languages = results[3] as List<ReferenceItem>;
+    final musicGenres = results[4] as List<ReferenceItem>;
+    final relationshipGoals = results[5] as List<ReferenceItem>;
+    final genders = results[6] as List<ReferenceItem>;
+    final preferredGenders = results[7] as List<ReferenceItem>;
+
+    // Convert selected titles to IDs
+    final interestIds = _convertTitlesToIds(_selectedInterests, interests);
+    final jobIds = _convertTitlesToIds(_selectedJobs, jobs);
+    final educationIds = _convertTitlesToIds(_selectedEducations, educationLevels);
+    final languageIds = _convertTitlesToIds(_selectedLanguages, languages);
+    final musicGenreIds = _convertTitlesToIds(_selectedMusicGenres, musicGenres);
+    final relationshipGoalIds = _convertTitlesToIds(_selectedRelationGoals, relationshipGoals);
+    final genderId = _convertTitleToId(_selectedGender, genders);
+    final preferredGenderIds = _convertTitlesToIds(_selectedPreferredGenders, preferredGenders);
+
+    return {
+      'first_name': _firstNameController.text.trim(),
+      'last_name': _lastNameController.text.trim(),
+      'profile_bio': _bioController.text.trim(),
+      'city': _cityController.text.trim(),
+      'country': _countryController.text.trim(),
+      'birth_date': _birthDate?.toIso8601String().split('T')[0],
+      'interest_ids': interestIds,
+      'job_ids': jobIds,
+      'education_ids': educationIds,
+      'language_ids': languageIds,
+      'music_genre_ids': musicGenreIds,
+      'relationship_goal_ids': relationshipGoalIds,
+      'gender_id': genderId,
+      'preferred_gender_ids': preferredGenderIds,
+      'height': _height,
+      'weight': _weight,
+      'smoke': _smoke,
+      'drink': _drink,
+      'exercise': _exercise,
+      'religion': _religion,
+      'political_views': _politicalViews,
+      'zodiac_sign': _zodiacSign,
+      'education_level': _educationLevel,
+      'work_status': _workStatus,
+      'income_range': _incomeRange,
+      'relationship_status': _relationshipStatus,
+    };
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -138,23 +343,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     });
 
     try {
+      // Prepare profile data with proper ID conversions
+      final profileData = await _prepareProfileData();
+
       // TODO: Save profile via API
       // PUT /api/profile
-      final profileData = {
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'profile_bio': _bioController.text.trim(),
-        'city': _cityController.text.trim(),
-        'country': _countryController.text.trim(),
-        'birth_date': _birthDate?.toIso8601String().split('T')[0],
-        'interest_ids': _selectedInterests, // TODO: Convert to IDs
-        'job_ids': _selectedJobs, // TODO: Convert to IDs
-        'education_ids': _selectedEducations, // TODO: Convert to IDs
-        'language_ids': _selectedLanguages, // TODO: Convert to IDs
-        'music_genre_ids': _selectedMusicGenres, // TODO: Convert to IDs
-        'relationship_goal_ids': _selectedRelationGoals, // TODO: Convert to IDs
-        'gender_id': _selectedGender, // TODO: Convert to ID
-        'preferred_gender_ids': _selectedPreferredGenders, // TODO: Convert to IDs
+      // For now, just show success message
         'height': _height,
         'weight': _weight,
         'smoke': _smoke,

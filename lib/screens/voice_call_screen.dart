@@ -201,20 +201,52 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     }
   }
 
-  void _toggleMute() {
+  Future<void> _toggleMute() async {
+    final newState = !_isMuted;
     setState(() {
-      _isMuted = !_isMuted;
+      _isMuted = newState;
     });
-    // TODO: Toggle mute via WebRTC - requires WebRTC integration
-    // For now, just UI state change
+
+    try {
+      await _agoraService.toggleAudio(!newState); // Pass enabled state
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        _isMuted = !newState;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to toggle mute: $e'),
+            backgroundColor: AppColors.notificationRed,
+          ),
+        );
+      }
+    }
   }
 
-  void _toggleSpeaker() {
+  Future<void> _toggleSpeaker() async {
+    final newState = !_isSpeakerOn;
     setState(() {
-      _isSpeakerOn = !_isSpeakerOn;
+      _isSpeakerOn = newState;
     });
-    // TODO: Toggle speaker via WebRTC - requires WebRTC integration
-    // For now, just UI state change
+
+    try {
+      await _agoraService.setSpeakerphoneEnabled(newState);
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        _isSpeakerOn = !newState;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to toggle speaker: $e'),
+            backgroundColor: AppColors.notificationRed,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _acceptCall() async {
@@ -240,11 +272,14 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (_channelName != null && _token != null) {
         await _initializeAgoraAndJoinChannel();
       } else {
-        // For incoming calls, we might need to get call details differently
-        // TODO: Handle incoming call channel/token retrieval - requires call provider integration
-        setState(() {
-          _isCallActive = true;
-        });
+        // For incoming calls, fetch call details to get channel/token
+        if (_currentCallId != null) {
+          await _fetchCallDetailsAndJoin();
+        } else {
+          setState(() {
+            _isCallActive = true;
+          });
+        }
       }
 
     } on ApiError catch (e) {
@@ -364,6 +399,125 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     }
   }
 
+  Future<void> _fetchCallDetailsAndJoin() async {
+    try {
+      final callRepository = ref.read(callRepositoryProvider);
+      final call = await callRepository.getCall(_currentCallId.toString());
+
+      if (call.callId.isNotEmpty) {
+        _channelName = call.callId;
+        _token = call.metadata['agora_token'] as String?;
+        _agoraToken = _token;
+
+        if (_channelName != null && _token != null) {
+          await _initializeAgoraAndJoinChannel();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get call details: $e'),
+            backgroundColor: AppColors.notificationRed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _minimizeCall() {
+    // Create a floating call overlay
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 50,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 280,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                AvatarWithStatus(
+                  imageUrl: widget.profileImage,
+                  name: widget.userName,
+                  isOnline: _isCallActive,
+                  size: 40,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.userName,
+                        style: AppTypography.labelLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        _isCallActive ? 'Call in progress' : 'Connecting...',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    _isMuted ? Icons.mic_off : Icons.mic,
+                    color: _isMuted ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: _toggleMute,
+                  iconSize: 20,
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.call_end,
+                    color: AppColors.notificationRed,
+                  ),
+                  onPressed: () {
+                    overlayEntry.remove();
+                    _endCall();
+                  },
+                  iconSize: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Insert the overlay
+    Overlay.of(context).insert(overlayEntry);
+
+    // Navigate back to previous screen (usually chat)
+    Navigator.of(context).pop();
+
+    // Auto-remove overlay after 30 seconds if call ends
+    Future.delayed(const Duration(seconds: 30), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
   @override
   void dispose() {
     // Stop monitoring if still active
@@ -402,14 +556,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                   ),
                   IconButton(
                     icon: Icon(Icons.minimize, color: textColor),
-                    onPressed: () {
-                      // Minimize call - implementation needed
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Minimize call functionality will be implemented'),
-                        ),
-                      );
-                    },
+                    onPressed: _minimizeCall,
                   ),
                 ],
               ),

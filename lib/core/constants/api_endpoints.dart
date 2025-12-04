@@ -101,6 +101,7 @@ class ApiEndpoints {
   static const String chatUnreadCount = '/chat/unread-count';
   static const String chatAttachmentUpload = '/chat/attachment/upload';
   static const String chatOnlineStatus = '/chat/online-status';
+  static const String chatPinnedCount = '/chat/pinned-count';
 
   // ==================== Notifications ====================
   static const String notifications = '/notifications';
@@ -119,7 +120,10 @@ class ApiEndpoints {
   static const String deviceSessions = '/device-sessions';
   static String deviceSessionById(int id) => '/device-sessions/$id';
   static String deviceSessionTrust(int id) => '/device-sessions/$id/trust';
-  static const String changePassword = '/user/change-password';
+  static const String changePassword = '/auth/change-password';
+  static const String changeEmail = '/profile/change-email';
+  static const String verifyEmailChange = '/profile/verify-email-change';
+  static const String deleteAccount = '/auth/delete-account';
   static const String deleteAccount = '/user/delete-account';
   static const String exportData = '/user/export-data';
   static const String clearCache = '/user/clear-cache';

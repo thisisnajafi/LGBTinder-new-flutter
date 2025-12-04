@@ -184,7 +184,9 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
                       SizedBox(width: AppSpacing.spacingXS),
                       Expanded(
                         child: Text(
-                          'User ${isOutgoing ? call.receiverId : call.callerId}', // TODO: Fetch user name from profile API - requires profile provider integration
+                          isOutgoing
+                              ? '${call.receiver?.firstName ?? 'Unknown'} ${call.receiver?.lastName ?? 'User'}'
+                              : '${call.caller?.firstName ?? 'Unknown'} ${call.caller?.lastName ?? 'User'}',
                           style: AppTypography.h3.copyWith(
                             color: isMissed ? AppColors.notificationRed : textColor,
                             fontWeight: FontWeight.w600,
@@ -217,7 +219,7 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formatTime(call.startedAt ?? DateTime.now()), // TODO: Use proper timestamp from API - requires API integration
+                  _formatTime(call.startedAt ?? DateTime.now()),
                   style: AppTypography.caption.copyWith(
                     color: secondaryTextColor,
                   ),
