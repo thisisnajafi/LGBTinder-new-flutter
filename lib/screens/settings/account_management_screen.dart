@@ -11,6 +11,7 @@ import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/confirmation_dialog.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/constants/api_endpoints.dart';
 
 /// Account management screen - Manage account settings
 class AccountManagementScreen extends ConsumerStatefulWidget {
@@ -50,21 +51,28 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     });
 
     try {
-      // TODO: Change email via API
-      await Future.delayed(const Duration(seconds: 1));
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.changeEmail,
+        data: {'email': newEmail},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
       if (mounted) {
         AlertDialogCustom.show(
           context,
-          title: 'Email Updated',
-          message: 'A verification email has been sent to $newEmail',
-          icon: Icons.check_circle,
-          iconColor: AppColors.onlineGreen,
+          title: 'Verification Code Sent',
+          message: 'A verification code has been sent to $newEmail. Please check your email and enter the code below.',
+          icon: Icons.email,
+          iconColor: AppColors.primaryLight,
         );
+        // TODO: Show verification code input dialog
+        // This would open a dialog to enter the 6-digit code
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update email: $e')),
+          SnackBar(content: Text('Failed to send verification code: $e')),
         );
       }
     } finally {
@@ -96,8 +104,17 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     });
 
     try {
-      // TODO: Change password via API
-      await Future.delayed(const Duration(seconds: 1));
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.changePassword,
+        data: {
+          'current_password': _currentPasswordController.text,
+          'password': _newPasswordController.text,
+          'password_confirmation': _confirmPasswordController.text,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
       if (mounted) {
         _currentPasswordController.clear();
         _newPasswordController.clear();
@@ -141,11 +158,23 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       });
 
       try {
-        // TODO: Delete account via API
-        await Future.delayed(const Duration(seconds: 2));
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.delete<Map<String, dynamic>>(
+          ApiEndpoints.deleteAccount,
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
         if (mounted) {
-          // TODO: Navigate to login/welcome screen
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          AlertDialogCustom.show(
+            context,
+            title: 'Account Deleted',
+            message: 'Your account has been permanently deleted. You will now be logged out.',
+            icon: Icons.delete_forever,
+            iconColor: AppColors.notificationRed,
+          ).then((_) {
+            // Navigate to login/welcome screen and clear auth state
+            Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+          });
         }
       } catch (e) {
         if (mounted) {

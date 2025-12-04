@@ -124,6 +124,11 @@ class ApiEndpoints {
   static const String changeEmail = '/profile/change-email';
   static const String verifyEmailChange = '/profile/verify-email-change';
   static const String deleteAccount = '/auth/delete-account';
+  static const String subscriptionStatus = '/subscriptions/status';
+  static const String subscriptionCancel = '/subscriptions/cancel';
+  static const String subscriptionReactivate = '/subscriptions/reactivate';
+  static const String userPaymentMethods = '/user/payment-methods';
+  static const String paymentMethodsList = '/payment-methods';
   static const String deleteAccount = '/user/delete-account';
   static const String exportData = '/user/export-data';
   static const String clearCache = '/user/clear-cache';

@@ -11,6 +11,7 @@ import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
+import '../core/constants/api_endpoints.dart';
 import 'add_payment_method_screen.dart';
 
 /// Payment methods screen - Manage payment methods
@@ -37,46 +38,57 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     });
 
     try {
-      // TODO: Load payment methods from API
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _paymentMethods = [
-          {
-            'id': 'card_1',
-            'type': 'card',
-            'last4': '4242',
-            'brand': 'Visa',
-            'expiry': '12/25',
-            'isDefault': true,
-          },
-          {
-            'id': 'card_2',
-            'type': 'card',
-            'last4': '8888',
-            'brand': 'Mastercard',
-            'expiry': '06/26',
-            'isDefault': false,
-          },
-        ];
-        _isLoading = false;
-      });
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.userPaymentMethods,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as List<dynamic>? ?? [];
+        setState(() {
+          _paymentMethods = data.map((method) => method as Map<String, dynamic>).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _paymentMethods = [];
+          _isLoading = false;
+        });
+      }
     } catch (e) {
+      // On error, set empty list
       setState(() {
+        _paymentMethods = [];
         _isLoading = false;
       });
     }
   }
 
   Future<void> _handleSetDefault(String id) async {
-    // TODO: Set default payment method via API
-    setState(() {
-      for (var method in _paymentMethods) {
-        method['isDefault'] = method['id'] == id;
-      }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Default payment method updated')),
-    );
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.patch<Map<String, dynamic>>(
+        ApiEndpoints.userPaymentMethods,
+        data: {'payment_method_id': id},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      // Update local state
+      setState(() {
+        for (var method in _paymentMethods) {
+          method['isDefault'] = method['id'] == id;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Default payment method updated')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update default payment method: $e')),
+      );
+    }
   }
 
   Future<void> _handleDelete(String id) async {
@@ -90,13 +102,26 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     );
 
     if (confirmed == true) {
-      // TODO: Delete payment method via API
-      setState(() {
-        _paymentMethods.removeWhere((method) => method['id'] == id);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment method removed')),
-      );
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.delete<Map<String, dynamic>>(
+          '${ApiEndpoints.userPaymentMethods}/$id',
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        // Update local state
+        setState(() {
+          _paymentMethods.removeWhere((method) => method['id'] == id);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment method removed')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove payment method: $e')),
+        );
+      }
     }
   }
 

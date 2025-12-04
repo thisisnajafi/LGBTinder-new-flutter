@@ -12,6 +12,7 @@ import '../widgets/badges/premium_badge.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
+import '../core/constants/api_endpoints.dart';
 import 'premium/premium_subscription_screen.dart';
 
 /// Subscription management screen - Manage premium subscription
@@ -35,13 +36,33 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
   }
 
   Future<void> _loadSubscription() async {
-    // TODO: Load subscription from API
-    setState(() {
-      _isPremium = true;
-      _currentPlan = 'Monthly';
-      _renewalDate = DateTime.now().add(const Duration(days: 30));
-      _autoRenew = true;
-    });
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.subscriptionStatus,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        setState(() {
+          _isPremium = data['is_active'] ?? false;
+          _currentPlan = data['plan_name'] ?? 'Free';
+          _renewalDate = data['ends_at'] != null
+              ? DateTime.parse(data['ends_at'])
+              : null;
+          _autoRenew = !(data['cancel_at_period_end'] ?? false);
+        });
+      }
+    } catch (e) {
+      // On error, keep default values (free plan)
+      setState(() {
+        _isPremium = false;
+        _currentPlan = 'Free';
+        _renewalDate = null;
+        _autoRenew = false;
+      });
+    }
   }
 
   Future<void> _handleCancelSubscription() async {
@@ -55,28 +76,52 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
     );
 
     if (confirmed == true) {
-      // TODO: Cancel subscription via API
-      setState(() {
-        _autoRenew = false;
-      });
-      AlertDialogCustom.show(
-        context,
-        title: 'Subscription Cancelled',
-        message: 'Your subscription will remain active until ${_formatDate(_renewalDate)}. You can reactivate anytime.',
-        icon: Icons.info,
-        iconColor: AppColors.warningYellow,
-      );
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.post<Map<String, dynamic>>(
+          ApiEndpoints.subscriptionCancel,
+          data: {},
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        // Reload subscription status
+        await _loadSubscription();
+
+        AlertDialogCustom.show(
+          context,
+          title: 'Subscription Cancelled',
+          message: 'Your subscription will remain active until ${_formatDate(_renewalDate)}. You can reactivate anytime.',
+          icon: Icons.info,
+          iconColor: AppColors.warningYellow,
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to cancel subscription: $e')),
+        );
+      }
     }
   }
 
   Future<void> _handleReactivate() async {
-    // TODO: Reactivate subscription via API
-    setState(() {
-      _autoRenew = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Subscription reactivated')),
-    );
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.subscriptionReactivate,
+        data: {},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      // Reload subscription status
+      await _loadSubscription();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Subscription reactivated successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to reactivate subscription: $e')),
+      );
+    }
   }
 
   String _formatDate(DateTime? date) {

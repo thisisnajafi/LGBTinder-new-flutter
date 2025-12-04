@@ -9,6 +9,7 @@ import '../widgets/navbar/app_bar_custom.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
+import '../core/constants/api_endpoints.dart';
 
 /// Add payment method screen - Add new payment method
 class AddPaymentMethodScreen extends ConsumerStatefulWidget {
@@ -46,8 +47,17 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
     });
 
     try {
-      // TODO: Add payment method via API
-      await Future.delayed(const Duration(seconds: 2));
+      // TODO: Integrate with Stripe Elements to collect card details and get payment_method_id
+      // For now, using a placeholder payment method ID for demonstration
+      const placeholderPaymentMethodId = 'pm_card_visa'; // This would come from Stripe Elements
+
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.userPaymentMethods,
+        data: {'payment_method_id': placeholderPaymentMethodId},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
       if (mounted) {
         AlertDialogCustom.show(
           context,
