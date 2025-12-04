@@ -1,11 +1,5 @@
 // Repository: AuthRepository
 import '../models/models.dart';
-import '../models/send_otp_request.dart';
-import '../models/verify_otp_request.dart';
-import '../models/otp_response.dart';
-import '../models/reset_password_request.dart';
-import '../models/social_auth_request.dart';
-import '../models/social_auth_response.dart';
 import '../services/auth_service.dart';
 
 /// Auth repository - wraps AuthService for use in use cases

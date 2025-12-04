@@ -1,4 +1,5 @@
 import '../../data/repositories/payment_repository.dart';
+import '../../data/models/superlike_pack.dart';
 
 /// Use case for getting available superlike packs
 class GetSuperlikePacksUseCase {

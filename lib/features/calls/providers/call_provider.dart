@@ -3,6 +3,7 @@ import '../data/models/call.dart';
 import '../data/models/call_statistics.dart';
 import '../domain/use_cases/initiate_call_use_case.dart';
 import '../domain/use_cases/get_call_history_use_case.dart';
+import '../domain/use_cases/get_call_use_case.dart';
 import '../domain/use_cases/accept_call_use_case.dart';
 import '../domain/use_cases/end_call_use_case.dart';
 
@@ -10,12 +11,14 @@ import '../domain/use_cases/end_call_use_case.dart';
 final callProvider = StateNotifierProvider<CallNotifier, CallState>((ref) {
   final initiateCallUseCase = ref.watch(initiateCallUseCaseProvider);
   final getCallHistoryUseCase = ref.watch(getCallHistoryUseCaseProvider);
+  final getCallUseCase = ref.watch(getCallUseCaseProvider);
   final acceptCallUseCase = ref.watch(acceptCallUseCaseProvider);
   final endCallUseCase = ref.watch(endCallUseCaseProvider);
 
   return CallNotifier(
     initiateCallUseCase: initiateCallUseCase,
     getCallHistoryUseCase: getCallHistoryUseCase,
+    getCallUseCase: getCallUseCase,
     acceptCallUseCase: acceptCallUseCase,
     endCallUseCase: endCallUseCase,
   );
@@ -86,16 +89,19 @@ class CallState {
 class CallNotifier extends StateNotifier<CallState> {
   final InitiateCallUseCase _initiateCallUseCase;
   final GetCallHistoryUseCase _getCallHistoryUseCase;
+  final GetCallUseCase _getCallUseCase;
   final AcceptCallUseCase _acceptCallUseCase;
   final EndCallUseCase _endCallUseCase;
 
   CallNotifier({
     required InitiateCallUseCase initiateCallUseCase,
     required GetCallHistoryUseCase getCallHistoryUseCase,
+    required GetCallUseCase getCallUseCase,
     required AcceptCallUseCase acceptCallUseCase,
     required EndCallUseCase endCallUseCase,
   }) : _initiateCallUseCase = initiateCallUseCase,
        _getCallHistoryUseCase = getCallHistoryUseCase,
+       _getCallUseCase = getCallUseCase,
        _acceptCallUseCase = acceptCallUseCase,
        _endCallUseCase = endCallUseCase,
        super(CallState());
@@ -228,6 +234,11 @@ class CallNotifier extends StateNotifier<CallState> {
     }
   }
 
+  /// Get call by ID
+  Future<Call> getCall(String callId) async {
+    return await _getCallUseCase.execute(callId);
+  }
+
   /// Set incoming call
   void setIncomingCall(String callId) {
     state = state.copyWith(incomingCallId: callId);
@@ -249,6 +260,7 @@ class CallNotifier extends StateNotifier<CallState> {
     // For now, just reset duration
     state = state.copyWith(callDuration: Duration.zero);
   }
+
 
   /// Check if there's an active call
   bool get hasActiveCall => state.activeCall != null;
@@ -295,6 +307,10 @@ final initiateCallUseCaseProvider = Provider<InitiateCallUseCase>((ref) {
 
 final getCallHistoryUseCaseProvider = Provider<GetCallHistoryUseCase>((ref) {
   throw UnimplementedError('GetCallHistoryUseCase must be overridden in the provider scope');
+});
+
+final getCallUseCaseProvider = Provider<GetCallUseCase>((ref) {
+  throw UnimplementedError('GetCallUseCase must be overridden in the provider scope');
 });
 
 final acceptCallUseCaseProvider = Provider<AcceptCallUseCase>((ref) {

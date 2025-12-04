@@ -19,6 +19,8 @@ import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
 import '../widgets/match/match_screen.dart';
 import '../features/profile/providers/profile_providers.dart';
+import '../features/profile/providers/profile_provider.dart';
+import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../features/matching/providers/likes_providers.dart';
 import '../features/safety/providers/user_actions_providers.dart';
@@ -835,13 +837,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
                   valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
-              ),
-            ),
-            errorBuilder: (context, error, stackTrace) => const Center(
-              child: Icon(
-                Icons.error_outline,
-                color: Colors.white,
-                size: 48,
               ),
             ),
           ),

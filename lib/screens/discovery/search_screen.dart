@@ -12,6 +12,8 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/cards/card_preview_widget.dart';
 import '../../widgets/loading/skeleton_loader.dart';
 import '../../widgets/error_handling/empty_state.dart';
+import '../../core/constants/api_endpoints.dart';
+import 'package:go_router/go_router.dart';
 import '../../screens/discovery/filter_screen.dart';
 
 /// Search screen - Advanced search interface
@@ -77,42 +79,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
 
     try {
-      // TODO: Perform search via API
-      // GET /api/users/search?query={query}&filters={filters}
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() {
-          _searchResults = [
-            {
-              'id': 1,
-              'name': 'Alex',
-              'age': 28,
-              'avatar_url': null,
-              'is_verified': true,
-              'is_premium': false,
-            },
-            {
-              'id': 2,
-              'name': 'Sam',
-              'age': 32,
-              'avatar_url': null,
-              'is_verified': false,
-              'is_premium': true,
-            },
-          ];
-        });
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.userSearch,
+        queryParameters: {
+          'query': query,
+          'limit': 20,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        final users = data?['users'] as List<dynamic>? ?? [];
+
+        if (mounted) {
+          setState(() {
+            _searchResults = users.map((user) => user as Map<String, dynamic>).toList();
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _searchResults = [];
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Search failed: $e')),
-        );
-      }
-    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Search failed: $e')),
+        );
       }
     }
   }
@@ -342,12 +344,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 isVerified: user['is_verified'] ?? false,
                                 isPremium: user['is_premium'] ?? false,
                                 onTap: () {
-                                  // TODO: Navigate to profile detail
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('View profile: ${user['name']}'),
-                                    ),
-                                  );
+                                  // Navigate to profile detail
+                                  context.push('/profile-detail?userId=${user['id']}');
                                 },
                               );
                             },

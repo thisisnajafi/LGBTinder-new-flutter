@@ -171,7 +171,44 @@ class SafetyCenterScreen extends ConsumerWidget {
           GradientButton(
             text: 'Report a Problem',
             onPressed: () {
-              // TODO: Open report dialog
+              // Open report problem dialog
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Text(
+                    'Report a Problem',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  content: Text(
+                    'For reporting specific users or content, please use the report buttons within the app. For general issues or technical problems, please contact our support team.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        // TODO: Navigate to help/support screen or open email client
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Support contact feature coming soon')),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryLight,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Contact Support'),
+                    ),
+                  ],
+                ),
+              );
             },
             isFullWidth: true,
           ),

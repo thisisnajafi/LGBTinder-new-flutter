@@ -9,6 +9,7 @@ import '../widgets/navbar/app_bar_custom.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/modals/confirmation_dialog.dart';
+import '../features/settings/providers/settings_provider.dart';
 import 'blocked_users_screen.dart';
 import 'report_history_screen.dart';
 import 'emergency_contacts_screen.dart';
@@ -211,10 +212,28 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
                 isDestructive: true,
               );
               if (confirmed == true) {
-                // TODO: Delete account via API
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Account deletion requested')),
-                );
+                try {
+                  final settingsNotifier = ref.read(settingsProvider.notifier);
+                  await settingsNotifier.deleteAccount();
+
+                  if (mounted) {
+                    // Navigate to login/welcome screen
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/welcome', // or your login route
+                      (Route<dynamic> route) => false,
+                    );
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Account deleted successfully')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to delete account: $e')),
+                    );
+                  }
+                }
               }
             },
             textColor: textColor,

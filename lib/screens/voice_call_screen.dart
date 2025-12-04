@@ -401,13 +401,12 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
 
   Future<void> _fetchCallDetailsAndJoin() async {
     try {
-      final callRepository = ref.read(callRepositoryProvider);
-      final call = await callRepository.getCall(_currentCallId.toString());
+      final callProviderInstance = ref.read(callProvider.notifier);
+      final call = await callProviderInstance.getCall(_currentCallId.toString());
 
       if (call.callId.isNotEmpty) {
         _channelName = call.callId;
         _token = call.metadata['agora_token'] as String?;
-        _agoraToken = _token;
 
         if (_channelName != null && _token != null) {
           await _initializeAgoraAndJoinChannel();
@@ -427,7 +426,8 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
 
   void _minimizeCall() {
     // Create a floating call overlay
-    final overlayEntry = OverlayEntry(
+    late final OverlayEntry overlayEntry;
+    overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: 50,
         right: 20,
@@ -450,7 +450,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
             child: Row(
               children: [
                 AvatarWithStatus(
-                  imageUrl: widget.profileImage,
+                  imageUrl: widget.userAvatarUrl,
                   name: widget.userName,
                   isOnline: _isCallActive,
                   size: 40,
@@ -463,7 +463,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                     children: [
                       Text(
                         widget.userName,
-                        style: AppTypography.labelLarge.copyWith(
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,

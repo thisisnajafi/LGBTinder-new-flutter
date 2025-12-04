@@ -137,5 +137,26 @@ class UserData {
       avatarUrl: json['avatar_url'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'first_name': firstName,
+      'last_name': lastName,
+      'email': email,
+      if (country != null) 'country': country,
+      if (city != null) 'city': city,
+      if (gender != null) 'gender': gender,
+      if (birthDate != null) 'birth_date': birthDate,
+      if (profileBio != null) 'profile_bio': profileBio,
+      if (height != null) 'height': height,
+      if (weight != null) 'weight': weight,
+      if (smoke != null) 'smoke': smoke,
+      if (drink != null) 'drink': drink,
+      if (gym != null) 'gym': gym,
+      if (images != null) 'images': images,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+    };
+  }
 }
 

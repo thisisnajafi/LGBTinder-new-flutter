@@ -13,6 +13,7 @@ import '../widgets/buttons/gradient_button.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../features/profile/providers/profile_providers.dart';
+import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../shared/models/api_error.dart';
@@ -203,18 +204,24 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           for (var i = 0; i < _images.length; i++) {
             _images[i] = UserImage(
               id: _images[i].id,
-              imageUrl: _images[i].imageUrl,
+              userId: _images[i].userId,
+              path: _images[i].path,
+              type: _images[i].type,
               isPrimary: i == index,
               order: _images[i].order,
+              sizes: _images[i].sizes,
             );
           }
           // Move to first position
           final image = _images.removeAt(index);
           _images.insert(0, UserImage(
             id: image.id,
-            imageUrl: image.imageUrl,
+            userId: image.userId,
+            path: image.path,
+            type: image.type,
             isPrimary: true,
             order: 0,
+            sizes: image.sizes,
           ));
           _avatarUrl = image.imageUrl;
         });

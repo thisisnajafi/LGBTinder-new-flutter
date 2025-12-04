@@ -9,6 +9,8 @@ import '../widgets/navbar/app_bar_custom.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/error_handling/empty_state.dart';
+import '../core/constants/api_endpoints.dart';
+import '../core/providers/api_providers.dart';
 
 /// Report history screen - View report history
 class ReportHistoryScreen extends ConsumerStatefulWidget {
@@ -34,29 +36,39 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
     });
 
     try {
-      // TODO: Load reports from API
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _reports = [
-          {
-            'id': 1,
-            'user_name': 'User 1',
-            'reason': 'Inappropriate content',
-            'status': 'Under Review',
-            'reported_at': DateTime.now().subtract(const Duration(days: 2)),
-          },
-          {
-            'id': 2,
-            'user_name': 'User 2',
-            'reason': 'Harassment',
-            'status': 'Resolved',
-            'reported_at': DateTime.now().subtract(const Duration(days: 10)),
-          },
-        ];
-        _isLoading = false;
-      });
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.reports,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        final reportsData = data?['reports'] as Map<String, dynamic>?;
+        final reportsList = reportsData?['data'] as List<dynamic>? ?? [];
+
+        setState(() {
+          _reports = reportsList.map((report) {
+            final reportable = report['reportable'] as Map<String, dynamic>?;
+            return {
+              'id': report['id'],
+              'user_name': reportable?['name'] ?? 'Unknown User',
+              'reason': report['reason'] ?? 'No reason provided',
+              'status': report['status'] ?? 'Unknown',
+              'reported_at': DateTime.parse(report['created_at']),
+            };
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _reports = [];
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
+        _reports = [];
         _isLoading = false;
       });
     }

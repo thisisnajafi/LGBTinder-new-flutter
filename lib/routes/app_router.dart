@@ -45,6 +45,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String profileEdit = '/profile/edit';
   static const String profileDetail = '/profile-detail';
+  static const String billingHistory = '/billing-history';
   static const String settings = '/settings';
   static const String notifications = '/notifications';
   static const String blockedUsers = '/blocked-users';
@@ -313,7 +314,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return null;
         },
       ),
-      
+
+      // Billing History (requires auth)
+      GoRoute(
+        path: AppRoutes.billingHistory,
+        name: 'billing-history',
+        builder: (context, state) => const BillingHistoryScreen(),
+        redirect: (context, state) async {
+          // Access providers through ref in the provider scope
+          final tokenStorage = ref.read(tokenStorageServiceProvider);
+          final isAuthenticated = await tokenStorage.isAuthenticated();
+
+          if (!isAuthenticated) {
+            return AppRoutes.welcome;
+          }
+          return null;
+        },
+      ),
+
       // Chat Page (requires auth)
       GoRoute(
         path: AppRoutes.chat,

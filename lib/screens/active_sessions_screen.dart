@@ -10,6 +10,7 @@ import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
+import '../core/constants/api_endpoints.dart';
 import '../widgets/loading/skeleton_loader.dart';
 
 /// Active sessions screen - Manage active sessions
@@ -36,42 +37,27 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     });
 
     try {
-      // TODO: Load sessions from API
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _sessions = [
-          {
-            'id': 'session_1',
-            'device': 'iPhone 14 Pro',
-            'location': 'New York, USA',
-            'ip_address': '192.168.1.1',
-            'last_active': DateTime.now().subtract(const Duration(minutes: 5)),
-            'is_current': true,
-            'platform': 'iOS',
-          },
-          {
-            'id': 'session_2',
-            'device': 'Samsung Galaxy S23',
-            'location': 'Los Angeles, USA',
-            'ip_address': '192.168.1.2',
-            'last_active': DateTime.now().subtract(const Duration(hours: 2)),
-            'is_current': false,
-            'platform': 'Android',
-          },
-          {
-            'id': 'session_3',
-            'device': 'Chrome Browser',
-            'location': 'Chicago, USA',
-            'ip_address': '192.168.1.3',
-            'last_active': DateTime.now().subtract(const Duration(days: 1)),
-            'is_current': false,
-            'platform': 'Web',
-          },
-        ];
-        _isLoading = false;
-      });
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.userSessions,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as List<dynamic>? ?? [];
+        setState(() {
+          _sessions = data.map((session) => session as Map<String, dynamic>).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _sessions = [];
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
+        _sessions = [];
         _isLoading = false;
       });
     }
@@ -88,13 +74,25 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     );
 
     if (confirmed == true) {
-      // TODO: Terminate session via API
-      setState(() {
-        _sessions.removeWhere((session) => session['id'] == sessionId);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Session terminated')),
-      );
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.post<Map<String, dynamic>>(
+          '${ApiEndpoints.userSessions}/revoke/$sessionId',
+          data: {},
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        // Reload sessions to reflect changes
+        await _loadSessions();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session terminated')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to terminate session: $e')),
+        );
+      }
     }
   }
 
@@ -109,13 +107,25 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     );
 
     if (confirmed == true) {
-      // TODO: Terminate all sessions via API
-      setState(() {
-        _sessions = _sessions.where((session) => session['is_current'] == true).toList();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All other sessions terminated')),
-      );
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.post<Map<String, dynamic>>(
+          '${ApiEndpoints.userSessions}/revoke-all',
+          data: {},
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        // Reload sessions to reflect changes
+        await _loadSessions();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All other sessions terminated')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to terminate sessions: $e')),
+        );
+      }
     }
   }
 

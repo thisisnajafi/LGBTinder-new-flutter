@@ -1,6 +1,6 @@
-import '../../../core/constants/api_endpoints.dart';
-import '../../../shared/services/api_service.dart';
-import '../../../core/network/dio_client.dart';
+import 'package:lgbtindernew/core/constants/api_endpoints.dart';
+import 'package:lgbtindernew/shared/services/api_service.dart';
+import 'package:lgbtindernew/core/network/dio_client.dart';
 import '../../data/models/like.dart';
 import '../../data/models/match.dart';
 import '../../data/models/superlike.dart';

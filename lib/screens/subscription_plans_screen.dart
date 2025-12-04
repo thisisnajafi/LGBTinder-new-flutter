@@ -12,6 +12,7 @@ import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/badges/premium_badge.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
+import '../core/constants/api_endpoints.dart';
 import 'premium/premium_subscription_screen.dart';
 
 /// Subscription plans screen - View and select subscription plans
@@ -91,18 +92,41 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     });
 
     try {
-      // TODO: Process subscription via API
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
+      // Map plan IDs to database sub_plan_ids
+      // This would need to be updated based on actual database plan IDs
+      final planIdMap = {
+        'basic': 1,  // Assuming basic plan has ID 1 in database
+        'premium': 2, // Assuming premium plan has ID 2 in database
+        'vip': 3,    // Assuming VIP plan has ID 3 in database
+      };
+
+      final subPlanId = planIdMap[planId] ?? 1; // Default to basic plan
+
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.stripeSubscription,
+        data: {
+          'sub_plan_id': subPlanId,
+          'currency': 'usd',
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
         final selectedPlan = _plans.firstWhere((p) => p['id'] == planId);
-        AlertDialogCustom.show(
-          context,
-          title: 'Subscription Started!',
-          message: 'You\'ve successfully subscribed to ${selectedPlan['name']}',
-          icon: Icons.check_circle,
-          iconColor: AppColors.onlineGreen,
-        );
-        Navigator.of(context).pop();
+
+        if (mounted) {
+          AlertDialogCustom.show(
+            context,
+            title: 'Subscription Started!',
+            message: 'You\'ve successfully subscribed to ${selectedPlan['name']}. Payment processing will be completed shortly.',
+            icon: Icons.check_circle,
+            iconColor: AppColors.onlineGreen,
+          );
+          Navigator.of(context).pop();
+        }
+      } else {
+        throw Exception(response.message);
       }
     } catch (e) {
       if (mounted) {

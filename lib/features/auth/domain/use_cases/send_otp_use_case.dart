@@ -1,6 +1,5 @@
 import '../../data/repositories/auth_repository.dart';
-import '../../data/models/send_otp_request.dart';
-import '../../data/models/otp_response.dart';
+import '../../data/models/models.dart';
 
 /// Use Case: SendOtpUseCase
 /// Handles sending OTP for password reset

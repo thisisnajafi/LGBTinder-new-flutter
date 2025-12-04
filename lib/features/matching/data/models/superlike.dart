@@ -1,3 +1,8 @@
+// Re-export Match for convenience
+export 'match.dart';
+
+import 'match.dart';
+
 /// Superlike model
 class Superlike {
   final int id;
@@ -89,6 +94,3 @@ class SuperlikeResponse {
     );
   }
 }
-
-// Re-export Match for convenience
-export 'match.dart';

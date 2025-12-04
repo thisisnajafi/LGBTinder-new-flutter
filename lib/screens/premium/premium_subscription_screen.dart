@@ -13,6 +13,7 @@ import '../../widgets/premium/premium_feature_card.dart';
 import '../../widgets/badges/premium_badge.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../premium_features_screen.dart';
 
 /// Premium subscription screen - Subscribe to premium plans
@@ -67,22 +68,44 @@ class _PremiumSubscriptionScreenState extends ConsumerState<PremiumSubscriptionS
     });
 
     try {
-      // TODO: Process subscription via API
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        AlertDialogCustom.show(
-          context,
-          title: 'Success!',
-          message: 'Your premium subscription is now active!',
-          icon: Icons.check_circle,
-          iconColor: AppColors.onlineGreen,
-        );
-        Navigator.of(context).pop();
+      // Map plan IDs to database sub_plan_ids
+      // This would need to be updated based on actual database plan IDs
+      final planIdMap = {
+        'monthly': 1,   // Assuming monthly plan has ID 1 in database
+        'quarterly': 2, // Assuming quarterly plan has ID 2 in database
+        'yearly': 3,    // Assuming yearly plan has ID 3 in database
+      };
+
+      final subPlanId = planIdMap[planId] ?? 1; // Default to monthly plan
+
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.stripeSubscription,
+        data: {
+          'sub_plan_id': subPlanId,
+          'currency': 'usd',
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        if (mounted) {
+          AlertDialogCustom.show(
+            context,
+            title: 'Premium Subscription Activated!',
+            message: 'Your premium subscription is now active. Enjoy all premium features!',
+            icon: Icons.star,
+            iconColor: AppColors.primaryLight,
+          );
+          Navigator.of(context).pop();
+        }
+      } else {
+        throw Exception(response.message);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Subscription failed: $e')),
+          SnackBar(content: Text('Failed to process subscription: $e')),
         );
       }
     } finally {

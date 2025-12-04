@@ -6,6 +6,7 @@ import '../domain/use_cases/get_settings_use_case.dart';
 import '../domain/use_cases/update_settings_use_case.dart';
 import '../domain/use_cases/change_password_use_case.dart';
 import '../domain/use_cases/delete_account_use_case.dart';
+import '../data/repositories/settings_repository.dart';
 
 /// Settings provider - manages user settings and account operations
 final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
@@ -13,12 +14,14 @@ final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>(
   final updateSettingsUseCase = ref.watch(updateSettingsUseCaseProvider);
   final changePasswordUseCase = ref.watch(changePasswordUseCaseProvider);
   final deleteAccountUseCase = ref.watch(deleteAccountUseCaseProvider);
+  final settingsRepository = ref.watch(settingsRepositoryProvider);
 
   return SettingsNotifier(
     getSettingsUseCase: getSettingsUseCase,
     updateSettingsUseCase: updateSettingsUseCase,
     changePasswordUseCase: changePasswordUseCase,
     deleteAccountUseCase: deleteAccountUseCase,
+    settingsRepository: settingsRepository,
   );
 });
 
@@ -81,16 +84,19 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   final UpdateSettingsUseCase _updateSettingsUseCase;
   final ChangePasswordUseCase _changePasswordUseCase;
   final DeleteAccountUseCase _deleteAccountUseCase;
+  final SettingsRepository _settingsRepository;
 
   SettingsNotifier({
     required GetSettingsUseCase getSettingsUseCase,
     required UpdateSettingsUseCase updateSettingsUseCase,
     required ChangePasswordUseCase changePasswordUseCase,
     required DeleteAccountUseCase deleteAccountUseCase,
+    required SettingsRepository settingsRepository,
   }) : _getSettingsUseCase = getSettingsUseCase,
        _updateSettingsUseCase = updateSettingsUseCase,
        _changePasswordUseCase = changePasswordUseCase,
        _deleteAccountUseCase = deleteAccountUseCase,
+       _settingsRepository = settingsRepository,
        super(SettingsState());
 
   /// Load user settings
@@ -183,11 +189,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   }
 
   /// Delete account
-  Future<bool> deleteAccount(String password, String reason) async {
+  Future<bool> deleteAccount([String? password, String? reason]) async {
     state = state.copyWith(isDeletingAccount: true, error: null);
 
     try {
-      await _deleteAccountUseCase.execute(password, reason);
+      await _deleteAccountUseCase.execute(password ?? '', reason ?? 'User requested deletion');
       state = state.copyWith(isDeletingAccount: false);
       return true;
     } catch (e) {
@@ -319,4 +325,8 @@ final changePasswordUseCaseProvider = Provider<ChangePasswordUseCase>((ref) {
 
 final deleteAccountUseCaseProvider = Provider<DeleteAccountUseCase>((ref) {
   throw UnimplementedError('DeleteAccountUseCase must be overridden in the provider scope');
+});
+
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  throw UnimplementedError('SettingsRepository must be overridden in the provider scope');
 });

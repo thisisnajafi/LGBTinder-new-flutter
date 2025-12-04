@@ -306,14 +306,17 @@ class GooglePlayBillingService {
   Future<List<PurchaseDetails>> getCurrentPurchases() async {
     try {
       // Query past purchases for both Google Play and App Store
-      final QueryPurchaseDetailsResponse response = await _inAppPurchase.queryPastPurchases();
+      // Note: queryPastPurchases() method doesn't exist in current in_app_purchase version
+      // Using queryProductDetails() as a placeholder - needs to be updated when backend is ready
+      final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(<String>{});
 
       if (response.error != null) {
         _errorController.add('Failed to query past purchases: ${response.error}');
         return [];
       }
 
-      return response.pastPurchases;
+      // TODO: Implement proper past purchases query when backend is ready
+      return [];
     } catch (e) {
       _errorController.add('Failed to get current purchases: $e');
       return [];

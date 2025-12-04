@@ -1,4 +1,4 @@
-import '../../domain/services/settings_service.dart';
+import '../services/settings_service.dart';
 import '../models/user_settings.dart';
 import '../models/privacy_settings.dart';
 import '../models/device_session.dart';

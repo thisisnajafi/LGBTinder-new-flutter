@@ -1,4 +1,4 @@
-import '../repositories/matching_repository.dart';
+import '../../data/repositories/matching_repository.dart';
 
 /// Use case for checking if current user is matched with another user
 class CheckMatchStatusUseCase {

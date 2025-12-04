@@ -7,6 +7,7 @@ import '../../user/data/models/user_info.dart';
 import '../../../shared/services/token_storage_service.dart';
 import '../../../shared/services/onboarding_service.dart';
 import '../../../core/providers/api_providers.dart';
+import 'auth_service_provider.dart';
 
 /// Auth Provider State
 class AuthProviderState {

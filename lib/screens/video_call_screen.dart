@@ -355,6 +355,30 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     }
   }
 
+  Future<void> _toggleAudio() async {
+    final newState = !_isMuted;
+    setState(() {
+      _isMuted = newState;
+    });
+
+    try {
+      await _agoraService.toggleAudio(newState);
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        _isMuted = !newState;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to toggle microphone: $e'),
+            backgroundColor: AppColors.notificationRed,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _switchCamera() async {
     setState(() {
       _isCameraSwitched = !_isCameraSwitched;
@@ -452,13 +476,12 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
 
   Future<void> _fetchCallDetailsAndJoin() async {
     try {
-      final callRepository = ref.read(callRepositoryProvider);
-      final call = await callRepository.getCall(_currentCallId.toString());
+      final callProviderInstance = ref.read(callProvider.notifier);
+      final call = await callProviderInstance.getCall(_currentCallId.toString());
 
       if (call.callId.isNotEmpty) {
         _channelName = call.callId;
         _token = call.metadata['agora_token'] as String?;
-        _agoraToken = _token;
 
         if (_channelName != null && _token != null) {
           await _initializeAgoraAndJoinChannel();
@@ -478,7 +501,8 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
 
   void _minimizeCall() {
     // Create a floating call overlay
-    final overlayEntry = OverlayEntry(
+    late final OverlayEntry overlayEntry;
+    overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: 50,
         right: 20,
@@ -501,7 +525,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
             child: Row(
               children: [
                 AvatarWithStatus(
-                  imageUrl: widget.profileImage,
+                  imageUrl: widget.userAvatarUrl,
                   name: widget.userName,
                   isOnline: _isCallActive,
                   size: 40,
@@ -514,7 +538,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                     children: [
                       Text(
                         widget.userName,
-                        style: AppTypography.labelLarge.copyWith(
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
@@ -534,7 +558,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                     _isMuted ? Icons.mic_off : Icons.mic,
                     color: _isMuted ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
                   ),
-                  onPressed: _toggleAudio,
+                  onPressed: _toggleMute,
                   iconSize: 20,
                 ),
                 IconButton(

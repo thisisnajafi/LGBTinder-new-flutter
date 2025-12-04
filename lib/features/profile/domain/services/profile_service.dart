@@ -1,7 +1,8 @@
-import '../../../core/constants/api_endpoints.dart';
-import '../../../shared/services/api_service.dart';
-import '../../../shared/services/token_storage_service.dart';
-import '../../../core/network/dio_client.dart';
+import 'package:lgbtindernew/core/constants/api_endpoints.dart';
+import 'package:lgbtindernew/shared/services/api_service.dart';
+import 'package:lgbtindernew/shared/services/token_storage_service.dart';
+import 'package:lgbtindernew/core/network/dio_client.dart';
+import 'package:dio/dio.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/models/update_profile_request.dart';
 import '../../data/models/user_image.dart';
@@ -313,6 +314,40 @@ class ProfileService {
       if (response.isSuccess && response.data != null) {
         return ProfileCompletion.fromJson(response.data!);
       } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Change user email address
+  Future<void> changeEmail(String newEmail) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.changeEmail,
+        data: {'new_email': newEmail},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Verify email change with verification code
+  Future<void> verifyEmailChange(String verificationCode) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.verifyEmailChange,
+        data: {'verification_code': verificationCode},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
         throw Exception(response.message);
       }
     } catch (e) {

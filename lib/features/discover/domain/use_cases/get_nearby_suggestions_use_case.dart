@@ -13,7 +13,7 @@ class GetNearbySuggestionsUseCase {
   /// Returns [List<DiscoveryProfile>] with nearby user suggestions
   Future<List<DiscoveryProfile>> execute({
     int limit = 20,
-    DiscoveryFilters? filters,
+    Map<String, dynamic>? filters,
   }) async {
     try {
       return await _discoveryRepository.getNearbySuggestions(

@@ -20,7 +20,7 @@ class DeviceSession {
     required this.deviceName,
     required this.deviceType,
     required this.platform,
-    this.browser,
+    this.browser = 'Unknown',
     required this.ipAddress,
     required this.location,
     required this.createdAt,
@@ -37,7 +37,7 @@ class DeviceSession {
       deviceName: json['device_name'] as String,
       deviceType: json['device_type'] as String,
       platform: json['platform'] as String,
-      browser: json['browser'] as String?,
+      browser: json['browser'] as String? ?? 'Unknown',
       ipAddress: json['ip_address'] as String,
       location: json['location'] as String,
       createdAt: json['created_at'] != null

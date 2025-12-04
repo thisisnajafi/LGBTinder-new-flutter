@@ -291,26 +291,6 @@ class InitiateCallRequest {
   }
 }
 
-/// Call action request
-class CallActionRequest {
-  final String callId;
-  final String action; // 'accept', 'decline', 'end'
-  final Map<String, dynamic> metadata;
-
-  CallActionRequest({
-    required this.callId,
-    required this.action,
-    this.metadata = const {},
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'call_id': callId,
-      'action': action,
-      'metadata': metadata,
-    };
-  }
-}
 
 /// Update call settings request
 class UpdateCallSettingsRequest {

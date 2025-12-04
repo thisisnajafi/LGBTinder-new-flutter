@@ -129,7 +129,18 @@ class ApiEndpoints {
   static const String subscriptionReactivate = '/subscriptions/reactivate';
   static const String userPaymentMethods = '/user/payment-methods';
   static const String paymentMethodsList = '/payment-methods';
-  static const String deleteAccount = '/user/delete-account';
+  static const String emergencyTrigger = '/emergency/trigger';
+  static const String reports = '/reports';
+  static const String twoFactorStatus = '/2fa/status';
+  static const String twoFactorEnable = '/2fa/enable';
+  static const String twoFactorVerify = '/2fa/verify';
+  static const String twoFactorDisable = '/2fa/disable';
+  static const String twoFactorQrCode = '/2fa/qr-code';
+  static const String twoFactorBackupCodes = '/2fa/backup-codes';
+  static const String userSessions = '/sessions';
+  static const String sessionActivity = '/sessions/activity';
+  static const String userSearch = '/profile/search';
+  static const String emergencyContacts = '/safety/emergency-contacts';
   static const String exportData = '/user/export-data';
   static const String clearCache = '/user/clear-cache';
   static const String resetSettings = '/user/reset-settings';
@@ -179,7 +190,6 @@ class ApiEndpoints {
   // ==================== User Actions ====================
   static const String blockUser = '/block/user';
   static const String blockList = '/block/list';
-  static const String reports = '/reports';
   static const String reportsHistory = '/reports/history';
   static const String mutesMute = '/mutes/mute';
   static const String favoritesAdd = '/favorites/add';
@@ -206,4 +216,17 @@ class ApiEndpoints {
   static const String superlikePacksPurchase = '/superlike-packs/purchase';
   static const String superlikePacksUserPacks = '/superlike-packs/user-packs';
   static const String superlikePacksStripeCheckout = '/superlike-packs/stripe-checkout';
+
+  // ==================== Payments ====================
+  static const String validateReceipt = '/payments/validate-receipt';
+  static const String restorePurchases = '/payments/restore-purchases';
+  static const String purchaseSuperlikePack = '/payments/purchase-superlike-pack';
+  static const String paymentHistory = '/payments/history';
+
+  // ==================== Community Forums ====================
+  static const String communityForums = '/community-forums';
+  static const String forumCategories = '/community-forums/categories';
+  static String forumPost(int postId) => '/community-forums/$postId';
+  static String forumPostLike(int postId) => '/community-forums/$postId/like';
+  static String forumPostComments(int postId) => '/community-forums/$postId/comments';
 }

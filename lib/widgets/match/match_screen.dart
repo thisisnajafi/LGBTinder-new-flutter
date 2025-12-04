@@ -26,7 +26,7 @@ class MatchScreen extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   @override
-  State<MatchScreen> createState() => _MatchScreenState();
+  ConsumerState<MatchScreen> createState() => _MatchScreenState();
 }
 
 class _MatchScreenState extends ConsumerState<MatchScreen>

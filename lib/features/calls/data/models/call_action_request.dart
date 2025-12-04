@@ -1,6 +1,6 @@
 /// Call action request model (accept, reject, end)
 class CallActionRequest {
-  final int callId;
+  final String callId;
   final String action; // 'accept', 'reject', 'end'
 
   CallActionRequest({
@@ -8,15 +8,15 @@ class CallActionRequest {
     required this.action,
   });
 
-  factory CallActionRequest.accept(int callId) {
+  factory CallActionRequest.accept(String callId) {
     return CallActionRequest(callId: callId, action: 'accept');
   }
 
-  factory CallActionRequest.reject(int callId) {
+  factory CallActionRequest.reject(String callId) {
     return CallActionRequest(callId: callId, action: 'reject');
   }
 
-  factory CallActionRequest.end(int callId) {
+  factory CallActionRequest.end(String callId) {
     return CallActionRequest(callId: callId, action: 'end');
   }
 

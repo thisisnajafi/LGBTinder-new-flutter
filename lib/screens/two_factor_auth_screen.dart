@@ -1,5 +1,6 @@
 ﻿// Screen: TwoFactorAuthScreen
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
@@ -10,6 +11,7 @@ import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
+import '../core/constants/api_endpoints.dart';
 
 /// Two-factor authentication screen - Setup 2FA
 class TwoFactorAuthScreen extends ConsumerStatefulWidget {
@@ -22,8 +24,10 @@ class TwoFactorAuthScreen extends ConsumerStatefulWidget {
 class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
   bool _isEnabled = false;
   bool _isLoading = false;
+  bool _showVerificationStep = false;
   String? _qrCodeUrl;
   final List<String> _backupCodes = [];
+  int _backupCodesCount = 0;
 
   @override
   void initState() {
@@ -32,10 +36,27 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
   }
 
   Future<void> _load2FAStatus() async {
-    // TODO: Load 2FA status from API
-    setState(() {
-      _isEnabled = false;
-    });
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.twoFactorStatus,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        setState(() {
+          _isEnabled = data['enabled'] ?? false;
+          _backupCodesCount = data['backup_codes_count'] ?? 0;
+        });
+      }
+    } catch (e) {
+      // On error, keep defaults (disabled)
+      setState(() {
+        _isEnabled = false;
+        _backupCodesCount = 0;
+      });
+    }
   }
 
   Future<void> _enable2FA() async {
@@ -44,20 +65,46 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
     });
 
     try {
-      // TODO: Enable 2FA via API and get QR code
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/LGBTinder?secret=JBSWY3DPEHPK3PXP';
-        _backupCodes.addAll([
-          '1234-5678',
-          '2345-6789',
-          '3456-7890',
-          '4567-8901',
-          '5678-9012',
-        ]);
-        _isEnabled = true;
-        _isLoading = false;
-      });
+      // First, enable 2FA to get the secret
+      final enableResponse = await ref.read(apiServiceProvider).post<Map<String, dynamic>>(
+        ApiEndpoints.twoFactorEnable,
+        data: {},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!enableResponse.isSuccess) {
+        throw Exception('Failed to enable 2FA');
+      }
+
+      // Then get the QR code
+      final qrResponse = await ref.read(apiServiceProvider).get<Map<String, dynamic>>(
+        ApiEndpoints.twoFactorQrCode,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      // Then get backup codes
+      final backupResponse = await ref.read(apiServiceProvider).post<Map<String, dynamic>>(
+        ApiEndpoints.twoFactorBackupCodes,
+        data: {},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (qrResponse.isSuccess && qrResponse.data != null &&
+          backupResponse.isSuccess && backupResponse.data != null) {
+        final qrData = qrResponse.data!;
+        final backupData = backupResponse.data!;
+
+        setState(() {
+          _qrCodeUrl = qrData['qr_code_url'] ?? '';
+          _backupCodes.clear();
+          _backupCodes.addAll(List<String>.from(backupData['backup_codes'] ?? []));
+          _isEnabled = false; // Still need to verify
+          _isLoading = false;
+          _showVerificationStep = true;
+        });
+      } else {
+        throw Exception('Failed to get QR code or backup codes');
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -96,14 +143,22 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
       });
 
       try {
-        // TODO: Disable 2FA via API
-        await Future.delayed(const Duration(seconds: 1));
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.post<Map<String, dynamic>>(
+          ApiEndpoints.twoFactorDisable,
+          data: {},
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
         setState(() {
           _isEnabled = false;
           _qrCodeUrl = null;
           _backupCodes.clear();
+          _backupCodesCount = 0;
+          _showVerificationStep = false;
           _isLoading = false;
         });
+
         AlertDialogCustom.show(
           context,
           title: '2FA Disabled',
@@ -120,6 +175,53 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
         );
       }
     }
+  }
+
+  Future<void> _verify2FACode(String code) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.twoFactorVerify,
+        data: {'code': code},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess) {
+        await _load2FAStatus(); // Reload status to confirm it's enabled
+        setState(() {
+          _showVerificationStep = false;
+          _isLoading = false;
+        });
+
+        AlertDialogCustom.show(
+          context,
+          title: '2FA Enabled',
+          message: 'Two-factor authentication has been successfully enabled. Make sure to save your backup codes.',
+          icon: Icons.verified,
+          iconColor: AppColors.onlineGreen,
+        );
+      } else {
+        throw Exception('Invalid verification code');
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Verification failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _copyToClipboard() async {
+    // TODO: Copy to clipboard functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copy to clipboard functionality will be implemented')),
+    );
   }
 
   @override
@@ -269,6 +371,50 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                     ),
                     SizedBox(height: AppSpacing.spacingXXL),
                   ],
+
+                  if (_showVerificationStep) ...[
+                    SizedBox(height: AppSpacing.spacingLG),
+                    SectionHeader(
+                      title: 'Verify Setup',
+                      icon: Icons.verified_user,
+                    ),
+                    SizedBox(height: AppSpacing.spacingMD),
+                    Container(
+                      padding: EdgeInsets.all(AppSpacing.spacingLG),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Enter the 6-digit code from your authenticator app to complete setup:',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: textColor,
+                            ),
+                          ),
+                          SizedBox(height: AppSpacing.spacingMD),
+                          TextFormField(
+                            decoration: InputDecoration(
+                              labelText: 'Verification Code',
+                              hintText: '000000',
+                              prefixIcon: Icon(Icons.lock_clock, color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            onChanged: (value) {
+                              if (value.length == 6) {
+                                _verify2FACode(value);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // Backup codes
                   if (_backupCodes.isNotEmpty) ...[
                     SectionHeader(
@@ -319,11 +465,16 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                                         size: 20,
                                         color: AppColors.accentPurple,
                                       ),
-                                      onPressed: () {
-                                        // TODO: Copy to clipboard
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Copied: $code')),
-                                        );
+                                      onPressed: () async {
+                                        await Clipboard.setData(ClipboardData(text: code));
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Backup code copied to clipboard'),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
                                       },
                                     ),
                                   ],

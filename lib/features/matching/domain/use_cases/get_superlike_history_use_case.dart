@@ -1,4 +1,5 @@
 import '../../data/repositories/matching_repository.dart';
+import '../../data/models/superlike.dart';
 
 /// Use case for getting superlike history
 class GetSuperlikeHistoryUseCase {

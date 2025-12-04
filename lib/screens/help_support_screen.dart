@@ -1,6 +1,7 @@
 ﻿// Screen: HelpSupportScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -70,11 +71,30 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             icon: Icons.email,
             title: 'Email Support',
             subtitle: 'support@lgbtinder.com',
-            onTap: () {
-              // TODO: Open email client
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Email: support@lgbtinder.com')),
+            onTap: () async {
+              final Uri emailUri = Uri(
+                scheme: 'mailto',
+                path: 'support@lgbtinder.com',
+                queryParameters: {
+                  'subject': 'LGBTinder Support Request',
+                  'body': 'Please describe your issue or question here...',
+                },
               );
+
+              try {
+                if (await canLaunchUrl(emailUri)) {
+                  await launchUrl(emailUri);
+                } else {
+                  // Fallback to copying email to clipboard
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Email: support@lgbtinder.com (copied to clipboard)')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Unable to open email app')),
+                );
+              }
             },
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
@@ -87,9 +107,40 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             title: 'Live Chat',
             subtitle: 'Available 24/7',
             onTap: () {
-              // TODO: Open live chat
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Live chat coming soon!')),
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Text(
+                    'Live Chat Support',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  content: Text(
+                    'Our live chat support is currently under development. For immediate assistance, please use email support or check our FAQ section.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('OK'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        // Trigger email support instead
+                        // TODO: Implement actual live chat integration (e.g., Intercom, Zendesk, etc.)
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryLight,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Use Email Support'),
+                    ),
+                  ],
+                ),
               );
             },
             textColor: textColor,

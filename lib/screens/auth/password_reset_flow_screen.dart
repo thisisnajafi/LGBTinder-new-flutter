@@ -13,9 +13,7 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/utils/app_icons.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
-import '../../features/auth/data/models/send_otp_request.dart';
-import '../../features/auth/data/models/verify_otp_request.dart';
-import '../../features/auth/data/models/reset_password_request.dart';
+import '../../features/auth/data/models/models.dart';
 
 /// Password reset flow screen - Multi-step password reset with OTP
 class PasswordResetFlowScreen extends ConsumerStatefulWidget {

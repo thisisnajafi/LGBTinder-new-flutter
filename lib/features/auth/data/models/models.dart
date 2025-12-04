@@ -12,8 +12,5 @@ export 'auth_user.dart';
 export 'otp_request.dart';
 export 'social_auth_request.dart';
 export 'social_auth_response.dart';
-export 'send_otp_request.dart';
-export 'verify_otp_request.dart';
 export 'otp_response.dart';
-export 'reset_password_request.dart';
 

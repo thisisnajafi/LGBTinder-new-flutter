@@ -2,6 +2,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/subscription_plan.dart';
 import '../models/superlike_pack.dart';
+import '../models/payment_history.dart';
 
 /// Payment service for subscriptions and payments
 class PaymentService {
@@ -120,19 +121,15 @@ class PaymentService {
   }
 
   /// Upgrade subscription
-  Future<SubscriptionStatus> upgradeSubscription(int newPlanId) async {
+  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.subscriptionsUpgrade,
-        data: {'new_plan_id': newPlanId},
+        data: {'current_plan_id': currentPlanId, 'target_plan_id': targetPlanId},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
-      if (response.isSuccess && response.data != null) {
-        return SubscriptionStatus.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
-      }
+      return response.isSuccess;
     } catch (e) {
       rethrow;
     }
@@ -195,27 +192,6 @@ class PaymentService {
   }
 
   /// Upgrade subscription plan
-  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.subscriptionsUpgrade,
-        data: {
-          'current_plan_id': currentPlanId,
-          'target_plan_id': targetPlanId,
-        },
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return response.data!['upgraded'] as bool? ?? false;
-      }
-      return false;
-    } catch (e) {
-      // For now, return true to indicate upgrade was attempted
-      return true;
-    }
-  }
-
   /// Purchase superlike pack
   Future<bool> purchaseSuperlikePack(int packId) async {
     try {

@@ -1,7 +1,9 @@
 import '../services/payment_service.dart';
 import '../services/superlike_pack_service.dart';
 import '../models/subscription_plan.dart';
+import '../models/payment_history.dart';
 import '../models/superlike_pack.dart';
+import '../models/payment_history.dart';
 
 /// Payment repository - wraps PaymentService for use in use cases
 class PaymentRepository {
@@ -36,8 +38,8 @@ class PaymentRepository {
   }
 
   /// Upgrade subscription
-  Future<SubscriptionStatus> upgradeSubscription(int newPlanId) async {
-    return await _paymentService.upgradeSubscription(newPlanId);
+  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
+    return await _paymentService.upgradeSubscription(currentPlanId, targetPlanId);
   }
 
   /// Cancel subscription
@@ -67,11 +69,6 @@ class PaymentRepository {
   /// Restore purchases
   Future<bool> restorePurchases() async {
     return await _paymentService.restorePurchases();
-  }
-
-  /// Upgrade subscription
-  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
-    return await _paymentService.upgradeSubscription(currentPlanId, targetPlanId);
   }
 
   /// Get payment history

@@ -13,6 +13,7 @@ import '../../widgets/badges/verification_badge.dart';
 import '../../widgets/badges/premium_badge.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/buttons/like_button.dart';
+import '../../core/constants/api_endpoints.dart';
 import '../../widgets/buttons/dislike_button.dart';
 import '../../widgets/error_handling/empty_state.dart';
 import '../../widgets/loading/skeleton_loader.dart';
@@ -43,57 +44,102 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
     });
 
     try {
-      // TODO: Load likes from API
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        _likes = [
-          {
-            'id': 1,
-            'name': 'Alex',
-            'age': 28,
-            'avatar_url': 'https://via.placeholder.com/200',
-            'bio': 'Love traveling and exploring new places!',
-            'is_verified': true,
-            'is_premium': false,
-            'distance': 5.2,
-            'liked_at': DateTime.now().subtract(const Duration(hours: 2)),
-          },
-          {
-            'id': 2,
-            'name': 'Jordan',
-            'age': 25,
-            'avatar_url': 'https://via.placeholder.com/200',
-            'bio': 'Music lover and coffee enthusiast',
-            'is_verified': false,
-            'is_premium': true,
-            'distance': 12.5,
-            'liked_at': DateTime.now().subtract(const Duration(days: 1)),
-          },
-        ];
-        _isLoading = false;
-      });
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.likesPending,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        final pendingLikes = data?['pending_likes'] as List<dynamic>? ?? [];
+
+        setState(() {
+          _likes = pendingLikes.map((like) {
+            final user = like['user'] as Map<String, dynamic>;
+            return {
+              'id': like['id'],
+              'user_id': user['id'],
+              'name': user['name'],
+              'avatar_url': user['avatar_url'],
+              'is_verified': user['is_verified'] ?? false,
+              'is_premium': user['is_premium'] ?? false,
+              'liked_at': DateTime.parse(like['created_at']),
+            };
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _likes = [];
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
+        _likes = [];
         _isLoading = false;
       });
     }
   }
 
-  void _handleLike(int userId) {
-    // TODO: Send like action to API
-    setState(() {
-      _likes.removeWhere((like) => like['id'] == userId);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('It\'s a match!')),
-    );
+  void _handleLike(int userId) async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.likesRespond,
+        data: {
+          'like_id': userId,
+          'action': 'accept',
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess) {
+        setState(() {
+          _likes.removeWhere((like) => like['id'] == userId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('It\'s a match!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to accept like: ${response.message}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to accept like: $e')),
+      );
+    }
   }
 
-  void _handleDislike(int userId) {
-    // TODO: Send dislike action to API
-    setState(() {
-      _likes.removeWhere((like) => like['id'] == userId);
-    });
+  void _handleDislike(int userId) async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.likesRespond,
+        data: {
+          'like_id': userId,
+          'action': 'reject',
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess) {
+        setState(() {
+          _likes.removeWhere((like) => like['id'] == userId);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reject like: ${response.message}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to reject like: $e')),
+      );
+    }
   }
 
   void _handleProfileTap(int userId) {

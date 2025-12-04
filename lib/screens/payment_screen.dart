@@ -10,6 +10,7 @@ import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/bottom_sheet_custom.dart';
+import '../routes/app_router.dart';
 import 'payment_methods_screen.dart';
 import 'add_payment_method_screen.dart';
 
@@ -262,7 +263,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               color: secondaryTextColor,
             ),
             onTap: () {
-              // TODO: Navigate to billing history
+              // Navigate to billing history
+              context.push(AppRoutes.billingHistory);
             },
           ),
         ],

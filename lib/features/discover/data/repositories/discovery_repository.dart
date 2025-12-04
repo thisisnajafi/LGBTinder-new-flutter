@@ -22,7 +22,7 @@ class DiscoveryRepository {
   /// Get nearby suggestions
   Future<List<DiscoveryProfile>> getNearbySuggestions({
     int limit = 20,
-    DiscoveryFilters? filters,
+    Map<String, dynamic>? filters,
   }) async {
     return await _discoveryService.getNearbySuggestions(
       limit: limit,

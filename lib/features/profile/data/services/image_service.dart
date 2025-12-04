@@ -2,7 +2,7 @@ import 'dart:io';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/models/api_response.dart';
-import '../models/user_profile.dart';
+import '../models/user_image.dart';
 
 /// Image management service
 class ImageService {
@@ -32,8 +32,12 @@ class ImageService {
           final imageUrl = sizes?['full'] ?? sizes?['250x250'] ?? '';
           return UserImage(
             id: imageData['id'] as int,
-            imageUrl: imageUrl is String ? imageUrl : '',
+            userId: 0, // Will be set by backend
+            path: imageUrl is String ? imageUrl : '',
+            type: 'profile',
+            order: 0,
             isPrimary: true,
+            sizes: sizes,
           );
         } else {
           throw Exception(response.message);

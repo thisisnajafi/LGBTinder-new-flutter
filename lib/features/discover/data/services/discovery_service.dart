@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/discovery_profile.dart';
@@ -14,11 +15,50 @@ class DiscoveryService {
   Future<List<DiscoveryProfile>> getNearbySuggestions({
     int? page,
     int? limit,
+    Map<String, dynamic>? filters,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
       if (page != null) queryParams['page'] = page;
       if (limit != null) queryParams['limit'] = limit;
+
+      // Add filter parameters if provided
+      if (filters != null) {
+        // Age range
+        if (filters['ageRange'] != null) {
+          final ageRange = filters['ageRange'] as RangeValues;
+          queryParams['min_age'] = ageRange.start.toInt();
+          queryParams['max_age'] = ageRange.end.toInt();
+        }
+
+        // Max distance
+        if (filters['maxDistance'] != null) {
+          queryParams['max_distance'] = filters['maxDistance'];
+        }
+
+        // Gender filters
+        if (filters['genders'] != null) {
+          final genders = filters['genders'] as List<String>;
+          if (!genders.contains('All')) {
+            queryParams['gender_ids'] = genders.join(',');
+          }
+        }
+
+        // Verification filter
+        if (filters['verifiedOnly'] == true) {
+          queryParams['verified_only'] = '1';
+        }
+
+        // Online status filter
+        if (filters['onlineOnly'] == true) {
+          queryParams['online_only'] = '1';
+        }
+
+        // Premium filter
+        if (filters['premiumOnly'] == true) {
+          queryParams['premium_only'] = '1';
+        }
+      }
 
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.matchingNearbySuggestions,

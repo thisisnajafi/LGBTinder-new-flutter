@@ -1,6 +1,7 @@
 ﻿// Screen: MessageSearchScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -9,6 +10,7 @@ import '../widgets/navbar/app_bar_custom.dart';
 import '../widgets/chat/chat_list_item.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
+import '../core/constants/api_endpoints.dart';
 import '../pages/chat_page.dart';
 
 /// Message search screen - Search messages
@@ -24,12 +26,20 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _recentSearches = [];
+  late SharedPreferences _prefs;
+  static const String _recentSearchesKey = 'message_recent_searches';
+  static const int _maxRecentSearches = 10;
 
   @override
   void initState() {
     super.initState();
-    _loadRecentSearches();
+    _initPrefs();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _initPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+    _loadRecentSearches();
   }
 
   @override
@@ -56,35 +66,59 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     });
 
     try {
-      // TODO: Search messages via API
-      await Future.delayed(const Duration(milliseconds: 500));
-      setState(() {
-        _searchResults = [
-          {
-            'id': 1,
-            'name': 'Alex',
-            'avatar_url': 'https://via.placeholder.com/200',
-            'last_message': 'Hey! How are you?',
-            'last_message_time': DateTime.now().subtract(const Duration(hours: 2)),
-            'unread_count': 0,
-            'is_online': false,
-            'is_verified': true,
-            'is_premium': false,
-          },
-          {
-            'id': 2,
-            'name': 'Jordan',
-            'avatar_url': 'https://via.placeholder.com/200',
-            'last_message': 'Thanks for the message!',
-            'last_message_time': DateTime.now().subtract(const Duration(days: 1)),
-            'unread_count': 2,
-            'is_online': true,
-            'is_verified': false,
-            'is_premium': true,
-          },
-        ];
-        _isLoading = false;
-      });
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.messageSearch,
+        queryParameters: {
+          'query': query,
+          'limit': 20,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as Map<String, dynamic>?;
+        final messages = data?['messages'] as List<dynamic>? ?? [];
+
+        // Group messages by chat/conversation
+        final groupedResults = <Map<String, dynamic>>[];
+        final chatMap = <int, Map<String, dynamic>>{};
+
+        for (final message in messages) {
+          final messageData = message as Map<String, dynamic>;
+          final otherUser = messageData['other_user'] as Map<String, dynamic>;
+          final chatId = messageData['chat_id'] as int;
+
+          if (!chatMap.containsKey(chatId)) {
+            chatMap[chatId] = {
+              'id': otherUser['id'],
+              'name': otherUser['name'],
+              'avatar_url': otherUser['avatar_url'],
+              'last_message': messageData['message'],
+              'last_message_time': DateTime.parse(messageData['created_at']),
+              'unread_count': 0, // Could be calculated from API
+              'is_online': false, // Could be added to API response
+              'is_verified': false, // Could be added to API response
+              'is_premium': false, // Could be added to API response
+              'chat_id': chatId,
+            };
+            groupedResults.add(chatMap[chatId]!);
+          }
+        }
+
+        setState(() {
+          _searchResults = groupedResults;
+          _isLoading = false;
+        });
+
+        // Save to recent searches
+        await _saveRecentSearch(query);
+      } else {
+        setState(() {
+          _searchResults = [];
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -93,16 +127,42 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   }
 
   Future<void> _loadRecentSearches() async {
-    // TODO: Load recent searches from storage
+    final searches = _prefs.getStringList(_recentSearchesKey) ?? [];
     setState(() {
-      _recentSearches = [
-        {
-          'id': 1,
-          'name': 'Alex',
-          'avatar_url': 'https://via.placeholder.com/200',
-        },
-      ];
+      _recentSearches = searches.map((search) => {'query': search}).toList();
     });
+  }
+
+  Future<void> _saveRecentSearch(String query) async {
+    if (query.trim().isEmpty) return;
+
+    final searches = _prefs.getStringList(_recentSearchesKey) ?? [];
+
+    // Remove if already exists
+    searches.remove(query);
+
+    // Add to beginning
+    searches.insert(0, query);
+
+    // Keep only max recent searches
+    if (searches.length > _maxRecentSearches) {
+      searches.removeRange(_maxRecentSearches, searches.length);
+    }
+
+    await _prefs.setStringList(_recentSearchesKey, searches);
+    _loadRecentSearches();
+  }
+
+  Future<void> _removeRecentSearch(String query) async {
+    final searches = _prefs.getStringList(_recentSearchesKey) ?? [];
+    searches.remove(query);
+    await _prefs.setStringList(_recentSearchesKey, searches);
+    _loadRecentSearches();
+  }
+
+  Future<void> _clearRecentSearches() async {
+    await _prefs.remove(_recentSearchesKey);
+    _loadRecentSearches();
   }
 
   void _handleChatTap(int userId) {
@@ -212,9 +272,23 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                             children: [
                               Padding(
                                 padding: EdgeInsets.all(AppSpacing.spacingLG),
-                                child: Text(
-                                  'Recent Searches',
-                                  style: AppTypography.h3.copyWith(color: textColor),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Recent Searches',
+                                      style: AppTypography.h3.copyWith(color: textColor),
+                                    ),
+                                    TextButton(
+                                      onPressed: _clearRecentSearches,
+                                      child: Text(
+                                        'Clear All',
+                                        style: AppTypography.body.copyWith(
+                                          color: AppColors.accentPurple,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Expanded(
@@ -224,16 +298,28 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                                   ),
                                   itemCount: _recentSearches.length,
                                   itemBuilder: (context, index) {
-                                    final user = _recentSearches[index];
-                                    return ChatListItem(
-                                      userId: user['id'],
-                                      name: user['name'],
-                                      avatarUrl: user['avatar_url'],
-                                      lastMessage: null,
-                                      lastMessageTime: null,
-                                      unreadCount: 0,
-                                      isOnline: false,
-                                      onTap: () => _handleChatTap(user['id']),
+                                    final search = _recentSearches[index];
+                                    return ListTile(
+                                      leading: Icon(
+                                        Icons.search,
+                                        color: secondaryTextColor,
+                                      ),
+                                      title: Text(
+                                        search['query'],
+                                        style: AppTypography.body.copyWith(color: textColor),
+                                      ),
+                                      trailing: IconButton(
+                                        icon: Icon(
+                                          Icons.close,
+                                          color: secondaryTextColor,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _removeRecentSearch(search['query']),
+                                      ),
+                                      onTap: () {
+                                        _searchController.text = search['query'];
+                                        _performSearch(search['query']);
+                                      },
                                     );
                                   },
                                 ),

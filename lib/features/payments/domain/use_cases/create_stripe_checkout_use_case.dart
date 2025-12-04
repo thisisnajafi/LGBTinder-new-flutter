@@ -1,4 +1,5 @@
 import '../../data/repositories/payment_repository.dart';
+import '../../data/models/subscription_plan.dart';
 
 /// Use case for creating Stripe checkout sessions
 class CreateStripeCheckoutUseCase {

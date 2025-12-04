@@ -8,3 +8,13 @@ class AppRadius {
   static const double radiusRound = 999.0;
 }
 
+/// Alias for backward compatibility
+class AppBorderRadius {
+  static const double radiusXS = AppRadius.radiusXS;
+  static const double radiusSM = AppRadius.radiusSM;
+  static const double radiusMD = AppRadius.radiusMD;
+  static const double radiusLG = AppRadius.radiusLG;
+  static const double radiusXL = AppRadius.radiusXL;
+  static const double radiusRound = AppRadius.radiusRound;
+}
+

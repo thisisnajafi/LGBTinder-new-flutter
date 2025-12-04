@@ -1,4 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/api_providers.dart';
+import '../../../shared/services/token_storage_service.dart';
+import '../../../core/network/dio_client.dart';
+import '../domain/services/profile_service.dart';
 import '../data/models/user_profile.dart';
 import '../data/models/update_profile_request.dart';
 import '../data/models/user_image.dart';

@@ -11,6 +11,8 @@ import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
+import '../core/constants/api_endpoints.dart';
+import '../core/providers/api_providers.dart';
 
 /// Emergency contacts screen - Manage emergency contacts
 class EmergencyContactsScreen extends ConsumerStatefulWidget {
@@ -22,6 +24,7 @@ class EmergencyContactsScreen extends ConsumerStatefulWidget {
 
 class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScreen> {
   List<Map<String, dynamic>> _contacts = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -30,32 +33,56 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
   }
 
   Future<void> _loadContacts() async {
-    // TODO: Load contacts from API
-    setState(() {
-      _contacts = [
-        {
-          'id': 1,
-          'name': 'Emergency Contact 1',
-          'phone': '+1234567890',
-          'relationship': 'Friend',
-        },
-      ];
-    });
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final response = await apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.emergencyContacts,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!['data'] as List<dynamic>? ?? [];
+        setState(() {
+          _contacts = data.map((contact) => contact as Map<String, dynamic>).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _contacts = [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _contacts = [];
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _handleAddContact() async {
-    // TODO: Open add contact dialog
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _AddContactDialog(),
     );
     if (result != null) {
-      setState(() {
-        _contacts.add({
-          'id': _contacts.length + 1,
-          ...result,
-        });
-      });
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        final response = await apiService.post<Map<String, dynamic>>(
+          ApiEndpoints.emergencyContacts,
+          data: result,
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        if (response.isSuccess && response.data != null) {
+          // Reload contacts to get the updated list with proper IDs
+          await _loadContacts();
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add emergency contact: $e')),
+        );
+      }
     }
   }
 
@@ -70,9 +97,67 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
     );
 
     if (confirmed == true) {
-      setState(() {
-        _contacts.removeWhere((contact) => contact['id'] == id);
-      });
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.delete<Map<String, dynamic>>(
+          '${ApiEndpoints.emergencyContacts}/$id',
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        // Reload contacts
+        await _loadContacts();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Emergency contact removed')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to remove emergency contact: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleEmergencyAlert() async {
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Send Emergency Alert',
+      message: 'This will immediately notify all your emergency contacts. Only use this feature in genuine emergencies.',
+      confirmText: 'Send Alert',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    );
+
+    if (confirmed == true) {
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        final response = await apiService.post<Map<String, dynamic>>(
+          ApiEndpoints.emergencyTrigger,
+          data: {
+            'message': 'Emergency alert triggered from LGBTinder app',
+            'include_location': true,
+          },
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+
+        if (response.isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Emergency alert sent to your contacts'),
+              backgroundColor: AppColors.onlineGreen,
+            ),
+          );
+        } else {
+          throw Exception('Failed to send emergency alert');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send emergency alert: $e'),
+            backgroundColor: AppColors.notificationRed,
+          ),
+        );
+      }
     }
   }
 
@@ -200,6 +285,40 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
                     },
                   ),
           ),
+          // Emergency alert button (only show if contacts exist)
+          if (_contacts.isNotEmpty) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+              child: ElevatedButton(
+                onPressed: _handleEmergencyAlert,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.notificationRed,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                  ),
+                  elevation: 4,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.emergency, color: Colors.white),
+                    SizedBox(width: AppSpacing.spacingSM),
+                    Text(
+                      'Send Emergency Alert',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: AppSpacing.spacingMD),
+          ],
+
           // Add button
           Padding(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
@@ -221,17 +340,34 @@ class _AddContactDialog extends StatefulWidget {
   State<_AddContactDialog> createState() => _AddContactDialogState();
 }
 
+
 class _AddContactDialogState extends State<_AddContactDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _relationshipController = TextEditingController();
+  final _notesController = TextEditingController();
+  bool _isPrimary = false;
+
+  final List<String> _relationshipOptions = [
+    'Parent',
+    'Sibling',
+    'Child',
+    'Spouse/Partner',
+    'Friend',
+    'Colleague',
+    'Doctor',
+    'Other'
+  ];
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _relationshipController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -239,115 +375,184 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Dialog(
-      backgroundColor: surfaceColor,
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AlertDialog(
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.radiusLG),
+      ),
+      title: Text(
+        'Add Emergency Contact',
+        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          color: theme.colorScheme.onSurface,
+        ),
+        textAlign: TextAlign.center,
+      ),
+      content: SingleChildScrollView(
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Add Emergency Contact',
-                style: AppTypography.h2.copyWith(color: textColor),
-              ),
-              SizedBox(height: AppSpacing.spacingLG),
+              // Name field
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Name',
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.surfaceElevatedDark
-                      : AppColors.surfaceElevatedLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
+                  labelText: 'Full Name *',
+                  hintText: 'Enter contact\'s full name',
+                  prefixIcon: Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant),
                 ),
-                style: AppTypography.body.copyWith(color: textColor),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Please enter a name' : null,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Name is required';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: AppSpacing.spacingMD),
+
+              // Phone field
               TextFormField(
                 controller: _phoneController,
-                keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.surfaceElevatedDark
-                      : AppColors.surfaceElevatedLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
+                  labelText: 'Phone Number *',
+                  hintText: '+1234567890',
+                  prefixIcon: Icon(Icons.phone, color: theme.colorScheme.onSurfaceVariant),
                 ),
-                style: AppTypography.body.copyWith(color: textColor),
-                validator: (value) =>
-                    value?.isEmpty ?? true ? 'Please enter a phone number' : null,
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Phone number is required';
+                  }
+                  // Basic phone number validation
+                  if (!RegExp(r'^\+?[1-9]\d{1,14}$').hasMatch(value.replaceAll(' ', ''))) {
+                    return 'Please enter a valid phone number';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: AppSpacing.spacingMD),
+
+              // Email field (optional)
               TextFormField(
-                controller: _relationshipController,
+                controller: _emailController,
                 decoration: InputDecoration(
-                  labelText: 'Relationship (Optional)',
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.surfaceElevatedDark
-                      : AppColors.surfaceElevatedLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
+                  labelText: 'Email (Optional)',
+                  hintText: 'contact@example.com',
+                  prefixIcon: Icon(Icons.email, color: theme.colorScheme.onSurfaceVariant),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      return 'Please enter a valid email address';
+                    }
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+
+              // Relationship dropdown
+              DropdownButtonFormField<String>(
+                value: _relationshipController.text.isNotEmpty ? _relationshipController.text : null,
+                decoration: InputDecoration(
+                  labelText: 'Relationship *',
+                  prefixIcon: Icon(Icons.people, color: theme.colorScheme.onSurfaceVariant),
+                ),
+                items: _relationshipOptions.map((relationship) {
+                  return DropdownMenuItem<String>(
+                    value: relationship,
+                    child: Text(relationship),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _relationshipController.text = value ?? '';
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a relationship';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+
+              // Notes field (optional)
+              TextFormField(
+                controller: _notesController,
+                decoration: InputDecoration(
+                  labelText: 'Notes (Optional)',
+                  hintText: 'Additional information about this contact',
+                  prefixIcon: Icon(Icons.note, color: theme.colorScheme.onSurfaceVariant),
+                ),
+                maxLines: 2,
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+
+              // Primary contact checkbox
+              CheckboxListTile(
+                title: Text(
+                  'Set as primary emergency contact',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
-                style: AppTypography.body.copyWith(color: textColor),
-              ),
-              SizedBox(height: AppSpacing.spacingLG),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Cancel',
-                        style: AppTypography.button.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
+                subtitle: Text(
+                  'Primary contacts receive priority notifications',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  SizedBox(width: AppSpacing.spacingMD),
-                  Expanded(
-                    child: GradientButton(
-                      text: 'Add',
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Navigator.pop(context, {
-                            'name': _nameController.text,
-                            'phone': _phoneController.text,
-                            'relationship': _relationshipController.text,
-                          });
-                        }
-                      },
-                      isFullWidth: true,
-                      height: 40,
-                    ),
-                  ),
-                ],
+                ),
+                value: _isPrimary,
+                onChanged: (value) {
+                  setState(() {
+                    _isPrimary = value ?? false;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
               ),
             ],
           ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: AppTypography.bodyLarge.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop({
+                'name': _nameController.text.trim(),
+                'phone_number': _phoneController.text.trim(),
+                'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+                'relationship': _relationshipController.text,
+                'notes': _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+                'is_primary': _isPrimary,
+              });
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentPurple,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
+            ),
+          ),
+          child: Text('Add Contact'),
+        ),
+      ],
     );
   }
 }

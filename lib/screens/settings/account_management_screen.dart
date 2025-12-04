@@ -12,6 +12,8 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/confirmation_dialog.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/providers/api_providers.dart';
+import '../../features/profile/providers/profile_provider.dart';
 
 /// Account management screen - Manage account settings
 class AccountManagementScreen extends ConsumerStatefulWidget {
@@ -64,10 +66,10 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
           title: 'Verification Code Sent',
           message: 'A verification code has been sent to $newEmail. Please check your email and enter the code below.',
           icon: Icons.email,
-          iconColor: AppColors.primaryLight,
+          iconColor: Theme.of(context).colorScheme.primary,
         );
-        // TODO: Show verification code input dialog
-        // This would open a dialog to enter the 6-digit code
+        // Show verification code input dialog
+        await _showEmailVerificationDialog(newEmail);
       }
     } catch (e) {
       if (mounted) {
@@ -428,6 +430,159 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                 SizedBox(height: AppSpacing.spacingXXL),
               ],
             ),
+    );
+  }
+
+  Future<void> _showEmailVerificationDialog(String newEmail) async {
+    final verificationCodeController = TextEditingController();
+    bool isLoading = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+              ),
+              title: Text(
+                'Verify Email Change',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter the 6-digit verification code sent to:',
+                    style: AppTypography.body.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSpacing.spacingSM),
+                  Text(
+                    newEmail,
+                    style: AppTypography.bodyLarge.copyWith(
+                      color: AppColors.accentPurple,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSpacing.spacingLG),
+                  TextFormField(
+                    controller: verificationCodeController,
+                    decoration: InputDecoration(
+                      labelText: 'Verification Code',
+                      hintText: '000000',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                      ),
+                      counterText: '',
+                    ),
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.h2.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter the verification code';
+                      }
+                      if (value.length != 6) {
+                        return 'Code must be 6 digits';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: AppTypography.button.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (verificationCodeController.text.length == 6) {
+                            setState(() => isLoading = true);
+
+                            try {
+                              await ref.read(profileServiceProvider).verifyEmailChange(
+                                verificationCodeController.text,
+                              );
+
+                              if (context.mounted) {
+                                Navigator.of(dialogContext).pop();
+                                AlertDialogCustom.show(
+                                  context,
+                                  title: 'Email Updated',
+                                  message: 'Your email address has been successfully updated to $newEmail.',
+                                  icon: Icons.check_circle,
+                                  iconColor: AppColors.onlineGreen,
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Verification failed: $e'),
+                                    backgroundColor: AppColors.notificationRed,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() => isLoading = false);
+                              }
+                            }
+                          } else {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a valid 6-digit code'),
+                              ),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentPurple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
+                    ),
+                  ),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text('Verify'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

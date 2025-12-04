@@ -28,6 +28,11 @@ class CallRepository {
     return await _callService.endCall(request);
   }
 
+  /// Get a specific call by ID
+  Future<Call> getCall(String callId) async {
+    return await _callService.getCall(callId);
+  }
+
   /// Get call history
   Future<List<Call>> getCallHistory({
     int? page,

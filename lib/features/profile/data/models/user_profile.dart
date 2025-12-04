@@ -1,3 +1,5 @@
+import 'models.dart';
+
 /// User profile model with full details
 class UserProfile {
   final int id;
@@ -168,35 +170,3 @@ class UserProfile {
   }
 }
 
-/// User image model
-class UserImage {
-  final int id;
-  final String imageUrl;
-  final bool isPrimary;
-  final int? order;
-
-  UserImage({
-    required this.id,
-    required this.imageUrl,
-    this.isPrimary = false,
-    this.order,
-  });
-
-  factory UserImage.fromJson(Map<String, dynamic> json) {
-    return UserImage(
-      id: json['id'] as int,
-      imageUrl: json['image_url'] as String? ?? json['url'] as String? ?? '',
-      isPrimary: json['is_primary'] as bool? ?? false,
-      order: json['order'] as int?,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'image_url': imageUrl,
-      'is_primary': isPrimary,
-      if (order != null) 'order': order,
-    };
-  }
-}

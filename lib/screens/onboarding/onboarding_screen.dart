@@ -69,12 +69,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    // TODO: Mark onboarding as completed
-    // await SharedPreferences.getInstance().then((prefs) {
-    //   prefs.setBool('onboarding_completed', true);
-    // });
-    if (mounted) {
-      Navigator.of(context).pop(true);
+    try {
+      final onboardingNotifier = ref.read(onboardingProvider.notifier);
+      final success = await onboardingNotifier.completeOnboarding();
+
+      if (success && mounted) {
+        Navigator.of(context).pop(true);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to complete onboarding')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error completing onboarding: $e')),
+        );
+      }
     }
   }
 

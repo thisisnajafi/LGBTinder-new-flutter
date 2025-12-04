@@ -1,6 +1,7 @@
 ﻿// Screen: ProfileEditScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -84,24 +85,26 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     });
 
     try {
-      // TODO: Load profile from API
-      // GET /api/profile
-      await Future.delayed(const Duration(seconds: 1));
+      final profileService = ref.read(profileServiceProvider);
+      final profile = await profileService.getProfile();
+
       if (mounted) {
         setState(() {
-          _firstNameController.text = 'John';
-          _lastNameController.text = 'Doe';
-          _bioController.text = 'Love music and travel';
-          _cityController.text = 'New York';
-          _countryController.text = 'United States';
-          _birthDate = DateTime(1990, 1, 1);
-          _age = 34;
-          _avatarUrl = null;
-          _imageUrls = [];
-          _selectedInterests = ['Music', 'Travel'];
-          _selectedJobs = ['Software Engineer'];
-          _selectedEducations = ['University'];
-          _selectedLanguages = ['English', 'Spanish'];
+          _firstNameController.text = profile.firstName ?? '';
+          _lastNameController.text = profile.lastName ?? '';
+          _bioController.text = profile.bio ?? '';
+          _cityController.text = profile.city ?? '';
+          _countryController.text = profile.country ?? '';
+          _birthDate = profile.birthDate;
+          _age = profile.age;
+          _avatarUrl = profile.avatarUrl;
+          _imageUrls = profile.images?.map((img) => img.url).toList() ?? [];
+
+          // Load reference data selections
+          _selectedInterests = profile.interests?.map((i) => i.title).toList() ?? [];
+          _selectedJobs = profile.jobs?.map((j) => j.title).toList() ?? [];
+          _selectedEducations = profile.educations?.map((e) => e.title).toList() ?? [];
+          _selectedLanguages = profile.languages?.map((l) => l.title).toList() ?? [];
           _selectedMusicGenres = ['Pop', 'Rock'];
           _selectedRelationGoals = ['Long-term'];
           _selectedGender = 'Male';
@@ -261,6 +264,42 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     });
   }
 
+  Future<void> _pickAndUploadImage({required bool isAvatar}) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        // Upload the image
+        final profileService = ref.read(profileServiceProvider);
+        final uploadedImage = await profileService.uploadImage(image.path);
+
+        if (isAvatar) {
+          setState(() {
+            _avatarUrl = uploadedImage.url;
+          });
+        } else {
+          setState(() {
+            _imageUrls.add(uploadedImage.url);
+          });
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image uploaded successfully')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload image: $e')),
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> _prepareProfileData() async {
     // Load all reference data
     final interestsAsync = ref.read(interestsProvider);
@@ -346,19 +385,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       // Prepare profile data with proper ID conversions
       final profileData = await _prepareProfileData();
 
-      // TODO: Save profile via API
-      // PUT /api/profile
-      // For now, just show success message
-        'height': _height,
-        'weight': _weight,
-        'smoke': _smoke,
-        'drink': _drink,
-        'gym': _gym,
-        'min_age_preference': _minAgePreference,
-        'max_age_preference': _maxAgePreference,
-      };
+      // Create update request
+      final updateRequest = UpdateProfileRequest.fromJson(profileData);
 
-      await Future.delayed(const Duration(seconds: 2));
+      // Save profile via API
+      final profileService = ref.read(profileServiceProvider);
+      await profileService.updateProfile(updateRequest);
+
       if (mounted) {
         AlertDialogCustom.show(
           context,
@@ -466,18 +499,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 imageUrl: _avatarUrl,
                 name: '${_firstNameController.text} ${_lastNameController.text}',
                 size: 120.0,
-                onUpload: () {
-                  // TODO: Open image picker
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Image picker coming soon')),
-                  );
-                },
-                onEdit: () {
-                  // TODO: Open image picker
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Image picker coming soon')),
-                  );
-                },
+                onUpload: () => _pickAndUploadImage(isAvatar: true),
+                onEdit: () => _pickAndUploadImage(isAvatar: true),
               ),
             ),
             DividerCustom(),

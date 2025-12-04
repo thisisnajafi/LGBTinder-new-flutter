@@ -232,7 +232,7 @@ class PushNotificationService {
         case 'message':
           final userId = data['user_id'];
           if (userId != null && _navigateToChat != null) {
-            _navigateToChat(userId);
+            _navigateToChat?.call(userId);
           }
           break;
         case 'call':

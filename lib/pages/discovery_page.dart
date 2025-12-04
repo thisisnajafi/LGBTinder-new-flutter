@@ -126,19 +126,12 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       final discoveryService = ref.read(discoveryServiceProvider);
       List<DiscoveryProfile> profiles;
       
-      // Use advanced matches if filters are active, otherwise use nearby suggestions
-      if (_activeFilters != null && _activeFilters!.isNotEmpty) {
-        profiles = await discoveryService.getAdvancedMatches(
-          filters: _activeFilters,
-          page: _currentPage,
-          limit: _pageSize,
-        );
-      } else {
-        profiles = await discoveryService.getNearbySuggestions(
-          page: _currentPage,
-          limit: _pageSize,
-        );
-      }
+      // Always use nearby suggestions with optional filters
+      profiles = await discoveryService.getNearbySuggestions(
+        page: _currentPage,
+        limit: _pageSize,
+        filters: _activeFilters,
+      );
 
       if (mounted) {
         setState(() {

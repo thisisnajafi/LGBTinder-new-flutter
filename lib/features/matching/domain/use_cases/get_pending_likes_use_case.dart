@@ -1,4 +1,5 @@
 import '../../data/repositories/matching_repository.dart';
+import '../../data/models/like.dart';
 
 /// Use case for getting pending likes (received likes)
 class GetPendingLikesUseCase {

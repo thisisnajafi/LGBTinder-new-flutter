@@ -5,7 +5,7 @@ class ProfileVerification {
   final bool videoVerified;
   final int verificationScore;
   final int totalVerifications;
-  final int pendingVerifications;
+  final int pendingVerificationsCount;
   final String verificationBadge;
   final bool canSubmitPhoto;
   final bool canSubmitId;
@@ -18,7 +18,7 @@ class ProfileVerification {
     required this.videoVerified,
     required this.verificationScore,
     required this.totalVerifications,
-    required this.pendingVerifications,
+    required this.pendingVerificationsCount,
     required this.verificationBadge,
     required this.canSubmitPhoto,
     required this.canSubmitId,
@@ -36,13 +36,13 @@ class ProfileVerification {
       videoVerified: verificationStatus['video_verified'] as bool? ?? false,
       verificationScore: verificationStatus['verification_score'] as int? ?? 0,
       totalVerifications: verificationStatus['total_verifications'] as int? ?? 0,
-      pendingVerifications: verificationStatus['pending_verifications'] as int? ?? 0,
+      pendingVerificationsCount: verificationStatus['pending_verifications'] as int? ?? 0,
       verificationBadge: data['verification_badge'] as String? ?? 'Unverified',
       canSubmitPhoto: data['can_submit_photo'] as bool? ?? false,
       canSubmitId: data['can_submit_id'] as bool? ?? false,
       canSubmitVideo: data['can_submit_video'] as bool? ?? false,
-      pendingVerifications: data['pending_verifications'] != null
-          ? (data['pending_verifications'] as List)
+      pendingVerifications: data['pending_verifications_list'] != null
+          ? (data['pending_verifications_list'] as List)
               .map((item) => PendingVerification.fromJson(item as Map<String, dynamic>))
               .toList()
           : null,

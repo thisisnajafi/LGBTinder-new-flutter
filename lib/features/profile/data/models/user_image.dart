@@ -23,6 +23,9 @@ class UserImage {
       ? path
       : 'https://your-cdn-domain.com/storage/$path'; // Replace with actual CDN domain
 
+  /// Alias for url property for backward compatibility
+  String get imageUrl => url;
+
   /// Get thumbnail URL
   String get thumbnailUrl {
     if (sizes != null && sizes!.containsKey('thumbnail')) {
