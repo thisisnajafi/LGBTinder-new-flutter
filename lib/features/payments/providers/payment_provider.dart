@@ -269,34 +269,3 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 }
 
 // Use case providers
-final getSubscriptionPlansUseCaseProvider = Provider<GetSubscriptionPlansUseCase>((ref) {
-  throw UnimplementedError('GetSubscriptionPlansUseCase must be overridden in the provider scope');
-});
-
-final purchaseSubscriptionUseCaseProvider = Provider<PurchaseSubscriptionUseCase>((ref) {
-  throw UnimplementedError('PurchaseSubscriptionUseCase must be overridden in the provider scope');
-});
-
-final cancelSubscriptionUseCaseProvider = Provider<CancelSubscriptionUseCase>((ref) {
-  throw UnimplementedError('CancelSubscriptionUseCase must be overridden in the provider scope');
-});
-
-final restorePurchasesUseCaseProvider = Provider<RestorePurchasesUseCase>((ref) {
-  throw UnimplementedError('RestorePurchasesUseCase must be overridden in the provider scope');
-});
-
-final validateReceiptUseCaseProvider = Provider<ValidateReceiptUseCase>((ref) {
-  throw UnimplementedError('ValidateReceiptUseCase must be overridden in the provider scope');
-});
-
-final getSuperlikePacksUseCaseProvider = Provider<GetSuperlikePacksUseCase>((ref) {
-  throw UnimplementedError('GetSuperlikePacksUseCase must be overridden in the provider scope');
-});
-
-final getSubscriptionStatusUseCaseProvider = Provider<GetSubscriptionStatusUseCase>((ref) {
-  throw UnimplementedError('GetSubscriptionStatusUseCase must be overridden in the provider scope');
-});
-
-final createStripeCheckoutUseCaseProvider = Provider<CreateStripeCheckoutUseCase>((ref) {
-  throw UnimplementedError('CreateStripeCheckoutUseCase must be overridden in the provider scope');
-});

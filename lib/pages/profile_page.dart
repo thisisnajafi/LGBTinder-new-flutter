@@ -757,14 +757,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _handlePickedImage(File imageFile) async {
-    // TODO: Upload image to backend and update profile
-    // For now, show success message
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image selected successfully! Upload functionality will be implemented.'),
-        ),
-      );
+    try {
+      // Upload image using profile provider
+      final profileNotifier = ref.read(profileProvider.notifier);
+      await profileNotifier.uploadImage(imageFile.path);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile image uploaded successfully!'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
 
     // Here you would typically:

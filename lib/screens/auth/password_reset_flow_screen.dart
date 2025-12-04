@@ -12,6 +12,10 @@ import '../../widgets/navbar/app_bar_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/utils/app_icons.dart';
+import '../../features/auth/providers/auth_service_provider.dart';
+import '../../features/auth/data/models/send_otp_request.dart';
+import '../../features/auth/data/models/verify_otp_request.dart';
+import '../../features/auth/data/models/reset_password_request.dart';
 
 /// Password reset flow screen - Multi-step password reset with OTP
 class PasswordResetFlowScreen extends ConsumerStatefulWidget {
@@ -107,9 +111,14 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Send OTP via API - requires auth provider integration
-      // POST /api/auth/send-password-reset-otp
-      await Future.delayed(const Duration(seconds: 2));
+      final authService = ref.read(authServiceProvider);
+      final request = SendOtpRequest(
+        email: _emailController.text.trim(),
+        type: 'password_reset',
+      );
+
+      await authService.sendOtp(request);
+
       if (mounted) {
         _startResendCountdown(120); // 2 minutes
         _nextStep();
@@ -143,12 +152,18 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Verify OTP via API - requires auth provider integration
-      // POST /api/auth/verify-password-reset-otp
-      await Future.delayed(const Duration(seconds: 2));
+      final authService = ref.read(authServiceProvider);
+      final request = VerifyOtpRequest(
+        email: _emailController.text.trim(),
+        otp: code,
+        type: 'password_reset',
+      );
+
+      final response = await authService.verifyOtp(request);
+
       if (mounted) {
         setState(() {
-          _resetToken = 'token_from_api'; // TODO: Get token from API response - requires API integration
+          _resetToken = response.token ?? '';
         });
         _nextStep();
       }
@@ -179,8 +194,14 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Resend OTP via API - requires auth provider integration
-      await Future.delayed(const Duration(seconds: 1));
+      final authService = ref.read(authServiceProvider);
+      final request = SendOtpRequest(
+        email: _emailController.text.trim(),
+        type: 'password_reset',
+      );
+
+      await authService.sendOtp(request);
+
       if (mounted) {
         _startResendCountdown(120);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -229,9 +250,15 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
-      // TODO: Reset password via API - requires auth provider integration
-      // POST /api/auth/reset-password
-      await Future.delayed(const Duration(seconds: 2));
+      final authService = ref.read(authServiceProvider);
+      final request = ResetPasswordRequest(
+        token: _resetToken,
+        password: _passwordController.text.trim(),
+        passwordConfirmation: _confirmPasswordController.text.trim(),
+      );
+
+      await authService.resetPassword(request);
+
       if (mounted) {
         AlertDialogCustom.show(
           context,

@@ -9,6 +9,8 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/navbar/app_bar_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../features/auth/providers/auth_service_provider.dart';
+import '../../features/auth/data/models/send_otp_request.dart';
 import 'login_screen.dart';
 
 /// Forgot password screen - Password reset
@@ -41,8 +43,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     });
 
     try {
-      // TODO: Send password reset email via API - requires auth provider integration
-      await Future.delayed(const Duration(seconds: 1));
+      final authService = ref.read(authServiceProvider);
+      final request = SendOtpRequest(
+        email: _emailController.text.trim(),
+        type: 'password_reset',
+      );
+
+      await authService.sendOtp(request);
+
       if (mounted) {
         setState(() {
           _emailSent = true;

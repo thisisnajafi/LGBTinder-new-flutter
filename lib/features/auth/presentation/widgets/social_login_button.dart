@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -108,8 +109,9 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
         final authUrl = authUrlResponse.data!['authorization_url'] as String;
         final state = authUrlResponse.data!['state'] as String;
 
-        // Store state for callback validation
-        // TODO: Store state securely for callback validation
+        // Store state securely for callback validation
+        const storage = FlutterSecureStorage();
+        await storage.write(key: 'oauth_state', value: state);
 
         // Launch URL in external browser
         final Uri url = Uri.parse(authUrl);

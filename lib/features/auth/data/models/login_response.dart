@@ -81,6 +81,7 @@ class UserData {
   final bool? drink;
   final bool? gym;
   final List<dynamic>? images;
+  final String? avatarUrl;
 
   UserData({
     required this.id,
@@ -98,6 +99,7 @@ class UserData {
     this.drink,
     this.gym,
     this.images,
+    this.avatarUrl,
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) {
@@ -132,6 +134,7 @@ class UserData {
       drink: json['drink'] is bool ? json['drink'] as bool? : (json['drink'] == 1 || json['drink'] == '1'), // Handle both bool and int (0/1)
       gym: json['gym'] is bool ? json['gym'] as bool? : (json['gym'] == 1 || json['gym'] == '1'), // Handle both bool and int (0/1)
       images: json['images'] as List<dynamic>?,
+      avatarUrl: json['avatar_url'] as String?,
     );
   }
 }

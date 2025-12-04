@@ -13,6 +13,8 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../widgets/common/selection_bottom_sheet.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
+import '../../features/profile/providers/profile_provider.dart';
+import '../../features/profile/data/models/update_profile_request.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../core/utils/app_icons.dart';
 
@@ -102,9 +104,22 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
     });
 
     try {
-      // TODO: Save profile via API - requires profile provider integration
-      // POST /api/profile-wizard/save-step/{step}
-      await Future.delayed(const Duration(seconds: 2));
+      final profileNotifier = ref.read(profileProvider.notifier);
+      final request = UpdateProfileRequest(
+        profileBio: _bioController.text.trim().isNotEmpty ? _bioController.text.trim() : null,
+        preferredGenders: _selectedPreferredGenders.map((item) => item.id).toList(),
+        relationGoals: _selectedRelationGoals.map((item) => item.id).toList(),
+        minAgePreference: _minAgePreference,
+        maxAgePreference: _maxAgePreference,
+        musicGenres: _selectedMusicGenres.map((item) => item.id).toList(),
+        educations: _selectedEducations.map((item) => item.id).toList(),
+        jobs: _selectedJobs.map((item) => item.id).toList(),
+        languages: _selectedLanguages.map((item) => item.id).toList(),
+        interests: _selectedInterests.map((item) => item.id).toList(),
+      );
+
+      await profileNotifier.updateProfile(request);
+
       if (mounted) {
         AlertDialogCustom.show(
           context,

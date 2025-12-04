@@ -1,12 +1,14 @@
-import '../../domain/services/payment_service.dart';
+import '../services/payment_service.dart';
+import '../services/superlike_pack_service.dart';
 import '../models/subscription_plan.dart';
 import '../models/superlike_pack.dart';
 
 /// Payment repository - wraps PaymentService for use in use cases
 class PaymentRepository {
   final PaymentService _paymentService;
+  final SuperlikePackService _superlikePackService;
 
-  PaymentRepository(this._paymentService);
+  PaymentRepository(this._paymentService, this._superlikePackService);
 
   /// Get all subscription plans
   Future<List<SubscriptionPlan>> getSubscriptionPlans() async {
@@ -45,9 +47,11 @@ class PaymentRepository {
 
   /// Get superlike packs
   Future<List<SuperlikePack>> getSuperlikePacks() async {
-    // TODO: Implement superlike packs retrieval
-    // This would typically call a service method
-    return [];
+    try {
+      return await _superlikePackService.getAvailablePacks();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Purchase superlike pack

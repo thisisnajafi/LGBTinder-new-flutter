@@ -1,9 +1,13 @@
+import '../../../auth/data/models/login_response.dart';
+
 /// Call model for voice and video calls
 class Call {
   final int id;
   final String callId;
   final int callerId;
   final int receiverId;
+  final UserData? caller;
+  final UserData? receiver;
   final String callType; // 'audio', 'video'
   final String status; // 'initiated', 'ringing', 'connected', 'ended', 'missed', 'declined'
   final DateTime startedAt;
@@ -17,6 +21,8 @@ class Call {
     required this.callId,
     required this.callerId,
     required this.receiverId,
+    this.caller,
+    this.receiver,
     required this.callType,
     required this.status,
     required this.startedAt,
@@ -32,6 +38,12 @@ class Call {
       callId: json['call_id'] as String,
       callerId: json['caller_id'] as int,
       receiverId: json['receiver_id'] as int,
+      caller: json['caller'] != null
+          ? UserData.fromJson(json['caller'] as Map<String, dynamic>)
+          : null,
+      receiver: json['receiver'] != null
+          ? UserData.fromJson(json['receiver'] as Map<String, dynamic>)
+          : null,
       callType: json['call_type'] as String,
       status: json['status'] as String,
       startedAt: json['started_at'] != null
@@ -56,6 +68,8 @@ class Call {
       'call_id': callId,
       'caller_id': callerId,
       'receiver_id': receiverId,
+      if (caller != null) 'caller': caller!.toJson(),
+      if (receiver != null) 'receiver': receiver!.toJson(),
       'call_type': callType,
       'status': status,
       'started_at': startedAt.toIso8601String(),
@@ -100,6 +114,8 @@ class Call {
     String? callId,
     int? callerId,
     int? receiverId,
+    UserData? caller,
+    UserData? receiver,
     String? callType,
     String? status,
     DateTime? startedAt,
@@ -113,6 +129,8 @@ class Call {
       callId: callId ?? this.callId,
       callerId: callerId ?? this.callerId,
       receiverId: receiverId ?? this.receiverId,
+      caller: caller ?? this.caller,
+      receiver: receiver ?? this.receiver,
       callType: callType ?? this.callType,
       status: status ?? this.status,
       startedAt: startedAt ?? this.startedAt,

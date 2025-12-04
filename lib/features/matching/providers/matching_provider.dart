@@ -9,6 +9,7 @@ import '../domain/use_cases/get_pending_likes_use_case.dart';
 import '../domain/use_cases/get_superlike_history_use_case.dart';
 import '../domain/use_cases/get_matches_use_case.dart';
 import '../domain/use_cases/get_compatibility_score_use_case.dart';
+import '../domain/use_cases/check_match_status_use_case.dart';
 
 /// Matching provider - manages matching state and operations
 final matchingProvider = StateNotifierProvider<MatchingNotifier, MatchingState>((ref) {
@@ -18,6 +19,7 @@ final matchingProvider = StateNotifierProvider<MatchingNotifier, MatchingState>(
   final getCompatibilityScoreUseCase = ref.watch(getCompatibilityScoreUseCaseProvider);
   final getPendingLikesUseCase = ref.watch(getPendingLikesUseCaseProvider);
   final getSuperlikeHistoryUseCase = ref.watch(getSuperlikeHistoryUseCaseProvider);
+  final checkMatchStatusUseCase = ref.watch(checkMatchStatusUseCaseProvider);
 
   return MatchingNotifier(
     likeProfileUseCase: likeProfileUseCase,
@@ -26,6 +28,7 @@ final matchingProvider = StateNotifierProvider<MatchingNotifier, MatchingState>(
     getCompatibilityScoreUseCase: getCompatibilityScoreUseCase,
     getPendingLikesUseCase: getPendingLikesUseCase,
     getSuperlikeHistoryUseCase: getSuperlikeHistoryUseCase,
+    checkMatchStatusUseCase: checkMatchStatusUseCase,
   );
 });
 
@@ -90,6 +93,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
   final GetCompatibilityScoreUseCase _getCompatibilityScoreUseCase;
   final GetPendingLikesUseCase _getPendingLikesUseCase;
   final GetSuperlikeHistoryUseCase _getSuperlikeHistoryUseCase;
+  final CheckMatchStatusUseCase _checkMatchStatusUseCase;
 
   MatchingNotifier({
     required LikeProfileUseCase likeProfileUseCase,
@@ -98,12 +102,14 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
     required GetCompatibilityScoreUseCase getCompatibilityScoreUseCase,
     required GetPendingLikesUseCase getPendingLikesUseCase,
     required GetSuperlikeHistoryUseCase getSuperlikeHistoryUseCase,
+    required CheckMatchStatusUseCase checkMatchStatusUseCase,
   }) : _likeProfileUseCase = likeProfileUseCase,
        _superlikeProfileUseCase = superlikeProfileUseCase,
        _getMatchesUseCase = getMatchesUseCase,
        _getCompatibilityScoreUseCase = getCompatibilityScoreUseCase,
        _getPendingLikesUseCase = getPendingLikesUseCase,
        _getSuperlikeHistoryUseCase = getSuperlikeHistoryUseCase,
+       _checkMatchStatusUseCase = checkMatchStatusUseCase,
        super(MatchingState());
 
   /// Load all matches
@@ -144,6 +150,15 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
       state = state.copyWith(superlikeHistory: superlikeHistory);
     } catch (e) {
       state = state.copyWith(error: e.toString());
+    }
+  }
+
+  /// Check if current user is matched with target user
+  Future<bool> checkMatchStatus(int targetUserId) async {
+    try {
+      return await _checkMatchStatusUseCase.execute(targetUserId);
+    } catch (e) {
+      return false;
     }
   }
 
@@ -286,4 +301,8 @@ final getPendingLikesUseCaseProvider = Provider<GetPendingLikesUseCase>((ref) {
 
 final getSuperlikeHistoryUseCaseProvider = Provider<GetSuperlikeHistoryUseCase>((ref) {
   throw UnimplementedError('GetSuperlikeHistoryUseCase must be overridden in the provider scope');
+});
+
+final checkMatchStatusUseCaseProvider = Provider<CheckMatchStatusUseCase>((ref) {
+  throw UnimplementedError('CheckMatchStatusUseCase must be overridden in the provider scope');
 });

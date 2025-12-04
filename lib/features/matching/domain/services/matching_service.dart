@@ -155,6 +155,22 @@ class MatchingService {
     }
   }
 
+  /// Check if current user is matched with another user
+  Future<bool> checkMatchStatus(int targetUserId) async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        'profile/$targetUserId/match-status',
+      );
+
+      if (response.isSuccess && response.data != null && response.data!['is_matched'] != null) {
+        return response.data!['is_matched'] as bool;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Get compatibility score between current user and target user
   Future<CompatibilityScore> getCompatibilityScore(int targetUserId) async {
     try {

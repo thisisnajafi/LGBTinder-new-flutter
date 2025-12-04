@@ -45,6 +45,10 @@ class MatchingRepository {
     return await _matchingService.getCompatibilityScore(targetUserId);
   }
 
+  Future<bool> checkMatchStatus(int targetUserId) async {
+    return await _matchingService.checkMatchStatus(targetUserId);
+  }
+
   /// Respond to a like (accept/reject)
   Future<void> respondToLike(int likeId, bool accept) async {
     return await _matchingService.respondToLike(likeId, accept);

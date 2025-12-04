@@ -162,8 +162,10 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
         child: Row(
           children: [
             AvatarWithStatus(
-              imageUrl: null, // TODO: Fetch user avatar from profile API - requires profile provider integration
-              name: 'User ${isOutgoing ? call.receiverId : call.callerId}', // TODO: Fetch user name from profile API - requires profile provider integration
+              imageUrl: isOutgoing ? call.receiver?.avatarUrl : call.caller?.avatarUrl,
+              name: isOutgoing
+                  ? '${call.receiver?.firstName ?? 'Unknown'} ${call.receiver?.lastName ?? 'User'}'
+                  : '${call.caller?.firstName ?? 'Unknown'} ${call.caller?.lastName ?? 'User'}',
               isOnline: false,
               size: 56.0,
             ),

@@ -15,6 +15,7 @@ import '../../widgets/error_handling/error_display_widget.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../../features/profile/data/models/user_profile.dart';
 import '../../features/matching/providers/likes_providers.dart';
+import '../../features/matching/providers/matching_provider.dart';
 import '../../features/matching/data/models/match.dart' as match_models;
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
@@ -40,6 +41,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   bool _hasError = false;
   String? _errorMessage;
   UserProfile? _profile;
+  bool _isMatched = false;
 
   @override
   void initState() {
@@ -58,9 +60,14 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
       final profileService = ref.read(profileServiceProvider);
       final profile = await profileService.getUserProfile(widget.userId);
 
+      // Check match status
+      final matchingNotifier = ref.read(matchingProvider.notifier);
+      final isMatched = await matchingNotifier.checkMatchStatus(widget.userId);
+
       if (mounted) {
         setState(() {
           _profile = profile;
+          _isMatched = isMatched;
           _isLoading = false;
         });
       }
@@ -304,7 +311,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                             onLike: _handleLike,
                             onSuperlike: _handleSuperlike,
                             onMessage: _handleMessage,
-                            isMatched: false, // TODO: Check if matched with current user - requires matching provider integration
+                            isMatched: _isMatched,
                           ),
                         ],
                       ),
