@@ -191,7 +191,6 @@ class PaymentService {
     }
   }
 
-  /// Upgrade subscription plan
   /// Purchase superlike pack
   Future<bool> purchaseSuperlikePack(int packId) async {
     try {

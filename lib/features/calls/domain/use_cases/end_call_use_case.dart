@@ -1,5 +1,6 @@
 import '../../data/repositories/call_repository.dart';
 import '../../data/models/call.dart';
+import '../../data/models/call_action_request.dart';
 
 /// Use Case: EndCallUseCase
 /// Handles ending active calls
