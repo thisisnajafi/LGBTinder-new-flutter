@@ -20,17 +20,21 @@ class OnboardingProgress {
 
   factory OnboardingProgress.fromJson(Map<String, dynamic> json) {
     return OnboardingProgress(
-      currentStep: json['current_step'] ?? 1,
-      totalSteps: json['total_steps'] ?? 5,
-      isCompleted: json['is_completed'] ?? false,
-      stepData: json['step_data'] ?? {},
+      currentStep: json['current_step'] != null ? ((json['current_step'] is int) ? json['current_step'] as int : int.tryParse(json['current_step'].toString()) ?? 1) : 1,
+      totalSteps: json['total_steps'] != null ? ((json['total_steps'] is int) ? json['total_steps'] as int : int.tryParse(json['total_steps'].toString()) ?? 5) : 5,
+      isCompleted: json['is_completed'] == true || json['is_completed'] == 1,
+      stepData: json['step_data'] != null && json['step_data'] is Map
+          ? Map<String, dynamic>.from(json['step_data'] as Map)
+          : {},
       startedAt: json['started_at'] != null
-          ? DateTime.parse(json['started_at'])
+          ? DateTime.tryParse(json['started_at'].toString())
           : null,
       completedAt: json['completed_at'] != null
-          ? DateTime.parse(json['completed_at'])
+          ? DateTime.tryParse(json['completed_at'].toString())
           : null,
-      metadata: json['metadata'],
+      metadata: json['metadata'] != null && json['metadata'] is Map
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : null,
     );
   }
 
