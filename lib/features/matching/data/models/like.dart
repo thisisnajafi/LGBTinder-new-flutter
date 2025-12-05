@@ -25,18 +25,41 @@ class Like {
   });
 
   factory Like.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['first_name'] == null) {
+      throw FormatException('Like.fromJson: first_name is required but was null');
+    }
+    
+    // Get ID from multiple possible fields
+    int likeId = 0;
+    if (json['id'] != null) {
+      likeId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['like_id'] != null) {
+      likeId = (json['like_id'] is int) ? json['like_id'] as int : int.tryParse(json['like_id'].toString()) ?? 0;
+    }
+    
+    // Get user ID - validate it exists
+    int likedUserId;
+    if (json['liked_user_id'] != null) {
+      likedUserId = (json['liked_user_id'] is int) ? json['liked_user_id'] as int : int.parse(json['liked_user_id'].toString());
+    } else if (json['user_id'] != null) {
+      likedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
+    } else {
+      throw FormatException('Like.fromJson: liked_user_id (or user_id) is required but was null');
+    }
+    
     return Like(
-      id: json['id'] as int? ?? json['like_id'] as int? ?? 0,
-      likedUserId: json['liked_user_id'] as int? ?? json['user_id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
+      id: likeId,
+      likedUserId: likedUserId,
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       likedAt: json['liked_at'] != null
-          ? DateTime.parse(json['liked_at'] as String)
+          ? (DateTime.tryParse(json['liked_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      isSuperlike: json['is_superlike'] as bool? ?? false,
-      isMatch: json['is_match'] as bool? ?? false,
-      hasResponded: json['has_responded'] as bool? ?? false,
+      isSuperlike: json['is_superlike'] == true || json['is_superlike'] == 1,
+      isMatch: json['is_match'] == true || json['is_match'] == 1,
+      hasResponded: json['has_responded'] == true || json['has_responded'] == 1,
     );
   }
 
@@ -80,11 +103,11 @@ class LikeResponse {
 
   factory LikeResponse.fromJson(Map<String, dynamic> json) {
     return LikeResponse(
-      isMatch: json['is_match'] as bool? ?? false,
-      match: json['match'] != null
-          ? match_models.Match.fromJson(json['match'] as Map<String, dynamic>)
+      isMatch: json['is_match'] == true || json['is_match'] == 1,
+      match: json['match'] != null && json['match'] is Map
+          ? match_models.Match.fromJson(Map<String, dynamic>.from(json['match'] as Map))
           : null,
-      message: json['message'] as String?,
+      message: json['message']?.toString(),
     );
   }
 }

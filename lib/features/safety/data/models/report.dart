@@ -17,15 +17,33 @@ class Report {
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('Report.fromJson: id is required but was null');
+    }
+    if (json['reason'] == null) {
+      throw FormatException('Report.fromJson: reason is required but was null');
+    }
+    
+    // Get user ID - validate it exists
+    int reportedUserId;
+    if (json['reported_user_id'] != null) {
+      reportedUserId = (json['reported_user_id'] is int) ? json['reported_user_id'] as int : int.parse(json['reported_user_id'].toString());
+    } else if (json['user_id'] != null) {
+      reportedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
+    } else {
+      throw FormatException('Report.fromJson: reported_user_id (or user_id) is required but was null');
+    }
+    
     return Report(
-      id: json['id'] as int,
-      reportedUserId: json['reported_user_id'] as int? ?? json['user_id'] as int,
-      reason: json['reason'] as String,
-      description: json['description'] as String?,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      reportedUserId: reportedUserId,
+      reason: json['reason'].toString(),
+      description: json['description']?.toString(),
       reportedAt: json['reported_at'] != null
-          ? DateTime.parse(json['reported_at'] as String)
+          ? (DateTime.tryParse(json['reported_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      status: json['status'] as String?,
+      status: json['status']?.toString(),
     );
   }
 

@@ -57,14 +57,30 @@ class UserImage {
   }
 
   factory UserImage.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('UserImage.fromJson: id is required but was null');
+    }
+    if (json['user_id'] == null) {
+      throw FormatException('UserImage.fromJson: user_id is required but was null');
+    }
+    if (json['path'] == null) {
+      throw FormatException('UserImage.fromJson: path is required but was null');
+    }
+    if (json['type'] == null) {
+      throw FormatException('UserImage.fromJson: type is required but was null');
+    }
+    
     return UserImage(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
-      path: json['path'] as String,
-      type: json['type'] as String,
-      order: json['order'] as int? ?? 0,
-      isPrimary: json['is_primary'] as bool? ?? false,
-      sizes: json['sizes'] as Map<String, dynamic>?,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
+      path: json['path'].toString(),
+      type: json['type'].toString(),
+      order: json['order'] != null ? ((json['order'] is int) ? json['order'] as int : int.tryParse(json['order'].toString()) ?? 0) : 0,
+      isPrimary: json['is_primary'] == true || json['is_primary'] == 1,
+      sizes: json['sizes'] != null && json['sizes'] is Map
+          ? Map<String, dynamic>.from(json['sizes'] as Map)
+          : null,
     );
   }
 

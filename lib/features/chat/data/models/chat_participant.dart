@@ -19,16 +19,24 @@ class ChatParticipant {
   });
 
   factory ChatParticipant.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['user_id'] == null) {
+      throw FormatException('ChatParticipant.fromJson: user_id is required but was null');
+    }
+    if (json['first_name'] == null) {
+      throw FormatException('ChatParticipant.fromJson: first_name is required but was null');
+    }
+    
     return ChatParticipant(
-      userId: json['user_id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
-      isOnline: json['is_online'] as bool? ?? false,
+      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      isOnline: json['is_online'] == true || json['is_online'] == 1,
       lastSeen: json['last_seen'] != null
-          ? DateTime.parse(json['last_seen'] as String)
+          ? DateTime.tryParse(json['last_seen'].toString())
           : null,
-      isTyping: json['is_typing'] as bool? ?? false,
+      isTyping: json['is_typing'] == true || json['is_typing'] == 1,
     );
   }
 

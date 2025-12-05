@@ -39,24 +39,40 @@ class UserInfo {
   });
 
   factory UserInfo.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('UserInfo.fromJson: id is required but was null');
+    }
+    if (json['first_name'] == null) {
+      throw FormatException('UserInfo.fromJson: first_name is required but was null');
+    }
+    if (json['last_name'] == null) {
+      throw FormatException('UserInfo.fromJson: last_name is required but was null');
+    }
+    if (json['email'] == null) {
+      throw FormatException('UserInfo.fromJson: email is required but was null');
+    }
+    
     return UserInfo(
-      id: json['id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String,
-      email: json['email'] as String,
-      country: json['country'] as String?,
-      city: json['city'] as String?,
-      gender: json['gender'] as String?,
-      birthDate: json['birth_date'] as String?,
-      profileBio: json['profile_bio'] as String?,
-      height: json['height'] as int?,
-      weight: json['weight'] as int?,
-      smoke: json['smoke'] as bool?,
-      drink: json['drink'] as bool?,
-      gym: json['gym'] as bool?,
-      images: json['images'] as List<dynamic>?,
-      showAdultContent: json['show_adult_content'] as bool?,
-      notificationPreferences: json['notification_preferences'] as Map<String, dynamic>?,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name'].toString(),
+      email: json['email'].toString(),
+      country: json['country']?.toString(),
+      city: json['city']?.toString(),
+      gender: json['gender']?.toString(),
+      birthDate: json['birth_date']?.toString(),
+      profileBio: json['profile_bio']?.toString(),
+      height: json['height'] != null ? ((json['height'] is int) ? json['height'] as int : int.tryParse(json['height'].toString())) : null,
+      weight: json['weight'] != null ? ((json['weight'] is int) ? json['weight'] as int : int.tryParse(json['weight'].toString())) : null,
+      smoke: json['smoke'] == true || json['smoke'] == 1,
+      drink: json['drink'] == true || json['drink'] == 1,
+      gym: json['gym'] == true || json['gym'] == 1,
+      images: json['images'] != null && json['images'] is List ? json['images'] as List<dynamic> : null,
+      showAdultContent: json['show_adult_content'] == true || json['show_adult_content'] == 1,
+      notificationPreferences: json['notification_preferences'] != null && json['notification_preferences'] is Map
+          ? Map<String, dynamic>.from(json['notification_preferences'] as Map)
+          : null,
     );
   }
 

@@ -19,15 +19,38 @@ class BlockedUser {
   });
 
   factory BlockedUser.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['first_name'] == null) {
+      throw FormatException('BlockedUser.fromJson: first_name is required but was null');
+    }
+    
+    // Get ID from multiple possible fields
+    int blockId = 0;
+    if (json['id'] != null) {
+      blockId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['block_id'] != null) {
+      blockId = (json['block_id'] is int) ? json['block_id'] as int : int.tryParse(json['block_id'].toString()) ?? 0;
+    }
+    
+    // Get user ID - validate it exists
+    int blockedUserId;
+    if (json['blocked_user_id'] != null) {
+      blockedUserId = (json['blocked_user_id'] is int) ? json['blocked_user_id'] as int : int.parse(json['blocked_user_id'].toString());
+    } else if (json['user_id'] != null) {
+      blockedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
+    } else {
+      throw FormatException('BlockedUser.fromJson: blocked_user_id (or user_id) is required but was null');
+    }
+    
     return BlockedUser(
-      id: json['id'] as int? ?? json['block_id'] as int? ?? 0,
-      blockedUserId: json['blocked_user_id'] as int? ?? json['user_id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
-      reason: json['reason'] as String?,
+      id: blockId,
+      blockedUserId: blockedUserId,
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      reason: json['reason']?.toString(),
       blockedAt: json['blocked_at'] != null
-          ? DateTime.parse(json['blocked_at'] as String)
+          ? (DateTime.tryParse(json['blocked_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }

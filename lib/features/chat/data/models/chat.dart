@@ -29,24 +29,40 @@ class Chat {
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['user_id'] == null) {
+      throw FormatException('Chat.fromJson: user_id is required but was null');
+    }
+    if (json['first_name'] == null) {
+      throw FormatException('Chat.fromJson: first_name is required but was null');
+    }
+    
+    // Get ID from multiple possible fields
+    int chatId = 0;
+    if (json['id'] != null) {
+      chatId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['chat_id'] != null) {
+      chatId = (json['chat_id'] is int) ? json['chat_id'] as int : int.tryParse(json['chat_id'].toString()) ?? 0;
+    }
+    
     return Chat(
-      id: json['id'] as int? ?? json['chat_id'] as int? ?? 0,
-      userId: json['user_id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
-      lastMessage: json['last_message'] != null
-          ? Message.fromJson(json['last_message'] as Map<String, dynamic>)
+      id: chatId,
+      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      lastMessage: json['last_message'] != null && json['last_message'] is Map
+          ? Message.fromJson(Map<String, dynamic>.from(json['last_message'] as Map))
           : null,
       lastMessageAt: json['last_message_at'] != null
-          ? DateTime.parse(json['last_message_at'] as String)
+          ? DateTime.tryParse(json['last_message_at'].toString())
           : null,
-      unreadCount: json['unread_count'] as int? ?? 0,
-      isOnline: json['is_online'] as bool? ?? false,
+      unreadCount: json['unread_count'] != null ? ((json['unread_count'] is int) ? json['unread_count'] as int : int.tryParse(json['unread_count'].toString()) ?? 0) : 0,
+      isOnline: json['is_online'] == true || json['is_online'] == 1,
       lastSeen: json['last_seen'] != null
-          ? DateTime.parse(json['last_seen'] as String)
+          ? DateTime.tryParse(json['last_seen'].toString())
           : null,
-      isTyping: json['is_typing'] as bool? ?? false,
+      isTyping: json['is_typing'] == true || json['is_typing'] == 1,
     );
   }
 

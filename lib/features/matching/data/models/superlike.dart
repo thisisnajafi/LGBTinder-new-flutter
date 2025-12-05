@@ -28,18 +28,41 @@ class Superlike {
   });
 
   factory Superlike.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['first_name'] == null) {
+      throw FormatException('Superlike.fromJson: first_name is required but was null');
+    }
+    
+    // Get ID from multiple possible fields
+    int superlikeId = 0;
+    if (json['id'] != null) {
+      superlikeId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['superlike_id'] != null) {
+      superlikeId = (json['superlike_id'] is int) ? json['superlike_id'] as int : int.tryParse(json['superlike_id'].toString()) ?? 0;
+    }
+    
+    // Get user ID - validate it exists
+    int superlikedUserId;
+    if (json['superliked_user_id'] != null) {
+      superlikedUserId = (json['superliked_user_id'] is int) ? json['superliked_user_id'] as int : int.parse(json['superliked_user_id'].toString());
+    } else if (json['user_id'] != null) {
+      superlikedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
+    } else {
+      throw FormatException('Superlike.fromJson: superliked_user_id (or user_id) is required but was null');
+    }
+    
     return Superlike(
-      id: json['id'] as int? ?? json['superlike_id'] as int? ?? 0,
-      superlikedUserId: json['superliked_user_id'] as int? ?? json['user_id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
+      id: superlikeId,
+      superlikedUserId: superlikedUserId,
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       superlikedAt: json['superliked_at'] != null
-          ? DateTime.parse(json['superliked_at'] as String)
+          ? (DateTime.tryParse(json['superliked_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      isMatch: json['is_match'] as bool? ?? false,
-      hasResponded: json['has_responded'] as bool? ?? false,
-      remainingSuperlikes: json['remaining_superlikes'] as int?,
+      isMatch: json['is_match'] == true || json['is_match'] == 1,
+      hasResponded: json['has_responded'] == true || json['has_responded'] == 1,
+      remainingSuperlikes: json['remaining_superlikes'] != null ? ((json['remaining_superlikes'] is int) ? json['remaining_superlikes'] as int : int.tryParse(json['remaining_superlikes'].toString())) : null,
     );
   }
 
@@ -85,12 +108,12 @@ class SuperlikeResponse {
 
   factory SuperlikeResponse.fromJson(Map<String, dynamic> json) {
     return SuperlikeResponse(
-      isMatch: json['is_match'] as bool? ?? false,
-      match: json['match'] != null
-          ? Match.fromJson(json['match'] as Map<String, dynamic>)
+      isMatch: json['is_match'] == true || json['is_match'] == 1,
+      match: json['match'] != null && json['match'] is Map
+          ? Match.fromJson(Map<String, dynamic>.from(json['match'] as Map))
           : null,
-      message: json['message'] as String?,
-      remainingSuperlikes: json['remaining_superlikes'] as int?,
+      message: json['message']?.toString(),
+      remainingSuperlikes: json['remaining_superlikes'] != null ? ((json['remaining_superlikes'] is int) ? json['remaining_superlikes'] as int : int.tryParse(json['remaining_superlikes'].toString())) : null,
     );
   }
 }
