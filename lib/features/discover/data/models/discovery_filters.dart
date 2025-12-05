@@ -30,24 +30,24 @@ class DiscoveryFilters {
 
   factory DiscoveryFilters.fromJson(Map<String, dynamic> json) {
     return DiscoveryFilters(
-      minAge: json['min_age'] as int?,
-      maxAge: json['max_age'] as int?,
-      preferredGenders: json['preferred_genders'] != null
-          ? (json['preferred_genders'] as List).map((e) => e as int).toList()
+      minAge: json['min_age'] != null ? ((json['min_age'] is int) ? json['min_age'] as int : int.tryParse(json['min_age'].toString())) : null,
+      maxAge: json['max_age'] != null ? ((json['max_age'] is int) ? json['max_age'] as int : int.tryParse(json['max_age'].toString())) : null,
+      preferredGenders: json['preferred_genders'] != null && json['preferred_genders'] is List
+          ? (json['preferred_genders'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      interests: json['interests'] != null
-          ? (json['interests'] as List).map((e) => e as int).toList()
+      interests: json['interests'] != null && json['interests'] is List
+          ? (json['interests'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      relationGoals: json['relation_goals'] != null
-          ? (json['relation_goals'] as List).map((e) => e as int).toList()
+      relationGoals: json['relation_goals'] != null && json['relation_goals'] is List
+          ? (json['relation_goals'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
       maxDistance: json['max_distance'] != null
           ? (json['max_distance'] as num).toDouble()
           : null,
-      hasPhoto: json['has_photo'] as bool?,
-      isVerified: json['is_verified'] as bool?,
-      isOnline: json['is_online'] as bool?,
-      location: json['location'] as String?,
+      hasPhoto: json['has_photo'] == true || json['has_photo'] == 1,
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isOnline: json['is_online'] == true || json['is_online'] == 1,
+      location: json['location']?.toString(),
       latitude: json['latitude'] != null
           ? (json['latitude'] as num).toDouble()
           : null,

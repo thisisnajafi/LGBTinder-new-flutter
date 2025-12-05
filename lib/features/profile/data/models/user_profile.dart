@@ -77,25 +77,39 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('UserProfile.fromJson: id is required but was null');
-    }
-    if (json['first_name'] == null) {
-      throw FormatException('UserProfile.fromJson: first_name is required but was null');
-    }
-    if (json['last_name'] == null) {
-      throw FormatException('UserProfile.fromJson: last_name is required but was null');
-    }
-    if (json['email'] == null) {
-      throw FormatException('UserProfile.fromJson: email is required but was null');
+    // Get ID - use 0 as fallback (though this should typically be provided)
+    int userId = 0;
+    if (json['id'] != null) {
+      userId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['user_id'] != null) {
+      userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
     }
     
+    // Get names - provide defaults if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['firstName']?.toString() ?? 
+                       'User';
+    String lastName = json['last_name']?.toString() ?? 
+                      json['lastName']?.toString() ?? 
+                      '';
+    
+    // If we have a single 'name' field, split it
+    if (firstName == 'User' && json['name'] != null) {
+      final nameParts = json['name'].toString().trim().split(' ');
+      firstName = nameParts.isNotEmpty ? nameParts.first : 'User';
+      lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+    }
+    
+    // Get email - provide default if missing
+    String email = json['email']?.toString() ?? 
+                   json['user_email']?.toString() ?? 
+                   'user@unknown.com';
+    
     return UserProfile(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      firstName: json['first_name'].toString(),
-      lastName: json['last_name'].toString(),
-      email: json['email'].toString(),
+      id: userId,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
       countryId: json['country_id'] != null ? ((json['country_id'] is int) ? json['country_id'] as int : int.tryParse(json['country_id'].toString())) : null,
       country: json['country']?.toString(),
       cityId: json['city_id'] != null ? ((json['city_id'] is int) ? json['city_id'] as int : int.tryParse(json['city_id'].toString())) : null,
@@ -110,7 +124,18 @@ class UserProfile {
       drink: json['drink'] == true || json['drink'] == 1,
       gym: json['gym'] == true || json['gym'] == 1,
       images: json['images'] != null && json['images'] is List
-          ? (json['images'] as List).map((i) => UserImage.fromJson(i is Map<String, dynamic> ? i : Map<String, dynamic>.from(i as Map))).toList()
+          ? (json['images'] as List)
+              .where((i) => i != null)
+              .map((i) {
+                try {
+                  return UserImage.fromJson(i is Map<String, dynamic> ? i : Map<String, dynamic>.from(i as Map));
+                } catch (e) {
+                  // Skip invalid image entries
+                  return null;
+                }
+              })
+              .whereType<UserImage>()
+              .toList()
           : null,
       musicGenres: json['music_genres'] != null && json['music_genres'] is List
           ? (json['music_genres'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()

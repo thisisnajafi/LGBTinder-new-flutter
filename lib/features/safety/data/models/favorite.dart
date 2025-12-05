@@ -19,11 +19,6 @@ class FavoriteUser {
   });
 
   factory FavoriteUser.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['first_name'] == null) {
-      throw FormatException('FavoriteUser.fromJson: first_name is required but was null');
-    }
-    
     // Get ID from multiple possible fields
     int favoriteId = 0;
     if (json['id'] != null) {
@@ -32,20 +27,23 @@ class FavoriteUser {
       favoriteId = (json['favorite_id'] is int) ? json['favorite_id'] as int : int.tryParse(json['favorite_id'].toString()) ?? 0;
     }
     
-    // Get user ID - validate it exists
-    int favoriteUserId;
+    // Get user ID
+    int favoriteUserId = 0;
     if (json['favorite_user_id'] != null) {
-      favoriteUserId = (json['favorite_user_id'] is int) ? json['favorite_user_id'] as int : int.parse(json['favorite_user_id'].toString());
+      favoriteUserId = (json['favorite_user_id'] is int) ? json['favorite_user_id'] as int : int.tryParse(json['favorite_user_id'].toString()) ?? 0;
     } else if (json['user_id'] != null) {
-      favoriteUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
-    } else {
-      throw FormatException('FavoriteUser.fromJson: favorite_user_id (or user_id) is required but was null');
+      favoriteUserId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
     }
+    
+    // Get first name - provide default if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['name']?.toString() ?? 
+                       'Favorite User';
     
     return FavoriteUser(
       id: favoriteId,
       favoriteUserId: favoriteUserId,
-      firstName: json['first_name'].toString(),
+      firstName: firstName,
       lastName: json['last_name']?.toString(),
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       note: json['note']?.toString(),

@@ -92,22 +92,29 @@ class PendingVerification {
   });
 
   factory PendingVerification.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('PendingVerification.fromJson: id is required but was null');
-    }
-    if (json['type'] == null) {
-      throw FormatException('PendingVerification.fromJson: type is required but was null');
-    }
-    if (json['status'] == null) {
-      throw FormatException('PendingVerification.fromJson: status is required but was null');
+    // Get ID - use 0 as fallback
+    int verificationId = 0;
+    if (json['id'] != null) {
+      verificationId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['verification_id'] != null) {
+      verificationId = (json['verification_id'] is int) ? json['verification_id'] as int : int.tryParse(json['verification_id'].toString()) ?? 0;
     }
     
+    // Get type - default to 'photo' if missing
+    String verificationType = json['type']?.toString() ?? 
+                               json['verification_type']?.toString() ?? 
+                               'photo';
+    
+    // Get status - default to 'pending' if missing
+    String verificationStatus = json['status']?.toString() ?? 
+                                 json['verification_status']?.toString() ?? 
+                                 'pending';
+    
     return PendingVerification(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      type: json['type'].toString(),
-      status: json['status'].toString(),
-      submittedAt: json['submitted_at']?.toString(),
+      id: verificationId,
+      type: verificationType,
+      status: verificationStatus,
+      submittedAt: json['submitted_at']?.toString() ?? json['submittedAt']?.toString(),
     );
   }
 

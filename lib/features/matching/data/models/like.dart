@@ -25,11 +25,6 @@ class Like {
   });
 
   factory Like.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['first_name'] == null) {
-      throw FormatException('Like.fromJson: first_name is required but was null');
-    }
-    
     // Get ID from multiple possible fields
     int likeId = 0;
     if (json['id'] != null) {
@@ -38,20 +33,23 @@ class Like {
       likeId = (json['like_id'] is int) ? json['like_id'] as int : int.tryParse(json['like_id'].toString()) ?? 0;
     }
     
-    // Get user ID - validate it exists
-    int likedUserId;
+    // Get user ID
+    int likedUserId = 0;
     if (json['liked_user_id'] != null) {
-      likedUserId = (json['liked_user_id'] is int) ? json['liked_user_id'] as int : int.parse(json['liked_user_id'].toString());
+      likedUserId = (json['liked_user_id'] is int) ? json['liked_user_id'] as int : int.tryParse(json['liked_user_id'].toString()) ?? 0;
     } else if (json['user_id'] != null) {
-      likedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
-    } else {
-      throw FormatException('Like.fromJson: liked_user_id (or user_id) is required but was null');
+      likedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
     }
+    
+    // Get first name - provide default if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['name']?.toString() ?? 
+                       'User $likedUserId';
     
     return Like(
       id: likeId,
       likedUserId: likedUserId,
-      firstName: json['first_name'].toString(),
+      firstName: firstName,
       lastName: json['last_name']?.toString(),
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       likedAt: json['liked_at'] != null

@@ -23,28 +23,44 @@ class SubscriptionPlan {
   });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('SubscriptionPlan.fromJson: id is required but was null');
+    // Get ID - use 0 as fallback if not provided
+    int planId = 0;
+    if (json['id'] != null) {
+      planId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['plan_id'] != null) {
+      planId = (json['plan_id'] is int) ? json['plan_id'] as int : int.tryParse(json['plan_id'].toString()) ?? 0;
     }
     
-    // Get name from multiple possible fields (name, title, plan_name, plan_title)
-    String? name = json['name']?.toString() ?? 
-                   json['title']?.toString() ?? 
-                   json['plan_name']?.toString() ?? 
-                   json['plan_title']?.toString();
+    // Get price and duration for name construction fallback
+    double price = (json['price'] as num?)?.toDouble() ?? 0.0;
+    String? duration = json['duration']?.toString();
     
-    if (name == null || name.isEmpty) {
-      throw FormatException('SubscriptionPlan.fromJson: name (or title/plan_name/plan_title) is required but was null or empty');
+    // Get name from multiple possible fields (name, title, plan_name, plan_title)
+    String name = json['name']?.toString() ?? 
+                  json['title']?.toString() ?? 
+                  json['plan_name']?.toString() ?? 
+                  json['plan_title']?.toString() ??
+                  '';
+    
+    // If name is still empty, construct from available data
+    if (name.isEmpty) {
+      if (duration != null && duration.isNotEmpty) {
+        name = duration.toUpperCase();
+      } else if (price > 0) {
+        String currencySymbol = (json['currency']?.toString() ?? 'usd').toUpperCase() == 'USD' ? '\$' : (json['currency']?.toString() ?? 'usd').toUpperCase();
+        name = '$currencySymbol${price.toStringAsFixed(2)} Plan';
+      } else {
+        name = planId > 0 ? 'Plan $planId' : 'Subscription Plan';
+      }
     }
     
     return SubscriptionPlan(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      id: planId,
       name: name,
       description: json['description']?.toString(),
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      price: price,
       currency: json['currency']?.toString() ?? 'usd',
-      duration: json['duration']?.toString(),
+      duration: duration,
       features: json['features'] != null && json['features'] is List
           ? (json['features'] as List).map((e) => e.toString()).toList()
           : null,
@@ -80,7 +96,7 @@ class SubPlan {
   final String? stripePriceId;
 
   SubPlan({
-    required this.id,
+    this.id = 0, // Made optional with default value
     required this.planId,
     required this.name,
     this.description,
@@ -91,33 +107,70 @@ class SubPlan {
   });
 
   factory SubPlan.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('SubPlan.fromJson: id is required but was null');
-    }
-    if (json['plan_id'] == null) {
-      throw FormatException('SubPlan.fromJson: plan_id is required but was null');
+    // Get ID from multiple possible fields (id, sub_plan_id, subplan_id)
+    // ID is optional since some APIs might not send it for sub-plans
+    int subPlanId = 0;
+    if (json['id'] != null) {
+      subPlanId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['sub_plan_id'] != null) {
+      subPlanId = (json['sub_plan_id'] is int) ? json['sub_plan_id'] as int : int.tryParse(json['sub_plan_id'].toString()) ?? 0;
+    } else if (json['subplan_id'] != null) {
+      subPlanId = (json['subplan_id'] is int) ? json['subplan_id'] as int : int.tryParse(json['subplan_id'].toString()) ?? 0;
     }
     
-    // Get name from multiple possible fields (name, title, plan_name, duration_name)
-    String? name = json['name']?.toString() ?? 
-                   json['title']?.toString() ?? 
-                   json['plan_name']?.toString() ?? 
-                   json['duration_name']?.toString() ??
-                   json['duration']?.toString();
+    // Get plan_id - this is required to link to parent plan
+    int planId = 0;
+    if (json['plan_id'] != null) {
+      planId = (json['plan_id'] is int) ? json['plan_id'] as int : int.tryParse(json['plan_id'].toString()) ?? 0;
+    } else if (json['subscription_plan_id'] != null) {
+      planId = (json['subscription_plan_id'] is int) ? json['subscription_plan_id'] as int : int.tryParse(json['subscription_plan_id'].toString()) ?? 0;
+    }
     
-    if (name == null || name.isEmpty) {
-      throw FormatException('SubPlan.fromJson: name (or title/plan_name/duration) is required but was null or empty');
+    // Get price - we'll need it for name construction
+    double price = (json['price'] as num?)?.toDouble() ?? 0.0;
+    String currency = json['currency']?.toString() ?? 'usd';
+    String? duration = json['duration']?.toString();
+    
+    // Get name from multiple possible fields (name, title, plan_name, duration_name, duration)
+    String name = json['name']?.toString() ?? 
+                  json['title']?.toString() ?? 
+                  json['plan_name']?.toString() ?? 
+                  json['duration_name']?.toString() ??
+                  duration ??
+                  '';
+    
+    // If name is still empty, construct from available data
+    if (name.isEmpty) {
+      // Try to construct a meaningful name from price and duration
+      if (duration != null && duration.isNotEmpty) {
+        name = duration;
+        if (price > 0) {
+          String currencySymbol = currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
+          name = '$duration - $currencySymbol${price.toStringAsFixed(2)}';
+        }
+      } else if (price > 0) {
+        // Just use price if no duration
+        String currencySymbol = currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
+        name = '$currencySymbol${price.toStringAsFixed(2)}';
+      } else {
+        // Last resort - use a generic name with ID or index
+        name = subPlanId > 0 ? 'Plan Option $subPlanId' : 'Plan Option';
+      }
+    }
+    
+    // If we still don't have a plan_id, generate one from the hash of constructed data
+    if (planId == 0) {
+      planId = name.hashCode.abs();
     }
     
     return SubPlan(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      planId: (json['plan_id'] is int) ? json['plan_id'] as int : int.parse(json['plan_id'].toString()),
+      id: subPlanId,
+      planId: planId,
       name: name,
       description: json['description']?.toString(),
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency']?.toString() ?? 'usd',
-      duration: json['duration']?.toString(),
+      price: price,
+      currency: currency,
+      duration: duration,
       stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
     );
   }

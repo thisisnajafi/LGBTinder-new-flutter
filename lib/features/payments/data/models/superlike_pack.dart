@@ -21,18 +21,12 @@ class SuperlikePack {
   });
 
   factory SuperlikePack.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('SuperlikePack.fromJson: id is required but was null');
-    }
-    
-    // Get name from multiple possible fields
-    String? name = json['name']?.toString() ?? 
-                   json['title']?.toString() ?? 
-                   json['pack_name']?.toString();
-    
-    if (name == null || name.isEmpty) {
-      throw FormatException('SuperlikePack.fromJson: name (or title/pack_name) is required but was null or empty');
+    // Get ID from multiple possible fields
+    int packId = 0;
+    if (json['id'] != null) {
+      packId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['pack_id'] != null) {
+      packId = (json['pack_id'] is int) ? json['pack_id'] as int : int.tryParse(json['pack_id'].toString()) ?? 0;
     }
     
     // Get superlike count from multiple possible fields
@@ -43,12 +37,30 @@ class SuperlikePack {
       superlikeCount = (json['count'] is int) ? json['count'] as int : int.tryParse(json['count'].toString()) ?? 0;
     }
     
+    // Get price
+    double price = (json['price'] as num?)?.toDouble() ?? 0.0;
+    
+    // Get name from multiple possible fields
+    String name = json['name']?.toString() ?? 
+                  json['title']?.toString() ?? 
+                  json['pack_name']?.toString() ??
+                  '';
+    
+    // If name is still empty, construct from superlike count
+    if (name.isEmpty) {
+      if (superlikeCount > 0) {
+        name = '$superlikeCount Superlikes';
+      } else {
+        name = 'Superlike Pack';
+      }
+    }
+    
     return SuperlikePack(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      id: packId,
       name: name,
       description: json['description']?.toString(),
       superlikeCount: superlikeCount,
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      price: price,
       currency: json['currency']?.toString() ?? 'usd',
       isPopular: json['is_popular'] == true || json['is_popular'] == 1,
       stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),

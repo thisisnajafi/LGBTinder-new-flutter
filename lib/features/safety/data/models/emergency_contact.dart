@@ -19,17 +19,28 @@ class EmergencyContact {
   });
 
   factory EmergencyContact.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('EmergencyContact.fromJson: id is required but was null');
+    }
+    if (json['name'] == null) {
+      throw FormatException('EmergencyContact.fromJson: name is required but was null');
+    }
+    if (json['phone_number'] == null) {
+      throw FormatException('EmergencyContact.fromJson: phone_number is required but was null');
+    }
+    
     return EmergencyContact(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      phoneNumber: json['phone_number'] as String,
-      relationship: json['relationship'] as String?,
-      isPrimary: json['is_primary'] as bool? ?? false,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      name: json['name'].toString(),
+      phoneNumber: json['phone_number'].toString(),
+      relationship: json['relationship']?.toString(),
+      isPrimary: json['is_primary'] == true || json['is_primary'] == 1,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }
@@ -114,16 +125,27 @@ class EmergencyAlert {
   });
 
   factory EmergencyAlert.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('EmergencyAlert.fromJson: id is required but was null');
+    }
+    if (json['message'] == null) {
+      throw FormatException('EmergencyAlert.fromJson: message is required but was null');
+    }
+    if (json['location'] == null) {
+      throw FormatException('EmergencyAlert.fromJson: location is required but was null');
+    }
+    
     return EmergencyAlert(
-      id: json['id'] as int,
-      message: json['message'] as String,
-      location: json['location'] as String,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      message: json['message'].toString(),
+      location: json['location'].toString(),
       sentAt: json['sent_at'] != null
-          ? DateTime.parse(json['sent_at'] as String)
+          ? (DateTime.tryParse(json['sent_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      notifiedContacts: json['notified_contacts'] != null
+      notifiedContacts: json['notified_contacts'] != null && json['notified_contacts'] is List
           ? (json['notified_contacts'] as List)
-              .map((contact) => EmergencyContact.fromJson(contact as Map<String, dynamic>))
+              .map((contact) => EmergencyContact.fromJson(Map<String, dynamic>.from(contact as Map)))
               .toList()
           : [],
     );

@@ -31,14 +31,6 @@ class Match {
   });
 
   factory Match.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['user_id'] == null) {
-      throw FormatException('Match.fromJson: user_id is required but was null');
-    }
-    if (json['first_name'] == null) {
-      throw FormatException('Match.fromJson: first_name is required but was null');
-    }
-    
     // Get ID from multiple possible fields
     int matchId = 0;
     if (json['id'] != null) {
@@ -47,10 +39,21 @@ class Match {
       matchId = (json['match_id'] is int) ? json['match_id'] as int : int.tryParse(json['match_id'].toString()) ?? 0;
     }
     
+    // Get user ID
+    int userId = 0;
+    if (json['user_id'] != null) {
+      userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
+    }
+    
+    // Get first name - provide default if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['name']?.toString() ?? 
+                       'Match';
+    
     return Match(
       id: matchId,
-      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
-      firstName: json['first_name'].toString(),
+      userId: userId,
+      firstName: firstName,
       lastName: json['last_name']?.toString(),
       profileBio: json['profile_bio']?.toString(),
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),

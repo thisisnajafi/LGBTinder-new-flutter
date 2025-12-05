@@ -145,7 +145,17 @@ class ProfileService {
 
       if (response.isSuccess && response.data != null) {
         final images = response.data!['images'] as List<dynamic>? ?? [];
-        return images.map((image) => UserImage.fromJson(image as Map<String, dynamic>)).toList();
+        return images
+            .where((image) => image != null)
+            .map((image) {
+              try {
+                return UserImage.fromJson(image is Map<String, dynamic> ? image : Map<String, dynamic>.from(image as Map));
+              } catch (e) {
+                return null;
+              }
+            })
+            .whereType<UserImage>()
+            .toList();
       } else {
         throw Exception(response.message);
       }

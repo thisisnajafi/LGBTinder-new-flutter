@@ -29,14 +29,6 @@ class Chat {
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['user_id'] == null) {
-      throw FormatException('Chat.fromJson: user_id is required but was null');
-    }
-    if (json['first_name'] == null) {
-      throw FormatException('Chat.fromJson: first_name is required but was null');
-    }
-    
     // Get ID from multiple possible fields
     int chatId = 0;
     if (json['id'] != null) {
@@ -45,10 +37,21 @@ class Chat {
       chatId = (json['chat_id'] is int) ? json['chat_id'] as int : int.tryParse(json['chat_id'].toString()) ?? 0;
     }
     
+    // Get user ID
+    int userId = 0;
+    if (json['user_id'] != null) {
+      userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
+    }
+    
+    // Get first name - provide default if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['name']?.toString() ?? 
+                       'User';
+    
     return Chat(
       id: chatId,
-      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
-      firstName: json['first_name'].toString(),
+      userId: userId,
+      firstName: firstName,
       lastName: json['last_name']?.toString(),
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       lastMessage: json['last_message'] != null && json['last_message'] is Map

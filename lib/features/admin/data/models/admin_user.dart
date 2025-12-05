@@ -23,22 +23,36 @@ class AdminUser {
   });
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('AdminUser.fromJson: id is required but was null');
+    }
+    if (json['email'] == null) {
+      throw FormatException('AdminUser.fromJson: email is required but was null');
+    }
+    if (json['name'] == null) {
+      throw FormatException('AdminUser.fromJson: name is required but was null');
+    }
+    if (json['role'] == null) {
+      throw FormatException('AdminUser.fromJson: role is required but was null');
+    }
+    
     return AdminUser(
-      id: json['id'] as int,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      role: json['role'] as String,
-      permissions: json['permissions'] != null
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      email: json['email'].toString(),
+      name: json['name'].toString(),
+      role: json['role'].toString(),
+      permissions: json['permissions'] != null && json['permissions'] is List
           ? (json['permissions'] as List).map((e) => e.toString()).toList()
           : [],
-      isActive: json['is_active'] as bool? ?? true,
+      isActive: json['is_active'] == true || json['is_active'] == 1 || json['is_active'] == null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       lastLoginAt: json['last_login_at'] != null
-          ? DateTime.parse(json['last_login_at'] as String)
+          ? (DateTime.tryParse(json['last_login_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      metadata: json['metadata'] != null
+      metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : {},
     );

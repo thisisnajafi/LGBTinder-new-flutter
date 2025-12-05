@@ -28,11 +28,6 @@ class Superlike {
   });
 
   factory Superlike.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['first_name'] == null) {
-      throw FormatException('Superlike.fromJson: first_name is required but was null');
-    }
-    
     // Get ID from multiple possible fields
     int superlikeId = 0;
     if (json['id'] != null) {
@@ -41,20 +36,23 @@ class Superlike {
       superlikeId = (json['superlike_id'] is int) ? json['superlike_id'] as int : int.tryParse(json['superlike_id'].toString()) ?? 0;
     }
     
-    // Get user ID - validate it exists
-    int superlikedUserId;
+    // Get user ID
+    int superlikedUserId = 0;
     if (json['superliked_user_id'] != null) {
-      superlikedUserId = (json['superliked_user_id'] is int) ? json['superliked_user_id'] as int : int.parse(json['superliked_user_id'].toString());
+      superlikedUserId = (json['superliked_user_id'] is int) ? json['superliked_user_id'] as int : int.tryParse(json['superliked_user_id'].toString()) ?? 0;
     } else if (json['user_id'] != null) {
-      superlikedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
-    } else {
-      throw FormatException('Superlike.fromJson: superliked_user_id (or user_id) is required but was null');
+      superlikedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
     }
+    
+    // Get first name - provide default if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['name']?.toString() ?? 
+                       'User $superlikedUserId';
     
     return Superlike(
       id: superlikeId,
       superlikedUserId: superlikedUserId,
-      firstName: json['first_name'].toString(),
+      firstName: firstName,
       lastName: json['last_name']?.toString(),
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       superlikedAt: json['superliked_at'] != null

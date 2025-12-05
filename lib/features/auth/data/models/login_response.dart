@@ -103,39 +103,39 @@ class UserData {
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('UserData.fromJson: id is required but was null');
-    }
-    if (json['email'] == null) {
-      throw FormatException('UserData.fromJson: email is required but was null');
+    // Get ID - use 0 as fallback
+    int userId = 0;
+    if (json['id'] != null) {
+      userId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['user_id'] != null) {
+      userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
     }
     
     // Handle both formats: 'name' (single field) or 'first_name'/'last_name' (separate fields)
-    String firstName;
-    String lastName;
+    String firstName = 'User';
+    String lastName = '';
     
     if (json['name'] != null) {
       // Backend returns 'name' as a single field, split it
       final nameParts = json['name'].toString().trim().split(' ');
-      firstName = nameParts.isNotEmpty ? nameParts.first : '';
+      firstName = nameParts.isNotEmpty ? nameParts.first : 'User';
       lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-    } else {
+    } else if (json['first_name'] != null) {
       // Backend returns 'first_name' and 'last_name' separately
-      firstName = json['first_name']?.toString() ?? '';
+      firstName = json['first_name'].toString();
       lastName = json['last_name']?.toString() ?? '';
     }
     
-    // If first name is still empty, throw error
-    if (firstName.isEmpty) {
-      throw FormatException('UserData.fromJson: first_name (or name) is required but was null or empty');
-    }
+    // Get email - provide default if missing
+    String email = json['email']?.toString() ?? 
+                   json['user_email']?.toString() ?? 
+                   'user@unknown.com';
     
     return UserData(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      id: userId,
       firstName: firstName,
       lastName: lastName,
-      email: json['email'].toString(),
+      email: email,
       country: json['country']?.toString(),
       city: json['city']?.toString(),
       gender: json['gender']?.toString(),

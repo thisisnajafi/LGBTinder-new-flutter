@@ -57,27 +57,41 @@ class UserImage {
   }
 
   factory UserImage.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('UserImage.fromJson: id is required but was null');
-    }
-    if (json['user_id'] == null) {
-      throw FormatException('UserImage.fromJson: user_id is required but was null');
-    }
-    if (json['path'] == null) {
-      throw FormatException('UserImage.fromJson: path is required but was null');
-    }
-    if (json['type'] == null) {
-      throw FormatException('UserImage.fromJson: type is required but was null');
+    // Get ID - use 0 as fallback
+    int imageId = 0;
+    if (json['id'] != null) {
+      imageId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['image_id'] != null) {
+      imageId = (json['image_id'] is int) ? json['image_id'] as int : int.tryParse(json['image_id'].toString()) ?? 0;
     }
     
+    // Get userId - use 0 as fallback
+    int userId = 0;
+    if (json['user_id'] != null) {
+      userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
+    } else if (json['userId'] != null) {
+      userId = (json['userId'] is int) ? json['userId'] as int : int.tryParse(json['userId'].toString()) ?? 0;
+    }
+    
+    // Get path - check multiple field names, default to empty string
+    String imagePath = json['path']?.toString() ?? 
+                       json['url']?.toString() ?? 
+                       json['image_url']?.toString() ?? 
+                       json['imageUrl']?.toString() ?? 
+                       '';
+    
+    // Get type - default to 'gallery' if missing
+    String imageType = json['type']?.toString() ?? 
+                       json['image_type']?.toString() ?? 
+                       'gallery';
+    
     return UserImage(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
-      path: json['path'].toString(),
-      type: json['type'].toString(),
+      id: imageId,
+      userId: userId,
+      path: imagePath,
+      type: imageType,
       order: json['order'] != null ? ((json['order'] is int) ? json['order'] as int : int.tryParse(json['order'].toString()) ?? 0) : 0,
-      isPrimary: json['is_primary'] == true || json['is_primary'] == 1,
+      isPrimary: json['is_primary'] == true || json['is_primary'] == 1 || json['isPrimary'] == true || json['isPrimary'] == 1,
       sizes: json['sizes'] != null && json['sizes'] is Map
           ? Map<String, dynamic>.from(json['sizes'] as Map)
           : null,

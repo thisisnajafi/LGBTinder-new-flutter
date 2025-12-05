@@ -19,19 +19,26 @@ class ReferenceItem {
   });
 
   factory ReferenceItem.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('ReferenceItem.fromJson: id is required but was null');
+    // Get ID - use 0 as fallback if not provided
+    int refId = 0;
+    if (json['id'] != null) {
+      refId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
     }
     
     // Get title from multiple possible fields
-    String title = json['title']?.toString() ?? json['name']?.toString() ?? '';
+    String title = json['title']?.toString() ?? 
+                   json['name']?.toString() ?? 
+                   json['label']?.toString() ??
+                   json['value']?.toString() ??
+                   '';
+    
+    // If title is still empty, use code or a default
     if (title.isEmpty) {
-      throw FormatException('ReferenceItem.fromJson: title (or name) is required but was null or empty');
+      title = json['code']?.toString() ?? 'Item $refId';
     }
     
     return ReferenceItem(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      id: refId,
       title: title,
       status: json['status']?.toString(),
       code: json['code']?.toString(),

@@ -43,17 +43,22 @@ class DiscoveryProfile {
   });
 
   factory DiscoveryProfile.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('DiscoveryProfile.fromJson: id is required but was null');
-    }
-    if (json['first_name'] == null) {
-      throw FormatException('DiscoveryProfile.fromJson: first_name is required but was null');
+    // Get ID - use 0 as fallback
+    int profileId = 0;
+    if (json['id'] != null) {
+      profileId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['user_id'] != null) {
+      profileId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
     }
     
+    // Get first name - provide default if missing
+    String firstName = json['first_name']?.toString() ?? 
+                       json['name']?.toString() ?? 
+                       'User';
+    
     return DiscoveryProfile(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      firstName: json['first_name'].toString(),
+      id: profileId,
+      firstName: firstName,
       lastName: json['last_name']?.toString(),
       age: json['age'] != null ? ((json['age'] is int) ? json['age'] as int : int.tryParse(json['age'].toString())) : null,
       city: json['city']?.toString(),
