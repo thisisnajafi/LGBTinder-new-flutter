@@ -33,30 +33,50 @@ class Call {
   });
 
   factory Call.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('Call.fromJson: id is required but was null');
+    }
+    if (json['call_id'] == null) {
+      throw FormatException('Call.fromJson: call_id is required but was null');
+    }
+    if (json['caller_id'] == null) {
+      throw FormatException('Call.fromJson: caller_id is required but was null');
+    }
+    if (json['receiver_id'] == null) {
+      throw FormatException('Call.fromJson: receiver_id is required but was null');
+    }
+    if (json['call_type'] == null) {
+      throw FormatException('Call.fromJson: call_type is required but was null');
+    }
+    if (json['status'] == null) {
+      throw FormatException('Call.fromJson: status is required but was null');
+    }
+    
     return Call(
-      id: json['id'] as int,
-      callId: json['call_id'] as String,
-      callerId: json['caller_id'] as int,
-      receiverId: json['receiver_id'] as int,
-      caller: json['caller'] != null
-          ? UserData.fromJson(json['caller'] as Map<String, dynamic>)
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      callId: json['call_id'].toString(),
+      callerId: (json['caller_id'] is int) ? json['caller_id'] as int : int.parse(json['caller_id'].toString()),
+      receiverId: (json['receiver_id'] is int) ? json['receiver_id'] as int : int.parse(json['receiver_id'].toString()),
+      caller: json['caller'] != null && json['caller'] is Map
+          ? UserData.fromJson(Map<String, dynamic>.from(json['caller'] as Map))
           : null,
-      receiver: json['receiver'] != null
-          ? UserData.fromJson(json['receiver'] as Map<String, dynamic>)
+      receiver: json['receiver'] != null && json['receiver'] is Map
+          ? UserData.fromJson(Map<String, dynamic>.from(json['receiver'] as Map))
           : null,
-      callType: json['call_type'] as String,
-      status: json['status'] as String,
+      callType: json['call_type'].toString(),
+      status: json['status'].toString(),
       startedAt: json['started_at'] != null
-          ? DateTime.parse(json['started_at'] as String)
+          ? (DateTime.tryParse(json['started_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       endedAt: json['ended_at'] != null
-          ? DateTime.parse(json['ended_at'] as String)
+          ? DateTime.tryParse(json['ended_at'].toString())
           : null,
       duration: json['duration'] != null
-          ? Duration(seconds: json['duration'] as int)
+          ? Duration(seconds: (json['duration'] is int) ? json['duration'] as int : int.tryParse(json['duration'].toString()) ?? 0)
           : null,
-      endReason: json['end_reason'] as String?,
-      metadata: json['metadata'] != null
+      endReason: json['end_reason']?.toString(),
+      metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : {},
     );
@@ -161,14 +181,22 @@ class CallParticipant {
   });
 
   factory CallParticipant.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['user_id'] == null) {
+      throw FormatException('CallParticipant.fromJson: user_id is required but was null');
+    }
+    if (json['name'] == null) {
+      throw FormatException('CallParticipant.fromJson: name is required but was null');
+    }
+    
     return CallParticipant(
-      userId: json['user_id'] as int,
-      name: json['name'] as String,
-      avatarUrl: json['avatar_url'] as String?,
-      isOnline: json['is_online'] as bool? ?? false,
-      isPremium: json['is_premium'] as bool? ?? false,
+      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
+      name: json['name'].toString(),
+      avatarUrl: json['avatar_url']?.toString(),
+      isOnline: json['is_online'] == true || json['is_online'] == 1,
+      isPremium: json['is_premium'] == true || json['is_premium'] == 1,
       lastSeen: json['last_seen'] != null
-          ? DateTime.parse(json['last_seen'] as String)
+          ? DateTime.tryParse(json['last_seen'].toString())
           : null,
     );
   }

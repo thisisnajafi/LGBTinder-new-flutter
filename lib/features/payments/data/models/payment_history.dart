@@ -28,21 +28,21 @@ class PaymentHistory {
 
   factory PaymentHistory.fromJson(Map<String, dynamic> json) {
     return PaymentHistory(
-      id: json['id'] as int? ?? 0,
-      transactionId: json['transaction_id'] as String? ?? '',
-      type: json['type'] as String? ?? '',
-      status: json['status'] as String? ?? '',
+      id: json['id'] != null ? ((json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0) : 0,
+      transactionId: json['transaction_id']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'USD',
-      description: json['description'] as String? ?? '',
+      currency: json['currency']?.toString() ?? 'USD',
+      description: json['description']?.toString() ?? '',
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       completedAt: json['completed_at'] != null
-          ? DateTime.parse(json['completed_at'] as String)
+          ? DateTime.tryParse(json['completed_at'].toString())
           : null,
-      failureReason: json['failure_reason'] as String?,
-      metadata: json['metadata'] != null
+      failureReason: json['failure_reason']?.toString(),
+      metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : {},
     );

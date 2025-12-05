@@ -25,19 +25,29 @@ class Notification {
   });
 
   factory Notification.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('Notification.fromJson: id is required but was null');
+    }
+    if (json['type'] == null) {
+      throw FormatException('Notification.fromJson: type is required but was null');
+    }
+    
     return Notification(
-      id: json['id'] as int,
-      type: json['type'] as String,
-      title: json['title'] as String? ?? '',
-      message: json['message'] as String? ?? json['body'] as String? ?? '',
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      type: json['type'].toString(),
+      title: json['title']?.toString() ?? '',
+      message: json['message']?.toString() ?? json['body']?.toString() ?? '',
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      isRead: json['is_read'] as bool? ?? false,
-      data: json['data'] as Map<String, dynamic>?,
-      userId: json['user_id'] as int?,
-      userImageUrl: json['user_image_url'] as String? ?? json['image_url'] as String?,
-      actionUrl: json['action_url'] as String?,
+      isRead: json['is_read'] == true || json['is_read'] == 1,
+      data: json['data'] != null && json['data'] is Map
+          ? Map<String, dynamic>.from(json['data'] as Map)
+          : null,
+      userId: json['user_id'] != null ? ((json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString())) : null,
+      userImageUrl: json['user_image_url']?.toString() ?? json['image_url']?.toString(),
+      actionUrl: json['action_url']?.toString(),
     );
   }
 

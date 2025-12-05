@@ -35,23 +35,36 @@ class MessageAttachment {
   });
 
   factory MessageAttachment.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('MessageAttachment.fromJson: id is required but was null');
+    }
+    if (json['url'] == null) {
+      throw FormatException('MessageAttachment.fromJson: url is required but was null');
+    }
+    if (json['filename'] == null) {
+      throw FormatException('MessageAttachment.fromJson: filename is required but was null');
+    }
+    
     // Determine attachment type from mime type
-    final mimeType = json['mime_type'] as String? ?? '';
+    final mimeType = json['mime_type']?.toString() ?? '';
     final type = _determineAttachmentType(mimeType);
 
     return MessageAttachment(
-      id: json['id'] as int,
-      url: json['url'] as String,
-      filename: json['filename'] as String,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      url: json['url'].toString(),
+      filename: json['filename'].toString(),
       mimeType: mimeType,
-      size: json['size'] as int? ?? 0,
+      size: json['size'] != null ? ((json['size'] is int) ? json['size'] as int : int.tryParse(json['size'].toString()) ?? 0) : 0,
       type: type,
       width: json['width'] != null ? (json['width'] as num).toDouble() : null,
       height: json['height'] != null ? (json['height'] as num).toDouble() : null,
       duration: json['duration'] != null ? (json['duration'] as num).toDouble() : null,
-      metadata: json['metadata'] as Map<String, dynamic>?,
+      metadata: json['metadata'] != null && json['metadata'] is Map
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }

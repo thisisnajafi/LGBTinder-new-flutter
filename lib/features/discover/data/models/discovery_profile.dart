@@ -43,29 +43,35 @@ class DiscoveryProfile {
   });
 
   factory DiscoveryProfile.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('DiscoveryProfile.fromJson: id is required but was null');
+    }
+    if (json['first_name'] == null) {
+      throw FormatException('DiscoveryProfile.fromJson: first_name is required but was null');
+    }
+    
     return DiscoveryProfile(
-      id: json['id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      age: json['age'] as int?,
-      city: json['city'] as String?,
-      country: json['country'] as String?,
-      gender: json['gender'] as String?,
-      profileBio: json['profile_bio'] as String?,
-      height: json['height'] as int?,
-      imageUrls: json['images'] != null
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      age: json['age'] != null ? ((json['age'] is int) ? json['age'] as int : int.tryParse(json['age'].toString())) : null,
+      city: json['city']?.toString(),
+      country: json['country']?.toString(),
+      gender: json['gender']?.toString(),
+      profileBio: json['profile_bio']?.toString(),
+      height: json['height'] != null ? ((json['height'] is int) ? json['height'] as int : int.tryParse(json['height'].toString())) : null,
+      imageUrls: json['images'] != null && json['images'] is List
           ? (json['images'] as List).map((e) => e.toString()).toList()
           : null,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
-      compatibilityScore: json['compatibility_score'] as int?,
-      isSuperliked: json['is_superliked'] as bool?,
-      isVerified: json['is_verified'] as bool?,
-      isPremium: json['is_premium'] as bool?,
-      isOnline: json['is_online'] as bool?,
-      lastActive: json['last_active'] != null
-          ? DateTime.parse(json['last_active'] as String)
-          : null,
+      compatibilityScore: json['compatibility_score'] != null ? ((json['compatibility_score'] is int) ? json['compatibility_score'] as int : int.tryParse(json['compatibility_score'].toString())) : null,
+      isSuperliked: json['is_superliked'] == true || json['is_superliked'] == 1,
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isPremium: json['is_premium'] == true || json['is_premium'] == 1,
+      isOnline: json['is_online'] == true || json['is_online'] == 1,
+      lastActive: json['last_active'] != null ? DateTime.tryParse(json['last_active'].toString()) : null,
     );
   }
 

@@ -61,32 +61,6 @@ class AppRoutes {
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    redirect: (context, state) async {
-      // Global redirect logic - check authentication for protected routes
-      final tokenStorage = ref.read(tokenStorageServiceProvider);
-      final isAuthenticated = await tokenStorage.isAuthenticated();
-      
-      // List of public routes that don't require authentication
-      final publicRoutes = [
-        AppRoutes.splash,
-        AppRoutes.welcome,
-        AppRoutes.login,
-        AppRoutes.register,
-        AppRoutes.emailVerification,
-      ];
-      
-      // If route is public, allow access
-      if (publicRoutes.contains(state.uri.path)) {
-        return null;
-      }
-      
-      // For all other routes, require authentication
-      if (!isAuthenticated) {
-        return AppRoutes.welcome;
-      }
-      
-      return null;
-    },
     routes: [
       // Splash Screen (no guard)
       GoRoute(
@@ -138,16 +112,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final firstName = state.uri.queryParameters['firstName'] ?? '';
           return ProfileWizardPage(initialFirstName: firstName.isNotEmpty ? firstName : null);
         },
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-          return null;
-        },
       ),
       
       // Onboarding Screen (requires auth and profile completion)
@@ -155,16 +119,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.onboarding,
         name: 'onboarding',
         builder: (context, state) => const OnboardingPage(),
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-          return null;
-        },
       ),
       
       // Onboarding Preferences Screen (requires auth and profile completion)
@@ -172,16 +126,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.onboardingPreferences,
         name: 'onboarding-preferences',
         builder: (context, state) => const OnboardingPreferencesScreen(),
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-          return null;
-        },
       ),
       
       // Home Page (requires auth - onboarding is optional and can be done later)
@@ -189,19 +133,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.home,
         name: 'home',
         builder: (context, state) => const HomePage(),
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-
-          // Allow access to home even if onboarding isn't completed
-          // Users can complete onboarding later from within the app
-          return null;
-        },
         routes: [
           // Discovery Tab (inherits auth from parent)
           GoRoute(
@@ -243,13 +174,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SettingsScreen(),
           ),
           
-          // Notifications (inherits auth from parent)
-          GoRoute(
-            path: 'notifications',
-            name: 'notifications',
-            builder: (context, state) => const NotificationsScreen(),
-          ),
-          
           // Blocked Users (inherits auth from parent)
           GoRoute(
             path: 'blocked-users',
@@ -278,16 +202,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.profileEdit,
         name: 'profile-edit',
         builder: (context, state) => const ProfileEditPage(),
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-          return null;
-        },
       ),
       
       // Profile Detail (requires auth)
@@ -303,16 +217,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return ProfileDetailScreen(
             userId: int.parse(userId),
           );
-        },
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-          return null;
         },
       ),
 
@@ -352,16 +256,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             userName: userName,
             avatarUrl: avatarUrl,
           );
-        },
-        redirect: (context, state) async {
-          // Access providers through ref in the provider scope
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          
-          if (!isAuthenticated) {
-            return AppRoutes.welcome;
-          }
-          return null;
         },
       ),
     ],

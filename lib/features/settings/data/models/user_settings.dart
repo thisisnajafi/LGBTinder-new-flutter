@@ -56,35 +56,35 @@ class UserSettings {
 
   factory UserSettings.fromJson(Map<String, dynamic> json) {
     return UserSettings(
-      language: json['language'] as String? ?? 'en',
-      theme: json['theme'] as String? ?? 'system',
-      showOnlineStatus: json['show_online_status'] as bool? ?? true,
-      readReceipts: json['read_receipts'] as bool? ?? true,
-      typingIndicators: json['typing_indicators'] as bool? ?? true,
-      maxDistance: json['max_distance'] as int? ?? 50,
-      distanceUnit: json['distance_unit'] as String? ?? 'km',
-      interests: json['interests'] != null
+      language: json['language']?.toString() ?? 'en',
+      theme: json['theme']?.toString() ?? 'system',
+      showOnlineStatus: json['show_online_status'] == true || json['show_online_status'] == 1 || json['show_online_status'] == null,
+      readReceipts: json['read_receipts'] == true || json['read_receipts'] == 1 || json['read_receipts'] == null,
+      typingIndicators: json['typing_indicators'] == true || json['typing_indicators'] == 1 || json['typing_indicators'] == null,
+      maxDistance: json['max_distance'] != null ? ((json['max_distance'] is int) ? json['max_distance'] as int : int.tryParse(json['max_distance'].toString()) ?? 50) : 50,
+      distanceUnit: json['distance_unit']?.toString() ?? 'km',
+      interests: json['interests'] != null && json['interests'] is List
           ? (json['interests'] as List).map((e) => e.toString()).toList()
           : [],
-      discoveryPreferences: json['discovery_preferences'] != null
+      discoveryPreferences: json['discovery_preferences'] != null && json['discovery_preferences'] is Map
           ? Map<String, dynamic>.from(json['discovery_preferences'] as Map)
           : {},
-      emailNotifications: json['email_notifications'] as bool? ?? true,
-      pushNotifications: json['push_notifications'] as bool? ?? true,
-      smsNotifications: json['sms_notifications'] as bool? ?? false,
-      marketingEmails: json['marketing_emails'] as bool? ?? false,
-      timezone: json['timezone'] as String? ?? 'UTC',
-      dateFormat: json['date_format'] as String? ?? 'MM/dd/yyyy',
-      timeFormat: json['time_format'] as String? ?? '12h',
-      twoFactorEnabled: json['two_factor_enabled'] as bool? ?? false,
-      twoFactorMethod: json['two_factor_method'] as String?,
-      biometricEnabled: json['biometric_enabled'] as bool? ?? false,
-      hapticFeedback: json['haptic_feedback'] as bool? ?? true,
-      soundEffects: json['sound_effects'] as bool? ?? true,
-      cacheSize: json['cache_size'] as int? ?? 100,
-      autoBackup: json['auto_backup'] as bool? ?? true,
-      backupFrequency: json['backup_frequency'] as String? ?? 'weekly',
-      customSettings: json['custom_settings'] != null
+      emailNotifications: json['email_notifications'] == true || json['email_notifications'] == 1 || json['email_notifications'] == null,
+      pushNotifications: json['push_notifications'] == true || json['push_notifications'] == 1 || json['push_notifications'] == null,
+      smsNotifications: json['sms_notifications'] == true || json['sms_notifications'] == 1,
+      marketingEmails: json['marketing_emails'] == true || json['marketing_emails'] == 1,
+      timezone: json['timezone']?.toString() ?? 'UTC',
+      dateFormat: json['date_format']?.toString() ?? 'MM/dd/yyyy',
+      timeFormat: json['time_format']?.toString() ?? '12h',
+      twoFactorEnabled: json['two_factor_enabled'] == true || json['two_factor_enabled'] == 1,
+      twoFactorMethod: json['two_factor_method']?.toString(),
+      biometricEnabled: json['biometric_enabled'] == true || json['biometric_enabled'] == 1,
+      hapticFeedback: json['haptic_feedback'] == true || json['haptic_feedback'] == 1 || json['haptic_feedback'] == null,
+      soundEffects: json['sound_effects'] == true || json['sound_effects'] == 1 || json['sound_effects'] == null,
+      cacheSize: json['cache_size'] != null ? ((json['cache_size'] is int) ? json['cache_size'] as int : int.tryParse(json['cache_size'].toString()) ?? 100) : 100,
+      autoBackup: json['auto_backup'] == true || json['auto_backup'] == 1 || json['auto_backup'] == null,
+      backupFrequency: json['backup_frequency']?.toString() ?? 'weekly',
+      customSettings: json['custom_settings'] != null && json['custom_settings'] is Map
           ? Map<String, dynamic>.from(json['custom_settings'] as Map)
           : {},
     );

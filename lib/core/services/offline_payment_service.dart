@@ -5,7 +5,7 @@ import '../../shared/services/api_service.dart';
 /// Offline Payment Service - Handles payments when Google Play Billing is unavailable
 class OfflinePaymentService {
   final ApiService _apiService;
-  final SharedPreferences _prefs;
+  final SharedPreferences? _prefs;
   static const String _pendingPurchasesKey = 'pending_purchases';
 
   OfflinePaymentService(this._apiService, this._prefs);
@@ -97,8 +97,12 @@ class OfflinePaymentService {
 
   /// Get pending purchases from storage
   Future<List<Map<String, dynamic>>> _getPendingPurchases() async {
+    if (_prefs == null) {
+      return [];
+    }
+
     try {
-      final purchasesJson = _prefs.getStringList(_pendingPurchasesKey) ?? [];
+      final purchasesJson = _prefs!.getStringList(_pendingPurchasesKey) ?? [];
       return purchasesJson.map((json) {
         // In a real implementation, you'd use json.decode
         // For simplicity, we'll assume the data is already in the right format
@@ -112,10 +116,14 @@ class OfflinePaymentService {
 
   /// Save pending purchases to storage
   Future<void> _savePendingPurchases(List<Map<String, dynamic>> purchases) async {
+    if (_prefs == null) {
+      return;
+    }
+
     try {
       // In a real implementation, you'd use json.encode for each purchase
       final purchasesJson = purchases.map((purchase) => purchase.toString()).toList();
-      await _prefs.setStringList(_pendingPurchasesKey, purchasesJson);
+      await _prefs!.setStringList(_pendingPurchasesKey, purchasesJson);
     } catch (e) {
       debugPrint('Failed to save pending purchases: $e');
       rethrow;
@@ -124,7 +132,11 @@ class OfflinePaymentService {
 
   /// Clear all pending purchases (useful for testing or reset)
   Future<void> clearPendingPurchases() async {
-    await _prefs.remove(_pendingPurchasesKey);
+    if (_prefs == null) {
+      return;
+    }
+
+    await _prefs!.remove(_pendingPurchasesKey);
     debugPrint('Cleared all pending purchases');
   }
 

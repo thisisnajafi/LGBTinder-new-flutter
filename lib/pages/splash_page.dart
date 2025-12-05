@@ -38,7 +38,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       // Check authentication status
       final tokenStorage = ref.read(tokenStorageServiceProvider);
       final isAuthenticated = await tokenStorage.isAuthenticated();
-      
+      print('🔐 Authentication status: $isAuthenticated');
+
       // Check onboarding completion status and first launch
       final onboardingService = OnboardingService();
       final hasCompletedOnboarding = await onboardingService.isOnboardingCompleted();
@@ -46,13 +47,23 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
       if (!mounted) return;
 
+      // TEMPORARY: Force navigation to home for testing
+      print('🏠 TEMPORARY: Force navigation to home screen');
+      if (mounted) {
+        context.go('/home');
+      }
+      return;
+
       if (!isAuthenticated) {
+        print('🚪 Not authenticated - going to welcome screen');
         // Not authenticated - go to welcome screen
         if (mounted) {
           context.go('/welcome');
         }
         return;
       }
+
+      print('✅ User is authenticated - fetching user info');
 
       // User is authenticated - check profile and onboarding status
       try {
@@ -61,14 +72,23 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         final userInfo = await userService.getUserInfo();
         
         // Check if profile is complete (has required fields)
-        final isProfileComplete = userInfo.country != null && 
-                                  userInfo.city != null && 
-                                  userInfo.gender != null && 
+        // Temporarily not requiring gender for testing
+        final isProfileComplete = userInfo.country != null &&
+                                  userInfo.city != null &&
+                                  // userInfo.gender != null &&
                                   userInfo.birthDate != null;
+
+        print('👤 Profile completion check:');
+        print('  - Country: ${userInfo.country}');
+        print('  - City: ${userInfo.city}');
+        print('  - Gender: ${userInfo.gender}');
+        print('  - Birth Date: ${userInfo.birthDate}');
+        print('  - Is profile complete: $isProfileComplete');
 
         if (!mounted) return;
 
         if (!isProfileComplete) {
+          print('⚠️ Profile incomplete - going to profile wizard');
           // Profile incomplete - go to profile wizard
           if (mounted) {
             context.go('/profile-wizard');
@@ -78,7 +98,9 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
         // Only show onboarding on first launch, not every time it's incomplete
         // This prevents showing onboarding to returning users who skipped it
+        print('🎯 Onboarding check: hasCompleted=$hasCompletedOnboarding, isFirstLaunch=$isFirstLaunch');
         if (!hasCompletedOnboarding && isFirstLaunch) {
+          print('📚 First launch and onboarding not done - going to onboarding');
           // First launch and onboarding not done - go to onboarding
           if (mounted) {
             context.go('/onboarding');
@@ -86,24 +108,30 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           return;
         }
 
+        print('🏠 Everything is complete - going to home');
         // Everything is complete - go to home
         if (mounted) {
+          print('🚀 Navigating to /home');
           context.go('/home');
         }
       } on ApiError catch (e) {
+        print('🚨 ApiError during user info fetch: ${e.code} - ${e.message}');
         // If we get 401/403, token might be invalid - clear and go to welcome
         if (e.code == 401 || e.code == 403) {
+          print('🔑 Token invalid - clearing and going to welcome');
           await tokenStorage.clearAllTokens();
           if (mounted) {
             context.go('/welcome');
           }
         } else {
+          print('⚠️ Other API error - going to home anyway');
           // Other error - still try to go to home, user can retry
           if (mounted) {
             context.go('/home');
           }
         }
       } catch (e) {
+        print('💥 Unexpected error during splash: $e');
         // Unexpected error - go to welcome screen to be safe
         if (mounted) {
           context.go('/welcome');

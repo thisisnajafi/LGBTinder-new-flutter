@@ -16,18 +16,25 @@ class FeatureFlags {
     purchaseRestoration: true, // Enable purchase restoration
   };
 
-  final SharedPreferences _prefs;
+  final SharedPreferences? _prefs;
 
   const FeatureFlags(this._prefs);
 
   /// Get feature flag value
   bool getFeatureFlag(String key) {
-    return _prefs.getBool(key) ?? _defaults[key] ?? false;
+    if (_prefs == null) {
+      return _defaults[key] ?? false;
+    }
+    return _prefs!.getBool(key) ?? _defaults[key] ?? false;
   }
 
   /// Set feature flag value
   Future<void> setFeatureFlag(String key, bool value) async {
-    await _prefs.setBool(key, value);
+    if (_prefs == null) {
+      // Silently fail if SharedPreferences is not available
+      return;
+    }
+    await _prefs!.setBool(key, value);
   }
 
   /// Get all feature flags
@@ -85,13 +92,13 @@ enum PaymentSystem {
 }
 
 // Providers
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('SharedPreferences must be provided');
+final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) {
+  return null; // Will be overridden in main.dart if available
 });
 
 final featureFlagsProvider = Provider<FeatureFlags>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return FeatureFlags(prefs);
+  return FeatureFlags(prefs); // FeatureFlags should handle null prefs
 });
 
 // Feature flag state notifiers for reactive updates

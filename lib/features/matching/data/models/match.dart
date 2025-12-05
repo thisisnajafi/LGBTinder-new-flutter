@@ -31,25 +31,41 @@ class Match {
   });
 
   factory Match.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['user_id'] == null) {
+      throw FormatException('Match.fromJson: user_id is required but was null');
+    }
+    if (json['first_name'] == null) {
+      throw FormatException('Match.fromJson: first_name is required but was null');
+    }
+    
+    // Get ID from multiple possible fields
+    int matchId = 0;
+    if (json['id'] != null) {
+      matchId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+    } else if (json['match_id'] != null) {
+      matchId = (json['match_id'] is int) ? json['match_id'] as int : int.tryParse(json['match_id'].toString()) ?? 0;
+    }
+    
     return Match(
-      id: json['id'] as int? ?? json['match_id'] as int? ?? 0,
-      userId: json['user_id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String?,
-      profileBio: json['profile_bio'] as String?,
-      primaryImageUrl: json['primary_image_url'] as String? ?? json['image_url'] as String?,
-      imageUrls: json['images'] != null
+      id: matchId,
+      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name']?.toString(),
+      profileBio: json['profile_bio']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      imageUrls: json['images'] != null && json['images'] is List
           ? (json['images'] as List).map((e) => e.toString()).toList()
           : null,
       matchedAt: json['matched_at'] != null
-          ? DateTime.parse(json['matched_at'] as String)
+          ? (DateTime.tryParse(json['matched_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      isRead: json['is_read'] as bool?,
-      lastMessage: json['last_message'] as String?,
+      isRead: json['is_read'] == true || json['is_read'] == 1,
+      lastMessage: json['last_message']?.toString(),
       lastMessageAt: json['last_message_at'] != null
-          ? DateTime.parse(json['last_message_at'] as String)
+          ? DateTime.tryParse(json['last_message_at'].toString())
           : null,
-      unreadCount: json['unread_count'] as int?,
+      unreadCount: json['unread_count'] != null ? ((json['unread_count'] is int) ? json['unread_count'] as int : int.tryParse(json['unread_count'].toString())) : null,
     );
   }
 

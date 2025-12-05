@@ -23,18 +23,33 @@ class SubscriptionPlan {
   });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('SubscriptionPlan.fromJson: id is required but was null');
+    }
+    
+    // Get name from multiple possible fields (name, title, plan_name, plan_title)
+    String? name = json['name']?.toString() ?? 
+                   json['title']?.toString() ?? 
+                   json['plan_name']?.toString() ?? 
+                   json['plan_title']?.toString();
+    
+    if (name == null || name.isEmpty) {
+      throw FormatException('SubscriptionPlan.fromJson: name (or title/plan_name/plan_title) is required but was null or empty');
+    }
+    
     return SubscriptionPlan(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      description: json['description'] as String?,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      name: name,
+      description: json['description']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'usd',
-      duration: json['duration'] as String?,
-      features: json['features'] != null
+      currency: json['currency']?.toString() ?? 'usd',
+      duration: json['duration']?.toString(),
+      features: json['features'] != null && json['features'] is List
           ? (json['features'] as List).map((e) => e.toString()).toList()
           : null,
-      isPopular: json['is_popular'] as bool? ?? false,
-      stripePriceId: json['stripe_price_id'] as String? ?? json['price_id'] as String?,
+      isPopular: json['is_popular'] == true || json['is_popular'] == 1,
+      stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
     );
   }
 
@@ -76,15 +91,34 @@ class SubPlan {
   });
 
   factory SubPlan.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('SubPlan.fromJson: id is required but was null');
+    }
+    if (json['plan_id'] == null) {
+      throw FormatException('SubPlan.fromJson: plan_id is required but was null');
+    }
+    
+    // Get name from multiple possible fields (name, title, plan_name, duration_name)
+    String? name = json['name']?.toString() ?? 
+                   json['title']?.toString() ?? 
+                   json['plan_name']?.toString() ?? 
+                   json['duration_name']?.toString() ??
+                   json['duration']?.toString();
+    
+    if (name == null || name.isEmpty) {
+      throw FormatException('SubPlan.fromJson: name (or title/plan_name/duration) is required but was null or empty');
+    }
+    
     return SubPlan(
-      id: json['id'] as int,
-      planId: json['plan_id'] as int,
-      name: json['name'] as String,
-      description: json['description'] as String?,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      planId: (json['plan_id'] is int) ? json['plan_id'] as int : int.parse(json['plan_id'].toString()),
+      name: name,
+      description: json['description']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'usd',
-      duration: json['duration'] as String?,
-      stripePriceId: json['stripe_price_id'] as String? ?? json['price_id'] as String?,
+      currency: json['currency']?.toString() ?? 'usd',
+      duration: json['duration']?.toString(),
+      stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
     );
   }
 

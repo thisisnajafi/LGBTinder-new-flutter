@@ -25,19 +25,35 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('Message.fromJson: id is required but was null');
+    }
+    if (json['sender_id'] == null) {
+      throw FormatException('Message.fromJson: sender_id is required but was null');
+    }
+    if (json['receiver_id'] == null) {
+      throw FormatException('Message.fromJson: receiver_id is required but was null');
+    }
+    if (json['message'] == null) {
+      throw FormatException('Message.fromJson: message is required but was null');
+    }
+    
     return Message(
-      id: json['id'] as int,
-      senderId: json['sender_id'] as int,
-      receiverId: json['receiver_id'] as int,
-      message: json['message'] as String,
-      messageType: json['message_type'] as String? ?? 'text',
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      senderId: (json['sender_id'] is int) ? json['sender_id'] as int : int.parse(json['sender_id'].toString()),
+      receiverId: (json['receiver_id'] is int) ? json['receiver_id'] as int : int.parse(json['receiver_id'].toString()),
+      message: json['message'].toString(),
+      messageType: json['message_type']?.toString() ?? 'text',
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      isRead: json['is_read'] as bool? ?? false,
-      isDeleted: json['is_deleted'] as bool? ?? false,
-      attachmentUrl: json['attachment_url'] as String?,
-      metadata: json['metadata'] as Map<String, dynamic>?,
+      isRead: json['is_read'] == true || json['is_read'] == 1,
+      isDeleted: json['is_deleted'] == true || json['is_deleted'] == 1,
+      attachmentUrl: json['attachment_url']?.toString(),
+      metadata: json['metadata'] != null && json['metadata'] is Map
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : null,
     );
   }
 

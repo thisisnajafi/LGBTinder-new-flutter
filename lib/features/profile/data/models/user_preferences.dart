@@ -47,30 +47,30 @@ class UserPreferences {
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
     return UserPreferences(
-      preferredGenders: json['preferred_genders'] != null
-          ? (json['preferred_genders'] as List).map((e) => e as int).toList()
+      preferredGenders: json['preferred_genders'] != null && json['preferred_genders'] is List
+          ? (json['preferred_genders'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      relationGoals: json['relation_goals'] != null
-          ? (json['relation_goals'] as List).map((e) => e as int).toList()
+      relationGoals: json['relation_goals'] != null && json['relation_goals'] is List
+          ? (json['relation_goals'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      minAgePreference: json['min_age_preference'] as int?,
-      maxAgePreference: json['max_age_preference'] as int?,
-      maxDistance: json['max_distance'] as int?,
-      showMeOnApp: json['show_me_on_app'] as bool? ?? true,
-      globalDiscovery: json['global_discovery'] as bool? ?? false,
-      blockedCountries: json['blocked_countries'] != null
-          ? (json['blocked_countries'] as List).map((e) => e as int).toList()
+      minAgePreference: json['min_age_preference'] != null ? ((json['min_age_preference'] is int) ? json['min_age_preference'] as int : int.tryParse(json['min_age_preference'].toString())) : null,
+      maxAgePreference: json['max_age_preference'] != null ? ((json['max_age_preference'] is int) ? json['max_age_preference'] as int : int.tryParse(json['max_age_preference'].toString())) : null,
+      maxDistance: json['max_distance'] != null ? ((json['max_distance'] is int) ? json['max_distance'] as int : int.tryParse(json['max_distance'].toString())) : null,
+      showMeOnApp: json['show_me_on_app'] == true || json['show_me_on_app'] == 1 || json['show_me_on_app'] == null,
+      globalDiscovery: json['global_discovery'] == true || json['global_discovery'] == 1,
+      blockedCountries: json['blocked_countries'] != null && json['blocked_countries'] is List
+          ? (json['blocked_countries'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      blockedCities: json['blocked_cities'] != null
-          ? (json['blocked_cities'] as List).map((e) => e as int).toList()
+      blockedCities: json['blocked_cities'] != null && json['blocked_cities'] is List
+          ? (json['blocked_cities'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      showOnlineStatus: json['show_online_status'] as bool? ?? true,
-      showLastSeen: json['show_last_seen'] as bool? ?? true,
-      showReadReceipts: json['show_read_receipts'] as bool? ?? true,
-      allowProfileScreenshot: json['allow_profile_screenshot'] as bool? ?? false,
-      showDistanceInDiscovery: json['show_distance_in_discovery'] as bool? ?? true,
-      showAgeInDiscovery: json['show_age_in_discovery'] as bool? ?? true,
-      customPreferences: json['custom_preferences'] != null
+      showOnlineStatus: json['show_online_status'] == true || json['show_online_status'] == 1 || json['show_online_status'] == null,
+      showLastSeen: json['show_last_seen'] == true || json['show_last_seen'] == 1 || json['show_last_seen'] == null,
+      showReadReceipts: json['show_read_receipts'] == true || json['show_read_receipts'] == 1 || json['show_read_receipts'] == null,
+      allowProfileScreenshot: json['allow_profile_screenshot'] == true || json['allow_profile_screenshot'] == 1,
+      showDistanceInDiscovery: json['show_distance_in_discovery'] == true || json['show_distance_in_discovery'] == 1 || json['show_distance_in_discovery'] == null,
+      showAgeInDiscovery: json['show_age_in_discovery'] == true || json['show_age_in_discovery'] == 1 || json['show_age_in_discovery'] == null,
+      customPreferences: json['custom_preferences'] != null && json['custom_preferences'] is Map
           ? Map<String, dynamic>.from(json['custom_preferences'] as Map)
           : null,
     );

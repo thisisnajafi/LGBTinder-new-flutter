@@ -77,55 +77,71 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('UserProfile.fromJson: id is required but was null');
+    }
+    if (json['first_name'] == null) {
+      throw FormatException('UserProfile.fromJson: first_name is required but was null');
+    }
+    if (json['last_name'] == null) {
+      throw FormatException('UserProfile.fromJson: last_name is required but was null');
+    }
+    if (json['email'] == null) {
+      throw FormatException('UserProfile.fromJson: email is required but was null');
+    }
+    
     return UserProfile(
-      id: json['id'] as int,
-      firstName: json['first_name'] as String,
-      lastName: json['last_name'] as String,
-      email: json['email'] as String,
-      countryId: json['country_id'] as int?,
-      country: json['country'] as String?,
-      cityId: json['city_id'] as int?,
-      city: json['city'] as String?,
-      genderId: json['gender_id'] as int?,
-      gender: json['gender'] as String?,
-      birthDate: json['birth_date'] as String?,
-      profileBio: json['profile_bio'] as String?,
-      height: json['height'] as int?,
-      weight: json['weight'] as int?,
-      smoke: json['smoke'] as bool?,
-      drink: json['drink'] as bool?,
-      gym: json['gym'] as bool?,
-      images: json['images'] != null
-          ? (json['images'] as List).map((i) => UserImage.fromJson(i as Map<String, dynamic>)).toList()
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      firstName: json['first_name'].toString(),
+      lastName: json['last_name'].toString(),
+      email: json['email'].toString(),
+      countryId: json['country_id'] != null ? ((json['country_id'] is int) ? json['country_id'] as int : int.tryParse(json['country_id'].toString())) : null,
+      country: json['country']?.toString(),
+      cityId: json['city_id'] != null ? ((json['city_id'] is int) ? json['city_id'] as int : int.tryParse(json['city_id'].toString())) : null,
+      city: json['city']?.toString(),
+      genderId: json['gender_id'] != null ? ((json['gender_id'] is int) ? json['gender_id'] as int : int.tryParse(json['gender_id'].toString())) : null,
+      gender: json['gender']?.toString(),
+      birthDate: json['birth_date']?.toString(),
+      profileBio: json['profile_bio']?.toString(),
+      height: json['height'] != null ? ((json['height'] is int) ? json['height'] as int : int.tryParse(json['height'].toString())) : null,
+      weight: json['weight'] != null ? ((json['weight'] is int) ? json['weight'] as int : int.tryParse(json['weight'].toString())) : null,
+      smoke: json['smoke'] == true || json['smoke'] == 1,
+      drink: json['drink'] == true || json['drink'] == 1,
+      gym: json['gym'] == true || json['gym'] == 1,
+      images: json['images'] != null && json['images'] is List
+          ? (json['images'] as List).map((i) => UserImage.fromJson(i is Map<String, dynamic> ? i : Map<String, dynamic>.from(i as Map))).toList()
           : null,
-      musicGenres: json['music_genres'] != null
-          ? (json['music_genres'] as List).map((e) => e as int).toList()
+      musicGenres: json['music_genres'] != null && json['music_genres'] is List
+          ? (json['music_genres'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      educations: json['educations'] != null
-          ? (json['educations'] as List).map((e) => e as int).toList()
+      educations: json['educations'] != null && json['educations'] is List
+          ? (json['educations'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      jobs: json['jobs'] != null ? (json['jobs'] as List).map((e) => e as int).toList() : null,
-      languages: json['languages'] != null
-          ? (json['languages'] as List).map((e) => e as int).toList()
+      jobs: json['jobs'] != null && json['jobs'] is List
+          ? (json['jobs'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      interests: json['interests'] != null
-          ? (json['interests'] as List).map((e) => e as int).toList()
+      languages: json['languages'] != null && json['languages'] is List
+          ? (json['languages'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      preferredGenders: json['preferred_genders'] != null
-          ? (json['preferred_genders'] as List).map((e) => e as int).toList()
+      interests: json['interests'] != null && json['interests'] is List
+          ? (json['interests'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      relationGoals: json['relation_goals'] != null
-          ? (json['relation_goals'] as List).map((e) => e as int).toList()
+      preferredGenders: json['preferred_genders'] != null && json['preferred_genders'] is List
+          ? (json['preferred_genders'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
           : null,
-      minAgePreference: json['min_age_preference'] as int?,
-      maxAgePreference: json['max_age_preference'] as int?,
-      isVerified: json['is_verified'] as bool?,
-      isPremium: json['is_premium'] as bool?,
-      isOnline: json['is_online'] as bool?,
-      isPhoneVerified: json['is_phone_verified'] as bool?,
-      isEmailVerified: json['is_email_verified'] as bool?,
-      viewsCount: json['views_count'] as int?,
-      lastSeen: json['last_seen'] != null ? DateTime.parse(json['last_seen'] as String) : null,
+      relationGoals: json['relation_goals'] != null && json['relation_goals'] is List
+          ? (json['relation_goals'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
+          : null,
+      minAgePreference: json['min_age_preference'] != null ? ((json['min_age_preference'] is int) ? json['min_age_preference'] as int : int.tryParse(json['min_age_preference'].toString())) : null,
+      maxAgePreference: json['max_age_preference'] != null ? ((json['max_age_preference'] is int) ? json['max_age_preference'] as int : int.tryParse(json['max_age_preference'].toString())) : null,
+      isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isPremium: json['is_premium'] == true || json['is_premium'] == 1,
+      isOnline: json['is_online'] == true || json['is_online'] == 1,
+      isPhoneVerified: json['is_phone_verified'] == true || json['is_phone_verified'] == 1,
+      isEmailVerified: json['is_email_verified'] == true || json['is_email_verified'] == 1,
+      viewsCount: json['views_count'] != null ? ((json['views_count'] is int) ? json['views_count'] as int : int.tryParse(json['views_count'].toString())) : null,
+      lastSeen: json['last_seen'] != null ? DateTime.tryParse(json['last_seen'].toString()) : null,
       additionalData: json,
     );
   }

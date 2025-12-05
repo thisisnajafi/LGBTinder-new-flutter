@@ -1,4 +1,5 @@
 ﻿// Screen: MessageSearchScreen
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,7 +27,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _recentSearches = [];
-  late SharedPreferences _prefs;
+  SharedPreferences? _prefs;
   static const String _recentSearchesKey = 'message_recent_searches';
   static const int _maxRecentSearches = 10;
 
@@ -38,8 +39,16 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   }
 
   Future<void> _initPrefs() async {
-    _prefs = await SharedPreferences.getInstance();
-    _loadRecentSearches();
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      _loadRecentSearches();
+    } catch (e) {
+      // Fallback to empty recent searches if SharedPreferences fails
+      debugPrint('Failed to initialize SharedPreferences: $e');
+      setState(() {
+        _recentSearches = [];
+      });
+    }
   }
 
   @override
@@ -127,42 +136,83 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   }
 
   Future<void> _loadRecentSearches() async {
-    final searches = _prefs.getStringList(_recentSearchesKey) ?? [];
-    setState(() {
-      _recentSearches = searches.map((search) => {'query': search}).toList();
-    });
+    if (_prefs == null) {
+      setState(() {
+        _recentSearches = [];
+      });
+      return;
+    }
+
+    try {
+      final searches = _prefs!.getStringList(_recentSearchesKey) ?? [];
+      setState(() {
+        _recentSearches = searches.map((search) => {'query': search}).toList();
+      });
+    } catch (e) {
+      debugPrint('Failed to load recent searches: $e');
+      setState(() {
+        _recentSearches = [];
+      });
+    }
   }
 
   Future<void> _saveRecentSearch(String query) async {
-    if (query.trim().isEmpty) return;
+    if (query.trim().isEmpty || _prefs == null) return;
 
-    final searches = _prefs.getStringList(_recentSearchesKey) ?? [];
+    try {
+      final searches = _prefs!.getStringList(_recentSearchesKey) ?? [];
 
-    // Remove if already exists
-    searches.remove(query);
+      // Remove if already exists
+      searches.remove(query);
 
-    // Add to beginning
-    searches.insert(0, query);
+      // Add to beginning
+      searches.insert(0, query);
 
-    // Keep only max recent searches
-    if (searches.length > _maxRecentSearches) {
-      searches.removeRange(_maxRecentSearches, searches.length);
+      // Keep only max recent searches
+      if (searches.length > _maxRecentSearches) {
+        searches.removeRange(_maxRecentSearches, searches.length);
+      }
+
+      await _prefs!.setStringList(_recentSearchesKey, searches);
+      _loadRecentSearches();
+    } catch (e) {
+      debugPrint('Failed to save recent search: $e');
+      // Continue without saving to avoid crashes
     }
-
-    await _prefs.setStringList(_recentSearchesKey, searches);
-    _loadRecentSearches();
   }
 
   Future<void> _removeRecentSearch(String query) async {
-    final searches = _prefs.getStringList(_recentSearchesKey) ?? [];
-    searches.remove(query);
-    await _prefs.setStringList(_recentSearchesKey, searches);
-    _loadRecentSearches();
+    if (_prefs == null) return;
+
+    try {
+      final searches = _prefs!.getStringList(_recentSearchesKey) ?? [];
+      searches.remove(query);
+      await _prefs!.setStringList(_recentSearchesKey, searches);
+      _loadRecentSearches();
+    } catch (e) {
+      debugPrint('Failed to remove recent search: $e');
+      // Continue without removing to avoid crashes
+    }
   }
 
   Future<void> _clearRecentSearches() async {
-    await _prefs.remove(_recentSearchesKey);
-    _loadRecentSearches();
+    if (_prefs == null) {
+      setState(() {
+        _recentSearches = [];
+      });
+      return;
+    }
+
+    try {
+      await _prefs!.remove(_recentSearchesKey);
+      _loadRecentSearches();
+    } catch (e) {
+      debugPrint('Failed to clear recent searches: $e');
+      // Continue with empty list
+      setState(() {
+        _recentSearches = [];
+      });
+    }
   }
 
   void _handleChatTap(int userId) {

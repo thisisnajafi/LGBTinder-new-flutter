@@ -24,19 +24,19 @@ class OnboardingPreferences {
 
   factory OnboardingPreferences.fromJson(Map<String, dynamic> json) {
     return OnboardingPreferences(
-      relationshipGoal: json['relationship_goal'] as String?,
-      interests: json['interests'] != null
+      relationshipGoal: json['relationship_goal']?.toString(),
+      interests: json['interests'] != null && json['interests'] is List
           ? (json['interests'] as List).map((e) => e.toString()).toList()
           : null,
-      preferredGender: json['preferred_gender'] as String?,
-      ageRangeMin: json['age_range_min'] as int?,
-      ageRangeMax: json['age_range_max'] as int?,
+      preferredGender: json['preferred_gender']?.toString(),
+      ageRangeMin: json['age_range_min'] != null ? ((json['age_range_min'] is int) ? json['age_range_min'] as int : int.tryParse(json['age_range_min'].toString())) : null,
+      ageRangeMax: json['age_range_max'] != null ? ((json['age_range_max'] is int) ? json['age_range_max'] as int : int.tryParse(json['age_range_max'].toString())) : null,
       maxDistance: json['max_distance'] != null
           ? (json['max_distance'] as num).toDouble()
           : null,
-      showMeOnApp: json['show_me_on_app'] as bool?,
-      receiveNotifications: json['receive_notifications'] as bool?,
-      customAnswers: json['custom_answers'] != null
+      showMeOnApp: json['show_me_on_app'] == true || json['show_me_on_app'] == 1,
+      receiveNotifications: json['receive_notifications'] == true || json['receive_notifications'] == 1,
+      customAnswers: json['custom_answers'] != null && json['custom_answers'] is Map
           ? Map<String, dynamic>.from(json['custom_answers'] as Map)
           : null,
     );
@@ -125,14 +125,14 @@ class OnboardingProgress {
 
   factory OnboardingProgress.fromJson(Map<String, dynamic> json) {
     return OnboardingProgress(
-      currentStep: json['current_step'] as int? ?? 0,
-      totalSteps: json['total_steps'] as int? ?? 5,
-      isCompleted: json['is_completed'] as bool? ?? false,
+      currentStep: json['current_step'] != null ? ((json['current_step'] is int) ? json['current_step'] as int : int.tryParse(json['current_step'].toString()) ?? 0) : 0,
+      totalSteps: json['total_steps'] != null ? ((json['total_steps'] is int) ? json['total_steps'] as int : int.tryParse(json['total_steps'].toString()) ?? 5) : 5,
+      isCompleted: json['is_completed'] == true || json['is_completed'] == 1,
       startedAt: json['started_at'] != null
-          ? DateTime.parse(json['started_at'] as String)
+          ? DateTime.tryParse(json['started_at'].toString())
           : null,
       completedAt: json['completed_at'] != null
-          ? DateTime.parse(json['completed_at'] as String)
+          ? DateTime.tryParse(json['completed_at'].toString())
           : null,
     );
   }
@@ -179,14 +179,25 @@ class OnboardingStep {
   });
 
   factory OnboardingStep.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['step_number'] == null) {
+      throw FormatException('OnboardingStep.fromJson: step_number is required but was null');
+    }
+    if (json['title'] == null) {
+      throw FormatException('OnboardingStep.fromJson: title is required but was null');
+    }
+    if (json['subtitle'] == null) {
+      throw FormatException('OnboardingStep.fromJson: subtitle is required but was null');
+    }
+    
     return OnboardingStep(
-      stepNumber: json['step_number'] as int,
-      title: json['title'] as String,
-      subtitle: json['subtitle'] as String,
-      description: json['description'] as String?,
-      isRequired: json['is_required'] as bool? ?? true,
-      isCompleted: json['is_completed'] as bool? ?? false,
-      metadata: json['metadata'] != null
+      stepNumber: (json['step_number'] is int) ? json['step_number'] as int : int.parse(json['step_number'].toString()),
+      title: json['title'].toString(),
+      subtitle: json['subtitle'].toString(),
+      description: json['description']?.toString(),
+      isRequired: json['is_required'] == true || json['is_required'] == 1 || json['is_required'] == null,
+      isCompleted: json['is_completed'] == true || json['is_completed'] == 1,
+      metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : null,
     );

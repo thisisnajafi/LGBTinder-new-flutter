@@ -30,12 +30,6 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
   @override
   void initState() {
     super.initState();
-    // Load initial data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(forumCategoriesProvider.notifier).loadCategories();
-      ref.read(forumPostsProvider.notifier).loadPosts();
-    });
-
     _scrollController.addListener(_onScroll);
   }
 
@@ -124,9 +118,9 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    final filteredPosts = _selectedCategory == 0
-        ? _posts
-        : _posts.where((post) => post['category'] == _categories[_selectedCategory]).toList();
+    final postsState = ref.watch(forumPostsProvider);
+    final categoriesState = ref.watch(forumCategoriesProvider);
+    final categories = ref.watch(forumCategoriesListProvider);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -139,257 +133,249 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
               Icons.add,
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Text(
-                    'Create Post',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  content: Text(
-                    'Community forums are coming soon! This feature will allow you to share experiences, ask questions, and connect with the LGBTinder community.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('OK'),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onPressed: _showCreatePostDialog,
           ),
         ],
       ),
       body: Column(
         children: [
           // Category filter
-          Container(
-            height: 50,
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final isSelected = _selectedCategory == index;
-                return Padding(
-                  padding: EdgeInsets.only(right: AppSpacing.spacingSM),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = index;
-                      });
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingMD,
-                        vertical: AppSpacing.spacingSM,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accentPurple.withOpacity(0.2)
-                            : surfaceColor,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accentPurple
-                              : borderColor,
-                          width: isSelected ? 2 : 1,
+          if (categoriesState.isLoading)
+            Container(
+              height: 50,
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (categories.isNotEmpty)
+            Container(
+              height: 50,
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+                itemCount: categories.length + 1, // +1 for "All" category
+                itemBuilder: (context, index) {
+                  final categoryId = index == 0 ? null : categories[index - 1].id;
+                  final categoryName = index == 0 ? 'All' : categories[index - 1].name;
+                  final isSelected = _selectedCategoryId == categoryId;
+
+                  return Padding(
+                    padding: EdgeInsets.only(right: AppSpacing.spacingSM),
+                    child: GestureDetector(
+                      onTap: () => _onCategorySelected(categoryId),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingMD,
+                          vertical: AppSpacing.spacingSM,
                         ),
-                      ),
-                      child: Text(
-                        _categories[index],
-                        style: AppTypography.body.copyWith(
+                        decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.accentPurple
-                              : textColor,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                              ? AppColors.accentPurple.withOpacity(0.2)
+                              : surfaceColor,
+                          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.accentPurple
+                                : borderColor,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          categoryName,
+                          style: AppTypography.body.copyWith(
+                            color: isSelected
+                                ? AppColors.accentPurple
+                                : textColor,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-          DividerCustom(),
-          // Posts list
           Expanded(
-            child: _isLoading
-                ? ListView.builder(
-                    itemCount: 5,
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
-                    itemBuilder: (context, index) {
-                      return Container(
-                        margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                        child: SkeletonLoader(
-                          width: double.infinity,
-                          height: 150,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        ),
-                      );
-                    },
-                  )
-                : filteredPosts.isEmpty
+            child: postsState.isLoading && postsState.posts.isEmpty
+                ? Center(child: CircularProgressIndicator())
+                : postsState.posts.isEmpty
                     ? EmptyState(
                         title: 'No Posts',
                         message: 'Be the first to start a discussion!',
                         icon: Icons.forum,
                         actionLabel: 'Create Post',
-                        onAction: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              backgroundColor: Theme.of(context).colorScheme.surface,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              title: Text(
-                                'Create Post',
-                                style: Theme.of(context).textTheme.headlineSmall,
-                              ),
-                              content: Text(
-                                'Community forums are coming soon! This feature will allow you to share experiences, ask questions, and connect with the LGBTinder community.',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: Text('OK'),
-                                ),
-                              ],
-                            ),
+                        onAction: _showCreatePostDialog,
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          await ref.read(forumPostsProvider.notifier).loadPosts(
+                            category: _selectedCategoryId,
+                            refresh: true,
                           );
                         },
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.all(AppSpacing.spacingLG),
-                        itemCount: filteredPosts.length,
-                        itemBuilder: (context, index) {
-                          final post = filteredPosts[index];
-                          return Container(
-                            margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                            padding: EdgeInsets.all(AppSpacing.spacingLG),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                              border: Border.all(color: borderColor),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Header
-                                Row(
-                                  children: [
-                                    AvatarWithStatus(
-                                      imageUrl: post['author_avatar'],
-                                      name: post['author'],
-                                      isOnline: false,
-                                      size: 40.0,
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingMD),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.all(AppSpacing.spacingLG),
+                          itemCount: postsState.posts.length + (postsState.hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == postsState.posts.length) {
+                              return Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(AppSpacing.spacingLG),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+
+                            final post = postsState.posts[index];
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: AppSpacing.spacingLG),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: surfaceColor,
+                                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.all(AppSpacing.spacingLG),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Header
+                                      Row(
                                         children: [
-                                          Text(
-                                            post['author'],
-                                            style: AppTypography.body.copyWith(
-                                              color: textColor,
-                                              fontWeight: FontWeight.w600,
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundImage: post.user.avatarUrl != null
+                                                ? CachedNetworkImageProvider(post.user.avatarUrl!)
+                                                : null,
+                                            child: post.user.avatarUrl == null
+                                                ? Text(
+                                                    post.user.firstName[0].toUpperCase(),
+                                                    style: TextStyle(color: textColor),
+                                                  )
+                                                : null,
+                                          ),
+                                          SizedBox(width: AppSpacing.spacingMD),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      '${post.user.firstName} ${post.user.lastName ?? ''}'.trim(),
+                                                      style: AppTypography.bodyBold.copyWith(
+                                                        color: textColor,
+                                                      ),
+                                                    ),
+                                                    if (post.user.isVerified) ...[
+                                                      SizedBox(width: AppSpacing.spacingXS),
+                                                      Icon(
+                                                        Icons.verified,
+                                                        size: 16,
+                                                        color: AppColors.onlineGreen,
+                                                      ),
+                                                    ],
+                                                    if (post.user.isPremium) ...[
+                                                      SizedBox(width: AppSpacing.spacingXS),
+                                                      Icon(
+                                                        Icons.star,
+                                                        size: 16,
+                                                        color: AppColors.warningYellow,
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                                Text(
+                                                  _formatTime(post.createdAt),
+                                                  style: AppTypography.caption.copyWith(
+                                                    color: secondaryTextColor,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: AppSpacing.spacingSM,
+                                              vertical: AppSpacing.spacingXS,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.accentPurple.withOpacity(0.2),
+                                              borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                                            ),
+                                            child: Text(
+                                              post.category,
+                                              style: AppTypography.caption.copyWith(
+                                                color: AppColors.accentPurple,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: AppSpacing.spacingMD),
+                                      // Title
+                                      Text(
+                                        post.title,
+                                        style: AppTypography.headline.copyWith(
+                                          color: textColor,
+                                        ),
+                                      ),
+                                      SizedBox(height: AppSpacing.spacingSM),
+                                      // Content
+                                      Text(
+                                        post.content,
+                                        style: AppTypography.body.copyWith(
+                                          color: secondaryTextColor,
+                                        ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: AppSpacing.spacingMD),
+                                      DividerCustom(),
+                                      // Actions
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(
+                                              post.isLikedByUser ? Icons.favorite : Icons.favorite_border,
+                                              size: 20,
+                                              color: post.isLikedByUser ? AppColors.notificationRed : secondaryTextColor,
+                                            ),
+                                            onPressed: () => _toggleLike(post),
+                                          ),
                                           Text(
-                                            _formatTime(post['created_at']),
+                                            '${post.likesCount}',
+                                            style: AppTypography.caption.copyWith(
+                                              color: secondaryTextColor,
+                                            ),
+                                          ),
+                                          SizedBox(width: AppSpacing.spacingLG),
+                                          Icon(
+                                            Icons.comment_outlined,
+                                            size: 20,
+                                            color: secondaryTextColor,
+                                          ),
+                                          SizedBox(width: AppSpacing.spacingXS),
+                                          Text(
+                                            '${post.commentsCount}',
                                             style: AppTypography.caption.copyWith(
                                               color: secondaryTextColor,
                                             ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.spacingSM,
-                                        vertical: AppSpacing.spacingXS,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.accentPurple.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                      ),
-                                      child: Text(
-                                        post['category'],
-                                        style: AppTypography.caption.copyWith(
-                                          color: AppColors.accentPurple,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: AppSpacing.spacingMD),
-                                // Title
-                                Text(
-                                  post['title'],
-                                  style: AppTypography.h3.copyWith(
-                                    color: textColor,
-                                    fontWeight: FontWeight.bold,
+                                    ],
                                   ),
                                 ),
-                                SizedBox(height: AppSpacing.spacingSM),
-                                // Content
-                                Text(
-                                  post['content'],
-                                  style: AppTypography.body.copyWith(
-                                    color: secondaryTextColor,
-                                  ),
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                SizedBox(height: AppSpacing.spacingMD),
-                                DividerCustom(),
-                                // Actions
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.favorite_border,
-                                      size: 20,
-                                      color: secondaryTextColor,
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingXS),
-                                    Text(
-                                      '${post['likes']}',
-                                      style: AppTypography.caption.copyWith(
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingLG),
-                                    Icon(
-                                      Icons.comment_outlined,
-                                      size: 20,
-                                      color: secondaryTextColor,
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingXS),
-                                    Text(
-                                      '${post['comments']}',
-                                      style: AppTypography.caption.copyWith(
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                              ),
+                            );
+                          },
+                        ),
                       ),
           ),
         ],
