@@ -22,13 +22,15 @@ class CompleteRegistrationResponse {
 
   factory CompleteRegistrationResponse.fromJson(Map<String, dynamic> json) {
     return CompleteRegistrationResponse(
-      user: json['user'] != null ? UserData.fromJson(json['user'] as Map<String, dynamic>) : null,
-      token: json['token'] as String?,
-      tokenType: json['token_type'] as String?,
-      onesignalPlayerId: json['onesignal_player_id'] as String?,
-      profileCompleted: json['profile_completed'] as bool? ?? false,
-      needsProfileCompletion: json['needs_profile_completion'] as bool? ?? false,
-      userState: json['user_state'] as String?,
+      user: json['user'] != null && json['user'] is Map
+          ? UserData.fromJson(Map<String, dynamic>.from(json['user'] as Map))
+          : null,
+      token: json['token']?.toString(),
+      tokenType: json['token_type']?.toString(),
+      onesignalPlayerId: json['onesignal_player_id']?.toString(),
+      profileCompleted: json['profile_completed'] == true || json['profile_completed'] == 1,
+      needsProfileCompletion: json['needs_profile_completion'] == true || json['needs_profile_completion'] == 1,
+      userState: json['user_state']?.toString(),
     );
   }
 }

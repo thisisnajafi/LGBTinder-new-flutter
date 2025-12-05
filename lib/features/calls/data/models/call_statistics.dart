@@ -34,29 +34,29 @@ class CallStatistics {
 
   factory CallStatistics.fromJson(Map<String, dynamic> json) {
     return CallStatistics(
-      totalCalls: json['total_calls'] as int? ?? 0,
-      totalCallDuration: json['total_call_duration'] as int? ?? 0,
-      audioCalls: json['audio_calls'] as int? ?? 0,
-      videoCalls: json['video_calls'] as int? ?? 0,
-      missedCalls: json['missed_calls'] as int? ?? 0,
-      declinedCalls: json['declined_calls'] as int? ?? 0,
-      completedCalls: json['completed_calls'] as int? ?? 0,
+      totalCalls: json['total_calls'] != null ? ((json['total_calls'] is int) ? json['total_calls'] as int : int.tryParse(json['total_calls'].toString()) ?? 0) : 0,
+      totalCallDuration: json['total_call_duration'] != null ? ((json['total_call_duration'] is int) ? json['total_call_duration'] as int : int.tryParse(json['total_call_duration'].toString()) ?? 0) : 0,
+      audioCalls: json['audio_calls'] != null ? ((json['audio_calls'] is int) ? json['audio_calls'] as int : int.tryParse(json['audio_calls'].toString()) ?? 0) : 0,
+      videoCalls: json['video_calls'] != null ? ((json['video_calls'] is int) ? json['video_calls'] as int : int.tryParse(json['video_calls'].toString()) ?? 0) : 0,
+      missedCalls: json['missed_calls'] != null ? ((json['missed_calls'] is int) ? json['missed_calls'] as int : int.tryParse(json['missed_calls'].toString()) ?? 0) : 0,
+      declinedCalls: json['declined_calls'] != null ? ((json['declined_calls'] is int) ? json['declined_calls'] as int : int.tryParse(json['declined_calls'].toString()) ?? 0) : 0,
+      completedCalls: json['completed_calls'] != null ? ((json['completed_calls'] is int) ? json['completed_calls'] as int : int.tryParse(json['completed_calls'].toString()) ?? 0) : 0,
       averageCallDuration: (json['average_call_duration'] as num?)?.toDouble() ?? 0.0,
-      longestCall: json['longest_call'] as int? ?? 0,
-      callsByDay: json['calls_by_day'] != null
-          ? Map<String, int>.from(json['calls_by_day'] as Map)
+      longestCall: json['longest_call'] != null ? ((json['longest_call'] is int) ? json['longest_call'] as int : int.tryParse(json['longest_call'].toString()) ?? 0) : 0,
+      callsByDay: json['calls_by_day'] != null && json['calls_by_day'] is Map
+          ? Map<String, int>.from((json['calls_by_day'] as Map).map((k, v) => MapEntry(k.toString(), (v is int) ? v : int.tryParse(v.toString()) ?? 0)))
           : {},
-      callsByHour: json['calls_by_hour'] != null
-          ? Map<String, int>.from(json['calls_by_hour'] as Map)
+      callsByHour: json['calls_by_hour'] != null && json['calls_by_hour'] is Map
+          ? Map<String, int>.from((json['calls_by_hour'] as Map).map((k, v) => MapEntry(k.toString(), (v is int) ? v : int.tryParse(v.toString()) ?? 0)))
           : {},
-      callsByStatus: json['calls_by_status'] != null
-          ? Map<String, int>.from(json['calls_by_status'] as Map)
+      callsByStatus: json['calls_by_status'] != null && json['calls_by_status'] is Map
+          ? Map<String, int>.from((json['calls_by_status'] as Map).map((k, v) => MapEntry(k.toString(), (v is int) ? v : int.tryParse(v.toString()) ?? 0)))
           : {},
       periodStart: json['period_start'] != null
-          ? DateTime.parse(json['period_start'] as String)
+          ? (DateTime.tryParse(json['period_start'].toString()) ?? DateTime.now().subtract(const Duration(days: 30)))
           : DateTime.now().subtract(const Duration(days: 30)),
       periodEnd: json['period_end'] != null
-          ? DateTime.parse(json['period_end'] as String)
+          ? (DateTime.tryParse(json['period_end'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }
@@ -144,11 +144,11 @@ class CallEligibility {
 
   factory CallEligibility.fromJson(Map<String, dynamic> json) {
     return CallEligibility(
-      canCall: json['can_call'] as bool? ?? false,
-      reason: json['reason'] as String?,
-      isPremiumRequired: json['is_premium_required'] as bool? ?? false,
-      isMatchRequired: json['is_match_required'] as bool? ?? false,
-      cooldownMinutes: json['cooldown_minutes'] as int?,
+      canCall: json['can_call'] == true || json['can_call'] == 1,
+      reason: json['reason']?.toString(),
+      isPremiumRequired: json['is_premium_required'] == true || json['is_premium_required'] == 1,
+      isMatchRequired: json['is_match_required'] == true || json['is_match_required'] == 1,
+      cooldownMinutes: json['cooldown_minutes'] != null ? ((json['cooldown_minutes'] is int) ? json['cooldown_minutes'] as int : int.tryParse(json['cooldown_minutes'].toString())) : null,
     );
   }
 
@@ -211,15 +211,20 @@ class CallQualityMetrics {
   });
 
   factory CallQualityMetrics.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['call_id'] == null) {
+      throw FormatException('CallQualityMetrics.fromJson: call_id is required but was null');
+    }
+    
     return CallQualityMetrics(
-      callId: json['call_id'] as String,
+      callId: json['call_id'].toString(),
       audioQuality: (json['audio_quality'] as num?)?.toDouble() ?? 0.0,
       videoQuality: (json['video_quality'] as num?)?.toDouble() ?? 0.0,
-      packetLoss: json['packet_loss'] as int? ?? 0,
-      jitter: json['jitter'] as int? ?? 0,
-      latency: json['latency'] as int? ?? 0,
+      packetLoss: json['packet_loss'] != null ? ((json['packet_loss'] is int) ? json['packet_loss'] as int : int.tryParse(json['packet_loss'].toString()) ?? 0) : 0,
+      jitter: json['jitter'] != null ? ((json['jitter'] is int) ? json['jitter'] as int : int.tryParse(json['jitter'].toString()) ?? 0) : 0,
+      latency: json['latency'] != null ? ((json['latency'] is int) ? json['latency'] as int : int.tryParse(json['latency'].toString()) ?? 0) : 0,
       measuredAt: json['measured_at'] != null
-          ? DateTime.parse(json['measured_at'] as String)
+          ? (DateTime.tryParse(json['measured_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }

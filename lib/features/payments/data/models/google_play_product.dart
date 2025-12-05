@@ -42,15 +42,17 @@ class GooglePlayProduct extends Equatable {
   /// Create from JSON (API response)
   factory GooglePlayProduct.fromJson(Map<String, dynamic> json) {
     return GooglePlayProduct(
-      productId: json['productId'] ?? json['google_product_id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      priceAmountMicros: json['priceAmountMicros'] ?? json['price_amount_micros'] ?? 0,
-      priceCurrencyCode: json['priceCurrencyCode'] ?? json['price_currency_code'] ?? 'USD',
-      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      productId: json['productId']?.toString() ?? json['google_product_id']?.toString() ?? json['product_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      priceAmountMicros: json['priceAmountMicros'] != null 
+          ? ((json['priceAmountMicros'] is int) ? json['priceAmountMicros'] as int : int.tryParse(json['priceAmountMicros'].toString()) ?? 0)
+          : (json['price_amount_micros'] != null ? ((json['price_amount_micros'] is int) ? json['price_amount_micros'] as int : int.tryParse(json['price_amount_micros'].toString()) ?? 0) : 0),
+      priceCurrencyCode: json['priceCurrencyCode']?.toString() ?? json['price_currency_code']?.toString() ?? 'USD',
+      isActive: json['isActive'] == true || json['isActive'] == 1 || json['is_active'] == true || json['is_active'] == 1 || json['isActive'] == null,
       productType: _parseProductType(json['productType'] ?? json['type']),
-      subscriptionOffers: json['subscriptionOfferDetails'] != null
-          ? _parseSubscriptionOffersFromJson(json['subscriptionOfferDetails'])
+      subscriptionOffers: json['subscriptionOfferDetails'] != null && json['subscriptionOfferDetails'] is List
+          ? _parseSubscriptionOffersFromJson(json['subscriptionOfferDetails'] as List)
           : null,
     );
   }
@@ -154,12 +156,14 @@ class SubscriptionOffer extends Equatable {
   /// Create from JSON
   factory SubscriptionOffer.fromJson(Map<String, dynamic> json) {
     return SubscriptionOffer(
-      offerId: json['offerId'] ?? '',
-      offerToken: json['offerToken'] ?? '',
-      pricingPhases: (json['pricingPhases'] as List<dynamic>?)
-          ?.map((phase) => PricingPhase.fromJson(phase))
-          .toList() ?? [],
-      offerTags: (json['offerTags'] as List<dynamic>?)?.cast<String>(),
+      offerId: json['offerId']?.toString() ?? '',
+      offerToken: json['offerToken']?.toString() ?? '',
+      pricingPhases: json['pricingPhases'] != null && json['pricingPhases'] is List
+          ? (json['pricingPhases'] as List).map((phase) => PricingPhase.fromJson(Map<String, dynamic>.from(phase as Map))).toList()
+          : [],
+      offerTags: json['offerTags'] != null && json['offerTags'] is List
+          ? (json['offerTags'] as List).map((e) => e.toString()).toList()
+          : null,
     );
   }
 
@@ -210,11 +214,15 @@ class PricingPhase extends Equatable {
   /// Create from JSON
   factory PricingPhase.fromJson(Map<String, dynamic> json) {
     return PricingPhase(
-      priceAmountMicros: json['priceAmountMicros'] ?? 0,
-      priceCurrencyCode: json['priceCurrencyCode'] ?? 'USD',
-      billingPeriod: json['billingPeriod'] ?? 'P1M',
-      recurrenceMode: json['recurrenceMode'] ?? 'RECURRING',
-      billingCycleCount: json['billingCycleCount'],
+      priceAmountMicros: json['priceAmountMicros'] != null 
+          ? ((json['priceAmountMicros'] is int) ? json['priceAmountMicros'] as int : int.tryParse(json['priceAmountMicros'].toString()) ?? 0)
+          : 0,
+      priceCurrencyCode: json['priceCurrencyCode']?.toString() ?? 'USD',
+      billingPeriod: json['billingPeriod']?.toString() ?? 'P1M',
+      recurrenceMode: json['recurrenceMode']?.toString() ?? 'RECURRING',
+      billingCycleCount: json['billingCycleCount'] != null 
+          ? ((json['billingCycleCount'] is int) ? json['billingCycleCount'] as int : int.tryParse(json['billingCycleCount'].toString()))
+          : null,
     );
   }
 
@@ -263,6 +271,7 @@ List<SubscriptionOffer> _parseSubscriptionOffersFromJson(List<dynamic> offersJso
 }
 
 ProductType _parseProductType(dynamic value) {
+  if (value == null) return ProductType.oneTime;
   if (value is String) {
     return ProductType.fromString(value);
   }

@@ -10,8 +10,8 @@ class OtpResponse {
 
   factory OtpResponse.fromJson(Map<String, dynamic> json) {
     return OtpResponse(
-      status: json['status'] as bool? ?? false,
-      message: json['message'] as String? ?? '',
+      status: json['status'] == true || json['status'] == 1 || json['status'] == 'true',
+      message: json['message']?.toString() ?? '',
     );
   }
 }

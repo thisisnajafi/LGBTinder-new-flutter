@@ -26,16 +26,16 @@ class PaymentMethod {
 
   factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     return PaymentMethod(
-      id: json['id'] as int? ?? 0,
-      type: json['type'] as String? ?? '',
-      provider: json['provider'] as String? ?? '',
-      lastFour: json['last_four'] as String? ?? '',
-      brand: json['brand'] as String? ?? '',
-      expiryMonth: json['expiry_month'] as int? ?? 0,
-      expiryYear: json['expiry_year'] as int? ?? 0,
-      isDefault: json['is_default'] as bool? ?? false,
-      isExpired: json['is_expired'] as bool? ?? false,
-      metadata: json['metadata'] != null
+      id: json['id'] != null ? ((json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0) : 0,
+      type: json['type']?.toString() ?? '',
+      provider: json['provider']?.toString() ?? '',
+      lastFour: json['last_four']?.toString() ?? json['last4']?.toString() ?? '',
+      brand: json['brand']?.toString() ?? '',
+      expiryMonth: json['expiry_month'] != null ? ((json['expiry_month'] is int) ? json['expiry_month'] as int : int.tryParse(json['expiry_month'].toString()) ?? 0) : 0,
+      expiryYear: json['expiry_year'] != null ? ((json['expiry_year'] is int) ? json['expiry_year'] as int : int.tryParse(json['expiry_year'].toString()) ?? 0) : 0,
+      isDefault: json['is_default'] == true || json['is_default'] == 1,
+      isExpired: json['is_expired'] == true || json['is_expired'] == 1,
+      metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : {},
     );

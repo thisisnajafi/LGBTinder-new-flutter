@@ -31,24 +31,47 @@ class DeviceSession {
   });
 
   factory DeviceSession.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('DeviceSession.fromJson: id is required but was null');
+    }
+    if (json['device_id'] == null) {
+      throw FormatException('DeviceSession.fromJson: device_id is required but was null');
+    }
+    if (json['device_name'] == null) {
+      throw FormatException('DeviceSession.fromJson: device_name is required but was null');
+    }
+    if (json['device_type'] == null) {
+      throw FormatException('DeviceSession.fromJson: device_type is required but was null');
+    }
+    if (json['platform'] == null) {
+      throw FormatException('DeviceSession.fromJson: platform is required but was null');
+    }
+    if (json['ip_address'] == null) {
+      throw FormatException('DeviceSession.fromJson: ip_address is required but was null');
+    }
+    if (json['location'] == null) {
+      throw FormatException('DeviceSession.fromJson: location is required but was null');
+    }
+    
     return DeviceSession(
-      id: json['id'] as int,
-      deviceId: json['device_id'] as String,
-      deviceName: json['device_name'] as String,
-      deviceType: json['device_type'] as String,
-      platform: json['platform'] as String,
-      browser: json['browser'] as String? ?? 'Unknown',
-      ipAddress: json['ip_address'] as String,
-      location: json['location'] as String,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      deviceId: json['device_id'].toString(),
+      deviceName: json['device_name'].toString(),
+      deviceType: json['device_type'].toString(),
+      platform: json['platform'].toString(),
+      browser: json['browser']?.toString() ?? 'Unknown',
+      ipAddress: json['ip_address'].toString(),
+      location: json['location'].toString(),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       lastActiveAt: json['last_active_at'] != null
-          ? DateTime.parse(json['last_active_at'] as String)
+          ? (DateTime.tryParse(json['last_active_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
-      isCurrentDevice: json['is_current_device'] as bool? ?? false,
-      isTrusted: json['is_trusted'] as bool? ?? false,
-      deviceInfo: json['device_info'] != null
+      isCurrentDevice: json['is_current_device'] == true || json['is_current_device'] == 1,
+      isTrusted: json['is_trusted'] == true || json['is_trusted'] == 1,
+      deviceInfo: json['device_info'] != null && json['device_info'] is Map
           ? Map<String, dynamic>.from(json['device_info'] as Map)
           : {},
     );

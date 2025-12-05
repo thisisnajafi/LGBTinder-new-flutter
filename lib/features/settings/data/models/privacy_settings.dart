@@ -44,28 +44,28 @@ class PrivacySettings {
 
   factory PrivacySettings.fromJson(Map<String, dynamic> json) {
     return PrivacySettings(
-      profileVisible: json['profile_visible'] as bool? ?? true,
-      showDistance: json['show_distance'] as bool? ?? true,
-      showAge: json['show_age'] as bool? ?? true,
-      showOnlineStatus: json['show_online_status'] as bool? ?? true,
-      allowMessaging: json['allow_messaging'] as bool? ?? true,
-      allowSuperLikes: json['allow_superlikes'] as bool? ?? true,
-      allowProfileViews: json['allow_profile_views'] as bool? ?? true,
-      hideFromDiscovery: json['hide_from_discovery'] as bool? ?? false,
-      incognitoMode: json['incognito_mode'] as bool? ?? false,
-      blockUnknownMessages: json['block_unknown_messages'] as bool? ?? false,
-      requireVerification: json['require_verification'] as bool? ?? false,
-      blockedWords: json['blocked_words'] != null
+      profileVisible: json['profile_visible'] == true || json['profile_visible'] == 1 || json['profile_visible'] == null,
+      showDistance: json['show_distance'] == true || json['show_distance'] == 1 || json['show_distance'] == null,
+      showAge: json['show_age'] == true || json['show_age'] == 1 || json['show_age'] == null,
+      showOnlineStatus: json['show_online_status'] == true || json['show_online_status'] == 1 || json['show_online_status'] == null,
+      allowMessaging: json['allow_messaging'] == true || json['allow_messaging'] == 1 || json['allow_messaging'] == null,
+      allowSuperLikes: json['allow_superlikes'] == true || json['allow_superlikes'] == 1 || json['allow_superlikes'] == null,
+      allowProfileViews: json['allow_profile_views'] == true || json['allow_profile_views'] == 1 || json['allow_profile_views'] == null,
+      hideFromDiscovery: json['hide_from_discovery'] == true || json['hide_from_discovery'] == 1,
+      incognitoMode: json['incognito_mode'] == true || json['incognito_mode'] == 1,
+      blockUnknownMessages: json['block_unknown_messages'] == true || json['block_unknown_messages'] == 1,
+      requireVerification: json['require_verification'] == true || json['require_verification'] == 1,
+      blockedWords: json['blocked_words'] != null && json['blocked_words'] is List
           ? (json['blocked_words'] as List).map((e) => e.toString()).toList()
           : [],
-      dataCollection: json['data_collection'] as bool? ?? true,
-      analyticsSharing: json['analytics_sharing'] as bool? ?? false,
-      locationSharing: json['location_sharing'] as bool? ?? true,
-      contactSync: json['contact_sync'] as bool? ?? false,
-      photoVerification: json['photo_verification'] as bool? ?? false,
-      visibilityLevel: json['visibility_level'] as String? ?? 'public',
-      featureVisibility: json['feature_visibility'] != null
-          ? Map<String, bool>.from(json['feature_visibility'] as Map)
+      dataCollection: json['data_collection'] == true || json['data_collection'] == 1 || json['data_collection'] == null,
+      analyticsSharing: json['analytics_sharing'] == true || json['analytics_sharing'] == 1,
+      locationSharing: json['location_sharing'] == true || json['location_sharing'] == 1 || json['location_sharing'] == null,
+      contactSync: json['contact_sync'] == true || json['contact_sync'] == 1,
+      photoVerification: json['photo_verification'] == true || json['photo_verification'] == 1,
+      visibilityLevel: json['visibility_level']?.toString() ?? 'public',
+      featureVisibility: json['feature_visibility'] != null && json['feature_visibility'] is Map
+          ? Map<String, bool>.from((json['feature_visibility'] as Map).map((k, v) => MapEntry(k.toString(), v == true || v == 1)))
           : {},
     );
   }

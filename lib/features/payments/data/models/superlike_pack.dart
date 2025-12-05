@@ -21,15 +21,37 @@ class SuperlikePack {
   });
 
   factory SuperlikePack.fromJson(Map<String, dynamic> json) {
+    // Validate required fields
+    if (json['id'] == null) {
+      throw FormatException('SuperlikePack.fromJson: id is required but was null');
+    }
+    
+    // Get name from multiple possible fields
+    String? name = json['name']?.toString() ?? 
+                   json['title']?.toString() ?? 
+                   json['pack_name']?.toString();
+    
+    if (name == null || name.isEmpty) {
+      throw FormatException('SuperlikePack.fromJson: name (or title/pack_name) is required but was null or empty');
+    }
+    
+    // Get superlike count from multiple possible fields
+    int superlikeCount = 0;
+    if (json['superlike_count'] != null) {
+      superlikeCount = (json['superlike_count'] is int) ? json['superlike_count'] as int : int.tryParse(json['superlike_count'].toString()) ?? 0;
+    } else if (json['count'] != null) {
+      superlikeCount = (json['count'] is int) ? json['count'] as int : int.tryParse(json['count'].toString()) ?? 0;
+    }
+    
     return SuperlikePack(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      superlikeCount: json['superlike_count'] as int? ?? json['count'] as int? ?? 0,
+      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
+      name: name,
+      description: json['description']?.toString(),
+      superlikeCount: superlikeCount,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'usd',
-      isPopular: json['is_popular'] as bool? ?? false,
-      stripePriceId: json['stripe_price_id'] as String? ?? json['price_id'] as String?,
+      currency: json['currency']?.toString() ?? 'usd',
+      isPopular: json['is_popular'] == true || json['is_popular'] == 1,
+      stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
     );
   }
 
@@ -69,26 +91,26 @@ class UserSuperlikePack {
 
   factory UserSuperlikePack.fromJson(Map<String, dynamic> json) {
     // Handle response format: { data: { total_superlikes: X, packs: [...] } }
-    final data = json['data'] != null && json['data'] is Map<String, dynamic>
-        ? json['data'] as Map<String, dynamic>
+    final data = json['data'] != null && json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
         : json;
     
     // If this is the user-packs response with total_superlikes
     if (data.containsKey('total_superlikes') && data.containsKey('packs')) {
-      final packs = data['packs'] as List?;
-      if (packs != null && packs.isNotEmpty) {
-        final firstPack = packs.first as Map<String, dynamic>;
+      final packs = data['packs'];
+      if (packs != null && packs is List && packs.isNotEmpty) {
+        final firstPack = Map<String, dynamic>.from(packs.first as Map);
         return UserSuperlikePack(
-          id: firstPack['id'] as int? ?? 0,
-          packId: firstPack['pack_id'] as int? ?? 0,
-          packName: firstPack['pack_name'] as String? ?? firstPack['name'] as String? ?? '',
-          remainingCount: data['total_superlikes'] as int? ?? 0,
-          totalCount: firstPack['total_count'] as int? ?? 0,
+          id: firstPack['id'] != null ? ((firstPack['id'] is int) ? firstPack['id'] as int : int.tryParse(firstPack['id'].toString()) ?? 0) : 0,
+          packId: firstPack['pack_id'] != null ? ((firstPack['pack_id'] is int) ? firstPack['pack_id'] as int : int.tryParse(firstPack['pack_id'].toString()) ?? 0) : 0,
+          packName: firstPack['pack_name']?.toString() ?? firstPack['name']?.toString() ?? '',
+          remainingCount: data['total_superlikes'] != null ? ((data['total_superlikes'] is int) ? data['total_superlikes'] as int : int.tryParse(data['total_superlikes'].toString()) ?? 0) : 0,
+          totalCount: firstPack['total_count'] != null ? ((firstPack['total_count'] is int) ? firstPack['total_count'] as int : int.tryParse(firstPack['total_count'].toString()) ?? 0) : 0,
           purchasedAt: firstPack['purchased_at'] != null
-              ? DateTime.parse(firstPack['purchased_at'] as String)
+              ? (DateTime.tryParse(firstPack['purchased_at'].toString()) ?? DateTime.now())
               : DateTime.now(),
           expiresAt: firstPack['expires_at'] != null
-              ? DateTime.parse(firstPack['expires_at'] as String)
+              ? DateTime.tryParse(firstPack['expires_at'].toString())
               : null,
         );
       }
@@ -96,16 +118,21 @@ class UserSuperlikePack {
     
     // Standard format
     return UserSuperlikePack(
-      id: data['id'] as int? ?? 0,
-      packId: data['pack_id'] as int? ?? 0,
-      packName: data['pack_name'] as String? ?? data['name'] as String? ?? '',
-      remainingCount: data['remaining_count'] as int? ?? data['remaining'] as int? ?? data['total_superlikes'] as int? ?? 0,
-      totalCount: data['total_count'] as int? ?? data['total'] as int? ?? 0,
+      id: data['id'] != null ? ((data['id'] is int) ? data['id'] as int : int.tryParse(data['id'].toString()) ?? 0) : 0,
+      packId: data['pack_id'] != null ? ((data['pack_id'] is int) ? data['pack_id'] as int : int.tryParse(data['pack_id'].toString()) ?? 0) : 0,
+      packName: data['pack_name']?.toString() ?? data['name']?.toString() ?? '',
+      remainingCount: data['remaining_count'] != null 
+          ? ((data['remaining_count'] is int) ? data['remaining_count'] as int : int.tryParse(data['remaining_count'].toString()) ?? 0)
+          : (data['remaining'] != null ? ((data['remaining'] is int) ? data['remaining'] as int : int.tryParse(data['remaining'].toString()) ?? 0) 
+          : (data['total_superlikes'] != null ? ((data['total_superlikes'] is int) ? data['total_superlikes'] as int : int.tryParse(data['total_superlikes'].toString()) ?? 0) : 0)),
+      totalCount: data['total_count'] != null 
+          ? ((data['total_count'] is int) ? data['total_count'] as int : int.tryParse(data['total_count'].toString()) ?? 0)
+          : (data['total'] != null ? ((data['total'] is int) ? data['total'] as int : int.tryParse(data['total'].toString()) ?? 0) : 0),
       purchasedAt: data['purchased_at'] != null
-          ? DateTime.parse(data['purchased_at'] as String)
+          ? (DateTime.tryParse(data['purchased_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       expiresAt: data['expires_at'] != null
-          ? DateTime.parse(data['expires_at'] as String)
+          ? DateTime.tryParse(data['expires_at'].toString())
           : null,
     );
   }

@@ -48,26 +48,26 @@ class NotificationPreferences {
 
   factory NotificationPreferences.fromJson(Map<String, dynamic> json) {
     return NotificationPreferences(
-      pushEnabled: json['push_enabled'] as bool? ?? true,
-      emailEnabled: json['email_enabled'] as bool? ?? true,
-      smsEnabled: json['sms_enabled'] as bool? ?? false,
-      likes: json['likes'] as bool? ?? true,
-      matches: json['matches'] as bool? ?? true,
-      messages: json['messages'] as bool? ?? true,
-      superlikes: json['superlikes'] as bool? ?? true,
-      profileViews: json['profile_views'] as bool? ?? false,
-      premiumFeatures: json['premium_features'] as bool? ?? true,
-      weeklyDigest: json['weekly_digest'] as bool? ?? true,
-      marketingEmails: json['marketing_emails'] as bool? ?? false,
-      securityAlerts: json['security_alerts'] as bool? ?? true,
-      quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
-      quietHoursStart: json['quiet_hours_start'] as String?,
-      quietHoursEnd: json['quiet_hours_end'] as String?,
-      mutedUsers: json['muted_users'] != null
+      pushEnabled: json['push_enabled'] == true || json['push_enabled'] == 1 || json['push_enabled'] == null,
+      emailEnabled: json['email_enabled'] == true || json['email_enabled'] == 1 || json['email_enabled'] == null,
+      smsEnabled: json['sms_enabled'] == true || json['sms_enabled'] == 1,
+      likes: json['likes'] == true || json['likes'] == 1 || json['likes'] == null,
+      matches: json['matches'] == true || json['matches'] == 1 || json['matches'] == null,
+      messages: json['messages'] == true || json['messages'] == 1 || json['messages'] == null,
+      superlikes: json['superlikes'] == true || json['superlikes'] == 1 || json['superlikes'] == null,
+      profileViews: json['profile_views'] == true || json['profile_views'] == 1,
+      premiumFeatures: json['premium_features'] == true || json['premium_features'] == 1 || json['premium_features'] == null,
+      weeklyDigest: json['weekly_digest'] == true || json['weekly_digest'] == 1 || json['weekly_digest'] == null,
+      marketingEmails: json['marketing_emails'] == true || json['marketing_emails'] == 1,
+      securityAlerts: json['security_alerts'] == true || json['security_alerts'] == 1 || json['security_alerts'] == null,
+      quietHoursEnabled: json['quiet_hours_enabled'] == true || json['quiet_hours_enabled'] == 1,
+      quietHoursStart: json['quiet_hours_start']?.toString(),
+      quietHoursEnd: json['quiet_hours_end']?.toString(),
+      mutedUsers: json['muted_users'] != null && json['muted_users'] is List
           ? (json['muted_users'] as List).map((e) => e.toString()).toList()
           : [],
-      customPreferences: json['custom_preferences'] != null
-          ? Map<String, bool>.from(json['custom_preferences'] as Map)
+      customPreferences: json['custom_preferences'] != null && json['custom_preferences'] is Map
+          ? Map<String, bool>.from((json['custom_preferences'] as Map).map((k, v) => MapEntry(k.toString(), v == true || v == 1)))
           : {},
     );
   }

@@ -37,24 +37,24 @@ class GooglePlayPurchase extends Equatable {
   /// Create from JSON (API response)
   factory GooglePlayPurchase.fromJson(Map<String, dynamic> json) {
     return GooglePlayPurchase(
-      purchaseToken: json['google_purchase_token'] ?? '',
-      productId: json['google_product_id'] ?? '',
+      purchaseToken: json['google_purchase_token']?.toString() ?? json['purchase_token']?.toString() ?? '',
+      productId: json['google_product_id']?.toString() ?? json['product_id']?.toString() ?? '',
       purchaseState: _parsePurchaseState(json['purchase_state']),
-      orderId: json['order_id'],
+      orderId: json['order_id']?.toString(),
       purchaseTime: json['purchase_time'] != null
-          ? DateTime.parse(json['purchase_time'])
+          ? DateTime.tryParse(json['purchase_time'].toString())
           : null,
       expiryTime: json['expiry_time'] != null
-          ? DateTime.parse(json['expiry_time'])
+          ? DateTime.tryParse(json['expiry_time'].toString())
           : null,
-      autoRenewing: json['auto_renewing'] ?? false,
-      priceAmountMicros: json['price_amount_micros'],
-      priceCurrencyCode: json['price_currency_code'] ?? 'USD',
+      autoRenewing: json['auto_renewing'] == true || json['auto_renewing'] == 1,
+      priceAmountMicros: json['price_amount_micros'] != null ? ((json['price_amount_micros'] is int) ? json['price_amount_micros'] as int : int.tryParse(json['price_amount_micros'].toString())) : null,
+      priceCurrencyCode: json['price_currency_code']?.toString() ?? 'USD',
       acknowledgementState: _parseAcknowledgementState(json['acknowledgement_state']),
       consumptionState: _parseConsumptionState(json['consumption_state']),
-      notificationType: json['notification_type'],
-      eventTimeMillis: json['event_time_millis'],
-      userId: json['user_id'],
+      notificationType: json['notification_type'] != null ? ((json['notification_type'] is int) ? json['notification_type'] as int : int.tryParse(json['notification_type'].toString())) : null,
+      eventTimeMillis: json['event_time_millis'] != null ? ((json['event_time_millis'] is int) ? json['event_time_millis'] as int : int.tryParse(json['event_time_millis'].toString())) : null,
+      userId: json['user_id'] != null ? ((json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString())) : null,
     );
   }
 
@@ -176,32 +176,36 @@ enum ConsumptionState {
 
 // Helper functions
 PurchaseState _parsePurchaseState(dynamic value) {
+  if (value == null) return PurchaseState.pending;
   if (value is String) {
     return PurchaseState.fromString(value);
+  }
+  if (value is int) {
+    // Handle numeric purchase states (0=pending, 1=completed, etc.)
+    switch (value) {
+      case 1: return PurchaseState.completed;
+      case 2: return PurchaseState.cancelled;
+      case 3: return PurchaseState.refunded;
+      default: return PurchaseState.pending;
+    }
   }
   return PurchaseState.pending;
 }
 
 AcknowledgementState _parseAcknowledgementState(dynamic value) {
-  if (value is String) {
-    switch (value) {
-      case 'acknowledged':
-        return AcknowledgementState.acknowledged;
-      default:
-        return AcknowledgementState.yetToBeAcknowledged;
-    }
+  if (value == null) return AcknowledgementState.yetToBeAcknowledged;
+  final stringValue = value.toString().toLowerCase();
+  if (stringValue == 'acknowledged' || stringValue == '1' || value == 1) {
+    return AcknowledgementState.acknowledged;
   }
   return AcknowledgementState.yetToBeAcknowledged;
 }
 
 ConsumptionState _parseConsumptionState(dynamic value) {
-  if (value is String) {
-    switch (value) {
-      case 'consumed':
-        return ConsumptionState.consumed;
-      default:
-        return ConsumptionState.yetToBeConsumed;
-    }
+  if (value == null) return ConsumptionState.yetToBeConsumed;
+  final stringValue = value.toString().toLowerCase();
+  if (stringValue == 'consumed' || stringValue == '1' || value == 1) {
+    return ConsumptionState.consumed;
   }
   return ConsumptionState.yetToBeConsumed;
 }
