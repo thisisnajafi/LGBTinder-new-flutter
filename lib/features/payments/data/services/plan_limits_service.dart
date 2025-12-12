@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../../../core/providers/api_providers.dart';
 import '../models/plan_limits.dart';
 
 /// Plan Limits Service Provider

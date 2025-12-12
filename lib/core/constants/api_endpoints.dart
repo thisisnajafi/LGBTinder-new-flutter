@@ -2,6 +2,10 @@
 class ApiEndpoints {
   // Base URL
   static const String baseUrl = 'http://lg.abolfazlnajafi.com/api';
+  
+  // Storage/CDN URL for media files (Task 5.3.2)
+  // TODO: Update this to your actual CDN domain in production
+  static const String storageUrl = 'http://lg.abolfazlnajafi.com/storage';
 
   // ==================== Authentication ====================
   static const String register = '/auth/register';
@@ -20,8 +24,9 @@ class ApiEndpoints {
   static const String resetPassword = '/auth/reset-password';
 
   // Social Authentication
-  static const String googleAuthUrl = '/social/google/auth-url';
-  static const String googleCallback = '/social/google/callback';
+  // FIXED: Updated to match backend routes (api.php lines 103-104)
+  static const String googleAuthUrl = '/auth/google/url';
+  static const String googleCallback = '/auth/google/callback';
 
   // ==================== Reference Data ====================
   static const String countries = '/countries';
@@ -50,13 +55,14 @@ class ApiEndpoints {
   static String profileByJob(int jobId) => '/profile/by-job/$jobId';
 
   // ==================== Profile Verification ====================
-  static const String profileVerificationStatus = '/profile-verification/status';
-  static const String profileVerificationPhoto = '/profile-verification/photo';
-  static const String profileVerificationId = '/profile-verification/id';
-  static const String profileVerificationVideo = '/profile-verification/video';
-  static const String profileVerificationHistory = '/profile-verification/history';
-  static String profileVerificationCancel(int verificationId) => '/profile-verification/cancel/$verificationId';
-  static const String profileVerificationGuidelines = '/profile-verification/guidelines';
+  // FIXED: Updated to match backend routes (api.php lines 614-623)
+  static const String profileVerificationStatus = '/verification/status';
+  static const String profileVerificationPhoto = '/verification/submit-photo';
+  static const String profileVerificationId = '/verification/submit-id';
+  static const String profileVerificationVideo = '/verification/submit-video';
+  static const String profileVerificationHistory = '/verification/history';
+  static String profileVerificationCancel(int verificationId) => '/verification/cancel/$verificationId';
+  static const String profileVerificationGuidelines = '/verification/guidelines';
 
   // ==================== Profile Completion ====================
   static const String profileCompletionStatus = '/profile/completion-status';
@@ -99,8 +105,13 @@ class ApiEndpoints {
   static const String chatTyping = '/chat/typing';
   static const String chatRead = '/chat/read';
   static const String chatUnreadCount = '/chat/unread-count';
+  // NOTE (Task 2.3.2): Backend handles media uploads directly in sendMessage via 'media' field.
+  // Use multipart/form-data request with 'media' file when sending images/videos.
+  // This endpoint is kept for potential future separate upload functionality.
+  @Deprecated('Media uploads are handled in chatSend endpoint. Use multipart/form-data.')
   static const String chatAttachmentUpload = '/chat/attachment/upload';
-  static const String chatOnlineStatus = '/chat/online-status';
+  // FIXED: Updated to match backend route (api.php line 437)
+  static const String chatOnlineStatus = '/chat/online';
   static const String chatPinnedCount = '/chat/pinned-count';
 
   // ==================== Notifications ====================
@@ -156,11 +167,13 @@ class ApiEndpoints {
   static const String adminAppConfiguration = '/admin/app/configuration';
 
   // ==================== Calls ====================
+  // FIXED: Updated to match backend routes (api.php lines 454-466)
+  // Backend uses POST body for call_id, not URL path parameters
   static const String calls = '/calls';
   static const String callsInitiate = '/calls/initiate';
-  static String callsAccept(String callId) => '/calls/$callId/accept';
-  static String callsDecline(String callId) => '/calls/$callId/decline';
-  static String callsEnd(String callId) => '/calls/$callId/end';
+  static const String callsAccept = '/calls/accept';  // Send call_id in body
+  static const String callsDecline = '/calls/reject'; // Backend uses 'reject' not 'decline'
+  static const String callsEnd = '/calls/end';        // Send call_id in body
   static const String callsHistory = '/calls/history';
   static const String callsActive = '/calls/active';
   static String callsById(String callId) => '/calls/$callId';

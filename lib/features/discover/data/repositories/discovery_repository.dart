@@ -1,4 +1,4 @@
-import '../../domain/services/discovery_service.dart';
+import '../services/discovery_service.dart';
 import '../models/discovery_profile.dart';
 import '../models/discovery_filters.dart';
 

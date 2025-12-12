@@ -1,3 +1,21 @@
+/// Safe type parsing helpers for call settings
+/// FIXED: Task 5.2.1 - Added safe type parsing to prevent crashes
+bool _safeParseBool(dynamic value, {bool defaultValue = false}) {
+  if (value == null) return defaultValue;
+  if (value is bool) return value;
+  if (value is int) return value == 1;
+  if (value is String) return value.toLowerCase() == 'true' || value == '1';
+  return defaultValue;
+}
+
+int _safeParseInt(dynamic value, {int defaultValue = 0}) {
+  if (value == null) return defaultValue;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? defaultValue;
+  return defaultValue;
+}
+
 /// Call settings model for user call preferences
 class CallSettings {
   final bool videoEnabled;
@@ -20,13 +38,15 @@ class CallSettings {
 
   factory CallSettings.fromJson(Map<String, dynamic> json) {
     return CallSettings(
-      videoEnabled: json['video_enabled'] as bool? ?? true,
-      audioEnabled: json['audio_enabled'] as bool? ?? true,
-      speakerEnabled: json['speaker_enabled'] as bool? ?? false,
-      ringtone: json['ringtone'] as String?,
-      maxCallDuration: json['max_call_duration'] as int? ?? 60,
-      autoAcceptCalls: json['auto_accept_calls'] as bool? ?? false,
-      preferences: json['preferences'] as Map<String, dynamic>?,
+      videoEnabled: _safeParseBool(json['video_enabled'], defaultValue: true),
+      audioEnabled: _safeParseBool(json['audio_enabled'], defaultValue: true),
+      speakerEnabled: _safeParseBool(json['speaker_enabled']),
+      ringtone: json['ringtone']?.toString(),
+      maxCallDuration: _safeParseInt(json['max_call_duration'], defaultValue: 60),
+      autoAcceptCalls: _safeParseBool(json['auto_accept_calls']),
+      preferences: json['preferences'] != null && json['preferences'] is Map
+          ? Map<String, dynamic>.from(json['preferences'] as Map)
+          : null,
     );
   }
 

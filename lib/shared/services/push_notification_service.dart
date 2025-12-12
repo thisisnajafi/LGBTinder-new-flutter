@@ -1,11 +1,14 @@
 /// Push Notification Service
+/// FEATURE ENHANCEMENT (Task 9.1.2): Enhanced with deep linking and notification grouping
 /// Handles Firebase Cloud Messaging (FCM) integration
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
 import 'incoming_call_handler.dart';
+import 'deep_linking_service.dart';
 
 /// Service for handling push notifications
 class PushNotificationService {
@@ -181,44 +184,94 @@ class PushNotificationService {
   }
 
   /// Show local notification
+  /// FEATURE ENHANCEMENT (Task 9.1.2): Added notification grouping
   Future<void> _showLocalNotification(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) return;
 
-    const androidDetails = AndroidNotificationDetails(
-      'lgbtinder_channel',
+    final data = message.data;
+    final type = data['type']?.toString() ?? 'general';
+    
+    // Group notifications by type (messages from same user, etc.)
+    String? groupKey;
+    String? groupChannelId;
+    
+    if (type == 'message') {
+      final userId = data['user_id']?.toString();
+      if (userId != null) {
+        groupKey = 'messages_$userId';
+        groupChannelId = 'lgbtinder_messages';
+      }
+    } else {
+      groupChannelId = 'lgbtinder_$type';
+    }
+
+    final androidDetails = AndroidNotificationDetails(
+      groupChannelId ?? 'lgbtinder_channel',
       'LGBTinder Notifications',
       channelDescription: 'Notifications for LGBTinder app',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
+      groupKey: groupKey, // Group messages from same user
+      setAsGroupSummary: false, // Don't show summary for individual messages
+      styleInformation: const BigTextStyleInformation(''), // Expandable notification
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      threadIdentifier: groupKey, // iOS notification grouping
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
+    // Use message ID or timestamp as notification ID for uniqueness
+    final notificationId = data['message_id']?.hashCode ?? 
+                          data['notification_id']?.hashCode ?? 
+                          message.messageId?.hashCode ?? 
+                          DateTime.now().millisecondsSinceEpoch % 2147483647;
+
     await _localNotifications.show(
-      notification.hashCode,
+      notificationId,
       notification.title,
       notification.body,
       details,
       payload: message.data.toString(),
     );
+
+    // Show summary notification for grouped messages (Android)
+    if (groupKey != null && Platform.isAndroid) {
+      await _showGroupSummaryNotification(groupKey, type);
+    }
+  }
+
+  /// Show group summary notification (Android)
+  Future<void> _showGroupSummaryNotification(String groupKey, String type) async {
+    // This would show a summary like "5 new messages from John"
+    // Implementation depends on tracking unread counts
+    // For now, we'll skip this as it requires state management
   }
 
   /// Handle notification tap
+  /// FEATURE ENHANCEMENT (Task 9.1.2): Enhanced with deep linking
   void _handleNotificationTap(RemoteMessage message) {
     final data = message.data;
     
-    // Navigate based on notification type
+    // Use deep linking service if available
+    try {
+      final deepLinkingService = DeepLinkingService();
+      deepLinkingService.handleDeepLink(data);
+      return;
+    } catch (e) {
+      debugPrint('Deep linking service not available, using fallback: $e');
+    }
+    
+    // Fallback to callback-based navigation
     if (data.containsKey('type')) {
       final type = data['type'] as String;
       

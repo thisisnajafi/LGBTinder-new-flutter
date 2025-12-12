@@ -1,10 +1,14 @@
+// CODE QUALITY (Task 8.2.1): Fixed provider structure with proper dependency injection
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/discovery_profile.dart';
 import '../data/models/discovery_filters.dart';
+import '../data/repositories/discovery_repository.dart';
+import '../data/services/discovery_service.dart';
 import '../domain/use_cases/get_discovery_profiles_use_case.dart';
 import '../domain/use_cases/get_nearby_suggestions_use_case.dart';
 import '../domain/use_cases/apply_filters_use_case.dart';
 import '../../matching/providers/matching_provider.dart';
+import '../../../core/providers/api_providers.dart';
 
 /// Discovery provider - manages discovery state and operations
 final discoveryProvider = StateNotifierProvider<DiscoveryNotifier, DiscoveryState>((ref) {
@@ -248,15 +252,35 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
   }
 }
 
-// Use case providers
+// CODE QUALITY (Task 8.2.1): Properly implemented provider hierarchy
+// 
+// Provider Hierarchy:
+// ApiService → DiscoveryService → DiscoveryRepository → Use Cases → DiscoveryProvider
+
+/// Discovery Service Provider
+final discoveryServiceProvider = Provider<DiscoveryService>((ref) {
+  final apiService = ref.watch(apiServiceProvider);
+  return DiscoveryService(apiService);
+});
+
+/// Discovery Repository Provider
+final discoveryRepositoryProvider = Provider<DiscoveryRepository>((ref) {
+  final discoveryService = ref.watch(discoveryServiceProvider);
+  return DiscoveryRepository(discoveryService);
+});
+
+/// Use case providers - properly instantiated with repository dependency
 final getDiscoveryProfilesUseCaseProvider = Provider<GetDiscoveryProfilesUseCase>((ref) {
-  throw UnimplementedError('GetDiscoveryProfilesUseCase must be overridden in the provider scope');
+  final repository = ref.watch(discoveryRepositoryProvider);
+  return GetDiscoveryProfilesUseCase(repository);
 });
 
 final getNearbySuggestionsUseCaseProvider = Provider<GetNearbySuggestionsUseCase>((ref) {
-  throw UnimplementedError('GetNearbySuggestionsUseCase must be overridden in the provider scope');
+  final repository = ref.watch(discoveryRepositoryProvider);
+  return GetNearbySuggestionsUseCase(repository);
 });
 
 final applyFiltersUseCaseProvider = Provider<ApplyFiltersUseCase>((ref) {
-  throw UnimplementedError('ApplyFiltersUseCase must be overridden in the provider scope');
+  final repository = ref.watch(discoveryRepositoryProvider);
+  return ApplyFiltersUseCase(repository);
 });

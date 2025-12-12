@@ -14,6 +14,7 @@ class ChatService {
 
 
   /// Get chat history with a specific user
+  /// FIXED: Changed 'receiver_id' to 'user_id' to match backend ChatController@getChatHistory
   Future<List<Message>> getChatHistory({
     int? receiverId,
     int? page,
@@ -21,7 +22,7 @@ class ChatService {
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      if (receiverId != null) queryParams['receiver_id'] = receiverId;
+      if (receiverId != null) queryParams['user_id'] = receiverId; // Backend expects 'user_id'
       if (page != null) queryParams['page'] = page;
       if (limit != null) queryParams['limit'] = limit;
 
@@ -113,11 +114,12 @@ class ChatService {
   }
 
   /// Mark messages as read
-  Future<void> markAsRead(int receiverId) async {
+  /// FIXED: Changed 'receiver_id' to 'sender_id' to match backend ChatController@markAsRead
+  Future<void> markAsRead(int senderId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.chatRead,
-        data: {'receiver_id': receiverId},
+        data: {'sender_id': senderId}, // Backend expects 'sender_id' - the user whose messages to mark as read
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -197,17 +199,44 @@ class ChatService {
   }
 
   /// Enhanced send message with attachment support
+  /// 
+  /// FIXED: Task 2.3.1 & 2.3.2 - Updated to properly handle media uploads
+  /// Backend expects multipart/form-data when sending media (image, video, voice)
+  /// 
+  /// [receiverId] - The ID of the user to send the message to
+  /// [message] - Text content of the message (required for text type, optional for media)
+  /// [messageType] - One of: 'text', 'image', 'video', 'voice', 'disappearing_image', 'disappearing_video'
+  /// [mediaFile] - File to upload (required for media types)
+  /// [mediaDuration] - Duration in seconds (required for voice/video)
+  /// [expiresInSeconds] - 1-60 seconds (required for disappearing media)
   Future<Message> sendMessage(int receiverId, String message, {
     String messageType = 'text',
-    MessageAttachment? attachment,
+    File? mediaFile,
+    int? mediaDuration,
+    int? expiresInSeconds,
+    MessageAttachment? attachment, // Keep for backward compatibility
   }) async {
     try {
+      // Use FormData for media uploads, regular JSON for text messages
+      if (mediaFile != null && messageType != 'text') {
+        return await _sendMessageWithMedia(
+          receiverId: receiverId,
+          message: message,
+          messageType: messageType,
+          mediaFile: mediaFile,
+          mediaDuration: mediaDuration,
+          expiresInSeconds: expiresInSeconds,
+        );
+      }
+      
+      // Text-only message
       final data = <String, dynamic>{
         'receiver_id': receiverId,
         'message': message,
         'message_type': messageType,
       };
 
+      // Legacy attachment support (if attachment ID already exists)
       if (attachment != null) {
         data['attachment_id'] = attachment.id;
       }
@@ -219,6 +248,63 @@ class ChatService {
       );
 
       if (response.isSuccess && response.data != null) {
+        // Handle nested data structure
+        final messageData = response.data!['data'] ?? response.data!;
+        if (messageData is Map<String, dynamic>) {
+          return Message.fromJson(messageData);
+        }
+        return Message.fromJson(response.data!);
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+  /// Send message with media file using multipart/form-data
+  /// 
+  /// Backend validation (ChatController@sendMessage):
+  /// - 'receiver_id' => required, must exist in users table
+  /// - 'message' => required if message_type is text, nullable otherwise
+  /// - 'message_type' => required, one of: text, image, video, voice, disappearing_image, disappearing_video
+  /// - 'media' => required if message_type is image/video/voice/disappearing_*, must be a file
+  /// - 'media_duration' => required for voice/video types
+  /// - 'expires_in_seconds' => required for disappearing_* types, 1-60 seconds
+  Future<Message> _sendMessageWithMedia({
+    required int receiverId,
+    required String message,
+    required String messageType,
+    required File mediaFile,
+    int? mediaDuration,
+    int? expiresInSeconds,
+  }) async {
+    try {
+      final fileName = mediaFile.path.split('/').last;
+      
+      final formData = FormData.fromMap({
+        'receiver_id': receiverId,
+        'message': message.isNotEmpty ? message : null,
+        'message_type': messageType,
+        'media': await MultipartFile.fromFile(
+          mediaFile.path,
+          filename: fileName,
+        ),
+        if (mediaDuration != null) 'media_duration': mediaDuration,
+        if (expiresInSeconds != null) 'expires_in_seconds': expiresInSeconds,
+      });
+
+      final response = await _apiService.postFormData<Map<String, dynamic>>(
+        ApiEndpoints.chatSend,
+        data: formData,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final messageData = response.data!['data'] ?? response.data!;
+        if (messageData is Map<String, dynamic>) {
+          return Message.fromJson(messageData);
+        }
         return Message.fromJson(response.data!);
       } else {
         throw Exception(response.message);

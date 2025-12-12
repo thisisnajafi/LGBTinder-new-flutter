@@ -249,11 +249,12 @@ class DiscoveryService {
   }
 
   /// Like a profile
+  /// FIXED: Changed 'user_id' to 'target_user_id' to match backend LikeController
   Future<void> likeProfile(int profileId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesLike,
-        data: {'user_id': profileId},
+        data: {'target_user_id': profileId},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -266,11 +267,12 @@ class DiscoveryService {
   }
 
   /// Dislike a profile
+  /// FIXED: Changed 'user_id' to 'target_user_id' to match backend LikeController
   Future<void> dislikeProfile(int profileId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesDislike,
-        data: {'user_id': profileId},
+        data: {'target_user_id': profileId},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -283,11 +285,12 @@ class DiscoveryService {
   }
 
   /// Superlike a profile
+  /// FIXED: Changed 'user_id' to 'target_user_id' to match backend LikeController
   Future<void> superlikeProfile(int profileId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesSuperlike,
-        data: {'user_id': profileId},
+        data: {'target_user_id': profileId},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

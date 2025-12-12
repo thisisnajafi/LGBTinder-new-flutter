@@ -1,4 +1,7 @@
+import '../../../../core/constants/api_endpoints.dart';
+
 /// User Image model
+/// FIXED: Task 5.3.2 - Updated to use centralized storageUrl instead of hardcoded CDN domain
 class UserImage {
   final int id;
   final int userId;
@@ -18,10 +21,17 @@ class UserImage {
     this.sizes,
   });
 
+  /// Build full URL from path using centralized storage URL
+  static String _buildUrl(String pathOrUrl) {
+    if (pathOrUrl.isEmpty) return '';
+    if (pathOrUrl.startsWith('http')) return pathOrUrl;
+    // Remove leading slash if present to avoid double slashes
+    final cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl.substring(1) : pathOrUrl;
+    return '${ApiEndpoints.storageUrl}/$cleanPath';
+  }
+
   /// Get the full URL for the image
-  String get url => path.startsWith('http')
-      ? path
-      : 'https://your-cdn-domain.com/storage/$path'; // Replace with actual CDN domain
+  String get url => _buildUrl(path);
 
   /// Alias for url property for backward compatibility
   String get imageUrl => url;
@@ -29,29 +39,31 @@ class UserImage {
   /// Get thumbnail URL
   String get thumbnailUrl {
     if (sizes != null && sizes!.containsKey('thumbnail')) {
-      final thumbnailPath = sizes!['thumbnail'];
-      return thumbnailPath.startsWith('http')
-          ? thumbnailPath
-          : 'https://your-cdn-domain.com/storage/$thumbnailPath'; // Replace with actual CDN domain
+      final thumbnailPath = sizes!['thumbnail']?.toString() ?? '';
+      return _buildUrl(thumbnailPath);
     }
 
     // Fallback to original thumbnail logic if sizes not available
+    if (path.isEmpty) return '';
     final pathInfo = path.split('/');
+    if (pathInfo.isEmpty) return url;
+    
     final filename = pathInfo.last.split('.');
+    if (filename.length < 2) return url; // No extension found, return original
+    
     final extension = filename.last;
     final name = filename.first;
     final dir = pathInfo.sublist(0, pathInfo.length - 1).join('/');
 
-    return 'https://your-cdn-domain.com/storage/$dir/thumbnails/${name}_thumb.$extension'; // Replace with actual CDN domain
+    return _buildUrl('$dir/thumbnails/${name}_thumb.$extension');
   }
 
   /// Get URL for specific size
   String? getSizeUrl(String size) {
     if (sizes != null && sizes!.containsKey(size)) {
-      final sizePath = sizes![size];
-      return sizePath.startsWith('http')
-          ? sizePath
-          : 'https://your-cdn-domain.com/storage/$sizePath'; // Replace with actual CDN domain
+      final sizePath = sizes![size]?.toString() ?? '';
+      if (sizePath.isEmpty) return null;
+      return _buildUrl(sizePath);
     }
     return null;
   }

@@ -10,6 +10,7 @@ class NotificationService {
   NotificationService(this._apiService);
 
   /// Get all notifications
+  /// FIXED: Updated to handle backend response structure: {data: {notifications: [...], unread_count: 0}}
   Future<List<Notification>> getNotifications({
     int? page,
     int? limit,
@@ -29,7 +30,15 @@ class NotificationService {
       List<dynamic>? dataList;
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
+        // Handle nested structure: {data: {notifications: [...]}}
+        if (data['data'] != null && data['data'] is Map<String, dynamic>) {
+          final dataMap = data['data'] as Map<String, dynamic>;
+          if (dataMap['notifications'] != null && dataMap['notifications'] is List) {
+            dataList = dataMap['notifications'] as List;
+          }
+        }
+        // Fallback: direct list in data: {data: [...]}
+        else if (data['data'] != null && data['data'] is List) {
           dataList = data['data'] as List;
         }
       } else if (response.data is List) {
@@ -38,7 +47,15 @@ class NotificationService {
 
       if (dataList != null) {
         return dataList
-            .map((item) => Notification.fromJson(item as Map<String, dynamic>))
+            .map((item) {
+              try {
+                return Notification.fromJson(item as Map<String, dynamic>);
+              } catch (e) {
+                // Skip malformed notifications instead of crashing
+                return null;
+              }
+            })
+            .whereType<Notification>()
             .toList();
       }
       return [];

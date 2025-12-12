@@ -1,3 +1,21 @@
+/// Safe type parsing helpers for age preference
+/// FIXED: Task 5.2.1 - Added safe type parsing to prevent crashes
+int? _safeParseIntNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
+
+bool? _safeParseBoolNullable(dynamic value, {bool? defaultValue}) {
+  if (value == null) return defaultValue;
+  if (value is bool) return value;
+  if (value is int) return value == 1;
+  if (value is String) return value.toLowerCase() == 'true' || value == '1';
+  return defaultValue;
+}
+
 /// Age preference model - represents user's preferred age range for discovery
 class AgePreference {
   final int? minAge;
@@ -12,9 +30,9 @@ class AgePreference {
 
   factory AgePreference.fromJson(Map<String, dynamic> json) {
     return AgePreference(
-      minAge: json['min_age'] as int?,
-      maxAge: json['max_age'] as int?,
-      isEnabled: json['is_enabled'] as bool? ?? true,
+      minAge: _safeParseIntNullable(json['min_age']),
+      maxAge: _safeParseIntNullable(json['max_age']),
+      isEnabled: _safeParseBoolNullable(json['is_enabled'], defaultValue: true),
     );
   }
 

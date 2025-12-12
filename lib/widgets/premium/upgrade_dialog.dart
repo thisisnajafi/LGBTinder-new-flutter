@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
+import '../../core/theme/typography.dart';
 
 /// Upgrade Dialog
 /// 
@@ -34,7 +34,7 @@ class UpgradeDialog extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+          color: isDark ? AppColors.surfaceElevatedDark : AppColors.surfaceElevatedLight,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -48,7 +48,7 @@ class UpgradeDialog extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     AppColors.accentPurple,
-                    AppColors.primaryLight,
+                    AppColors.accentPink,
                   ],
                 ),
                 shape: BoxShape.circle,
@@ -124,9 +124,9 @@ class UpgradeDialog extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  const Icon(
+                  const                   Icon(
                     Icons.check_circle,
-                    color: AppColors.feedbackSuccess,
+                    color: AppColors.onlineGreen,
                     size: 20,
                   ),
                   const SizedBox(width: 12),

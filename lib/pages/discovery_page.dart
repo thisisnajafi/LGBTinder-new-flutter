@@ -16,6 +16,8 @@ import '../features/discover/data/models/discovery_profile.dart';
 import '../features/matching/providers/likes_providers.dart';
 import '../features/matching/data/models/match.dart' as match_models;
 import '../features/payments/providers/payment_providers.dart';
+import '../features/payments/data/services/plan_limits_service.dart';
+import '../widgets/premium/upgrade_dialog.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/profile_detail_screen.dart';
@@ -185,20 +187,59 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   Future<void> _handleSwipe(int userId, String action) async {
     try {
+      // Check limits before action
+      final planLimitsService = ref.read(planLimitsServiceProvider);
+      
+      // Check swipe limit
+      if (action == 'like' || action == 'dislike') {
+        final hasReached = await planLimitsService.hasReachedSwipeLimit();
+        if (hasReached && mounted) {
+          final limits = await planLimitsService.getPlanLimits();
+          UpgradeDialog.showSwipeLimitDialog(
+            context, 
+            limits.usage.swipes.usedToday,
+            limits.usage.swipes.limit,
+          );
+          return;
+        }
+      }
+      
+      // Check superlike limit
+      if (action == 'superlike') {
+        final hasReached = await planLimitsService.hasReachedSuperlikeLimit();
+        if (hasReached && mounted) {
+          final limits = await planLimitsService.getPlanLimits();
+          UpgradeDialog.showSuperlikeLimitDialog(
+            context,
+            limits.usage.superlikes.usedToday,
+            limits.usage.superlikes.limit,
+          );
+          return;
+        }
+      }
+      
       final likesService = ref.read(likesServiceProvider);
       
       switch (action) {
         case 'like':
           final response = await likesService.likeUser(userId);
+          // Increment usage locally (optimistic update)
+          planLimitsService.incrementUsage('swipes');
+          planLimitsService.incrementUsage('likes');
           if (response.isMatch && mounted) {
             _showMatchDialog(response.match as match_models.Match?);
           }
           break;
         case 'dislike':
           await likesService.dislikeUser(userId);
+          // Increment usage
+          planLimitsService.incrementUsage('swipes');
           break;
         case 'superlike':
           final response = await likesService.superlikeUser(userId);
+          // Increment usage
+          planLimitsService.incrementUsage('swipes');
+          planLimitsService.incrementUsage('superlikes');
           if (response.isMatch && mounted) {
             _showMatchDialog(response.match as match_models.Match?);
           }
@@ -206,11 +247,22 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       }
     } on ApiError catch (e) {
       if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e,
-          customMessage: 'Failed to $action',
-        );
+        // Check if error is DAILY_LIMIT_REACHED
+        final errorCode = e.responseData?['error_code'] as String?;
+        if (errorCode == 'DAILY_LIMIT_REACHED') {
+          final limits = await ref.read(planLimitsServiceProvider).getPlanLimits();
+          UpgradeDialog.showSwipeLimitDialog(
+            context,
+            limits.usage.swipes.usedToday,
+            limits.usage.swipes.limit,
+          );
+        } else {
+          ErrorHandlerService.showErrorSnackBar(
+            context,
+            e,
+            customMessage: 'Failed to $action',
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -261,6 +313,81 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       MaterialPageRoute(
         builder: (context) => ProfileDetailScreen(userId: userId),
       ),
+    );
+  }
+
+  /// Build limit indicator showing remaining swipes
+  Widget _buildLimitIndicator() {
+    final planLimits = ref.watch(planLimitsProvider);
+    
+    return planLimits.when(
+      data: (limits) {
+        if (limits.usage.swipes.isUnlimited) {
+          return const SizedBox.shrink();
+        }
+        
+        final remaining = limits.usage.swipes.remaining;
+        final used = limits.usage.swipes.usedToday;
+        final limit = limits.usage.swipes.limit;
+        
+        // Don't show if user has plenty of swipes left
+        if (remaining > limit * 0.5) {
+          return const SizedBox.shrink();
+        }
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: remaining > 3
+                ? AppColors.onlineGreen.withOpacity(0.1)
+                : AppColors.warningYellow.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: remaining > 3
+                  ? AppColors.onlineGreen.withOpacity(0.3)
+                  : AppColors.warningYellow.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                remaining > 3 ? Icons.favorite : Icons.warning_amber_rounded,
+                color: remaining > 3 ? AppColors.onlineGreen : AppColors.warningYellow,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '$remaining swipes remaining today ($used/$limit used)',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: remaining > 3 ? AppColors.onlineGreen : AppColors.warningYellow,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (!limits.planInfo.isPremium)
+                TextButton(
+                  onPressed: () {
+                    context.push('/subscription-plans');
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  child: Text(
+                    'Upgrade',
+                    style: TextStyle(
+                      color: remaining > 3 ? AppColors.onlineGreen : AppColors.warningYellow,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -511,6 +638,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       body: SafeArea(
         child: Column(
           children: [
+            // Limit indicator
+            _buildLimitIndicator(),
             // Card stack
             Expanded(
               child: _isLoading

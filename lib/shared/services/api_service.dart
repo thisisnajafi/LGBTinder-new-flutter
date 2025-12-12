@@ -420,6 +420,52 @@ class ApiService {
     }
   }
 
+  /// POST request with FormData (multipart/form-data)
+  /// 
+  /// Use this for uploading files or sending mixed data (files + fields)
+  /// Task 2.3.1 & 2.3.2: Added for chat media uploads
+  Future<ApiResponse<T>> postFormData<T>(
+    String endpoint, {
+    required FormData data,
+    T Function(dynamic)? fromJson,
+    ProgressCallback? onSendProgress,
+    Options? options,
+    bool queueIfOffline = false, // FormData can't be easily serialized for offline queue
+  }) async {
+    // Check connectivity
+    if (!_connectivityService.isOnline) {
+      throw ApiError(
+        message: 'No internet connection. Please check your network and try again.',
+        code: 0,
+      );
+    }
+
+    try {
+      final response = await _dioClient.dio.post(
+        endpoint,
+        data: data,
+        options: options ?? Options(
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+        onSendProgress: onSendProgress,
+      );
+
+      return _handleResponse<T>(response, fromJson);
+    } on DioException catch (e) {
+      throw ApiError.fromDioException(e);
+    } catch (e) {
+      if (e is ApiError) {
+        rethrow;
+      }
+      throw ApiError(
+        message: 'An unexpected error occurred: ${e.toString()}',
+        originalError: e,
+      );
+    }
+  }
+
   /// Upload file (multipart/form-data)
   Future<ApiResponse<T>> uploadFile<T>(
     String endpoint,

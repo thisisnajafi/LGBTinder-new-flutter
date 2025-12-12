@@ -1,3 +1,13 @@
+/// Safe boolean parsing helper
+/// FIXED: Task 5.2.1 - Added safe type parsing for notification preferences
+bool? _safeParseBoolNullable(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is int) return value == 1;
+  if (value is String) return value.toLowerCase() == 'true' || value == '1';
+  return null;
+}
+
 /// Notification preferences model
 class NotificationPreferences {
   final bool? emailNotifications;
@@ -29,12 +39,12 @@ class NotificationPreferences {
 
   factory NotificationPreferences.fromJson(Map<String, dynamic> json) {
     return NotificationPreferences(
-      emailNotifications: json['email_notifications'] as bool?,
-      pushNotifications: json['push_notifications'] as bool?,
-      smsNotifications: json['sms_notifications'] as bool?,
-      matchNotifications: json['match_notifications'] as bool?,
-      messageNotifications: json['message_notifications'] as bool?,
-      likeNotifications: json['like_notifications'] as bool?,
+      emailNotifications: _safeParseBoolNullable(json['email_notifications']),
+      pushNotifications: _safeParseBoolNullable(json['push_notifications']),
+      smsNotifications: _safeParseBoolNullable(json['sms_notifications']),
+      matchNotifications: _safeParseBoolNullable(json['match_notifications']),
+      messageNotifications: _safeParseBoolNullable(json['message_notifications']),
+      likeNotifications: _safeParseBoolNullable(json['like_notifications']),
     );
   }
 }

@@ -1,3 +1,30 @@
+/// Safe type parsing helpers for plan limits
+/// FIXED: Task 5.2.1 - Added safe type parsing to prevent crashes from backend type mismatches
+class _SafeParser {
+  static bool parseBool(dynamic value, {bool defaultValue = false}) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return defaultValue;
+  }
+  
+  static int parseInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+  
+  static DateTime? parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+}
+
 /// Plan Limits Model
 /// 
 /// Contains all plan limits and current usage for the authenticated user
@@ -103,12 +130,10 @@ class PlanInfo {
 
   factory PlanInfo.fromJson(Map<String, dynamic> json) {
     return PlanInfo(
-      isPremium: json['is_premium'] as bool? ?? false,
-      planName: json['plan_name'] as String? ?? 'Free',
-      planId: json['plan_id'] as int?,
-      expiresAt: json['expires_at'] != null 
-          ? DateTime.tryParse(json['expires_at'] as String) 
-          : null,
+      isPremium: _SafeParser.parseBool(json['is_premium']),
+      planName: json['plan_name']?.toString() ?? 'Free',
+      planId: _SafeParser.parseInt(json['plan_id']),
+      expiresAt: _SafeParser.parseDateTime(json['expires_at']),
     );
   }
 
@@ -167,8 +192,8 @@ class LimitDetail {
 
   factory LimitDetail.fromJson(Map<String, dynamic> json) {
     return LimitDetail(
-      dailyLimit: json['daily_limit'] as int? ?? 0,
-      isUnlimited: json['is_unlimited'] as bool? ?? false,
+      dailyLimit: _SafeParser.parseInt(json['daily_limit']),
+      isUnlimited: _SafeParser.parseBool(json['is_unlimited']),
     );
   }
 
@@ -192,8 +217,8 @@ class MessageLimitDetail {
 
   factory MessageLimitDetail.fromJson(Map<String, dynamic> json) {
     return MessageLimitDetail(
-      maxConversations: json['max_conversations'] as int? ?? 0,
-      isUnlimited: json['is_unlimited'] as bool? ?? false,
+      maxConversations: _SafeParser.parseInt(json['max_conversations']),
+      isUnlimited: _SafeParser.parseBool(json['is_unlimited']),
     );
   }
 
@@ -254,10 +279,10 @@ class UsageDetail {
 
   factory UsageDetail.fromJson(Map<String, dynamic> json) {
     return UsageDetail(
-      usedToday: json['used_today'] as int? ?? 0,
-      limit: json['limit'] as int? ?? 0,
-      remaining: json['remaining'] as int? ?? 0,
-      isUnlimited: json['is_unlimited'] as bool? ?? false,
+      usedToday: _SafeParser.parseInt(json['used_today']),
+      limit: _SafeParser.parseInt(json['limit']),
+      remaining: _SafeParser.parseInt(json['remaining']),
+      isUnlimited: _SafeParser.parseBool(json['is_unlimited']),
     );
   }
 
@@ -287,10 +312,10 @@ class MessageUsageDetail {
 
   factory MessageUsageDetail.fromJson(Map<String, dynamic> json) {
     return MessageUsageDetail(
-      sentToday: json['sent_today'] as int? ?? 0,
-      activeConversations: json['active_conversations'] as int? ?? 0,
-      conversationLimit: json['conversation_limit'] as int? ?? 0,
-      isUnlimited: json['is_unlimited'] as bool? ?? false,
+      sentToday: _SafeParser.parseInt(json['sent_today']),
+      activeConversations: _SafeParser.parseInt(json['active_conversations']),
+      conversationLimit: _SafeParser.parseInt(json['conversation_limit']),
+      isUnlimited: _SafeParser.parseBool(json['is_unlimited']),
     );
   }
 
@@ -334,17 +359,17 @@ class Features {
 
   factory Features.fromJson(Map<String, dynamic> json) {
     return Features(
-      advancedFilters: json['advanced_filters'] as bool? ?? false,
-      seeWhoLikedMe: json['see_who_liked_me'] as bool? ?? false,
-      rewind: json['rewind'] as bool? ?? false,
-      passport: json['passport'] as bool? ?? false,
-      boost: json['boost'] as bool? ?? false,
-      readReceipts: json['read_receipts'] as bool? ?? false,
-      videoCalls: json['video_calls'] as bool? ?? false,
-      incognitoMode: json['incognito_mode'] as bool? ?? false,
-      adFree: json['ad_free'] as bool? ?? false,
-      priorityLikes: json['priority_likes'] as bool? ?? false,
-      aiMatching: json['ai_matching'] as bool? ?? false,
+      advancedFilters: _SafeParser.parseBool(json['advanced_filters']),
+      seeWhoLikedMe: _SafeParser.parseBool(json['see_who_liked_me']),
+      rewind: _SafeParser.parseBool(json['rewind']),
+      passport: _SafeParser.parseBool(json['passport']),
+      boost: _SafeParser.parseBool(json['boost']),
+      readReceipts: _SafeParser.parseBool(json['read_receipts']),
+      videoCalls: _SafeParser.parseBool(json['video_calls']),
+      incognitoMode: _SafeParser.parseBool(json['incognito_mode']),
+      adFree: _SafeParser.parseBool(json['ad_free']),
+      priorityLikes: _SafeParser.parseBool(json['priority_likes']),
+      aiMatching: _SafeParser.parseBool(json['ai_matching']),
     );
   }
 
@@ -377,8 +402,8 @@ class Timestamps {
 
   factory Timestamps.fromJson(Map<String, dynamic> json) {
     return Timestamps(
-      resetsAt: DateTime.parse(json['resets_at'] as String),
-      checkedAt: DateTime.parse(json['checked_at'] as String),
+      resetsAt: _SafeParser.parseDateTime(json['resets_at']) ?? DateTime.now(),
+      checkedAt: _SafeParser.parseDateTime(json['checked_at']) ?? DateTime.now(),
     );
   }
 

@@ -1,6 +1,34 @@
 import '../../../auth/data/models/login_response.dart';
 
+/// Safe type parsing helpers for call models
+/// FIXED: Task 5.1.2, 5.1.3, 5.3.1 - Added safe type parsing to prevent crashes
+class _TypeParser {
+  static int parseInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+  
+  static bool parseBool(dynamic value, {bool defaultValue = false}) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return defaultValue;
+  }
+  
+  static DateTime? parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+}
+
 /// Call model for voice and video calls
+/// FIXED: Task 5.3.1 - Removed strict validation that throws exceptions
 class Call {
   final int id;
   final String callId;
@@ -33,47 +61,25 @@ class Call {
   });
 
   factory Call.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('Call.fromJson: id is required but was null');
-    }
-    if (json['call_id'] == null) {
-      throw FormatException('Call.fromJson: call_id is required but was null');
-    }
-    if (json['caller_id'] == null) {
-      throw FormatException('Call.fromJson: caller_id is required but was null');
-    }
-    if (json['receiver_id'] == null) {
-      throw FormatException('Call.fromJson: receiver_id is required but was null');
-    }
-    if (json['call_type'] == null) {
-      throw FormatException('Call.fromJson: call_type is required but was null');
-    }
-    if (json['status'] == null) {
-      throw FormatException('Call.fromJson: status is required but was null');
-    }
-    
+    // FIXED: Use safe parsing with defaults instead of throwing exceptions
+    // This prevents list parsing from crashing on a single malformed item
     return Call(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      callId: json['call_id'].toString(),
-      callerId: (json['caller_id'] is int) ? json['caller_id'] as int : int.parse(json['caller_id'].toString()),
-      receiverId: (json['receiver_id'] is int) ? json['receiver_id'] as int : int.parse(json['receiver_id'].toString()),
+      id: _TypeParser.parseInt(json['id']),
+      callId: json['call_id']?.toString() ?? '',
+      callerId: _TypeParser.parseInt(json['caller_id']),
+      receiverId: _TypeParser.parseInt(json['receiver_id']),
       caller: json['caller'] != null && json['caller'] is Map
           ? UserData.fromJson(Map<String, dynamic>.from(json['caller'] as Map))
           : null,
       receiver: json['receiver'] != null && json['receiver'] is Map
           ? UserData.fromJson(Map<String, dynamic>.from(json['receiver'] as Map))
           : null,
-      callType: json['call_type'].toString(),
-      status: json['status'].toString(),
-      startedAt: json['started_at'] != null
-          ? (DateTime.tryParse(json['started_at'].toString()) ?? DateTime.now())
-          : DateTime.now(),
-      endedAt: json['ended_at'] != null
-          ? DateTime.tryParse(json['ended_at'].toString())
-          : null,
+      callType: json['call_type']?.toString() ?? 'audio',
+      status: json['status']?.toString() ?? 'unknown',
+      startedAt: _TypeParser.parseDateTime(json['started_at']) ?? DateTime.now(),
+      endedAt: _TypeParser.parseDateTime(json['ended_at']),
       duration: json['duration'] != null
-          ? Duration(seconds: (json['duration'] is int) ? json['duration'] as int : int.tryParse(json['duration'].toString()) ?? 0)
+          ? Duration(seconds: _TypeParser.parseInt(json['duration']))
           : null,
       endReason: json['end_reason']?.toString(),
       metadata: json['metadata'] != null && json['metadata'] is Map
@@ -81,6 +87,9 @@ class Call {
           : {},
     );
   }
+  
+  /// Check if call data is valid (has required fields)
+  bool get isValid => id > 0 && callId.isNotEmpty && callerId > 0 && receiverId > 0;
 
   Map<String, dynamic> toJson() {
     return {
@@ -163,6 +172,7 @@ class Call {
 }
 
 /// Call participant model
+/// FIXED: Task 5.3.1 - Removed strict validation that throws exceptions
 class CallParticipant {
   final int userId;
   final String name;
@@ -181,25 +191,19 @@ class CallParticipant {
   });
 
   factory CallParticipant.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['user_id'] == null) {
-      throw FormatException('CallParticipant.fromJson: user_id is required but was null');
-    }
-    if (json['name'] == null) {
-      throw FormatException('CallParticipant.fromJson: name is required but was null');
-    }
-    
+    // FIXED: Use safe parsing with defaults instead of throwing exceptions
     return CallParticipant(
-      userId: (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString()),
-      name: json['name'].toString(),
+      userId: _TypeParser.parseInt(json['user_id']),
+      name: json['name']?.toString() ?? 'Unknown',
       avatarUrl: json['avatar_url']?.toString(),
-      isOnline: json['is_online'] == true || json['is_online'] == 1,
-      isPremium: json['is_premium'] == true || json['is_premium'] == 1,
-      lastSeen: json['last_seen'] != null
-          ? DateTime.tryParse(json['last_seen'].toString())
-          : null,
+      isOnline: _TypeParser.parseBool(json['is_online']),
+      isPremium: _TypeParser.parseBool(json['is_premium']),
+      lastSeen: _TypeParser.parseDateTime(json['last_seen']),
     );
   }
+  
+  /// Check if participant data is valid
+  bool get isValid => userId > 0;
 
   Map<String, dynamic> toJson() {
     return {
@@ -214,6 +218,7 @@ class CallParticipant {
 }
 
 /// Call settings model
+/// FIXED: Task 5.1.2 - Updated fromJson to handle type casting safely
 class CallSettings {
   final bool enableVideo;
   final bool enableAudio;
@@ -240,17 +245,18 @@ class CallSettings {
   });
 
   factory CallSettings.fromJson(Map<String, dynamic> json) {
+    // FIXED: Use safe type parsing instead of direct casting
     return CallSettings(
-      enableVideo: json['enable_video'] as bool? ?? true,
-      enableAudio: json['enable_audio'] as bool? ?? true,
-      videoQuality: json['video_quality'] as String? ?? 'medium',
-      audioQuality: json['audio_quality'] as String? ?? 'medium',
-      enableBackgroundBlur: json['enable_background_blur'] as bool? ?? false,
-      showPreview: json['show_preview'] as bool? ?? true,
-      maxCallDuration: json['max_call_duration'] as int? ?? 60,
-      autoAcceptFromMatches: json['auto_accept_from_matches'] as bool? ?? false,
-      enableCallWaiting: json['enable_call_waiting'] as bool? ?? true,
-      customSettings: json['custom_settings'] != null
+      enableVideo: _TypeParser.parseBool(json['enable_video'], defaultValue: true),
+      enableAudio: _TypeParser.parseBool(json['enable_audio'], defaultValue: true),
+      videoQuality: json['video_quality']?.toString() ?? 'medium',
+      audioQuality: json['audio_quality']?.toString() ?? 'medium',
+      enableBackgroundBlur: _TypeParser.parseBool(json['enable_background_blur']),
+      showPreview: _TypeParser.parseBool(json['show_preview'], defaultValue: true),
+      maxCallDuration: _TypeParser.parseInt(json['max_call_duration'], defaultValue: 60),
+      autoAcceptFromMatches: _TypeParser.parseBool(json['auto_accept_from_matches']),
+      enableCallWaiting: _TypeParser.parseBool(json['enable_call_waiting'], defaultValue: true),
+      customSettings: json['custom_settings'] != null && json['custom_settings'] is Map
           ? Map<String, dynamic>.from(json['custom_settings'] as Map)
           : {},
     );

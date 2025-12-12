@@ -190,6 +190,7 @@ class SubPlan {
 }
 
 /// Subscription status model
+/// FIXED: Updated fromJson to handle type casting safely (Task 5.1.1)
 class SubscriptionStatus {
   final bool isActive;
   final String? planName;
@@ -214,22 +215,42 @@ class SubscriptionStatus {
   });
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
+    // FIXED: Safe boolean parsing - handles bool, int (0/1), and string ('true'/'false')
+    bool parseBoolean(dynamic value, {bool defaultValue = false}) {
+      if (value == null) return defaultValue;
+      if (value is bool) return value;
+      if (value is int) return value == 1;
+      if (value is String) return value.toLowerCase() == 'true' || value == '1';
+      return defaultValue;
+    }
+    
+    // FIXED: Safe int parsing - handles int and string
+    int? parseInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      if (value is num) return value.toInt();
+      return null;
+    }
+    
+    // FIXED: Safe DateTime parsing - uses tryParse instead of parse to avoid throws
+    DateTime? parseDateTime(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      if (value is String) return DateTime.tryParse(value);
+      return null;
+    }
+    
     return SubscriptionStatus(
-      isActive: json['is_active'] as bool? ?? false,
-      planName: json['plan_name'] as String?,
-      planId: json['plan_id'] as int?,
-      startDate: json['start_date'] != null
-          ? DateTime.parse(json['start_date'] as String)
-          : null,
-      endDate: json['end_date'] != null
-          ? DateTime.parse(json['end_date'] as String)
-          : null,
-      nextBillingDate: json['next_billing_date'] != null
-          ? DateTime.parse(json['next_billing_date'] as String)
-          : null,
-      status: json['status'] as String?,
-      stripeSubscriptionId: json['stripe_subscription_id'] as String?,
-      autoRenew: json['auto_renew'] as bool? ?? true,
+      isActive: parseBoolean(json['is_active']),
+      planName: json['plan_name']?.toString(),
+      planId: parseInt(json['plan_id']),
+      startDate: parseDateTime(json['start_date']),
+      endDate: parseDateTime(json['end_date']),
+      nextBillingDate: parseDateTime(json['next_billing_date']),
+      status: json['status']?.toString(),
+      stripeSubscriptionId: json['stripe_subscription_id']?.toString(),
+      autoRenew: parseBoolean(json['auto_renew'], defaultValue: true),
     );
   }
 

@@ -1,4 +1,31 @@
+/// Safe integer parsing helper
+int _safeParseInt(dynamic value, {int defaultValue = 0}) {
+  if (value == null) return defaultValue;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? defaultValue;
+  return defaultValue;
+}
+
+/// Safe boolean parsing helper
+bool _safeParseBool(dynamic value, {bool defaultValue = false}) {
+  if (value == null) return defaultValue;
+  if (value is bool) return value;
+  if (value is int) return value == 1;
+  if (value is String) return value.toLowerCase() == 'true' || value == '1';
+  return defaultValue;
+}
+
+/// Safe DateTime parsing helper
+DateTime? _safeParseDateTime(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  return null;
+}
+
 /// Message model
+/// FIXED: Task 5.3.1 - Removed strict validation that throws exceptions
 class Message {
   final int id;
   final int senderId;
@@ -25,37 +52,26 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
-    // Validate required fields
-    if (json['id'] == null) {
-      throw FormatException('Message.fromJson: id is required but was null');
-    }
-    if (json['sender_id'] == null) {
-      throw FormatException('Message.fromJson: sender_id is required but was null');
-    }
-    if (json['receiver_id'] == null) {
-      throw FormatException('Message.fromJson: receiver_id is required but was null');
-    }
-    if (json['message'] == null) {
-      throw FormatException('Message.fromJson: message is required but was null');
-    }
-    
+    // FIXED: Use safe parsing with defaults instead of throwing exceptions
+    // This prevents list parsing from crashing on a single malformed item
     return Message(
-      id: (json['id'] is int) ? json['id'] as int : int.parse(json['id'].toString()),
-      senderId: (json['sender_id'] is int) ? json['sender_id'] as int : int.parse(json['sender_id'].toString()),
-      receiverId: (json['receiver_id'] is int) ? json['receiver_id'] as int : int.parse(json['receiver_id'].toString()),
-      message: json['message'].toString(),
+      id: _safeParseInt(json['id']),
+      senderId: _safeParseInt(json['sender_id']),
+      receiverId: _safeParseInt(json['receiver_id']),
+      message: json['message']?.toString() ?? '',
       messageType: json['message_type']?.toString() ?? 'text',
-      createdAt: json['created_at'] != null
-          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
-          : DateTime.now(),
-      isRead: json['is_read'] == true || json['is_read'] == 1,
-      isDeleted: json['is_deleted'] == true || json['is_deleted'] == 1,
+      createdAt: _safeParseDateTime(json['created_at']) ?? DateTime.now(),
+      isRead: _safeParseBool(json['is_read']),
+      isDeleted: _safeParseBool(json['is_deleted']),
       attachmentUrl: json['attachment_url']?.toString(),
       metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : null,
     );
   }
+  
+  /// Check if message data is valid (has required fields)
+  bool get isValid => id > 0 && senderId > 0 && receiverId > 0;
 
   Map<String, dynamic> toJson() {
     return {
