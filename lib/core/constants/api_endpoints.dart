@@ -1,4 +1,4 @@
-﻿/// API endpoint URLs organized by feature
+/// API endpoint URLs organized by feature
 class ApiEndpoints {
   // Base URL
   static const String baseUrl = 'http://lg.abolfazlnajafi.com/api';
@@ -243,4 +243,40 @@ class ApiEndpoints {
   static String forumPost(int postId) => '/community-forums/$postId';
   static String forumPostLike(int postId) => '/community-forums/$postId/like';
   static String forumPostComments(int postId) => '/community-forums/$postId/comments';
+
+  // ==================== Marketing System ====================
+  static const String marketingPromotions = '/marketing/promotions';
+  static const String marketingValidatePromo = '/marketing/validate-promo';
+  static const String marketingApplyPromotion = '/marketing/apply-promotion';
+  static const String marketingPricing = '/marketing/pricing';
+  static String marketingProductPrice(String productId) => '/marketing/price/$productId';
+  static const String marketingPromoCodes = '/marketing/promo-codes';
+  static const String marketingTrackImpression = '/marketing/track-impression';
+  static const String marketingTrackClick = '/marketing/track-click';
+
+  // ==================== Daily Rewards ====================
+  static const String dailyRewardsStatus = '/daily-rewards/status';
+  static const String dailyRewardsClaim = '/daily-rewards/claim';
+  static const String dailyRewardsConfig = '/daily-rewards/config';
+  static const String dailyRewardsHistory = '/daily-rewards/history';
+  static const String dailyRewardsLeaderboard = '/daily-rewards/leaderboard';
+
+  // ==================== Banners ====================
+  static String bannersByPosition(String position) => '/banners/position/$position';
+  static const String bannersAll = '/banners/all';
+  static const String bannersTrackImpression = '/banners/track-impression';
+  static const String bannersTrackClick = '/banners/track-click';
+  static const String bannersTrackDismissal = '/banners/track-dismissal';
+  static const String bannersTrackConversion = '/banners/track-conversion';
+
+  // ==================== Badges & Gamification ====================
+  static const String badgesAll = '/badges/all';
+  static const String badgesMy = '/badges/my';
+  static const String badgesDisplayed = '/badges/displayed';
+  static const String badgesEligibility = '/badges/eligibility';
+  static const String badgesClaim = '/badges/claim';
+  static const String badgesClaimReward = '/badges/claim-reward';
+  static const String badgesToggleDisplay = '/badges/toggle-display';
+  static const String badgesLeaderboard = '/badges/leaderboard';
+  static String badgesUser(int userId) => '/badges/user/$userId';
 }
