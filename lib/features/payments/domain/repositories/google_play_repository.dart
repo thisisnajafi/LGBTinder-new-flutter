@@ -37,6 +37,15 @@ abstract class GooglePlayRepository {
   /// Check if billing is available
   Future<bool> isBillingAvailable();
 
+  /// Sync subscription status with backend
+  Future<Map<String, dynamic>?> syncSubscriptionStatus();
+
+  /// Start periodic subscription status sync
+  void startPeriodicStatusSync({Duration interval = const Duration(minutes: 5)});
+
+  /// Stop periodic subscription status sync
+  void stopPeriodicStatusSync();
+
   /// Dispose resources
   void dispose();
 }
@@ -74,7 +83,7 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
 
   @override
   Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails) async {
-    return await _billingService.launchBillingFlow(productDetails);
+    return await _billingService.launchSubscriptionBillingFlow(productDetails);
   }
 
   @override
@@ -95,6 +104,21 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   @override
   Future<bool> isBillingAvailable() async {
     return await _billingService.isBillingAvailable();
+  }
+
+  @override
+  Future<Map<String, dynamic>?> syncSubscriptionStatus() async {
+    return await _billingService.syncSubscriptionStatus();
+  }
+
+  @override
+  void startPeriodicStatusSync({Duration interval = const Duration(minutes: 5)}) {
+    _billingService.startPeriodicStatusSync(interval: interval);
+  }
+
+  @override
+  void stopPeriodicStatusSync() {
+    _billingService.stopPeriodicStatusSync();
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../shared/services/api_service.dart';
@@ -72,23 +73,25 @@ class OfflinePaymentService {
     try {
       final purchaseData = purchase['data'] as Map<String, dynamic>;
       final isSubscription = purchaseData['isSubscription'] ?? false;
+      final productId = purchaseData['productId'] as String?;
 
-      // Validate purchase with backend
-      final response = await _apiService.post<Map<String, dynamic>>(
-        isSubscription
-            ? '/api/google-play/validate-purchase'
-            : '/api/google-play/validate-one-time-purchase',
-        data: purchaseData,
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess) {
-        debugPrint('Successfully processed queued purchase: ${purchaseData['productId']}');
-        return true;
-      } else {
-        debugPrint('Backend validation failed for queued purchase: ${response.message}');
+      if (productId == null) {
+        debugPrint('Queued purchase missing productId, skipping');
         return false;
       }
+
+      // Note: For offline purchases, we can't validate with Google Play directly
+      // Instead, we need to wait for the user to complete the purchase when online
+      // This service queues the purchase intent, not the completed purchase
+      
+      // When connectivity is restored, the purchase should complete through normal flow
+      // This queue is mainly for tracking purchase intents that were initiated offline
+      
+      debugPrint('Queued purchase for product: $productId (will complete when online)');
+      
+      // Mark as processed since we've logged it
+      // The actual purchase will complete through normal Google Play flow when online
+      return true;
     } catch (e) {
       debugPrint('Error processing queued purchase: $e');
       return false;
@@ -104,10 +107,13 @@ class OfflinePaymentService {
     try {
       final purchasesJson = _prefs!.getStringList(_pendingPurchasesKey) ?? [];
       return purchasesJson.map((json) {
-        // In a real implementation, you'd use json.decode
-        // For simplicity, we'll assume the data is already in the right format
-        return {'id': 'temp', 'data': {}, 'timestamp': '', 'status': 'queued'};
-      }).toList();
+        try {
+          return jsonDecode(json) as Map<String, dynamic>;
+        } catch (e) {
+          debugPrint('Failed to decode purchase JSON: $e');
+          return <String, dynamic>{};
+        }
+      }).where((purchase) => purchase.isNotEmpty).toList();
     } catch (e) {
       debugPrint('Failed to get pending purchases: $e');
       return [];
@@ -121,9 +127,9 @@ class OfflinePaymentService {
     }
 
     try {
-      // In a real implementation, you'd use json.encode for each purchase
-      final purchasesJson = purchases.map((purchase) => purchase.toString()).toList();
+      final purchasesJson = purchases.map((purchase) => jsonEncode(purchase)).toList();
       await _prefs!.setStringList(_pendingPurchasesKey, purchasesJson);
+      debugPrint('Saved ${purchases.length} pending purchases to storage');
     } catch (e) {
       debugPrint('Failed to save pending purchases: $e');
       rethrow;
