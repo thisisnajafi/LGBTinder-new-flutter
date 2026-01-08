@@ -17,6 +17,7 @@ import '../../data/models/subscription_plan.dart' show SubscribeRequest;
 import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/error_handler_service.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
+import '../widgets/offer_selection_widget.dart';
 import 'subscription_management_screen.dart';
 
 /// Subscription plans screen - Display and select subscription plans
@@ -133,8 +134,18 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         return;
       }
 
+      // Get selected sub-plan and its Google offer ID
+      String? offerId;
+      if (_selectedSubPlanId != null) {
+        final selectedSubPlan = _subPlans.firstWhere(
+          (sp) => sp.id == _selectedSubPlanId,
+          orElse: () => _subPlans.firstWhere((sp) => sp.planId == _selectedPlanId),
+        );
+        offerId = selectedSubPlan.googleOfferId;
+      }
+
       final purchaseNotifier = ref.read(googlePlayPurchaseProvider.notifier);
-      await purchaseNotifier.initiatePurchase(productId, true); // true for subscription
+      await purchaseNotifier.initiatePurchase(productId, true, offerId: offerId); // true for subscription
 
       // The purchase notifier will handle success/error states
       // Listen to the state changes
@@ -439,76 +450,30 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                                     ),
                                   ),
 
-                                  // Sub plans (duration options)
-                                  if (planSubPlans.isNotEmpty) ...[
+                                  // Sub plans (offer selection)
+                                  if (planSubPlans.isNotEmpty && isSelected) ...[
                                     Divider(height: 1, color: borderColor),
                                     Padding(
                                       padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Duration',
-                                            style: AppTypography.body.copyWith(
-                                              color: textColor,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          SizedBox(height: AppSpacing.spacingSM),
-                                          Wrap(
-                                            spacing: AppSpacing.spacingSM,
-                                            runSpacing: AppSpacing.spacingSM,
-                                            children: planSubPlans.map<Widget>((subPlan) {
-                                              final isSubSelected = _selectedSubPlanId == subPlan.id;
-                                              return InkWell(
-                                                onTap: () {
-                                                  setState(() {
-                                                    _selectedSubPlanId = subPlan.id;
-                                                  });
-                                                },
-                                                child: Container(
-                                                  padding: EdgeInsets.symmetric(
-                                                    horizontal: AppSpacing.spacingMD,
-                                                    vertical: AppSpacing.spacingSM,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: isSubSelected
-                                                        ? AppColors.accentPurple
-                                                        : surfaceColor,
-                                                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                                                    border: Border.all(
-                                                      color: isSubSelected
-                                                          ? AppColors.accentPurple
-                                                          : borderColor,
-                                                    ),
-                                                  ),
-                                                  child: Column(
-                                                    children: [
-                                                      Text(
-                                                        _formatPrice(subPlan.price, subPlan.currency),
-                                                        style: AppTypography.body.copyWith(
-                                                          color: isSubSelected
-                                                              ? Colors.white
-                                                              : textColor,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                      if (subPlan.duration != null)
-                                                        Text(
-                                                          subPlan.duration!,
-                                                          style: AppTypography.caption.copyWith(
-                                                            color: isSubSelected
-                                                                ? Colors.white.withOpacity(0.9)
-                                                                : secondaryTextColor,
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
-                                            }).toList(),
-                                          ),
-                                        ],
+                                      child: OfferSelectionWidget(
+                                        offers: planSubPlans,
+                                        selectedOffer: planSubPlans.firstWhere(
+                                          (sp) => sp.id == _selectedSubPlanId,
+                                          orElse: () => planSubPlans.first,
+                                        ),
+                                        onOfferSelected: (offer) {
+                                          setState(() {
+                                            _selectedSubPlanId = offer.id;
+                                          });
+                                        },
+                                        recommendedOffer: planSubPlans.length > 1
+                                            ? planSubPlans.firstWhere(
+                                                (sp) => sp.duration?.toLowerCase().contains('12') == true ||
+                                                    sp.duration?.toLowerCase().contains('year') == true ||
+                                                    sp.duration?.toLowerCase().contains('annual') == true,
+                                                orElse: () => planSubPlans.last,
+                                              )
+                                            : null,
                                       ),
                                     ),
                                   ],

@@ -94,6 +94,7 @@ class SubPlan {
   final String currency;
   final String? duration;
   final String? stripePriceId;
+  final String? googleOfferId; // Google Play offer ID for this billing cycle
 
   SubPlan({
     this.id = 0, // Made optional with default value
@@ -104,6 +105,7 @@ class SubPlan {
     this.currency = 'usd',
     this.duration,
     this.stripePriceId,
+    this.googleOfferId,
   });
 
   factory SubPlan.fromJson(Map<String, dynamic> json) {
@@ -172,6 +174,7 @@ class SubPlan {
       currency: currency,
       duration: duration,
       stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      googleOfferId: json['google_offer_id']?.toString(),
     );
   }
 
@@ -185,6 +188,7 @@ class SubPlan {
       'currency': currency,
       if (duration != null) 'duration': duration,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
+      if (googleOfferId != null) 'google_offer_id': googleOfferId,
     };
   }
 }

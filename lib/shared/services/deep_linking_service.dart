@@ -4,9 +4,11 @@
 // - Navigate to specific screens based on notification type
 // - Handle URL schemes (lgbtfinder://)
 // - Support universal links (iOS) and app links (Android)
+// - Capture UTM parameters for marketing attribution
 
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/payments/data/services/marketing_attribution_service.dart';
 
 /// Deep linking service for navigation from notifications and URLs
 class DeepLinkingService {
@@ -16,10 +18,12 @@ class DeepLinkingService {
 
   GoRouter? _router;
   final Map<String, DeepLinkHandler> _handlers = {};
+  final MarketingAttributionService _marketingAttributionService = MarketingAttributionService();
 
   /// Initialize with router
-  void initialize(GoRouter router) {
+  void initialize(GoRouter router) async {
     _router = router;
+    await _marketingAttributionService.initialize();
     _registerDefaultHandlers();
   }
 
@@ -95,6 +99,8 @@ class DeepLinkingService {
   ///   "match_id": "456",
   ///   "chat_id": "789",
   ///   "call_id": "101",
+  ///   "utm_source": "email",
+  ///   "utm_campaign": "promo",
   ///   ...
   /// }
   /// ```
@@ -117,6 +123,22 @@ class DeepLinkingService {
     }
 
     try {
+      // Extract and store UTM parameters for marketing attribution
+      final utmParams = <String, String>{};
+      if (data.containsKey('utm_source')) utmParams['utm_source'] = data['utm_source'].toString();
+      if (data.containsKey('utm_medium')) utmParams['utm_medium'] = data['utm_medium'].toString();
+      if (data.containsKey('utm_campaign')) utmParams['utm_campaign'] = data['utm_campaign'].toString();
+      if (data.containsKey('utm_term')) utmParams['utm_term'] = data['utm_term'].toString();
+      if (data.containsKey('utm_content')) utmParams['utm_content'] = data['utm_content'].toString();
+      if (data.containsKey('campaign_id')) utmParams['campaign_id'] = data['campaign_id'].toString();
+      if (data.containsKey('referral_code')) utmParams['referral_code'] = data['referral_code'].toString();
+      if (data.containsKey('marketing_source')) utmParams['marketing_source'] = data['marketing_source'].toString();
+
+      if (utmParams.isNotEmpty) {
+        await _marketingAttributionService.storeUtmParameters(utmParams);
+        debugPrint('📊 Stored marketing attribution: ${utmParams.keys.join(", ")}');
+      }
+
       debugPrint('🔗 Handling deep link: type=$type, data=$data');
       await handler(data);
     } catch (e) {
@@ -202,6 +224,19 @@ class DeepLinkingService {
     try {
       final uri = Uri.parse(url);
       final queryParams = uri.queryParameters;
+
+      // Extract and store UTM parameters for marketing attribution
+      final utmParams = <String, String>{};
+      queryParams.forEach((key, value) {
+        if (key.startsWith('utm_') || key == 'campaign_id' || key == 'referral_code' || key == 'marketing_source') {
+          utmParams[key] = value;
+        }
+      });
+
+      if (utmParams.isNotEmpty) {
+        await _marketingAttributionService.storeUtmParameters(utmParams);
+        debugPrint('📊 Stored marketing attribution from universal link: ${utmParams.keys.join(", ")}');
+      }
 
       // Extract type and data from query parameters
       final data = Map<String, dynamic>.from(queryParams);

@@ -8,7 +8,7 @@ class InitiateGooglePurchaseUseCase {
   InitiateGooglePurchaseUseCase(this._repository);
 
   /// Execute the use case
-  Future<PurchaseResult> execute(String productId, bool isSubscription) async {
+  Future<PurchaseResult> execute(String productId, bool isSubscription, {String? offerId}) async {
     try {
       // Query product details
       final products = isSubscription
@@ -23,7 +23,7 @@ class InitiateGooglePurchaseUseCase {
 
       // Launch billing flow
       final success = isSubscription
-          ? await _repository.launchSubscriptionBillingFlow(productDetails)
+          ? await _repository.launchSubscriptionBillingFlow(productDetails, offerId: offerId)
           : await _repository.launchConsumableBillingFlow(productDetails);
 
       if (success) {

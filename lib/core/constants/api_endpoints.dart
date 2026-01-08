@@ -237,6 +237,16 @@ class ApiEndpoints {
   static const String purchaseSuperlikePack = '/payments/purchase-superlike-pack';
   static const String paymentHistory = '/payments/history';
 
+  // ==================== Google Play Billing ====================
+  static const String googlePlayValidatePurchase = '/google-play/validate-purchase';
+  static const String googlePlaySubscriptionStatus = '/google-play/subscription/status';
+  static const String googlePlayPurchasesHistory = '/google-play/purchases/history';
+  static String googlePlayPurchaseDetails(int purchaseId) => '/google-play/purchases/$purchaseId';
+  static const String googlePlaySubscriptionsActive = '/google-play/subscriptions/active';
+  static const String googlePlaySubscriptionsHistory = '/google-play/subscriptions/history';
+  static String googlePlaySubscriptionDetails(int subscriptionId) => '/google-play/subscriptions/$subscriptionId';
+  static String googlePlayCancelSubscription(int subscriptionId) => '/google-play/subscriptions/$subscriptionId/cancel';
+
   // ==================== Community Forums ====================
   static const String communityForums = '/community-forums';
   static const String forumCategories = '/community-forums/categories';

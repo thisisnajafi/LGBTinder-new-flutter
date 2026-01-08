@@ -23,7 +23,7 @@ abstract class GooglePlayRepository {
   Future<List<ProductDetails>> queryOneTimeProducts();
 
   /// Launch billing flow for subscriptions
-  Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails);
+  Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails, {String? offerId});
 
   /// Launch billing flow for consumables (superlike packs)
   Future<bool> launchConsumableBillingFlow(ProductDetails productDetails);
@@ -82,8 +82,8 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   }
 
   @override
-  Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails) async {
-    return await _billingService.launchSubscriptionBillingFlow(productDetails);
+  Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails, {String? offerId}) async {
+    return await _billingService.launchSubscriptionBillingFlow(productDetails, offerId: offerId);
   }
 
   @override

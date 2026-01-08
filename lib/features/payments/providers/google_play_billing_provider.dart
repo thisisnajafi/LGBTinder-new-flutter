@@ -6,6 +6,7 @@ import '../../../core/services/offline_payment_service.dart';
 import '../../../shared/services/api_service.dart';
 import '../../../shared/services/connectivity_service.dart';
 import '../data/services/google_play_billing_service.dart';
+import '../data/services/marketing_attribution_service.dart';
 import '../domain/repositories/google_play_repository.dart';
 import '../domain/use_cases/initiate_google_purchase_use_case.dart';
 
@@ -22,11 +23,19 @@ final connectivityStatusProvider = StreamProvider<bool>((ref) {
   return connectivityService.connectivityStream;
 });
 
+// Provider for Marketing Attribution Service
+final marketingAttributionServiceProvider = Provider<MarketingAttributionService>((ref) {
+  final service = MarketingAttributionService();
+  service.initialize(); // Initialize async but don't await (will be ready when needed)
+  return service;
+});
+
 // Provider for Google Play Billing Service
 final googlePlayBillingServiceProvider = Provider<GooglePlayBillingService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   final offlineService = ref.watch(offlinePaymentServiceProvider);
-  return GooglePlayBillingService(apiService, offlineService);
+  final marketingService = ref.watch(marketingAttributionServiceProvider);
+  return GooglePlayBillingService(apiService, offlineService, marketingService);
 });
 
 // Provider for Google Play Repository
@@ -78,10 +87,10 @@ class GooglePlayPurchaseNotifier extends StateNotifier<GooglePlayPurchaseState> 
   GooglePlayPurchaseNotifier(this._purchaseUseCase)
       : super(const GooglePlayPurchaseState.initial());
 
-  Future<void> initiatePurchase(String productId, bool isSubscription) async {
+  Future<void> initiatePurchase(String productId, bool isSubscription, {String? offerId}) async {
     state = const GooglePlayPurchaseState.loading();
 
-    final result = await _purchaseUseCase.execute(productId, isSubscription);
+    final result = await _purchaseUseCase.execute(productId, isSubscription, offerId: offerId);
 
     if (result.isSuccess) {
       state = GooglePlayPurchaseState.success(result.productDetails!);

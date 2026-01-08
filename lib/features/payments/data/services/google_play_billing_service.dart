@@ -7,24 +7,37 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../core/services/offline_payment_service.dart';
+import 'marketing_attribution_service.dart';
 
 /// Google Play Billing Service for handling in-app purchases and subscriptions
 class GooglePlayBillingService {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   final ApiService _apiService;
   final OfflinePaymentService _offlinePaymentService;
+  final MarketingAttributionService _marketingAttributionService;
 
   // Stream controllers for reactive updates
   final StreamController<bool> _billingAvailabilityController = StreamController<bool>.broadcast();
   final StreamController<List<PurchaseDetails>> _purchaseUpdatesController = StreamController<List<PurchaseDetails>>.broadcast();
   final StreamController<String> _errorController = StreamController<String>.broadcast();
+  final StreamController<Map<String, dynamic>> _userFriendlyErrorController = StreamController<Map<String, dynamic>>.broadcast();
 
   // Stream subscriptions
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
 
-  GooglePlayBillingService(this._apiService, this._offlinePaymentService) {
+  // Store offerId for purchases (keyed by productId, cleared after processing)
+  final Map<String, String?> _pendingOfferIds = {};
+
+  GooglePlayBillingService(
+    this._apiService,
+    this._offlinePaymentService,
+    this._marketingAttributionService,
+  ) {
     _initialize();
   }
+
+  // Public stream for user-friendly errors
+  Stream<Map<String, dynamic>> get userFriendlyErrors => _userFriendlyErrorController.stream;
 
   // Public streams
   Stream<bool> get billingAvailability => _billingAvailabilityController.stream;
@@ -100,7 +113,11 @@ class GooglePlayBillingService {
         break;
 
       case PurchaseStatus.purchased:
-        await _handleSuccessfulPurchase(purchaseDetails);
+        // Get offerId if stored for this product
+        final offerId = _pendingOfferIds[purchaseDetails.productID];
+        await _handleSuccessfulPurchase(purchaseDetails, offerId: offerId);
+        // Clear offerId after processing
+        _pendingOfferIds.remove(purchaseDetails.productID);
         break;
 
       case PurchaseStatus.restored:
@@ -119,12 +136,12 @@ class GooglePlayBillingService {
   }
 
   /// Handle successful purchases
-  Future<void> _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) async {
+  Future<void> _handleSuccessfulPurchase(PurchaseDetails purchaseDetails, {String? offerId}) async {
     try {
       debugPrint('Processing successful purchase: ${purchaseDetails.productID}');
 
-      // Validate purchase with backend
-      final validationResult = await _validatePurchaseWithBackend(purchaseDetails);
+      // Validate purchase with backend (includes marketing attribution)
+      final validationResult = await _validatePurchaseWithBackend(purchaseDetails, offerId: offerId);
 
       if (validationResult['success'] == true) {
         // Acknowledge the purchase
@@ -132,7 +149,12 @@ class GooglePlayBillingService {
         debugPrint('Purchase validated and acknowledged: ${purchaseDetails.productID}');
       } else {
         debugPrint('Purchase validation failed: ${purchaseDetails.productID}');
-        _errorController.add('Purchase validation failed: ${validationResult['message'] ?? 'Unknown error'}');
+        // Check if there's user-friendly error data
+        if (validationResult['error'] != null) {
+          _userFriendlyErrorController.add(validationResult['error']);
+        } else {
+          _errorController.add('Purchase validation failed: ${validationResult['message'] ?? 'Unknown error'}');
+        }
       }
     } catch (e) {
       debugPrint('Error handling successful purchase: $e');
@@ -183,7 +205,7 @@ class GooglePlayBillingService {
   }
 
   /// Validate purchase with backend API
-  Future<Map<String, dynamic>> _validatePurchaseWithBackend(PurchaseDetails purchaseDetails) async {
+  Future<Map<String, dynamic>> _validatePurchaseWithBackend(PurchaseDetails purchaseDetails, {String? offerId}) async {
     try {
       final isSubscription = _isSubscriptionProduct(purchaseDetails.productID);
 
@@ -193,11 +215,18 @@ class GooglePlayBillingService {
         throw Exception('Unable to extract purchase token from purchase details');
       }
 
+      // Get marketing attribution data
+      final attributionData = await _marketingAttributionService.getAttributionData();
+      final hasAttribution = await _marketingAttributionService.hasAttribution();
+
       final requestData = {
         'purchaseToken': purchaseToken,
         'productId': purchaseDetails.productID,
         'isSubscription': isSubscription,
         'packageName': 'com.lgbtfinder.app', // Replace with actual package name
+        if (offerId != null) 'offerId': offerId,
+        // Add marketing attribution if available
+        if (hasAttribution) ...attributionData.map((key, value) => MapEntry(key, value ?? '')),
       };
 
       debugPrint('Validating purchase with backend: ${purchaseDetails.productID}');
@@ -209,14 +238,26 @@ class GooglePlayBillingService {
       );
 
       if (response.isSuccess && response.data != null) {
+        // Clear attribution after successful purchase
+        if (hasAttribution) {
+          await _marketingAttributionService.clearAttribution();
+        }
         return {
           'success': true,
           'data': response.data,
         };
       } else {
+        // Check if response contains user-friendly error information
+        final errorData = response.data?['error'] ?? response.data;
+        if (errorData != null && errorData is Map) {
+          // Emit user-friendly error
+          _userFriendlyErrorController.add(errorData);
+        }
+
         return {
           'success': false,
           'message': response.message,
+          'error': errorData,
         };
       }
     } catch (e) {
@@ -358,6 +399,11 @@ class GooglePlayBillingService {
           productDetails: productDetails,
         );
 
+        // Store offerId for later retrieval during purchase processing
+        if (offerId != null) {
+          _pendingOfferIds[productDetails.id] = offerId;
+        }
+
         // Use buyNonConsumable for subscriptions (this is how in_app_purchase handles subscriptions)
         final bool success = await androidAddition.buyNonConsumable(purchaseParam: purchaseParam);
         debugPrint('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
@@ -367,9 +413,14 @@ class GooglePlayBillingService {
         final PurchaseParam purchaseParam = PurchaseParam(
           productDetails: productDetails,
         );
+        // Store offerId for later retrieval during purchase processing
+        if (offerId != null) {
+          _pendingOfferIds[productDetails.id] = offerId;
+        }
+
         // iOS also uses buyNonConsumable for subscriptions
         final bool success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-        debugPrint('Subscription billing flow launched for ${productDetails.id}: $success');
+        debugPrint('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
         return success;
       }
     } catch (e) {

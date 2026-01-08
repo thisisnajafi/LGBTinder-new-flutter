@@ -3,6 +3,7 @@ import '../../../../shared/services/api_service.dart';
 import '../models/subscription_plan.dart';
 import '../models/superlike_pack.dart';
 import '../models/payment_history.dart';
+import '../models/google_play_purchase_history.dart';
 
 /// Payment service for subscriptions and payments
 class PaymentService {
@@ -240,6 +241,109 @@ class PaymentService {
     } catch (e) {
       // Return empty list on error
       return [];
+    }
+  }
+
+  /// Get Google Play purchase history
+  Future<List<GooglePlayPurchaseHistory>> getGooglePlayPurchaseHistory({
+    String? type, // 'subscription' or 'one_time'
+    String? status, // 'completed', 'pending', 'cancelled', 'refunded'
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'per_page': limit,
+      };
+      if (type != null) queryParams['type'] = type;
+      if (status != null) queryParams['status'] = status;
+
+      final response = await _apiService.get<dynamic>(
+        ApiEndpoints.googlePlayPurchasesHistory,
+        queryParameters: queryParams,
+      );
+
+      List<dynamic>? dataList;
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['data'] != null && data['data'] is List) {
+          dataList = data['data'] as List;
+        }
+      } else if (response.data is List) {
+        dataList = response.data as List;
+      }
+
+      if (dataList != null) {
+        return dataList
+            .map((item) => GooglePlayPurchaseHistory.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get Google Play purchase details
+  Future<GooglePlayPurchaseHistory> getGooglePlayPurchaseDetails(int purchaseId) async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.googlePlayPurchaseDetails(purchaseId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        return GooglePlayPurchaseHistory.fromJson(response.data!['data'] ?? response.data!);
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get active Google Play subscriptions
+  Future<List<Map<String, dynamic>>> getGooglePlayActiveSubscriptions() async {
+    try {
+      final response = await _apiService.get<dynamic>(
+        ApiEndpoints.googlePlaySubscriptionsActive,
+      );
+
+      List<dynamic>? dataList;
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['data'] != null && data['data'] is List) {
+          dataList = data['data'] as List;
+        }
+      } else if (response.data is List) {
+        dataList = response.data as List;
+      }
+
+      if (dataList != null) {
+        return dataList.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+      }
+
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Cancel Google Play subscription
+  Future<void> cancelGooglePlaySubscription(int subscriptionId) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.googlePlayCancelSubscription(subscriptionId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
     }
   }
 }
