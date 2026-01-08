@@ -1,4 +1,4 @@
-﻿// Screen: HelpSupportScreen
+// Screen: HelpSupportScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -70,13 +70,13 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
           _buildSupportCard(
             icon: Icons.email,
             title: 'Email Support',
-            subtitle: 'support@lgbtinder.com',
+            subtitle: 'support@lgbtfinder.com',
             onTap: () async {
               final Uri emailUri = Uri(
                 scheme: 'mailto',
-                path: 'support@lgbtinder.com',
+                path: 'support@lgbtfinder.com',
                 queryParameters: {
-                  'subject': 'LGBTinder Support Request',
+                  'subject': 'LGBTFinder Support Request',
                   'body': 'Please describe your issue or question here...',
                 },
               );
@@ -87,7 +87,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                 } else {
                   // Fallback to copying email to clipboard
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Email: support@lgbtinder.com (copied to clipboard)')),
+                    const SnackBar(content: Text('Email: support@lgbtfinder.com (copied to clipboard)')),
                   );
                 }
               } catch (e) {

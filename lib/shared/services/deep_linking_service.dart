@@ -2,7 +2,7 @@
 //
 // Handles deep linking from push notifications and URLs
 // - Navigate to specific screens based on notification type
-// - Handle URL schemes (lgbtinder://)
+// - Handle URL schemes (lgbtfinder://)
 // - Support universal links (iOS) and app links (Android)
 
 import 'package:flutter/foundation.dart';
@@ -124,13 +124,13 @@ class DeepLinkingService {
     }
   }
 
-  /// Handle URL scheme (lgbtinder://)
+  /// Handle URL scheme (lgbtfinder://)
   /// 
   /// Supported formats:
-  /// - lgbtinder://match/123
-  /// - lgbtinder://chat/456
-  /// - lgbtinder://profile/789
-  /// - lgbtinder://call/101
+  /// - lgbtfinder://match/123
+  /// - lgbtfinder://chat/456
+  /// - lgbtfinder://profile/789
+  /// - lgbtfinder://call/101
   Future<void> handleUrlScheme(String url) async {
     if (_router == null) {
       debugPrint('⚠️ DeepLinkingService not initialized');
@@ -143,7 +143,7 @@ class DeepLinkingService {
       final host = uri.host;
       final pathSegments = uri.pathSegments;
 
-      if (scheme != 'lgbtinder') {
+      if (scheme != 'lgbtfinder') {
         debugPrint('⚠️ Unsupported URL scheme: $scheme');
         return;
       }
@@ -192,7 +192,7 @@ class DeepLinkingService {
 
   /// Handle universal link (iOS) or app link (Android)
   /// 
-  /// Format: https://lgbtinder.com/deep-link?type=message&user_id=123
+  /// Format: https://lgbtfinder.com/deep-link?type=message&user_id=123
   Future<void> handleUniversalLink(String url) async {
     if (_router == null) {
       debugPrint('⚠️ DeepLinkingService not initialized');
@@ -221,7 +221,7 @@ class DeepLinkingService {
     String? callId,
   }) {
     final uri = Uri(
-      scheme: 'lgbtinder',
+      scheme: 'lgbtfinder',
       host: type,
       pathSegments: [
         if (userId != null) userId,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Typography system for LGBTinder app
+/// Typography system for LGBTFinder app
 class AppTypography {
   // Headlines
   static const TextStyle h1Large = TextStyle(

@@ -4,7 +4,7 @@ import 'typography.dart';
 import 'spacing_constants.dart';
 import 'border_radius_constants.dart';
 
-/// Main theme configuration for LGBTinder app
+/// Main theme configuration for LGBTFinder app
 /// Supports both light and dark modes
 class AppTheme {
   // Dark Theme

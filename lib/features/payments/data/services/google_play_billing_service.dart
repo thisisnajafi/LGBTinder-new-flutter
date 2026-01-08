@@ -146,7 +146,7 @@ class GooglePlayBillingService {
         'purchaseToken': purchaseDetails.purchaseID ?? purchaseDetails.verificationData.serverVerificationData,
         'productId': purchaseDetails.productID,
         'isSubscription': isSubscription,
-        'packageName': 'com.lgbtinder.app', // Replace with actual package name
+        'packageName': 'com.lgbtfinder.app', // Replace with actual package name
       };
 
       debugPrint('Validating purchase with backend: ${purchaseDetails.productID}');

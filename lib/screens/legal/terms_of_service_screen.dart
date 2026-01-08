@@ -1,4 +1,4 @@
-﻿// Screen: TermsOfServiceScreen
+// Screen: TermsOfServiceScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -37,7 +37,7 @@ class TermsOfServiceScreen extends ConsumerWidget {
             _buildSection(
               title: '1. Acceptance of Terms',
               content:
-                  'By accessing and using LGBTinder, you accept and agree to be bound by the terms and provision of this agreement.',
+                  'By accessing and using LGBTFinder, you accept and agree to be bound by the terms and provision of this agreement.',
               textColor: textColor,
               secondaryTextColor: secondaryTextColor,
             ),
@@ -61,7 +61,7 @@ class TermsOfServiceScreen extends ConsumerWidget {
             _buildSection(
               title: '4. Privacy',
               content:
-                  'Your use of LGBTinder is also governed by our Privacy Policy. Please review our Privacy Policy to understand our practices.',
+                  'Your use of LGBTFinder is also governed by our Privacy Policy. Please review our Privacy Policy to understand our practices.',
               textColor: textColor,
               secondaryTextColor: secondaryTextColor,
             ),
@@ -85,7 +85,7 @@ class TermsOfServiceScreen extends ConsumerWidget {
             _buildSection(
               title: '7. Contact Information',
               content:
-                  'If you have any questions about these Terms of Service, please contact us at legal@lgbtinder.com.',
+                  'If you have any questions about these Terms of Service, please contact us at legal@lgbtfinder.com.',
               textColor: textColor,
               secondaryTextColor: secondaryTextColor,
             ),

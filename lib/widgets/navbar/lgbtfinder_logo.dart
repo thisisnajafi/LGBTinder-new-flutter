@@ -1,4 +1,4 @@
-﻿// Widget: LGBTinderLogo
+// Widget: LGBTFinderLogo
 // App logo widget
 import 'package:flutter/material.dart';
 
@@ -6,17 +6,17 @@ import 'package:flutter/material.dart';
 /// 
 /// Usage:
 /// ```dart
-/// LGBTinderLogo(size: 80)
-/// LGBTinderLogo(size: 40, width: 120) // Custom width for horizontal logo
+/// LGBTFinderLogo(size: 80)
+/// LGBTFinderLogo(size: 40, width: 120) // Custom width for horizontal logo
 /// ```
-class LGBTinderLogo extends StatelessWidget {
+class LGBTFinderLogo extends StatelessWidget {
   /// Size of the logo (height). If width is not specified, width will equal size.
   final double size;
   
   /// Optional width. If not specified, width will equal size (square logo).
   final double? width;
 
-  const LGBTinderLogo({
+  const LGBTFinderLogo({
     Key? key,
     this.size = 40,
     this.width,
@@ -36,7 +36,7 @@ class LGBTinderLogo extends StatelessWidget {
           width: width ?? size,
           alignment: Alignment.center,
           child: Text(
-            'LGBTinder',
+            'LGBTFinder',
             style: TextStyle(
               fontSize: size * 0.3,
               fontWeight: FontWeight.bold,

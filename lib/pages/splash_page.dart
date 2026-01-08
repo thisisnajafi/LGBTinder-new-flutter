@@ -1,11 +1,11 @@
-﻿// Screen: SplashPage
+// Screen: SplashPage
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/spacing_constants.dart';
 import '../widgets/loading/circular_progress.dart';
-import '../widgets/navbar/lgbtinder_logo.dart';
+import '../widgets/navbar/lgbtfinder_logo.dart';
 import 'package:go_router/go_router.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';
@@ -189,12 +189,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                       ),
                     ],
                   ),
-                  child: LGBTinderLogo(size: 80),
+                  child: LGBTFinderLogo(size: 80),
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
                 // App name
                 Text(
-                  'LGBTinder',
+                  'LGBTFinder',
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

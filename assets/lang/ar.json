@@ -1,5 +1,5 @@
 {
-  "app_name": "LGBTinder",
+  "app_name": "LGBTFinder",
   "welcome": "مرحباً",
   "login": "تسجيل الدخول",
   "logout": "تسجيل الخروج",
@@ -82,7 +82,7 @@
   "billing": "الفوترة",
   "invoice": "فاتورة",
   "receipt": "إيصال",
-  "onboarding_welcome": "مرحباً بك في LGBTinder",
+  "onboarding_welcome": "مرحباً بك في LGBTFinder",
   "onboarding_get_started": "ابدأ",
   "onboarding_skip": "تخطي",
   "onboarding_complete": "إكمال",

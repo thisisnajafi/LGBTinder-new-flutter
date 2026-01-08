@@ -1,4 +1,4 @@
-﻿// Screen: PrivacyPolicyScreen
+// Screen: PrivacyPolicyScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -77,7 +77,7 @@ class PrivacyPolicyScreen extends ConsumerWidget {
             _buildSection(
               title: '6. Contact Us',
               content:
-                  'If you have questions about this Privacy Policy, please contact us at privacy@lgbtinder.com.',
+                  'If you have questions about this Privacy Policy, please contact us at privacy@lgbtfinder.com.',
               textColor: textColor,
               secondaryTextColor: secondaryTextColor,
             ),

@@ -1,6 +1,6 @@
-# lgbtindernew
+# LGBTFinder
 
-A new Flutter project.
+LGBTFinder - LGBTQ+ Dating Application
 
 ## Getting Started
 

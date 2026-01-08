@@ -1,6 +1,6 @@
 {
-    "name": "lgbtindernew",
-    "short_name": "lgbtindernew",
+    "name": "LGBTFinder",
+    "short_name": "LGBTFinder",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

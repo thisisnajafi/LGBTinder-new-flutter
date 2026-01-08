@@ -1,4 +1,4 @@
-/// Spacing constants for LGBTinder app
+/// Spacing constants for LGBTFinder app
 /// Base unit: 4px
 class AppSpacing {
   static const double spacingXS = 4.0;

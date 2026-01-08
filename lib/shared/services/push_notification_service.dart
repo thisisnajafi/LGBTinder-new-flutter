@@ -200,16 +200,16 @@ class PushNotificationService {
       final userId = data['user_id']?.toString();
       if (userId != null) {
         groupKey = 'messages_$userId';
-        groupChannelId = 'lgbtinder_messages';
+        groupChannelId = 'lgbtfinder_messages';
       }
     } else {
-      groupChannelId = 'lgbtinder_$type';
+      groupChannelId = 'lgbtfinder_$type';
     }
 
     final androidDetails = AndroidNotificationDetails(
-      groupChannelId ?? 'lgbtinder_channel',
-      'LGBTinder Notifications',
-      channelDescription: 'Notifications for LGBTinder app',
+      groupChannelId ?? 'lgbtfinder_channel',
+      'LGBTFinder Notifications',
+      channelDescription: 'Notifications for LGBTFinder app',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,

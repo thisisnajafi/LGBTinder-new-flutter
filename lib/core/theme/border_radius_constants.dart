@@ -1,4 +1,4 @@
-/// Border radius constants for LGBTinder app
+/// Border radius constants for LGBTFinder app
 class AppRadius {
   static const double radiusXS = 6.0;
   static const double radiusSM = 12.0;

@@ -1,4 +1,4 @@
-﻿// Screen: EnhancedOnboardingScreen
+// Screen: EnhancedOnboardingScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -26,7 +26,7 @@ class _EnhancedOnboardingScreenState extends ConsumerState<EnhancedOnboardingScr
 
   final List<EnhancedOnboardingSlide> _slides = [
     EnhancedOnboardingSlide(
-      title: 'Welcome to LGBTinder',
+      title: 'Welcome to LGBTFinder',
       description: 'A safe and inclusive space for the LGBTQ+ community to connect, discover, and build meaningful relationships.',
       icon: Icons.favorite,
       gradient: AppTheme.accentGradient,

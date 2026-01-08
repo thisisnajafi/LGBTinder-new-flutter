@@ -1,4 +1,4 @@
-﻿// Screen: RegisterScreen
+// Screen: RegisterScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -146,7 +146,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 SizedBox(height: AppSpacing.spacingXL),
                 Text(
-                  'Join LGBTinder',
+                  'Join LGBTFinder',
                   style: AppTypography.h1.copyWith(color: textColor),
                   textAlign: TextAlign.center,
                 ),

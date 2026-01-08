@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Color definitions for LGBTinder app
+/// Color definitions for LGBTFinder app
 /// Supports both dark and light modes
 class AppColors {
   // Dark Mode Colors

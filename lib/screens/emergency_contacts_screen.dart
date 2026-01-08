@@ -1,4 +1,4 @@
-﻿// Screen: EmergencyContactsScreen
+// Screen: EmergencyContactsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -134,7 +134,7 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
         final response = await apiService.post<Map<String, dynamic>>(
           ApiEndpoints.emergencyTrigger,
           data: {
-            'message': 'Emergency alert triggered from LGBTinder app',
+            'message': 'Emergency alert triggered from LGBTFinder app',
             'include_location': true,
           },
           fromJson: (json) => json as Map<String, dynamic>,

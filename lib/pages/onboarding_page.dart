@@ -1,4 +1,4 @@
-﻿// Screen: OnboardingPage
+// Screen: OnboardingPage
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -25,7 +25,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   final List<OnboardingStep> _steps = [
     OnboardingStep(
-      title: 'Welcome to LGBTinder',
+      title: 'Welcome to LGBTFinder',
       description: 'A safe and inclusive space to find meaningful connections',
       icon: Icons.favorite,
       color: AppColors.accentPurple,

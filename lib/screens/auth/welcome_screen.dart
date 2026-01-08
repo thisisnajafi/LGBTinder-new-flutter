@@ -1,4 +1,4 @@
-﻿// Screen: WelcomeScreen
+// Screen: WelcomeScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
@@ -9,7 +9,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/buttons/animated_button.dart';
-import '../../widgets/navbar/lgbtinder_logo.dart';
+import '../../widgets/navbar/lgbtfinder_logo.dart';
 import 'package:go_router/go_router.dart';
 
 /// Welcome screen - First screen for authentication flow
@@ -172,7 +172,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                 ),
                               ],
                             ),
-                            child: LGBTinderLogo(size: 70),
+                            child: LGBTFinderLogo(size: 70),
                           ),
                         ),
                       );
@@ -201,7 +201,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   ],
                                 ).createShader(bounds),
                                 child: Text(
-                                  'LGBTinder',
+                                  'LGBTFinder',
                                   style: AppTypography.h1Large.copyWith(
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 1.5,

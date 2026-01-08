@@ -48,7 +48,7 @@ class PremiumSubscriptionScreen extends ConsumerWidget {
             ),
             SizedBox(height: AppSpacing.spacingSM),
             Text(
-              'Get the most out of LGBTinder with premium features',
+              'Get the most out of LGBTFinder with premium features',
               style: AppTypography.body.copyWith(color: secondaryTextColor),
             ),
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -81,7 +81,7 @@ class MyApp extends ConsumerWidget {
 
     return ErrorBoundary(
       child: MaterialApp.router(
-        title: 'LGBTinder',
+        title: 'LGBTFinder',
         debugShowCheckedModeBanner: false,
 
         // Theme Configuration

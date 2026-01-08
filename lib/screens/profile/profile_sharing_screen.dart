@@ -1,4 +1,4 @@
-﻿// Screen: ProfileSharingScreen
+// Screen: ProfileSharingScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -42,7 +42,7 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         setState(() {
-          _profileShareUrl = 'https://lgbtinder.com/profile/12345';
+          _profileShareUrl = 'https://lgbtfinder.com/profile/12345';
           _profileQrCode = null; // TODO: Generate QR code
         });
       }
@@ -66,8 +66,8 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
 
     try {
       await Share.share(
-        'Check out my LGBTinder profile!\n$_profileShareUrl',
-        subject: 'My LGBTinder Profile',
+        'Check out my LGBTFinder profile!\n$_profileShareUrl',
+        subject: 'My LGBTFinder Profile',
       );
     } catch (e) {
       if (mounted) {

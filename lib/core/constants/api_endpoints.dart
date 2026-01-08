@@ -269,7 +269,13 @@ class ApiEndpoints {
   static const String bannersTrackDismissal = '/banners/track-dismissal';
   static const String bannersTrackConversion = '/banners/track-conversion';
 
-  // ==================== Badges & Gamification ====================
+    // ==================== A/B Testing ====================
+    static String abTestVariation(String featureKey) => '/ab-test/variation/$featureKey';
+    static const String abTestTrack = '/ab-test/track';
+    static const String abTestPricingPage = '/ab-test/pricing-page';
+    static String abTestBanner(String position) => '/ab-test/banner/$position';
+
+    // ==================== Badges & Gamification ====================
   static const String badgesAll = '/badges/all';
   static const String badgesMy = '/badges/my';
   static const String badgesDisplayed = '/badges/displayed';

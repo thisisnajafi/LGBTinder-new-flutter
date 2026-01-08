@@ -43,7 +43,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return [
       // Welcome page
       LGBTOnboardingPage(
-        title: 'Welcome to LGBTinder',
+        title: 'Welcome to LGBTFinder',
         subtitle: 'Find meaningful connections in the LGBTQ+ community',
         description: 'Connect with people who share your values and interests in a safe, inclusive environment.',
         iconData: Icons.favorite,

@@ -380,10 +380,10 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
         final file = File(tempPath);
         await file.writeAsBytes(response.bodyBytes);
 
-        await Share.shareXFiles([XFile(tempPath)], text: 'Shared from LGBTinder');
+        await Share.shareXFiles([XFile(tempPath)], text: 'Shared from LGBTFinder');
       } else {
         // Share local file
-        await Share.shareXFiles([XFile(widget.attachment.filePath)], text: 'Shared from LGBTinder');
+        await Share.shareXFiles([XFile(widget.attachment.filePath)], text: 'Shared from LGBTFinder');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
