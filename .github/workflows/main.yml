@@ -1,4 +1,4 @@
-name: LGBTinder Flutter App - Change Notification
+name: LGBTFinder Flutter App - Change Notification
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
-          MESSAGE=$(echo -e "🚀 <b>LGBTinder Flutter App</b> 🚀 \n\n📝 <b>New Changes Pushed</b>\n\n👤 <b>Updated by:</b> ${GITHUB_ACTOR}\n\n💬 <b>Commit Message:</b>\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
+          MESSAGE=$(echo -e "🚀 <b>LGBTFinder Flutter App</b> 🚀 \n\n📝 <b>New Changes Pushed</b>\n\n👤 <b>Updated by:</b> ${GITHUB_ACTOR}\n\n💬 <b>Commit Message:</b>\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
           curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
             -d text="${MESSAGE}" \
