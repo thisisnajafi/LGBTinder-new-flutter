@@ -30,7 +30,7 @@ class DeepLinkingService {
   /// Register default deep link handlers
   void _registerDefaultHandlers() {
     // Match notification → Navigate to matches screen
-    registerHandler('match', (data) {
+    registerHandler('match', (data) async {
       final matchId = data['match_id']?.toString();
       if (matchId != null) {
         _router?.go('/matches/$matchId');
@@ -40,12 +40,12 @@ class DeepLinkingService {
     });
 
     // Like notification → Navigate to likes screen (if premium)
-    registerHandler('like', (data) {
+    registerHandler('like', (data) async {
       _router?.go('/likes');
     });
 
     // Message notification → Navigate to specific chat
-    registerHandler('message', (data) {
+    registerHandler('message', (data) async {
       final userId = data['user_id']?.toString();
       final chatId = data['chat_id']?.toString();
       if (userId != null) {
@@ -58,7 +58,7 @@ class DeepLinkingService {
     });
 
     // Call notification → Navigate to call screen
-    registerHandler('call', (data) {
+    registerHandler('call', (data) async {
       final callId = data['call_id']?.toString();
       if (callId != null) {
         _router?.go('/call/$callId');
@@ -66,12 +66,12 @@ class DeepLinkingService {
     });
 
     // General notification → Navigate to notifications screen
-    registerHandler('notification', (data) {
+    registerHandler('notification', (data) async {
       _router?.go('/notifications');
     });
 
     // Profile view → Navigate to user profile
-    registerHandler('profile', (data) {
+    registerHandler('profile', (data) async {
       final userId = data['user_id']?.toString();
       if (userId != null) {
         _router?.go('/profile/$userId');
@@ -79,7 +79,7 @@ class DeepLinkingService {
     });
 
     // Superlike notification → Navigate to discovery
-    registerHandler('superlike', (data) {
+    registerHandler('superlike', (data) async {
       _router?.go('/discover');
     });
   }

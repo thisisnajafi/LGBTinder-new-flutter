@@ -1,7 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/api_providers.dart';
 import '../data/models/user_settings.dart';
 import '../data/models/privacy_settings.dart';
 import '../data/models/device_session.dart';
+import '../data/models/matching_preferences.dart';
+import '../data/models/settings_summary.dart';
+import '../data/services/matching_preferences_service.dart';
+import '../data/services/settings_summary_service.dart';
 import '../domain/use_cases/get_settings_use_case.dart';
 import '../domain/use_cases/update_settings_use_case.dart';
 import '../domain/use_cases/change_password_use_case.dart';
@@ -329,4 +334,28 @@ final deleteAccountUseCaseProvider = Provider<DeleteAccountUseCase>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   throw UnimplementedError('SettingsRepository must be overridden in the provider scope');
+});
+
+/// Matching preferences service (GET/PUT /api/preferences/matching)
+final matchingPreferencesServiceProvider = Provider<MatchingPreferencesService>((ref) {
+  final apiService = ref.watch(apiServiceProvider);
+  return MatchingPreferencesService(apiService);
+});
+
+/// Async provider for matching preferences (loads from API)
+final matchingPreferencesProvider = FutureProvider<MatchingPreferences>((ref) async {
+  final service = ref.watch(matchingPreferencesServiceProvider);
+  return service.getPreferences();
+});
+
+/// Settings summary service (GET /api/settings)
+final settingsSummaryServiceProvider = Provider<SettingsSummaryService>((ref) {
+  final apiService = ref.watch(apiServiceProvider);
+  return SettingsSummaryService(apiService);
+});
+
+/// Async provider for settings summary (overview screen)
+final settingsSummaryProvider = FutureProvider<SettingsSummary>((ref) async {
+  final service = ref.watch(settingsSummaryServiceProvider);
+  return service.getSummary();
 });

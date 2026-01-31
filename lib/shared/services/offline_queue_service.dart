@@ -236,7 +236,7 @@ class OfflineQueueService {
   /// FEATURE ENHANCEMENT (Task 9.2.1): Automatic sync
   Future<void> syncQueue({Dio? dio}) async {
     if (_connectivityService != null) {
-      final isOnline = await _connectivityService!.isConnected;
+      final isOnline = await _connectivityService!.checkConnectivity();
       if (!isOnline) {
         debugPrint('📡 Offline - skipping queue sync');
         return;

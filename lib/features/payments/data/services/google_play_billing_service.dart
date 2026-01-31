@@ -251,7 +251,7 @@ class GooglePlayBillingService {
         final errorData = response.data?['error'] ?? response.data;
         if (errorData != null && errorData is Map) {
           // Emit user-friendly error
-          _userFriendlyErrorController.add(errorData);
+          _userFriendlyErrorController.add(Map<String, dynamic>.from(errorData as Map));
         }
 
         return {
@@ -404,8 +404,8 @@ class GooglePlayBillingService {
           _pendingOfferIds[productDetails.id] = offerId;
         }
 
-        // Use buyNonConsumable for subscriptions (this is how in_app_purchase handles subscriptions)
-        final bool success = await androidAddition.buyNonConsumable(purchaseParam: purchaseParam);
+        // Use buyNonConsumable for subscriptions (cross-platform via InAppPurchase)
+        final bool success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
         debugPrint('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
         return success;
       } else {

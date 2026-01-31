@@ -201,10 +201,13 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
   }
 
   Widget _buildImageContent() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxW = screenWidth * 0.7;
+    final maxH = (maxW * 1.2).clamp(120.0, 280.0);
     return GestureDetector(
       onTap: widget.onAttachmentTap,
       child: Container(
-        constraints: const BoxConstraints(maxHeight: 200, maxWidth: 200),
+        constraints: BoxConstraints(maxHeight: maxH, maxWidth: maxW),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: widget.message.attachmentUrl != null
@@ -212,18 +215,18 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
                   imageUrl: widget.message.attachmentUrl!,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    height: 150,
+                    height: maxH,
                     color: Colors.grey[300],
                     child: const Center(child: CircularProgressIndicator()),
                   ),
                   errorWidget: (context, url, error) => Container(
-                    height: 150,
+                    height: maxH,
                     color: Colors.grey[300],
                     child: const Icon(Icons.broken_image),
                   ),
                 )
               : Container(
-                  height: 150,
+                  height: maxH,
                   color: Colors.grey[300],
                   child: const Icon(Icons.image_not_supported),
                 ),

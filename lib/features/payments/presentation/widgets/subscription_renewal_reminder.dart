@@ -173,7 +173,7 @@ class ReminderLevel {
     required this.getMessage,
   });
 
-  static const critical = ReminderLevel._(
+  static ReminderLevel get critical => ReminderLevel._(
     title: 'Subscription Expiring Soon!',
     color: AppColors.accentRed,
     icon: Icons.warning,
@@ -186,7 +186,7 @@ class ReminderLevel {
     },
   );
 
-  static const warning = ReminderLevel._(
+  static ReminderLevel get warning => ReminderLevel._(
     title: 'Subscription Expiring in 3 Days',
     color: Colors.orange,
     icon: Icons.schedule,
@@ -195,7 +195,7 @@ class ReminderLevel {
     },
   );
 
-  static const info = ReminderLevel._(
+  static ReminderLevel get info => ReminderLevel._(
     title: 'Subscription Renewal Reminder',
     color: AppColors.accentYellow,
     icon: Icons.info_outline,

@@ -1,4 +1,4 @@
-﻿// Widget: MessageBubble
+// Widget: MessageBubble
 // Chat message bubble
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

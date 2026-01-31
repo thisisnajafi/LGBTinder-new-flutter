@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/api_providers.dart';
 import '../data/services/payment_service.dart';
+import '../data/services/plan_limits_service.dart';
 import '../data/services/superlike_pack_service.dart';
 import '../data/repositories/payment_repository.dart';
 import '../data/models/subscription_plan.dart';
@@ -178,9 +179,6 @@ class SubscriptionSyncService {
     _ref.invalidate(planLimitsServiceProvider);
   }
 }
-
-// Import for plan limits provider
-import '../data/services/plan_limits_service.dart';
 
 /// Available Superlike Packs Provider
 final availableSuperlikePacksProvider = FutureProvider<List<SuperlikePack>>((ref) async {

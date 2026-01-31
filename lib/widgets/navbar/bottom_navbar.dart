@@ -1,4 +1,4 @@
-﻿// Widget: BottomNavbar
+// Widget: BottomNavbar
 // Bottom navigation bar
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

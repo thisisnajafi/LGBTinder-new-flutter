@@ -4,6 +4,36 @@ import 'package:flutter/foundation.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 
+/// Max chars of response/request body to log; longer content is truncated.
+const int _kLogBodyMaxChars = 400;
+
+/// Summarizes response/request body for debug logs (avoids dumping full HTML or huge JSON).
+String _summarizeBody(dynamic data, {int maxChars = _kLogBodyMaxChars}) {
+  if (data == null) return 'null';
+  if (data is Map || data is List) {
+    final str = data.toString();
+    if (str.length <= maxChars) return str;
+    return '${str.substring(0, maxChars)}... [${str.length} chars total]';
+  }
+  final str = data.toString().trim();
+  if (str.isEmpty) return '<empty>';
+  if (str.length <= maxChars && !_looksLikeHtml(str)) return str;
+  if (_looksLikeHtml(str)) {
+    final len = str.length;
+    final preview = str.length > 120 ? '${str.substring(0, 120)}...' : str;
+    return '[HTML/non-JSON, $len chars] preview: $preview';
+  }
+  if (str.length > maxChars) return '${str.substring(0, maxChars)}... [${str.length} chars]';
+  return str;
+}
+
+bool _looksLikeHtml(String s) {
+  final lower = s.toLowerCase();
+  return lower.startsWith('<!doctype') ||
+      lower.startsWith('<html') ||
+      (lower.contains('<html') && lower.contains('</body>'));
+}
+
 /// Dio HTTP client with interceptors for authentication and error handling
 class DioClient {
   static const String baseUrl = 'http://lg.abolfazlnajafi.com/api';
@@ -49,36 +79,46 @@ class DioClient {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          // Log request in debug mode
+          // Log request in debug mode (summarized; no huge bodies)
           if (kDebugMode) {
             debugPrint('🚀 REQUEST[${options.method}] => PATH: ${options.path}');
-            debugPrint('Headers: ${options.headers}');
+            debugPrint('   headers: ${options.headers}');
             if (options.data != null) {
-              debugPrint('Data: ${options.data}');
+              debugPrint('   body: ${_summarizeBody(options.data)}');
             }
             if (options.queryParameters.isNotEmpty) {
-              debugPrint('QueryParams: ${options.queryParameters}');
+              debugPrint('   query: ${options.queryParameters}');
             }
           }
 
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          // Log response in debug mode
+          // Log response in debug mode (summarized; detect HTML/non-JSON)
           if (kDebugMode) {
-            debugPrint('✅ RESPONSE[${response.statusCode}] => PATH: ${response.requestOptions.path}');
-            debugPrint('Data: ${response.data}');
+            final path = response.requestOptions.path;
+            final ct = response.headers.value('content-type') ?? '';
+            final isJson = ct.toLowerCase().contains('application/json');
+            debugPrint('✅ RESPONSE[${response.statusCode}] => $path');
+            debugPrint('   content-type: $ct');
+            if (!isJson && response.data != null) {
+              debugPrint('   body (non-JSON): ${_summarizeBody(response.data, maxChars: 200)}');
+            } else if (response.data != null) {
+              debugPrint('   body: ${_summarizeBody(response.data)}');
+            }
           }
 
           return handler.next(response);
         },
         onError: (error, handler) async {
-          // Log error in debug mode
+          // Log error in debug mode (summarized; no huge HTML dumps)
           if (kDebugMode) {
-            debugPrint('❌ ERROR[${error.response?.statusCode}] => PATH: ${error.requestOptions.path}');
-            debugPrint('Message: ${error.message}');
-            if (error.response != null) {
-              debugPrint('Response Data: ${error.response?.data}');
+            final path = error.requestOptions.path;
+            final code = error.response?.statusCode;
+            debugPrint('❌ API ERROR => $path');
+            debugPrint('   status: $code | message: ${error.message}');
+            if (error.response != null && error.response?.data != null) {
+              debugPrint('   response: ${_summarizeBody(error.response!.data, maxChars: 200)}');
             }
           }
 
@@ -129,16 +169,7 @@ class DioClient {
       ),
     );
 
-    // Logging Interceptor (only in debug mode)
-    if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        requestHeader: true,
-        responseHeader: false,
-        error: true,
-      ));
-    }
+    // Verbose LogInterceptor disabled; we use summarized logging in InterceptorsWrapper above
   }
 
   /// Get Dio instance

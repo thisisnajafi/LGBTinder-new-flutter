@@ -41,9 +41,20 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!['data'] as List<dynamic>? ?? [];
+        // Canonical API (Task 7): GET /emergency-contacts returns data.contacts; legacy safety returns data (list)
+        final raw = response.data!;
+        final List<dynamic> list;
+        if (raw is Map && raw['contacts'] != null && raw['contacts'] is List) {
+          list = List<dynamic>.from(raw['contacts'] as List);
+        } else if (raw is List) {
+          list = List<dynamic>.from(raw as List);
+        } else if (raw is Map && raw['data'] is List) {
+          list = List<dynamic>.from(raw['data'] as List);
+        } else {
+          list = <dynamic>[];
+        }
         setState(() {
-          _contacts = data.map((contact) => contact as Map<String, dynamic>).toList();
+          _contacts = list.map((contact) => contact as Map<String, dynamic>).toList();
           _isLoading = false;
         });
       } else {

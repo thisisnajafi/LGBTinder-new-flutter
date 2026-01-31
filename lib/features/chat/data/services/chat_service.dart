@@ -314,7 +314,7 @@ class ChatService {
     }
   }
 
-  /// Get pinned messages count for a conversation
+  /// Get pinned messages count for a conversation (Task 9)
   Future<int> getPinnedMessagesCount(int userId) async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
@@ -326,12 +326,86 @@ class ChatService {
       if (response.isSuccess && response.data != null) {
         final data = response.data!['data'] as Map<String, dynamic>?;
         return data?['pinned_count'] as int? ?? 0;
-      } else {
-        throw Exception(response.message);
       }
+      return 0;
     } catch (e) {
-      rethrow;
+      return 0;
     }
+  }
+
+  /// Pin a message (Task 9 — POST /chat/pin-message)
+  Future<void> pinMessage(int messageId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.chatPinMessage,
+      data: {'message_id': messageId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+  }
+
+  /// Unpin a message (Task 9 — POST /chat/unpin-message)
+  Future<void> unpinMessage(int messageId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.chatUnpinMessage,
+      data: {'message_id': messageId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+  }
+
+  /// Get pinned messages for a conversation (Task 9 — GET /chat/pinned-messages)
+  Future<List<Message>> getPinnedMessages(int userId) async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.chatPinnedMessages,
+      queryParameters: {'user_id': userId},
+    );
+    List<dynamic>? list;
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      if (data['data'] != null && data['data'] is List) {
+        list = data['data'] as List;
+      }
+    } else if (response.data is List) {
+      list = response.data as List;
+    }
+    if (list == null) return [];
+    return list
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Search messages (Task 9 — GET /chat/search)
+  Future<List<Message>> searchMessages({
+    required String query,
+    int? userId,
+    int? chatId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final params = <String, dynamic>{
+      'query': query,
+      'limit': limit,
+      'offset': offset,
+    };
+    if (userId != null) params['user_id'] = userId;
+    if (chatId != null) params['chat_id'] = chatId;
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.chatSearch,
+      queryParameters: params,
+    );
+    List<dynamic>? list;
+    if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      if (data['data'] != null && data['data'] is List) {
+        list = data['data'] as List;
+      }
+    } else if (response.data is List) {
+      list = response.data as List;
+    }
+    if (list == null) return [];
+    return list
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
 

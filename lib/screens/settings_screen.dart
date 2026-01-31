@@ -1,4 +1,4 @@
-﻿// Screen: SettingsScreen
+// Screen: SettingsScreen (Task 5 — summary overview with GET /api/settings)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +12,8 @@ import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import 'settings/account_management_screen.dart';
+import '../features/settings/presentation/screens/matching_preferences_screen.dart';
+import '../features/settings/providers/settings_provider.dart';
 import 'privacy_settings_screen.dart';
 import 'notification_settings_screen.dart';
 import 'safety_settings_screen.dart';
@@ -26,12 +28,17 @@ import '../features/payments/presentation/screens/subscription_management_screen
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
 import '../pages/onboarding_page.dart';
 
-/// Settings screen - Main settings page
-class SettingsScreen extends ConsumerWidget {
+/// Settings screen - Main settings overview (Task 5: summary from GET /api/settings)
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
@@ -39,6 +46,7 @@ class SettingsScreen extends ConsumerWidget {
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final summaryAsync = ref.watch(settingsSummaryProvider);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -46,136 +54,163 @@ class SettingsScreen extends ConsumerWidget {
         title: 'Settings',
         showBackButton: true,
       ),
-      body: ListView(
-        children: [
-          // Profile section
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
-              children: [
-                AvatarWithStatus(
-                  imageUrl: 'https://via.placeholder.com/100',
-                  name: 'User',
-                  isOnline: true,
-                  size: 64.0,
-                ),
-                SizedBox(width: AppSpacing.spacingLG),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Alex',
-                        style: AppTypography.h2.copyWith(color: textColor),
-                      ),
-                      SizedBox(height: AppSpacing.spacingXS),
-                      Text(
-                        'alex@example.com',
-                        style: AppTypography.body.copyWith(color: secondaryTextColor),
-                      ),
-                    ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(settingsSummaryProvider);
+          await ref.read(settingsSummaryProvider.future);
+        },
+        child: ListView(
+          children: [
+            // Profile section (name/email from summary when available)
+            Container(
+              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              child: Row(
+                children: [
+                  AvatarWithStatus(
+                    imageUrl: 'https://via.placeholder.com/100',
+                    name: summaryAsync.valueOrNull?.profile.displayName ?? 'User',
+                    isOnline: true,
+                    size: 64.0,
                   ),
-                ),
-                IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.chevronRight,
-                    color: secondaryTextColor,
-                    size: 24,
+                  SizedBox(width: AppSpacing.spacingLG),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          summaryAsync.valueOrNull?.profile.displayName ?? 'Profile',
+                          style: AppTypography.h2.copyWith(color: textColor),
+                        ),
+                        SizedBox(height: AppSpacing.spacingXS),
+                        Text(
+                          summaryAsync.valueOrNull?.account.email ?? '—',
+                          style: AppTypography.body.copyWith(color: secondaryTextColor),
+                        ),
+                      ],
+                    ),
                   ),
-                  onPressed: () {
-                    context.go('/profile');
-                  },
-                ),
-              ],
+                  IconButton(
+                    icon: AppSvgIcon(
+                      assetPath: AppIcons.chevronRight,
+                      color: secondaryTextColor,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      context.go('/profile');
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          DividerCustom(),
+            DividerCustom(),
 
-          // Account section
-          SectionHeader(
-            title: 'Account',
-            iconPath: AppIcons.userOutline,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.userEdit,
-            title: 'Account Management',
-            subtitle: 'Edit profile, change password',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AccountManagementScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.lockOutline,
-            title: 'Privacy',
-            subtitle: 'Control your privacy settings',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PrivacySettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.card,
-            title: 'Payment Settings',
-            subtitle: 'Configure payment systems and features',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PaymentSettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.discover,
-            title: 'Complete Setup',
-            subtitle: 'Finish setting up your preferences',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OnboardingPage(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.notification,
-            title: 'Notifications',
-            subtitle: 'Manage notification preferences',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationSettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
+            // Account section
+            SectionHeader(
+              title: 'Account',
+              iconPath: AppIcons.userOutline,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.userEdit,
+              title: 'Account Management',
+              subtitle: summaryAsync.valueOrNull?.account.email != null
+                  ? '${summaryAsync.valueOrNull!.account.email} · Edit profile, password'
+                  : 'Edit profile, change password',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AccountManagementScreen(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.discover,
+              title: 'Discovery preferences',
+              subtitle: summaryAsync.valueOrNull != null
+                  ? summaryAsync.valueOrNull!.discoverySubtitle
+                  : 'Age range, distance, who can see you',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MatchingPreferencesScreen(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.lockOutline,
+              title: 'Privacy',
+              subtitle: 'Control your privacy settings',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrivacySettingsScreen(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.card,
+              title: 'Payment Settings',
+              subtitle: 'Configure payment systems and features',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PaymentSettingsScreen(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.discover,
+              title: 'Complete Setup',
+              subtitle: 'Finish setting up your preferences',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OnboardingPage(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.notification,
+              title: 'Notifications',
+              subtitle: summaryAsync.valueOrNull != null
+                  ? '${summaryAsync.valueOrNull!.notifications.subtitle} · Manage preferences'
+                  : 'Manage notification preferences',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationSettingsScreen(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
           DividerCustom(),
 
           // Safety section
@@ -381,6 +416,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           SizedBox(height: AppSpacing.spacingXXL),
         ],
+      ),
       ),
     );
   }

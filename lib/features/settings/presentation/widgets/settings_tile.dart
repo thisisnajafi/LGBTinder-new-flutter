@@ -36,6 +36,9 @@ class SettingsTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final w = MediaQuery.sizeOf(context).width;
+    final iconSize = (w * 0.1).clamp(36.0, 48.0);
+    final iconInnerSize = (iconSize * 0.5).clamp(18.0, 24.0);
 
     return Column(
       children: [
@@ -48,8 +51,8 @@ class SettingsTile extends ConsumerWidget {
                 // Icon
                 if (iconPath != null || iconData != null) ...[
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: iconSize,
+                    height: iconSize,
                     decoration: BoxDecoration(
                       color: (iconColor ?? AppColors.primaryLight).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -58,12 +61,12 @@ class SettingsTile extends ConsumerWidget {
                       child: iconPath != null
                           ? AppSvgIcon(
                               assetPath: iconPath!,
-                              size: 20,
+                              size: iconInnerSize,
                               color: iconColor ?? AppColors.primaryLight,
                             )
                           : Icon(
                               iconData,
-                              size: 20,
+                              size: iconInnerSize,
                               color: iconColor ?? AppColors.primaryLight,
                             ),
                     ),
@@ -75,6 +78,7 @@ class SettingsTile extends ConsumerWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
@@ -84,6 +88,8 @@ class SettingsTile extends ConsumerWidget {
                               ? theme.colorScheme.onSurface
                               : theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
@@ -92,6 +98,8 @@ class SettingsTile extends ConsumerWidget {
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],
@@ -120,7 +128,7 @@ class SettingsTile extends ConsumerWidget {
             height: 1,
             thickness: 1,
             color: isDark ? Colors.grey[800] : Colors.grey[200],
-            indent: iconPath != null || iconData != null ? 64 : 16,
+            indent: iconPath != null || iconData != null ? (iconSize + 24) : 16,
           ),
       ],
     );

@@ -1,7 +1,5 @@
-import 'package:equatable/equatable.dart';
-
 /// Represents a Google Play purchase history item from the API
-class GooglePlayPurchaseHistory extends Equatable {
+class GooglePlayPurchaseHistory {
   final int id;
   final String productId;
   final String type; // 'subscription' or 'one_time'
@@ -108,16 +106,15 @@ class GooglePlayPurchaseHistory extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-    id,
-    productId,
-    type,
-    status,
-    price,
-    currency,
-    purchaseDate,
-    expiryDate,
-    autoRenewing,
-    orderId,
-  ];
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GooglePlayPurchaseHistory &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          productId == other.productId &&
+          type == other.type &&
+          status == other.status;
+
+  @override
+  int get hashCode => Object.hash(id, productId, type, status);
 }

@@ -164,7 +164,9 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
                 // Text input
                 Expanded(
                   child: Container(
-                    constraints: const BoxConstraints(maxHeight: 120),
+                    constraints: BoxConstraints(
+                      maxHeight: (MediaQuery.sizeOf(context).height * 0.25).clamp(80.0, 160.0),
+                    ),
                     decoration: BoxDecoration(
                       color: isDark ? Colors.grey[800] : Colors.grey[100],
                       borderRadius: BorderRadius.circular(24),
@@ -203,10 +205,13 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
                 const SizedBox(width: 8),
 
                 // Send button
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final size = (MediaQuery.sizeOf(context).width * 0.12).clamp(44.0, 56.0);
+                    return Container(
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
                     color: _textController.text.trim().isNotEmpty
                         ? AppColors.primaryLight
                         : Colors.grey[400],
@@ -232,6 +237,8 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
                           ),
                     tooltip: 'Send message',
                   ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -254,10 +261,13 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final size = (MediaQuery.sizeOf(context).width * 0.1).clamp(36.0, 48.0);
+                return Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
                 color: AppColors.primaryLight.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
@@ -268,6 +278,8 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
                   color: AppColors.primaryLight,
                 ),
               ),
+                );
+              },
             ),
             const SizedBox(height: 4),
             Text(

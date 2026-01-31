@@ -101,22 +101,27 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
         scale: _scaleAnimation,
         child: Dialog(
           backgroundColor: Colors.transparent,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: (MediaQuery.sizeOf(context).width * 0.9).clamp(280.0, 400.0),
+              maxHeight: MediaQuery.sizeOf(context).height * 0.8,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                 // Header
                 _buildHeader(theme),
 
@@ -147,7 +152,9 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
                   data: (status) => _buildFooter(theme, status),
                   orElse: () => const SizedBox.shrink(),
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),

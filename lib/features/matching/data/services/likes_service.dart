@@ -64,6 +64,32 @@ class LikesService {
     }
   }
 
+  /// Rewind (undo) the last like or dislike. Premium only. Returns restored user map or null.
+  /// Backend: POST /api/likes/rewind; 403 REWIND_PREMIUM_REQUIRED, 404 NOTHING_TO_REWIND.
+  Future<RewindResponse> rewind() async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.likesRewind,
+        data: <String, dynamic>{},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess && response.data != null) {
+        final data = response.data!;
+        final restored = data['restored_user'] as Map<String, dynamic>?;
+        return RewindResponse(
+          restoredUser: restored,
+          actionUndone: data['action_undone']?.toString(),
+          remainingRewinds: data['remaining_rewinds'] as int?,
+        );
+      } else {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Get all matches
   Future<List<Match>> getMatches() async {
     try {

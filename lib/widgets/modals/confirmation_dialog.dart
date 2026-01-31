@@ -1,4 +1,4 @@
-﻿// Widget: ConfirmationDialog
+// Widget: ConfirmationDialog
 // Confirmation dialog
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,30 +61,35 @@ class ConfirmationDialog extends ConsumerWidget {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.8;
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
-        padding: EdgeInsets.all(AppSpacing.spacingXL),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTypography.h2.copyWith(color: textColor),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: SingleChildScrollView(
+          child: Container(
+            padding: EdgeInsets.all(AppSpacing.spacingXL),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+              border: Border.all(color: borderColor),
             ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Text(
-              message,
-              style: AppTypography.body.copyWith(color: secondaryTextColor),
-            ),
-            SizedBox(height: AppSpacing.spacingXXL),
-            Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.h2.copyWith(color: textColor),
+                ),
+                SizedBox(height: AppSpacing.spacingMD),
+                Text(
+                  message,
+                  style: AppTypography.body.copyWith(color: secondaryTextColor),
+                ),
+                SizedBox(height: AppSpacing.spacingXXL),
+                Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
@@ -108,6 +113,8 @@ class ConfirmationDialog extends ConsumerWidget {
           ],
         ),
       ),
+    ),
+    ),
     );
   }
 }
