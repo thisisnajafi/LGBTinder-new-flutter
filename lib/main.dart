@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,16 +82,23 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
 
-    // When API returns 401, logout and redirect to welcome (run in next frame to avoid build context issues)
+    // When API returns 401: redirect to welcome, then clear session (must not throw to avoid crash)
     UnauthorizedHandler.setCallback(() {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          await ref.read(authProvider.notifier).logout();
-        } catch (_) {
-          // Ensure we redirect even if logout fails
-        }
+      try {
         router.go(AppRoutes.welcome);
-      });
+        // Clear tokens/auth in background so we don't block the UI (avoids ANR)
+        Future.microtask(() async {
+          try {
+            await ref.read(authProvider.notifier).logout(silent: true);
+          } catch (_) {
+            // Ignore so 401 flow never crashes the app
+          }
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('🔐 UnauthorizedHandler callback error: $e');
+        }
+      }
     });
 
     return ErrorBoundary(

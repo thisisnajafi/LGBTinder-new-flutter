@@ -18,6 +18,8 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
+        // Don't treat Kotlin warnings from dependencies as errors (see docs/ANDROID_BUILD_WARNINGS.md)
+        allWarningsAsErrors = false
     }
 
     defaultConfig {

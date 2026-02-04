@@ -110,9 +110,9 @@ class DioClient {
             }
           }
 
-          // Treat 401 as unauthenticated: clear tokens and notify app to logout + redirect
+          // Treat 401 as unauthenticated: clear in-memory auth and notify (storage cleared in logout)
           if (response.statusCode == 401) {
-            _tokenStorage.clearAllTokens();
+            clearAuthToken();
             _notifyUnauthorized();
           }
 
@@ -138,7 +138,7 @@ class DioClient {
             if (requestOptions.path.contains('/auth/') || 
                 requestOptions.path.contains('/login') ||
                 requestOptions.path.contains('/register')) {
-              _tokenStorage.clearAllTokens();
+              clearAuthToken();
               _notifyUnauthorized();
               return handler.next(error);
             }
@@ -162,14 +162,14 @@ class DioClient {
                 );
                 return handler.resolve(response);
               } else {
-                // Refresh failed, clear tokens and notify app to logout + redirect
-                _tokenStorage.clearAllTokens();
+                // Refresh failed, clear in-memory auth and notify (storage cleared in logout)
+                clearAuthToken();
                 _notifyUnauthorized();
                 return handler.next(error);
               }
             } catch (e) {
-              // Refresh failed, clear tokens and notify app to logout + redirect
-              _tokenStorage.clearAllTokens();
+              // Refresh failed, clear in-memory auth and notify (storage cleared in logout)
+              clearAuthToken();
               _notifyUnauthorized();
               return handler.next(error);
             }

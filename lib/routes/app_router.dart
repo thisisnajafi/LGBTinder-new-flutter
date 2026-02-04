@@ -1,4 +1,4 @@
-﻿// Router: AppRouter
+// Router: AppRouter
 // go_router configuration for declarative routing
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../pages/splash_page.dart';
 import '../pages/home_page.dart';
 import '../pages/onboarding_page.dart';
+import '../screens/auth/auth_check_screen.dart';
 import '../screens/auth/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -32,6 +33,7 @@ import '../shared/services/onboarding_service.dart';
 /// Route names constants
 class AppRoutes {
   static const String splash = '/';
+  static const String authCheck = '/auth-check';
   static const String welcome = '/welcome';
   static const String login = '/login';
   static const String register = '/register';
@@ -67,6 +69,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.splash,
         name: 'splash',
         builder: (context, state) => const SplashPage(),
+      ),
+
+      // Auth check: validates token + API, redirects to welcome or home
+      GoRoute(
+        path: AppRoutes.authCheck,
+        name: 'auth-check',
+        builder: (context, state) => const AuthCheckScreen(),
       ),
       
       // Welcome Screen (no guard - public)

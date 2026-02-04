@@ -120,14 +120,18 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     }
   }
 
-  /// Logout user
-  Future<void> logout() async {
-    state = state.copyWith(isLoading: true);
+  /// Logout user.
+  /// [silent] when true (e.g. from 401 handler): do not set loading state so it can be
+  /// run fire-and-forget without blocking the UI; storage is still cleared.
+  Future<void> logout({bool silent = false}) async {
+    if (!silent) {
+      state = state.copyWith(isLoading: true);
+    }
 
     try {
       await _authService.logout();
       await _tokenStorage.clearAllTokens();
-      
+
       state = AuthProviderState(
         isAuthenticated: false,
         isEmailVerified: false,
@@ -137,9 +141,17 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
         isLoading: false,
       );
     } catch (e) {
+      if (!silent) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: e.toString(),
+        );
+      }
+      // Ensure we end in logged-out state even on error so 401 flow is consistent
       state = state.copyWith(
+        isAuthenticated: false,
+        user: null,
         isLoading: false,
-        errorMessage: e.toString(),
       );
     }
   }

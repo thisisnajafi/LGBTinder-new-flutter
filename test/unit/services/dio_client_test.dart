@@ -129,7 +129,7 @@ void main() {
       verify(mockTokenStorage.getRefreshToken()).called(1);
     });
 
-    test('should clear tokens for auth endpoints on 401', () async {
+    test('on 401 for auth endpoints does not clear storage (app callback does via logout)', () async {
       // Arrange
       final error = DioException(
         requestOptions: RequestOptions(path: '/auth/login'),
@@ -141,15 +141,13 @@ void main() {
 
       // Act
       final handler = ErrorInterceptorHandler();
-      
-      // Simulate interceptor call
       final interceptor = dioClient.dio.interceptors.first;
       if (interceptor is InterceptorsWrapper) {
-        await interceptor.onError(error, handler);
+        interceptor.onError(error, handler);
       }
 
-      // Assert
-      verify(mockTokenStorage.clearAllTokens()).called(1);
+      // Assert: DioClient only clears in-memory auth and notifies; storage is cleared by app logout
+      verifyNever(mockTokenStorage.clearAllTokens());
     });
   });
 
