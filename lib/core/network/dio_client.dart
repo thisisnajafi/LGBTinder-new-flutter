@@ -38,7 +38,7 @@ bool _looksLikeHtml(String s) {
 
 /// Dio HTTP client with interceptors for authentication and error handling
 class DioClient {
-  static const String baseUrl = ApiEndpoints.baseUrl;
+  static const String baseUrl = 'http://lg.abolfazlnajafi.com/api';
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 

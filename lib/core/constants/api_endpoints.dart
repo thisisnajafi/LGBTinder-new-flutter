@@ -95,7 +95,6 @@ class ApiEndpoints {
   static const String likesMatches = '/likes/matches';
   static const String likesPending = '/likes/pending';
   static const String likesSuperlikeHistory = '/likes/superlike-history';
-  static const String likesRewind = '/likes/rewind';
 
   // ==================== Chat & Messaging ====================
   static const String chatSend = '/chat/send';
@@ -113,10 +112,6 @@ class ApiEndpoints {
   // FIXED: Updated to match backend route (api.php line 437)
   static const String chatOnlineStatus = '/chat/online';
   static const String chatPinnedCount = '/chat/pinned-count';
-  static const String chatPinMessage = '/chat/pin-message';
-  static const String chatUnpinMessage = '/chat/unpin-message';
-  static const String chatPinnedMessages = '/chat/pinned-messages';
-  static const String chatSearch = '/chat/search';
 
   // ==================== Notifications ====================
   static const String notifications = '/notifications';
@@ -131,8 +126,6 @@ class ApiEndpoints {
 
   // ==================== Settings ====================
   static const String userSettings = '/user/settings';
-  static const String preferencesMatching = '/preferences/matching';
-  static const String settingsSummary = '/settings';
   static const String privacySettings = '/privacy/settings';
   static const String deviceSessions = '/device-sessions';
   static String deviceSessionById(int id) => '/device-sessions/$id';

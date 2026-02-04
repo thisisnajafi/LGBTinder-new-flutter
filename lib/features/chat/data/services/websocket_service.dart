@@ -16,7 +16,7 @@ class WebSocketService {
   final _onlineStatusController = StreamController<Map<String, dynamic>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
 
-  WebSocketService(this._tokenStorage, {this.baseUrl = 'https://api.lgbtfinder.com'});
+  WebSocketService(this._tokenStorage, {this.baseUrl = 'http://lg.abolfazlnajafi.com'});
 
   /// Message stream
   Stream<Message> get messageStream => _messageController.stream;
