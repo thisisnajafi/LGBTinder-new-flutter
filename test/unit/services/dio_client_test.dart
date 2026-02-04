@@ -21,7 +21,7 @@ void main() {
   group('DioClient - Initialization', () {
     test('should initialize with correct base URL', () {
       // Assert
-      expect(dioClient.dio.options.baseUrl, equals('https://api.lgbtfinder.com'));
+      expect(dioClient.dio.options.baseUrl, equals('https://api.lgbtfinder.com/api'));
     });
 
     test('should initialize with correct timeouts', () {

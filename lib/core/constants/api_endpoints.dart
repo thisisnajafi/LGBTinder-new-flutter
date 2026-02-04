@@ -1,11 +1,10 @@
 /// API endpoint URLs organized by feature
 class ApiEndpoints {
-  // Base URL (production API)
-  static const String baseUrl = 'https://api.lgbtfinder.com';
+  // Base URL (production API) — must include /api to match Laravel apiPrefix
+  static const String baseUrl = 'https://api.lgbtfinder.com/api';
   
-  // Storage/CDN URL for media files (Task 5.3.2)
-  // TODO: Update this to your actual CDN domain in production
-  static const String storageUrl = 'http://lg.abolfazlnajafi.com/storage';
+  // Storage URL for media files (same host as API)
+  static const String storageUrl = 'https://api.lgbtfinder.com/storage';
 
   // ==================== Authentication ====================
   static const String register = '/auth/register';

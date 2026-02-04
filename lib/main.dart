@@ -5,11 +5,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
+import 'core/auth/unauthorized_handler.dart';
 import 'routes/app_router.dart';
 import 'widgets/error_handling/error_boundary.dart';
 import 'shared/services/push_notification_service.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'core/providers/feature_flags_provider.dart';
+import 'features/auth/providers/auth_provider.dart';
 
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -78,6 +80,18 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+
+    // When API returns 401, logout and redirect to welcome (run in next frame to avoid build context issues)
+    UnauthorizedHandler.setCallback(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await ref.read(authProvider.notifier).logout();
+        } catch (_) {
+          // Ensure we redirect even if logout fails
+        }
+        router.go(AppRoutes.welcome);
+      });
+    });
 
     return ErrorBoundary(
       child: MaterialApp.router(

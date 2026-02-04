@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../auth/unauthorized_handler.dart';
 
 /// Max chars of response/request body to log; longer content is truncated.
 const int _kLogBodyMaxChars = 400;
@@ -108,6 +110,12 @@ class DioClient {
             }
           }
 
+          // Treat 401 as unauthenticated: clear tokens and notify app to logout + redirect
+          if (response.statusCode == 401) {
+            _tokenStorage.clearAllTokens();
+            _notifyUnauthorized();
+          }
+
           return handler.next(response);
         },
         onError: (error, handler) async {
@@ -131,6 +139,7 @@ class DioClient {
                 requestOptions.path.contains('/login') ||
                 requestOptions.path.contains('/register')) {
               _tokenStorage.clearAllTokens();
+              _notifyUnauthorized();
               return handler.next(error);
             }
 
@@ -153,13 +162,15 @@ class DioClient {
                 );
                 return handler.resolve(response);
               } else {
-                // Refresh failed, clear tokens
+                // Refresh failed, clear tokens and notify app to logout + redirect
                 _tokenStorage.clearAllTokens();
+                _notifyUnauthorized();
                 return handler.next(error);
               }
             } catch (e) {
-              // Refresh failed, clear tokens
+              // Refresh failed, clear tokens and notify app to logout + redirect
               _tokenStorage.clearAllTokens();
+              _notifyUnauthorized();
               return handler.next(error);
             }
           }
@@ -187,6 +198,13 @@ class DioClient {
   /// Clear auth token from headers
   void clearAuthToken() {
     _dio.options.headers.remove('Authorization');
+  }
+
+  /// Notify app that user is unauthenticated (401). Schedules on UI thread.
+  void _notifyUnauthorized() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UnauthorizedHandler.invoke();
+    });
   }
 
   /// Refresh token if needed (handles concurrent requests)
