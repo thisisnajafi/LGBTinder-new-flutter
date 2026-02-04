@@ -13,7 +13,6 @@ import '../domain/use_cases/restore_purchases_use_case.dart';
 import '../domain/use_cases/validate_receipt_use_case.dart';
 import '../domain/use_cases/get_superlike_packs_use_case.dart';
 import '../domain/use_cases/get_subscription_status_use_case.dart';
-import '../domain/use_cases/create_stripe_checkout_use_case.dart';
 
 /// Payment Service Provider
 final paymentServiceProvider = Provider<PaymentService>((ref) {
@@ -68,11 +67,6 @@ final getSuperlikePacksUseCaseProvider = Provider<GetSuperlikePacksUseCase>((ref
 final getSubscriptionStatusUseCaseProvider = Provider<GetSubscriptionStatusUseCase>((ref) {
   final repository = ref.watch(paymentRepositoryProvider);
   return GetSubscriptionStatusUseCase(repository);
-});
-
-final createStripeCheckoutUseCaseProvider = Provider<CreateStripeCheckoutUseCase>((ref) {
-  final repository = ref.watch(paymentRepositoryProvider);
-  return CreateStripeCheckoutUseCase(repository);
 });
 
 /// Subscription Plans Provider

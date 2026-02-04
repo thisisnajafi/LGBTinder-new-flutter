@@ -105,13 +105,11 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
 
     if (paymentSystem == PaymentSystem.googlePlay) {
       await _subscribeWithGooglePlay();
-    } else if (paymentSystem == PaymentSystem.stripe) {
-      await _subscribeWithStripe();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No payment system available'),
+            content: Text('No payment system available. Enable Google Play Billing in settings.'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -180,50 +178,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
             content: Text('Purchase failed: $e'),
             backgroundColor: AppColors.accentRed,
           ),
-        );
-      }
-    }
-  }
-
-  Future<void> _subscribeWithStripe() async {
-    try {
-      final paymentService = ref.read(paymentServiceProvider);
-      final status = await paymentService.subscribeToPlan(
-        SubscribeRequest(
-          planId: _selectedPlanId!,
-          subPlanId: _selectedSubPlanId!,
-        ),
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Subscription successful!'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
-        // Navigate to subscription management
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SubscriptionManagementScreen(),
-          ),
-        );
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e,
-          customMessage: 'Failed to subscribe',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorHandlerService.handleError(
-          context,
-          e,
-          customMessage: 'Failed to subscribe',
         );
       }
     }

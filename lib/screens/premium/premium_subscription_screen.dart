@@ -1,4 +1,4 @@
-﻿// Screen: PremiumSubscriptionScreen
+// Screen: PremiumSubscriptionScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -80,8 +80,9 @@ class _PremiumSubscriptionScreenState extends ConsumerState<PremiumSubscriptionS
 
       final apiService = ref.read(apiServiceProvider);
       final response = await apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.stripeSubscription,
+        ApiEndpoints.subscriptionsSubscribe,
         data: {
+          'plan_id': subPlanId,
           'sub_plan_id': subPlanId,
           'currency': 'usd',
         },

@@ -1,4 +1,5 @@
 // Screen: WelcomeScreen
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
@@ -11,6 +12,7 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/buttons/animated_button.dart';
 import '../../widgets/navbar/lgbtfinder_logo.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Welcome screen - First screen for authentication flow
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -28,12 +30,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   late Animation<double> _logoAnimation;
   late Animation<double> _textAnimation;
   late Animation<double> _buttonAnimation;
+  /// Defer floating shapes until after first frame to keep first paint light (avoids ANR).
+  bool _showFloatingShapes = false;
+  /// Minimal first frame: no ShaderMask/AnimatedBuilders so first paint is fast (avoids ANR).
+  bool _minimalFirstFrame = true;
 
   @override
   void initState() {
     super.initState();
+    screenLog('WelcomeScreen', 'initState');
+    startupLog('WelcomeScreen: reached WELCOME');
 
-    // Logo animation
+    // Create controllers only; do not start animations here to keep first frame light (avoids ANR).
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -42,7 +50,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
-    // Text animation
     _textController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -51,7 +58,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       CurvedAnimation(parent: _textController, curve: Curves.easeOut),
     );
 
-    // Button animation
     _buttonController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -60,10 +66,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       CurvedAnimation(parent: _buttonController, curve: Curves.easeOut),
     );
 
-    // Start animations sequentially
-    _logoController.forward().then((_) {
-      _textController.forward().then((_) {
-        _buttonController.forward();
+    // Defer full UI and animations until after first frame paints (avoids ANR).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _minimalFirstFrame = false;
+        _showFloatingShapes = true;
+      });
+      _logoController.forward().then((_) {
+        if (!mounted) return;
+        _textController.forward().then((_) {
+          if (!mounted) return;
+          _buttonController.forward();
+        });
       });
     });
   }
@@ -78,63 +93,155 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    screenLog('WelcomeScreen', 'build');
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final size = MediaQuery.of(context).size;
 
-    // Modern gradient background
     final modernGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        Color(0xFF6366F1), // Indigo
-        Color(0xFF8B5CF6), // Purple
-        Color(0xFFEC4899), // Pink
-        Color(0xFFF97316), // Orange
+        const Color(0xFF6366F1),
+        const Color(0xFF8B5CF6),
+        const Color(0xFFEC4899),
+        const Color(0xFFF97316),
       ],
       stops: const [0.0, 0.4, 0.7, 1.0],
     );
 
+    // Minimal first frame: no ShaderMask, no AnimatedBuilders, no shadows — fast paint to avoid ANR.
+    if (_minimalFirstFrame) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(gradient: modernGradient),
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingXXL,
+                vertical: AppSpacing.spacingXL,
+              ),
+              child: Column(
+                children: [
+                  SizedBox(height: size.height * 0.1),
+                  // Placeholder circle only (no Image.asset) so first frame never blocks on decode
+                  Container(
+                    width: 70 + AppSpacing.spacingXL * 2,
+                    height: 70 + AppSpacing.spacingXL * 2,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.spacingXXL),
+                  Text(
+                    'LGBTFinder',
+                    style: AppTypography.h1Large.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSpacing.spacingLG),
+                  Text(
+                    'Find your perfect match',
+                    style: AppTypography.h2.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSpacing.spacingXL),
+                  Text(
+                    'Connect with like-minded people in a safe, inclusive community designed for everyone.',
+                    style: AppTypography.bodyLarge.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                      height: 1.6,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Spacer(),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/register'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.accentPurple,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                        ),
+                      ),
+                      child: Text(
+                        'Create Account',
+                        style: AppTypography.button.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.spacingLG),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: TextButton(
+                      onPressed: () => context.go('/login'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                        ),
+                      ),
+                      child: Text(
+                        'Sign In',
+                        style: AppTypography.button.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.spacingXXL),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Full UI with animations (after first frame)
     return Scaffold(
       body: Stack(
         children: [
-          // Background gradient
           Container(
-            decoration: BoxDecoration(
-              gradient: modernGradient,
-            ),
+            decoration: BoxDecoration(gradient: modernGradient),
           ),
-
-          // Floating animated shapes
-          Positioned(
-            top: size.height * 0.1,
-            left: size.width * 0.1,
-            child: _FloatingShape(
-              size: 80,
-              color: Colors.white.withOpacity(0.1),
-              animationDuration: const Duration(seconds: 6),
+          if (_showFloatingShapes) ...[
+            Positioned(
+              top: size.height * 0.1,
+              left: size.width * 0.1,
+              child: _FloatingShape(
+                size: 80,
+                color: Colors.white.withOpacity(0.1),
+                animationDuration: const Duration(seconds: 6),
+              ),
             ),
-          ),
-          Positioned(
-            top: size.height * 0.3,
-            right: size.width * 0.15,
-            child: _FloatingShape(
-              size: 60,
-              color: Colors.white.withOpacity(0.08),
-              animationDuration: const Duration(seconds: 8),
+            Positioned(
+              top: size.height * 0.3,
+              right: size.width * 0.15,
+              child: _FloatingShape(
+                size: 60,
+                color: Colors.white.withOpacity(0.08),
+                animationDuration: const Duration(seconds: 8),
+              ),
             ),
-          ),
-          Positioned(
-            bottom: size.height * 0.25,
-            left: size.width * 0.2,
-            child: _FloatingShape(
-              size: 40,
-              color: Colors.white.withOpacity(0.12),
-              animationDuration: const Duration(seconds: 7),
+            Positioned(
+              bottom: size.height * 0.25,
+              left: size.width * 0.2,
+              child: _FloatingShape(
+                size: 40,
+                color: Colors.white.withOpacity(0.12),
+                animationDuration: const Duration(seconds: 7),
+              ),
             ),
-          ),
-
-          // Main content
+          ],
           SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(
@@ -143,10 +250,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               ),
               child: Column(
                 children: [
-                  // Top spacing
                   SizedBox(height: size.height * 0.1),
-
-                  // Animated logo section
                   AnimatedBuilder(
                     animation: _logoAnimation,
                     builder: (context, child) {
@@ -178,10 +282,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       );
                     },
                   ),
-
                   SizedBox(height: AppSpacing.spacingXXL),
-
-                  // Animated text content
                   AnimatedBuilder(
                     animation: _textAnimation,
                     builder: (context, child) {
@@ -191,7 +292,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           offset: Offset(0, 20 * (1 - _textAnimation.value)),
                           child: Column(
                             children: [
-                              // App name with gradient text
                               ShaderMask(
                                 shaderCallback: (bounds) => LinearGradient(
                                   colors: [
@@ -217,10 +317,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-
                               SizedBox(height: AppSpacing.spacingLG),
-
-                              // Subtitle
                               Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: AppSpacing.spacingLG,
@@ -243,10 +340,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-
                               SizedBox(height: AppSpacing.spacingXL),
-
-                              // Description
                               Text(
                                 'Connect with like-minded people in a safe, inclusive community designed for everyone.',
                                 style: AppTypography.bodyLarge.copyWith(
@@ -261,10 +355,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       );
                     },
                   ),
-
                   const Spacer(),
-
-                  // Animated buttons
                   AnimatedBuilder(
                     animation: _buttonAnimation,
                     builder: (context, child) {
@@ -274,7 +365,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           offset: Offset(0, 30 * (1 - _buttonAnimation.value)),
                           child: Column(
                             children: [
-                              // Primary CTA button
                               Container(
                                 width: double.infinity,
                                 height: 56,
@@ -312,10 +402,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   ),
                                 ),
                               ),
-
                               SizedBox(height: AppSpacing.spacingLG),
-
-                              // Secondary button
                               Container(
                                 width: double.infinity,
                                 height: 56,
@@ -343,7 +430,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   ),
                                 ),
                               ),
-
                               SizedBox(height: AppSpacing.spacingXXL),
                             ],
                           ),

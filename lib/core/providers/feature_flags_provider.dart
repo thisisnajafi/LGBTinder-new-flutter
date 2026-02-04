@@ -4,14 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Feature flags for controlling app features and payment systems
 class FeatureFlags {
   static const String googlePlayBilling = 'google_play_billing';
-  static const String stripePayments = 'stripe_payments';
   static const String offlineMode = 'offline_mode';
   static const String purchaseRestoration = 'purchase_restoration';
 
   // Default values (Google Play Billing enabled by default for Android)
   static const Map<String, bool> _defaults = {
     googlePlayBilling: true, // Enable Google Play Billing by default
-    stripePayments: false,   // Disable Stripe by default (will be used as fallback)
     offlineMode: true,       // Enable offline mode
     purchaseRestoration: true, // Enable purchase restoration
   };
@@ -46,34 +44,24 @@ class FeatureFlags {
 
   // Convenience getters
   bool get isGooglePlayBillingEnabled => getFeatureFlag(googlePlayBilling);
-  bool get isStripePaymentsEnabled => getFeatureFlag(stripePayments);
   bool get isOfflineModeEnabled => getFeatureFlag(offlineMode);
   bool get isPurchaseRestorationEnabled => getFeatureFlag(purchaseRestoration);
 
-  /// Get the active payment system
+  /// Get the active payment system (Google Play only; Stripe removed)
   PaymentSystem get activePaymentSystem {
-    if (isGooglePlayBillingEnabled) {
-      return PaymentSystem.googlePlay;
-    } else if (isStripePaymentsEnabled) {
-      return PaymentSystem.stripe;
-    } else {
-      return PaymentSystem.none;
-    }
+    return isGooglePlayBillingEnabled ? PaymentSystem.googlePlay : PaymentSystem.none;
   }
 }
 
-/// Payment system enum
+/// Payment system enum (Stripe removed; Google Play only)
 enum PaymentSystem {
   googlePlay,
-  stripe,
   none;
 
   String get displayName {
     switch (this) {
       case PaymentSystem.googlePlay:
         return 'Google Play Billing';
-      case PaymentSystem.stripe:
-        return 'Stripe';
       case PaymentSystem.none:
         return 'None';
     }
@@ -83,8 +71,6 @@ enum PaymentSystem {
     switch (this) {
       case PaymentSystem.googlePlay:
         return true; // Always available on Android
-      case PaymentSystem.stripe:
-        return true; // Web-based fallback
       case PaymentSystem.none:
         return false;
     }
@@ -130,10 +116,6 @@ final googlePlayBillingEnabledProvider = Provider<bool>((ref) {
   return ref.watch(featureFlagNotifierProvider)[FeatureFlags.googlePlayBilling] ?? false;
 });
 
-final stripePaymentsEnabledProvider = Provider<bool>((ref) {
-  return ref.watch(featureFlagNotifierProvider)[FeatureFlags.stripePayments] ?? false;
-});
-
 final offlineModeEnabledProvider = Provider<bool>((ref) {
   return ref.watch(featureFlagNotifierProvider)[FeatureFlags.offlineMode] ?? true;
 });
@@ -144,13 +126,5 @@ final purchaseRestorationEnabledProvider = Provider<bool>((ref) {
 
 final activePaymentSystemProvider = Provider<PaymentSystem>((ref) {
   final googlePlayEnabled = ref.watch(googlePlayBillingEnabledProvider);
-  final stripeEnabled = ref.watch(stripePaymentsEnabledProvider);
-
-  if (googlePlayEnabled) {
-    return PaymentSystem.googlePlay;
-  } else if (stripeEnabled) {
-    return PaymentSystem.stripe;
-  } else {
-    return PaymentSystem.none;
-  }
+  return googlePlayEnabled ? PaymentSystem.googlePlay : PaymentSystem.none;
 });

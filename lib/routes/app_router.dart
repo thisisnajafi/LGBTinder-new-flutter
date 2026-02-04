@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../pages/splash_page.dart';
 import '../pages/home_page.dart';
 import '../pages/onboarding_page.dart';
-import '../screens/auth/auth_check_screen.dart';
 import '../screens/auth/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -29,11 +28,11 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';
 import '../shared/services/onboarding_service.dart';
+import '../core/utils/app_logger.dart';
 
 /// Route names constants
 class AppRoutes {
   static const String splash = '/';
-  static const String authCheck = '/auth-check';
   static const String welcome = '/welcome';
   static const String login = '/login';
   static const String register = '/register';
@@ -59,25 +58,35 @@ class AppRoutes {
 // Note: Route guards are implemented as redirect functions in individual routes
 // This allows access to Riverpod providers through the ref parameter
 
+/// Set to true once we've left splash (redirected to welcome or home). Prevents redirect loop:
+/// any later navigation to / (e.g. back button, recreated router) redirects to welcome.
+bool _hasLeftStartupFlow = false;
+void markStartupFlowLeft() => _hasLeftStartupFlow = true;
+
 /// App Router Configuration
+/// Redirect loop prevention: only SplashPage navigates from / to welcome or home.
+/// Route-level redirects return null when already at target (see billing-history).
 final appRouterProvider = Provider<GoRouter>((ref) {
+  routeLog('GoRouter created, initialLocation=${AppRoutes.splash}');
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    redirectLimit: 5,
+    redirect: (context, state) {
+      final loc = state.matchedLocation;
+      if (loc == AppRoutes.splash && _hasLeftStartupFlow) {
+        routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
+        return AppRoutes.welcome;
+      }
+      return null;
+    },
     routes: [
-      // Splash Screen (no guard)
+      // Splash Screen: checks token via GET /auth/check-token, then redirects to home or welcome
       GoRoute(
         path: AppRoutes.splash,
         name: 'splash',
         builder: (context, state) => const SplashPage(),
       ),
 
-      // Auth check: validates token + API, redirects to welcome or home
-      GoRoute(
-        path: AppRoutes.authCheck,
-        name: 'auth-check',
-        builder: (context, state) => const AuthCheckScreen(),
-      ),
-      
       // Welcome Screen (no guard - public)
       GoRoute(
         path: AppRoutes.welcome,
@@ -235,11 +244,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'billing-history',
         builder: (context, state) => const BillingHistoryScreen(),
         redirect: (context, state) async {
-          // Access providers through ref in the provider scope
+          if (state.matchedLocation == AppRoutes.welcome) return null;
           final tokenStorage = ref.read(tokenStorageServiceProvider);
           final isAuthenticated = await tokenStorage.isAuthenticated();
-
           if (!isAuthenticated) {
+            routeLog('billing-history: not authenticated → ${AppRoutes.welcome}');
             return AppRoutes.welcome;
           }
           return null;

@@ -1,4 +1,5 @@
-﻿// Screen: HomePage
+// Screen: HomePage
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -10,6 +11,7 @@ import '../pages/profile_page.dart';
 import '../screens/settings_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/notifications/providers/notification_providers.dart';
+import '../core/utils/app_logger.dart';
 
 /// Home page - Main navigation hub with bottom navigation
 class HomePage extends ConsumerStatefulWidget {
@@ -37,7 +39,15 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    screenLog('HomePage', 'initState');
+    startupLog('HomePage: reached HOME');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    screenLog('HomePage', 'build');
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;

@@ -77,23 +77,22 @@ class PushNotificationService {
     }
   }
 
-  /// Initialize push notification service
+  /// Initialize push notification service.
+  /// Yields between steps so the main thread is never blocked for >1s (avoids ANR).
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      // Request permission
       await _requestPermission();
+      await Future.delayed(Duration.zero); // yield to UI
 
-      // Initialize local notifications
       await _initializeLocalNotifications();
+      await Future.delayed(Duration.zero); // yield to UI
 
-      // Get FCM token
       await _getFCMToken();
+      await Future.delayed(Duration.zero); // yield to UI
 
-      // Set up message handlers
       _setupMessageHandlers();
-
       _isInitialized = true;
     } catch (e) {
       print('Error initializing push notifications: $e');
@@ -349,12 +348,5 @@ class PushNotificationService {
       print('Error deleting FCM token: $e');
     }
   }
-}
-
-/// Background message handler (must be top-level function)
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Handling background message: ${message.messageId}');
-  // Handle background message here
 }
 

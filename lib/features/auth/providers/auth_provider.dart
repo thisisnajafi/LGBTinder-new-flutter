@@ -61,8 +61,8 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     this._tokenStorage,
     this._onboardingService,
   ) : super(AuthProviderState()) {
-    // Check auth status on initialization
-    checkAuthStatus();
+    // Defer so provider creation never blocks; avoids async work during first read
+    Future.microtask(() => checkAuthStatus());
   }
 
   /// Check authentication status

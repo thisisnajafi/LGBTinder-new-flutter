@@ -13,7 +13,7 @@ import 'shared/services/push_notification_service.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'core/providers/feature_flags_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
-
+import 'core/utils/app_logger.dart';
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -21,30 +21,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
+  startupLog('1. main() started');
   // Ensure Flutter bindings are initialized
   WidgetsFlutterBinding.ensureInitialized();
+  startupLog('2. Flutter bindings initialized');
 
-  // Initialize Firebase
-  try {
-    await Firebase.initializeApp();
-    
-    // Set up background message handler
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    
-    // Initialize push notifications
-    await PushNotificationService().initialize();
-  } catch (e) {
-    print('Error initializing Firebase: $e');
-    // Continue app initialization even if Firebase fails
-  }
-
-  // Set preferred orientations (optional - can be configured per screen)
-  // SystemChrome.setPreferredOrientations([
-  //   DeviceOrientation.portraitUp,
-  //   DeviceOrientation.portraitDown,
-  // ]);
-
-  // Set system UI overlay style
+  // Lightweight setup only on main isolate — do NOT block first frame (avoids ANR)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -53,17 +35,31 @@ void main() async {
     ),
   );
 
-  // Initialize SharedPreferences for feature flags
+  // Firebase + background handler MUST be registered before runApp() (Firebase docs)
+  startupLog('3. Starting Firebase initialization...');
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    startupLog('4. Firebase initialized, background handler registered');
+  } catch (e) {
+    if (kDebugMode) debugPrint('Error initializing Firebase (non-fatal): $e');
+    startupLog('4. Firebase init failed (non-fatal): $e');
+  }
+
+  // SharedPreferences: fast, keep before runApp so providers can use it
+  startupLog('5. Loading SharedPreferences...');
   SharedPreferences? prefs;
   try {
     prefs = await SharedPreferences.getInstance();
+    startupLog('6. SharedPreferences loaded');
   } catch (e) {
-    print('Error initializing SharedPreferences: $e');
-    // Continue without SharedPreferences - app will work with limited functionality
+    if (kDebugMode) debugPrint('Error initializing SharedPreferences: $e');
     prefs = null;
+    startupLog('6. SharedPreferences failed: $e');
   }
 
-  // Run app with error boundary
+  // Run app so first frame (splash) can paint
+  startupLog('7. Calling runApp()...');
   runApp(
     ProviderScope(
       overrides: prefs != null ? [
@@ -73,6 +69,28 @@ void main() async {
       child: const MyApp(),
     ),
   );
+  startupLog('8. runApp() done; scheduling post-frame callback for push init');
+
+  // Defer push init until 12s after first frame so Welcome is fully interactive first (avoids ANR).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    startupLog('9. Post-frame callback fired (first frame painted)');
+    Future.delayed(const Duration(seconds: 12), () {
+      _initializePushInBackground();
+    });
+  });
+}
+
+/// Runs after first frame; must not block the UI thread.
+Future<void> _initializePushInBackground() async {
+  startupLog('10. Push notification init started (12s after first frame)');
+  await Future.delayed(Duration.zero);
+  try {
+    await PushNotificationService().initialize();
+    startupLog('11. Push notification init completed');
+  } catch (e) {
+    if (kDebugMode) debugPrint('Error initializing Push (non-fatal): $e');
+    startupLog('11. Push init failed (non-fatal): $e');
+  }
 }
 
 class MyApp extends ConsumerWidget {
@@ -80,10 +98,11 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    startupLog('MyApp.build()');
     final router = ref.watch(appRouterProvider);
 
-    // When API returns 401: redirect to welcome, then clear session (must not throw to avoid crash)
     UnauthorizedHandler.setCallback(() {
+      authLog('401 Unauthorized: redirecting to welcome');
       try {
         router.go(AppRoutes.welcome);
         // Clear tokens/auth in background so we don't block the UI (avoids ANR)
@@ -116,10 +135,12 @@ class MyApp extends ConsumerWidget {
 
         // Error Builder
         builder: (context, child) {
-          // Process any pending incoming calls
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            IncomingCallHandler.processPendingCallIfAvailable(context);
-          });
+          // Process pending incoming call only when one exists (avoids scheduling callback on every build → ANR).
+          if (IncomingCallHandler.hasPendingCall()) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              IncomingCallHandler.processPendingCallIfAvailable(context);
+            });
+          }
 
           // Handle any errors during widget building
           ErrorWidget.builder = (FlutterErrorDetails details) {

@@ -114,31 +114,5 @@ class SuperlikePackService {
     }
   }
 
-  /// Create Stripe checkout for superlike pack
-  Future<Map<String, dynamic>> createStripeCheckoutForPack({
-    required int packId,
-    required String successUrl,
-    required String cancelUrl,
-  }) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.superlikePacksStripeCheckout,
-        data: {
-          'pack_id': packId,
-          'success_url': successUrl,
-          'cancel_url': cancelUrl,
-        },
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return response.data!;
-      } else {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
 }
 

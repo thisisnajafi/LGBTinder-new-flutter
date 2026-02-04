@@ -32,11 +32,6 @@ class PaymentRepository {
     return await _paymentService.getSubscriptionStatus();
   }
 
-  /// Create Stripe checkout session
-  Future<Map<String, dynamic>> createStripeCheckout(StripeCheckoutRequest request) async {
-    return await _paymentService.createStripeCheckout(request);
-  }
-
   /// Upgrade subscription
   Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
     return await _paymentService.upgradeSubscription(currentPlanId, targetPlanId);

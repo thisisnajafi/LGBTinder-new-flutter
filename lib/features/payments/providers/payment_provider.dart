@@ -8,7 +8,6 @@ import '../domain/use_cases/restore_purchases_use_case.dart';
 import '../domain/use_cases/validate_receipt_use_case.dart';
 import '../domain/use_cases/get_superlike_packs_use_case.dart';
 import '../domain/use_cases/get_subscription_status_use_case.dart';
-import '../domain/use_cases/create_stripe_checkout_use_case.dart';
 
 /// Payment provider - manages payment and subscription state
 final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((ref) {
@@ -19,7 +18,6 @@ final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((re
   final validateReceiptUseCase = ref.watch(validateReceiptUseCaseProvider);
   final getSuperlikePacksUseCase = ref.watch(getSuperlikePacksUseCaseProvider);
   final getSubscriptionStatusUseCase = ref.watch(getSubscriptionStatusUseCaseProvider);
-  final createStripeCheckoutUseCase = ref.watch(createStripeCheckoutUseCaseProvider);
 
   return PaymentNotifier(
     getSubscriptionPlansUseCase: getSubscriptionPlansUseCase,
@@ -29,7 +27,6 @@ final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((re
     validateReceiptUseCase: validateReceiptUseCase,
     getSuperlikePacksUseCase: getSuperlikePacksUseCase,
     getSubscriptionStatusUseCase: getSubscriptionStatusUseCase,
-    createStripeCheckoutUseCase: createStripeCheckoutUseCase,
   );
 });
 
@@ -95,7 +92,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   final ValidateReceiptUseCase _validateReceiptUseCase;
   final GetSuperlikePacksUseCase _getSuperlikePacksUseCase;
   final GetSubscriptionStatusUseCase _getSubscriptionStatusUseCase;
-  final CreateStripeCheckoutUseCase _createStripeCheckoutUseCase;
 
   PaymentNotifier({
     required GetSubscriptionPlansUseCase getSubscriptionPlansUseCase,
@@ -105,7 +101,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required ValidateReceiptUseCase validateReceiptUseCase,
     required GetSuperlikePacksUseCase getSuperlikePacksUseCase,
     required GetSubscriptionStatusUseCase getSubscriptionStatusUseCase,
-    required CreateStripeCheckoutUseCase createStripeCheckoutUseCase,
   }) : _getSubscriptionPlansUseCase = getSubscriptionPlansUseCase,
        _purchaseSubscriptionUseCase = purchaseSubscriptionUseCase,
        _cancelSubscriptionUseCase = cancelSubscriptionUseCase,
@@ -113,7 +108,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
        _validateReceiptUseCase = validateReceiptUseCase,
        _getSuperlikePacksUseCase = getSuperlikePacksUseCase,
        _getSubscriptionStatusUseCase = getSubscriptionStatusUseCase,
-       _createStripeCheckoutUseCase = createStripeCheckoutUseCase,
        super(PaymentState());
 
   /// Load subscription plans
@@ -173,26 +167,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       );
 
       return subscriptionStatus;
-    } catch (e) {
-      state = state.copyWith(
-        isPurchasing: false,
-        error: e.toString(),
-      );
-      return null;
-    }
-  }
-
-  /// Create Stripe checkout session
-  Future<Map<String, dynamic>?> createStripeCheckout(StripeCheckoutRequest request) async {
-    state = state.copyWith(isPurchasing: true, error: null);
-
-    try {
-      final session = await _createStripeCheckoutUseCase.execute(request);
-      state = state.copyWith(
-        checkoutSession: session,
-        isPurchasing: false,
-      );
-      return session;
     } catch (e) {
       state = state.copyWith(
         isPurchasing: false,

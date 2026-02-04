@@ -290,24 +290,3 @@ class SubscribeRequest {
     };
   }
 }
-
-/// Stripe checkout request
-class StripeCheckoutRequest {
-  final String priceId;
-  final String successUrl;
-  final String cancelUrl;
-
-  StripeCheckoutRequest({
-    required this.priceId,
-    required this.successUrl,
-    required this.cancelUrl,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'price_id': priceId,
-      'success_url': successUrl,
-      'cancel_url': cancelUrl,
-    };
-  }
-}

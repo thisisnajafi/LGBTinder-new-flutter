@@ -10,6 +10,8 @@ class ApiEndpoints {
   static const String register = '/auth/register';
   static const String login = '/auth/login';
   static const String loginPassword = '/auth/login-password';
+  /// Lightweight token validation for splash (GET, Bearer token). 200 = valid, 401 = invalid.
+  static const String checkToken = '/auth/check-token';
   static const String checkUserState = '/auth/check-user-state';
   static const String sendVerification = '/auth/send-verification';
   static const String resendVerification = '/auth/resend-verification';
@@ -95,6 +97,7 @@ class ApiEndpoints {
   static const String likesMatches = '/likes/matches';
   static const String likesPending = '/likes/pending';
   static const String likesSuperlikeHistory = '/likes/superlike-history';
+  static const String likesRewind = '/likes/rewind';
 
   // ==================== Chat & Messaging ====================
   static const String chatSend = '/chat/send';
@@ -112,6 +115,10 @@ class ApiEndpoints {
   // FIXED: Updated to match backend route (api.php line 437)
   static const String chatOnlineStatus = '/chat/online';
   static const String chatPinnedCount = '/chat/pinned-count';
+  static const String chatPinMessage = '/chat/pin-message';
+  static const String chatUnpinMessage = '/chat/unpin-message';
+  static const String chatPinnedMessages = '/chat/pinned-messages';
+  static const String chatSearch = '/chat/search';
 
   // ==================== Notifications ====================
   static const String notifications = '/notifications';
@@ -127,6 +134,7 @@ class ApiEndpoints {
   // ==================== Settings ====================
   static const String userSettings = '/user/settings';
   static const String privacySettings = '/privacy/settings';
+  static const String preferencesMatching = '/preferences/matching';
   static const String deviceSessions = '/device-sessions';
   static String deviceSessionById(int id) => '/device-sessions/$id';
   static String deviceSessionTrust(int id) => '/device-sessions/$id/trust';
@@ -214,9 +222,7 @@ class ApiEndpoints {
   static const String emergencyAlert = '/emergency/alert';
 
   // ==================== Payments & Subscriptions ====================
-  static const String stripePaymentIntent = '/stripe/payment-intent';
-  static const String stripeCheckout = '/stripe/checkout';
-  static const String stripeSubscription = '/stripe/subscription';
+  // Stripe checkout/payment-intent removed; cancel-by-id kept for backend compatibility
   static String stripeSubscriptionById(String id) => '/stripe/subscription/$id';
   static const String subscriptionsStatus = '/subscriptions/status';
   static const String subscriptionsSubscribe = '/subscriptions/subscribe';
@@ -228,8 +234,6 @@ class ApiEndpoints {
   static const String superlikePacksAvailable = '/superlike-packs/available';
   static const String superlikePacksPurchase = '/superlike-packs/purchase';
   static const String superlikePacksUserPacks = '/superlike-packs/user-packs';
-  static const String superlikePacksStripeCheckout = '/superlike-packs/stripe-checkout';
-
   // ==================== Payments ====================
   static const String validateReceipt = '/payments/validate-receipt';
   static const String restorePurchases = '/payments/restore-purchases';

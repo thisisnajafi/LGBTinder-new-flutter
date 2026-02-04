@@ -1,4 +1,4 @@
-﻿// Screen: ComprehensiveSettingsScreen
+// Screen: ComprehensiveSettingsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -18,7 +18,6 @@ import '../subscription_management_screen.dart';
 import '../two_factor_auth_screen.dart';
 import '../active_sessions_screen.dart';
 import '../help_support_screen.dart';
-import '../payment_methods_screen.dart';
 import '../emergency_contacts_screen.dart';
 import '../safety_settings_screen.dart';
 
@@ -269,23 +268,6 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
                 context,
                 MaterialPageRoute(
                   builder: (context) => const SubscriptionManagementScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildSettingsTile(
-            icon: Icons.payment,
-            title: 'Payment Methods',
-            subtitle: 'Manage your payment methods',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PaymentMethodsScreen(),
                 ),
               );
             },

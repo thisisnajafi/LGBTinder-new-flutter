@@ -56,18 +56,6 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
             borderColor: borderColor,
           ),
 
-          // Stripe Payments Toggle
-          _buildFeatureToggle(
-            context: context,
-            title: 'Stripe Payments',
-            subtitle: 'Use Stripe for web-based payments (Fallback option)',
-            featureKey: 'stripe_payments',
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-
           DividerCustom(),
 
           // Features Section

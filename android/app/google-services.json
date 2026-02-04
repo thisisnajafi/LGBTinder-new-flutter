@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "736944131777",
+    "project_id": "lgbtfinder-c2bdc",
+    "storage_bucket": "lgbtfinder-c2bdc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736944131777:android:66f153c01aa591b389ce40",
+        "android_client_info": {
+          "package_name": "com.lgbtfinder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4MyyZG-KRgr1zcRNVxr-oAROpKVPsNic"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -109,3 +109,16 @@ class LikeResponse {
     );
   }
 }
+
+/// Response from likes/rewind (undo last like/dislike). Premium only.
+class RewindResponse {
+  final Map<String, dynamic>? restoredUser;
+  final String? actionUndone;
+  final int? remainingRewinds;
+
+  RewindResponse({
+    this.restoredUser,
+    this.actionUndone,
+    this.remainingRewinds,
+  });
+}

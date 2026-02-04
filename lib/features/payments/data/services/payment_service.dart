@@ -102,25 +102,6 @@ class PaymentService {
     }
   }
 
-  /// Create Stripe checkout session
-  Future<Map<String, dynamic>> createStripeCheckout(StripeCheckoutRequest request) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.stripeCheckout,
-        data: request.toJson(),
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return response.data!;
-      } else {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   /// Upgrade subscription
   Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
     try {

@@ -107,88 +107,17 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
   }
 
   Future<void> _cancelSubscription({int? googlePlaySubscriptionId}) async {
-    // Check if it's a Google Play subscription
     if (googlePlaySubscriptionId != null) {
       await _cancelGooglePlaySubscription(googlePlaySubscriptionId);
       return;
     }
-
-    // Otherwise, it's a Stripe subscription
-    if (_subscriptionStatus?.stripeSubscriptionId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No active subscription to cancel'),
-          backgroundColor: AppColors.accentRed,
-        ),
-      );
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Subscription'),
-        content: Text(
-          'Are you sure you want to cancel your ${_subscriptionStatus?.planName ?? 'subscription'}? '
-          'You will lose access to premium features at the end of your billing period.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep Subscription'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentRed),
-            child: const Text('Cancel Subscription'),
-          ),
-        ],
+    // Stripe cancel removed; only Google Play subscriptions can be cancelled from this screen
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No active subscription to cancel'),
+        backgroundColor: AppColors.accentRed,
       ),
     );
-
-    if (confirmed != true) return;
-
-    setState(() {
-      _isCancelling = true;
-    });
-
-    try {
-      final paymentService = ref.read(paymentServiceProvider);
-      await paymentService.cancelSubscription(_subscriptionStatus!.stripeSubscriptionId!);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Subscription cancelled successfully'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
-        // Reload status
-        _loadSubscriptionStatus();
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        setState(() {
-          _isCancelling = false;
-        });
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e,
-          customMessage: 'Failed to cancel subscription',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isCancelling = false;
-        });
-        ErrorHandlerService.handleError(
-          context,
-          e,
-          customMessage: 'Failed to cancel subscription',
-        );
-      }
-    }
   }
 
   Future<void> _cancelGooglePlaySubscription(int subscriptionId) async {
@@ -386,9 +315,7 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
                             // Already on management screen
                           },
                           onCancelAutoRenewal: () {
-                            if (_subscriptionStatus?.stripeSubscriptionId != null) {
-                              _cancelSubscription();
-                            } else if (_googlePlaySubscriptions != null && _googlePlaySubscriptions!.isNotEmpty) {
+                            if (_googlePlaySubscriptions != null && _googlePlaySubscriptions!.isNotEmpty) {
                               final sub = _googlePlaySubscriptions!.first;
                               final subscriptionId = sub['id'] is int
                                   ? sub['id'] as int
@@ -485,22 +412,6 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
                           isFullWidth: true,
                         ),
                         SizedBox(height: AppSpacing.spacingMD),
-                        if (_subscriptionStatus?.stripeSubscriptionId != null)
-                          OutlinedButton(
-                            onPressed: _isCancelling ? null : () => _cancelSubscription(),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.accentRed,
-                              side: BorderSide(color: AppColors.accentRed),
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
-                            child: _isCancelling
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Text('Cancel Stripe Subscription'),
-                          ),
                         // Restore Purchases Button
                         SizedBox(height: AppSpacing.spacingMD),
                         OutlinedButton.icon(
