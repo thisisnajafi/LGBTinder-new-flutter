@@ -87,13 +87,13 @@ No `/auth-check` route. No AuthCheckScreen.
 
 **Goal:** Delete the dedicated auth-check screen and route so the app never navigates to `/auth-check`.
 
-**Flutter:**
+**Flutter (done):**
 
 - Removed route **`/auth-check`** and its `AuthCheckScreen` builder from `lib/routes/app_router.dart`.
-- Remove or repoint any `context.go(AppRoutes.authCheck)` (only in Splash) – Splash will no longer go to auth-check; it will go to Welcome or Home.
-- Delete file `lib/screens/auth/auth_check_screen.dart` (or keep for reference and remove from router only).
-- Update **redirect loop guard**: if the app used “never go back to `/auth-check`” logic, remove references to `authCheck` in that guard (only splash `/` might need guarding).
-- Update **markStartupFlowLeft()**: call it when leaving Splash (e.g. when redirecting to Welcome or Home from Splash), so any later navigation to `/` is redirected to Welcome.
+- Splash no longer goes to auth-check; it goes to Welcome or Home directly.
+- Deleted file `lib/screens/auth/auth_check_screen.dart`.
+- Updated **redirect loop guard**: if the app used “never go back to `/auth-check`” logic, remove references to `authCheck` in that guard (only splash `/` might need guarding).
+- **markStartupFlowLeft()** is called from Splash when redirecting to Welcome or Home.
 
 **Acceptance:**  
 - No references to AuthCheckScreen or `/auth-check`.  

@@ -34,6 +34,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   bool _showFloatingShapes = false;
   /// Minimal first frame: no ShaderMask/AnimatedBuilders so first paint is fast (avoids ANR).
   bool _minimalFirstFrame = true;
+  /// Ensure we only schedule/apply full UI once (prevents build loop).
+  bool _fullUIScheduled = false;
+  /// Precache logo once so full UI frame doesn't block on decode.
+  bool _precacheScheduled = false;
+  int _buildCount = 0;
 
   @override
   void initState() {
@@ -66,18 +71,31 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       CurvedAnimation(parent: _buttonController, curve: Curves.easeOut),
     );
 
-    // Defer full UI and animations until after first frame paints (avoids ANR).
+    // In debug: stay on minimal frame only (no full UI, no animations). Avoids freeze from heavy build + tickers.
+    if (kDebugMode) {
+      return;
+    }
+    // Release/profile: defer full UI across frames.
+    // Frame 1: minimal. Frame 2: full without shapes + start logo. Floating shapes after ~2s.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || _fullUIScheduled) return;
+      _fullUIScheduled = true;
       setState(() {
         _minimalFirstFrame = false;
-        _showFloatingShapes = true;
+        _showFloatingShapes = false;
       });
-      _logoController.forward().then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _textController.forward().then((_) {
+        _logoController.forward().then((_) {
           if (!mounted) return;
-          _buttonController.forward();
+          _textController.forward().then((_) {
+            if (!mounted) return;
+            _buttonController.forward();
+          });
+        });
+        Future.delayed(const Duration(milliseconds: 2000), () {
+          if (!mounted) return;
+          setState(() => _showFloatingShapes = true);
         });
       });
     });
@@ -93,7 +111,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    screenLog('WelcomeScreen', 'build');
+    if (kDebugMode) {
+      _buildCount++;
+      screenLog('WelcomeScreen', 'build #$_buildCount');
+    }
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
 
@@ -111,6 +132,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
     // Minimal first frame: no ShaderMask, no AnimatedBuilders, no shadows — fast paint to avoid ANR.
     if (_minimalFirstFrame) {
+      if (!_precacheScheduled && context.mounted) {
+        _precacheScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          precacheImage(const AssetImage('assets/images/logo/logo.png'), context);
+        });
+      }
       return Scaffold(
         body: Container(
           decoration: BoxDecoration(gradient: modernGradient),
@@ -206,43 +234,50 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       );
     }
 
-    // Full UI with animations (after first frame)
+    // Full UI with animations (after first frame). In debug use lighter visuals to avoid freeze.
+    final isDebug = kDebugMode;
     return Scaffold(
       body: Stack(
         children: [
           Container(
             decoration: BoxDecoration(gradient: modernGradient),
           ),
-          if (_showFloatingShapes) ...[
-            Positioned(
-              top: size.height * 0.1,
-              left: size.width * 0.1,
-              child: _FloatingShape(
-                size: 80,
-                color: Colors.white.withOpacity(0.1),
-                animationDuration: const Duration(seconds: 6),
+          if (_showFloatingShapes && !isDebug)
+            RepaintBoundary(
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: size.height * 0.1,
+                    left: size.width * 0.1,
+                    child: _FloatingShape(
+                      size: 80,
+                      color: Colors.white.withOpacity(0.1),
+                      animationDuration: const Duration(seconds: 6),
+                    ),
+                  ),
+                  Positioned(
+                    top: size.height * 0.3,
+                    right: size.width * 0.15,
+                    child: _FloatingShape(
+                      size: 60,
+                      color: Colors.white.withOpacity(0.08),
+                      animationDuration: const Duration(seconds: 8),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: size.height * 0.25,
+                    left: size.width * 0.2,
+                    child: _FloatingShape(
+                      size: 40,
+                      color: Colors.white.withOpacity(0.12),
+                      animationDuration: const Duration(seconds: 7),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Positioned(
-              top: size.height * 0.3,
-              right: size.width * 0.15,
-              child: _FloatingShape(
-                size: 60,
-                color: Colors.white.withOpacity(0.08),
-                animationDuration: const Duration(seconds: 8),
-              ),
-            ),
-            Positioned(
-              bottom: size.height * 0.25,
-              left: size.width * 0.2,
-              child: _FloatingShape(
-                size: 40,
-                color: Colors.white.withOpacity(0.12),
-                animationDuration: const Duration(seconds: 7),
-              ),
-            ),
-          ],
-          SafeArea(
+          RepaintBoundary(
+            child: SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.spacingXXL,
@@ -251,8 +286,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               child: Column(
                 children: [
                   SizedBox(height: size.height * 0.1),
+                  // child: logo built once (avoids per-frame Image.asset rebuild → freeze)
+                  // In debug use one light shadow to reduce paint cost and avoid freeze.
                   AnimatedBuilder(
                     animation: _logoAnimation,
+                    child: LGBTFinderLogo(size: 70),
                     builder: (context, child) {
                       return Transform.scale(
                         scale: _logoAnimation.value,
@@ -263,20 +301,28 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.95),
                               shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 30,
-                                  offset: const Offset(0, 15),
-                                ),
-                                BoxShadow(
-                                  color: Colors.white.withOpacity(0.1),
-                                  blurRadius: 60,
-                                  offset: const Offset(0, -5),
-                                ),
-                              ],
+                              boxShadow: isDebug
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 15),
+                                      ),
+                                      BoxShadow(
+                                        color: Colors.white.withOpacity(0.1),
+                                        blurRadius: 60,
+                                        offset: const Offset(0, -5),
+                                      ),
+                                    ],
                             ),
-                            child: LGBTFinderLogo(size: 70),
+                            child: child,
                           ),
                         ),
                       );
@@ -292,31 +338,42 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           offset: Offset(0, 20 * (1 - _textAnimation.value)),
                           child: Column(
                             children: [
-                              ShaderMask(
-                                shaderCallback: (bounds) => LinearGradient(
-                                  colors: [
-                                    Colors.white,
-                                    Colors.white.withOpacity(0.9),
-                                    Colors.white.withOpacity(0.8),
-                                  ],
-                                ).createShader(bounds),
-                                child: Text(
-                                  'LGBTFinder',
-                                  style: AppTypography.h1Large.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        offset: const Offset(0, 2),
-                                        blurRadius: 4,
+                              // In debug skip ShaderMask (expensive) to avoid freeze; use plain Text.
+                              isDebug
+                                  ? Text(
+                                      'LGBTFinder',
+                                      style: AppTypography.h1Large.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.5,
+                                        color: Colors.white,
                                       ),
-                                    ],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
+                                      textAlign: TextAlign.center,
+                                    )
+                                  : ShaderMask(
+                                      shaderCallback: (bounds) => LinearGradient(
+                                        colors: [
+                                          Colors.white,
+                                          Colors.white.withOpacity(0.9),
+                                          Colors.white.withOpacity(0.8),
+                                        ],
+                                      ).createShader(bounds),
+                                      child: Text(
+                                        'LGBTFinder',
+                                        style: AppTypography.h1Large.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.5,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(
+                                              color: Colors.black.withOpacity(0.3),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
                               SizedBox(height: AppSpacing.spacingLG),
                               Container(
                                 padding: EdgeInsets.symmetric(
@@ -376,13 +433,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.15),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
+                                  boxShadow: isDebug
+                                      ? null
+                                      : [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.15),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
                                 ),
                                 child: ElevatedButton(
                                   onPressed: () => context.go('/register'),
@@ -440,6 +499,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ],
               ),
             ),
+          ),
           ),
         ],
       ),
@@ -503,11 +563,12 @@ class _FloatingShapeState extends State<_FloatingShape>
             decoration: BoxDecoration(
               color: widget.color,
               shape: BoxShape.circle,
+              // Light shadow to avoid heavy paint when 3 shapes appear (blur 20+spread 5 was costly)
               boxShadow: [
                 BoxShadow(
-                  color: widget.color.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+                  color: widget.color.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 0,
                 ),
               ],
             ),

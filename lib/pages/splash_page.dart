@@ -82,6 +82,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
       if (!mounted || _redirected) return;
       if (!hasToken) {
+        apiLog('Splash: no token, skipping GET ${ApiEndpoints.checkToken}');
         authLog('Splash: no token → welcome');
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _goToWelcome(tokenStorage);
@@ -89,6 +90,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         return;
       }
 
+      apiLog('Splash: calling GET ${ApiEndpoints.checkToken}');
       // Guard: force welcome if we hang
       Future.delayed(_guardTimeout, () {
         if (_redirected || !mounted) return;

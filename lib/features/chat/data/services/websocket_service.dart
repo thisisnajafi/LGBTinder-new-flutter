@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/token_storage_service.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
@@ -16,7 +17,7 @@ class WebSocketService {
   final _onlineStatusController = StreamController<Map<String, dynamic>>.broadcast();
   final _connectionController = StreamController<bool>.broadcast();
 
-  WebSocketService(this._tokenStorage, {this.baseUrl = 'http://lg.abolfazlnajafi.com'});
+  WebSocketService(this._tokenStorage, {this.baseUrl = ApiEndpoints.apiOrigin});
 
   /// Message stream
   Stream<Message> get messageStream => _messageController.stream;

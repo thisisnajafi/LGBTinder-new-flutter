@@ -119,12 +119,12 @@ class RetryService {
       return true;
     }
 
-    // Rate limiting (429) is retryable
+    // Rate limiting (429): do not retry — user must wait until next_available_at
     if (error.toString().contains('429')) {
-      return true;
+      return false;
     }
 
-    // Client errors (4xx except 429) are not retryable
+    // Client errors (4xx) are not retryable
     if (error.toString().contains('400') ||
         error.toString().contains('401') ||
         error.toString().contains('403') ||

@@ -1,10 +1,11 @@
 /// API endpoint URLs organized by feature
 class ApiEndpoints {
+  // API origin (host only, no path) — use for WebSocket and baseUrl
+  static const String apiOrigin = 'https://api.lgbtfinder.com';
   // Base URL (production API) — must include /api to match Laravel apiPrefix
-  static const String baseUrl = 'https://api.lgbtfinder.com/api';
-  
+  static const String baseUrl = '$apiOrigin/api';
   // Storage URL for media files (same host as API)
-  static const String storageUrl = 'https://api.lgbtfinder.com/storage';
+  static const String storageUrl = '$apiOrigin/storage';
 
   // ==================== Authentication ====================
   static const String register = '/auth/register';

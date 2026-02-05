@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../auth/unauthorized_handler.dart';
+import '../utils/app_logger.dart';
 
 /// Max chars of response/request body to log; longer content is truncated.
 const int _kLogBodyMaxChars = 400;
@@ -38,7 +39,6 @@ bool _looksLikeHtml(String s) {
 
 /// Dio HTTP client with interceptors for authentication and error handling
 class DioClient {
-  static const String baseUrl = 'http://lg.abolfazlnajafi.com/api';
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
@@ -53,7 +53,7 @@ class DioClient {
   DioClient(this._tokenStorage) {
     _dio = Dio(
       BaseOptions(
-        baseUrl: baseUrl,
+        baseUrl: ApiEndpoints.baseUrl,
         connectTimeout: connectTimeout,
         receiveTimeout: receiveTimeout,
         headers: {
@@ -81,33 +81,26 @@ class DioClient {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          // Log request in debug mode (summarized; no huge bodies)
-          if (kDebugMode) {
-            debugPrint('🚀 REQUEST[${options.method}] => PATH: ${options.path}');
-            debugPrint('   headers: ${options.headers}');
-            if (options.data != null) {
-              debugPrint('   body: ${_summarizeBody(options.data)}');
-            }
-            if (options.queryParameters.isNotEmpty) {
-              debugPrint('   query: ${options.queryParameters}');
-            }
+          // Log request: full URI, body (summarized)
+          final uri = options.uri.toString();
+          apiLog('REQUEST ${options.method} $uri');
+          if (options.data != null) {
+            apiLog('  body: ${_summarizeBody(options.data)}');
+          }
+          if (options.queryParameters.isNotEmpty) {
+            apiLog('  query: ${options.queryParameters}');
           }
 
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          // Log response in debug mode (summarized; detect HTML/non-JSON)
-          if (kDebugMode) {
-            final path = response.requestOptions.path;
+          // Log response: status, body (summarized)
+          final uri = response.requestOptions.uri.toString();
+          apiLog('RESPONSE ${response.statusCode} $uri');
+          if (response.data != null) {
             final ct = response.headers.value('content-type') ?? '';
             final isJson = ct.toLowerCase().contains('application/json');
-            debugPrint('✅ RESPONSE[${response.statusCode}] => $path');
-            debugPrint('   content-type: $ct');
-            if (!isJson && response.data != null) {
-              debugPrint('   body (non-JSON): ${_summarizeBody(response.data, maxChars: 200)}');
-            } else if (response.data != null) {
-              debugPrint('   body: ${_summarizeBody(response.data)}');
-            }
+            apiLog('  body: ${isJson ? _summarizeBody(response.data) : _summarizeBody(response.data, maxChars: 200)}');
           }
 
           // Treat 401 as unauthenticated: clear in-memory auth and notify (storage cleared in logout)
@@ -119,15 +112,11 @@ class DioClient {
           return handler.next(response);
         },
         onError: (error, handler) async {
-          // Log error in debug mode (summarized; no huge HTML dumps)
-          if (kDebugMode) {
-            final path = error.requestOptions.path;
-            final code = error.response?.statusCode;
-            debugPrint('❌ API ERROR => $path');
-            debugPrint('   status: $code | message: ${error.message}');
-            if (error.response != null && error.response?.data != null) {
-              debugPrint('   response: ${_summarizeBody(error.response!.data, maxChars: 200)}');
-            }
+          final uri = error.requestOptions.uri.toString();
+          final code = error.response?.statusCode;
+          apiLog('ERROR $code $uri | ${error.message}');
+          if (error.response != null && error.response?.data != null) {
+            apiLog('  response: ${_summarizeBody(error.response!.data, maxChars: 200)}');
           }
 
           // Handle 401 Unauthorized - Token expired or invalid
@@ -232,7 +221,7 @@ class DioClient {
       // Create a temporary Dio instance without interceptors to avoid recursion
       final refreshDio = Dio(
         BaseOptions(
-          baseUrl: baseUrl,
+          baseUrl: ApiEndpoints.baseUrl,
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
