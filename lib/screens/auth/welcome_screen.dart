@@ -136,7 +136,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         _precacheScheduled = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
-          precacheImage(const AssetImage('assets/images/logo/logo.png'), context);
+          precacheImage(const AssetImage(LGBTFinderLogo.assetPath), context);
         });
       }
       return Scaffold(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../widgets/navbar/lgbtfinder_logo.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/onboarding_page.dart';
 import '../widgets/onboarding_page_view.dart';
@@ -170,22 +171,8 @@ class QuickOnboardingScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // App logo/illustration
-              Container(
-                height: 120,
-                width: 120,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: AppColors.lgbtGradient,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.favorite,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
+              // App logo (rainbow heart)
+              const LGBTFinderLogo(size: 120),
 
               const SizedBox(height: 32),
 

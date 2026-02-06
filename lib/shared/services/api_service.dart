@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/network/dio_client.dart';
 import '../models/api_response.dart';
@@ -477,7 +477,8 @@ class ApiService {
     Options? options,
   }) async {
     try {
-      final fileName = file.path.split('/').last;
+      // Cross-platform basename (handles Windows backslash and Unix slash)
+      final fileName = file.path.replaceAll(r'\', '/').split('/').last;
       final formData = FormData.fromMap({
         fieldName: await MultipartFile.fromFile(
           file.path,
@@ -524,7 +525,7 @@ class ApiService {
         files.asMap().entries.map((entry) async {
           final index = entry.key;
           final file = entry.value;
-          final fileName = file.path.split('/').last;
+          final fileName = file.path.replaceAll(r'\', '/').split('/').last;
           final multipartFile = await MultipartFile.fromFile(file.path, filename: fileName);
           // Use indexed format for Laravel array recognition: images[0], images[1], etc.
           return MapEntry('$fieldName[$index]', multipartFile);

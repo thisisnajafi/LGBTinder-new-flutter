@@ -85,7 +85,18 @@ class DioClient {
           final uri = options.uri.toString();
           apiLog('REQUEST ${options.method} $uri');
           if (options.data != null) {
-            apiLog('  body: ${_summarizeBody(options.data)}');
+            if (options.data is FormData) {
+              final fd = options.data as FormData;
+              apiLog('  body: FormData (multipart)');
+              for (final f in fd.files) {
+                apiLog('  [UPLOAD] field=${f.key} filename=${f.value.filename} size=${f.value.length ?? '?'} bytes');
+              }
+              for (final e in fd.fields) {
+                apiLog('  field: ${e.key}=${e.value}');
+              }
+            } else {
+              apiLog('  body: ${_summarizeBody(options.data)}');
+            }
           }
           if (options.queryParameters.isNotEmpty) {
             apiLog('  query: ${options.queryParameters}');
@@ -101,6 +112,15 @@ class DioClient {
             final ct = response.headers.value('content-type') ?? '';
             final isJson = ct.toLowerCase().contains('application/json');
             apiLog('  body: ${isJson ? _summarizeBody(response.data) : _summarizeBody(response.data, maxChars: 200)}');
+            // For 4xx on upload endpoints, log full error body to debug INVALID_IMAGE etc.
+            if (response.statusCode != null &&
+                response.statusCode! >= 400 &&
+                response.statusCode! < 500 &&
+                uri.contains('/upload') &&
+                response.data is Map) {
+              final data = response.data as Map;
+              apiLog('  [UPLOAD_ERROR] message=${data['message']} error_code=${data['error_code']} detail=${data['detail']}');
+            }
           }
 
           // Treat 401 as unauthenticated: clear in-memory auth and notify (storage cleared in logout)
@@ -116,7 +136,11 @@ class DioClient {
           final code = error.response?.statusCode;
           apiLog('ERROR $code $uri | ${error.message}');
           if (error.response != null && error.response?.data != null) {
-            apiLog('  response: ${_summarizeBody(error.response!.data, maxChars: 200)}');
+            apiLog('  response: ${_summarizeBody(error.response!.data, maxChars: 500)}');
+            if (uri.contains('/upload') && error.response!.data is Map) {
+              final data = error.response!.data as Map;
+              apiLog('  [UPLOAD_ERROR] message=${data['message']} error_code=${data['error_code']} detail=${data['detail']}');
+            }
           }
 
           // Handle 401 Unauthorized - Token expired or invalid

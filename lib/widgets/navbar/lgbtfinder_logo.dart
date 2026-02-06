@@ -10,6 +10,9 @@ import 'package:flutter/material.dart';
 /// LGBTFinderLogo(size: 40, width: 120) // Custom width for horizontal logo
 /// ```
 class LGBTFinderLogo extends StatelessWidget {
+  /// Asset path for the app logo (rainbow heart). Use for precacheImage etc.
+  static const String assetPath = 'assets/logo/logo.png';
+
   /// Size of the logo (height). If width is not specified, width will equal size.
   final double size;
   
@@ -25,7 +28,7 @@ class LGBTFinderLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/images/logo/logo.png',
+      assetPath,
       height: size,
       width: width ?? size,
       fit: BoxFit.contain,
