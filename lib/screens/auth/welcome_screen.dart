@@ -151,14 +151,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               child: Column(
                 children: [
                   SizedBox(height: size.height * 0.1),
-                  // Placeholder circle only (no Image.asset) so first frame never blocks on decode
+                  // App logo with soft glow (no circle)
                   Container(
-                    width: 70 + AppSpacing.spacingXL * 2,
-                    height: 70 + AppSpacing.spacingXL * 2,
+                    padding: EdgeInsets.all(AppSpacing.spacingLG),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.35),
+                          blurRadius: 40,
+                          spreadRadius: 0,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
+                    child: LGBTFinderLogo(size: 120),
                   ),
                   SizedBox(height: AppSpacing.spacingXXL),
                   Text(
@@ -286,44 +296,41 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               child: Column(
                 children: [
                   SizedBox(height: size.height * 0.1),
-                  // child: logo built once (avoids per-frame Image.asset rebuild → freeze)
-                  // In debug use one light shadow to reduce paint cost and avoid freeze.
+                  // Logo with soft glow (no circle)
                   AnimatedBuilder(
                     animation: _logoAnimation,
-                    child: LGBTFinderLogo(size: 70),
+                    child: Container(
+                      padding: EdgeInsets.all(AppSpacing.spacingLG),
+                      decoration: BoxDecoration(
+                        boxShadow: isDebug
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ]
+                            : [
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.4),
+                                  blurRadius: 48,
+                                  spreadRadius: 0,
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.18),
+                                  blurRadius: 28,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                      ),
+                      child: LGBTFinderLogo(size: 120),
+                    ),
                     builder: (context, child) {
                       return Transform.scale(
                         scale: _logoAnimation.value,
                         child: Opacity(
                           opacity: _logoAnimation.value,
-                          child: Container(
-                            padding: EdgeInsets.all(AppSpacing.spacingXL),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
-                              shape: BoxShape.circle,
-                              boxShadow: isDebug
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ]
-                                  : [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 30,
-                                        offset: const Offset(0, 15),
-                                      ),
-                                      BoxShadow(
-                                        color: Colors.white.withOpacity(0.1),
-                                        blurRadius: 60,
-                                        offset: const Offset(0, -5),
-                                      ),
-                                    ],
-                            ),
-                            child: child,
-                          ),
+                          child: child,
                         ),
                       );
                     },

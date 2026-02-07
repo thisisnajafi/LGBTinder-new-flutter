@@ -198,10 +198,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             _musicGenres = profile.musicGenres!;
           }
           if (profile.educations != null && profile.educations!.isNotEmpty) {
-            _educations = profile.educations!;
+            _educations = [profile.educations!.first]; // Single selection only
           }
           if (profile.jobs != null && profile.jobs!.isNotEmpty) {
-            _jobs = profile.jobs!;
+            _jobs = [profile.jobs!.first]; // Single selection only
           }
           if (profile.languages != null && profile.languages!.isNotEmpty) {
             _languages = profile.languages!;
@@ -335,7 +335,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       if (_educations.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select at least one education level'),
+            content: Text('Please select one education level'),
             backgroundColor: Colors.red,
           ),
         );
@@ -344,7 +344,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       if (_jobs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select at least one job'),
+            content: Text('Please select one job'),
             backgroundColor: Colors.red,
           ),
         );
@@ -583,14 +583,14 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       errorMessage = 'Please enter your bio';
     }
     
-    // Check educations
+    // Check educations (single selection)
     if (errorMessage == null && _educations.isEmpty) {
-      errorMessage = 'Please select at least one education level';
+      errorMessage = 'Please select one education level';
     }
     
-    // Check jobs
+    // Check jobs (single selection)
     if (errorMessage == null && _jobs.isEmpty) {
-      errorMessage = 'Please select at least one job';
+      errorMessage = 'Please select one job';
     }
     
     // Check languages
@@ -693,9 +693,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           ),
         );
 
-        // Navigate to onboarding page (not home page)
+        // Navigate to home after profile setup
         if (mounted) {
-          context.go('/onboarding');
+          context.go('/home');
         }
       }
     } on ApiError catch (e) {
@@ -1237,6 +1237,192 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             ),
           ),
           SizedBox(height: AppSpacing.spacingMD),
+          // Country Bottom Sheet Field (above phone)
+          countriesAsync.when(
+            data: (countries) => ReferenceBottomSheetField(
+              label: 'Country',
+              hint: 'Select your country',
+              selectedId: _countryId,
+              items: countries,
+              onChanged: (value) {
+                setState(() {
+                  _countryId = value;
+                  _cityId = null; // Reset city when country changes
+                  final selectedCountry = countries.firstWhere(
+                    (c) => c.id == value,
+                    orElse: () => ReferenceItem(id: -1, title: '', phoneCode: _countryCode),
+                  );
+                  final newCode = selectedCountry.phoneCode ?? _countryCode ?? '+1';
+                  _countryCode = newCode;
+                  _countryCodeController.text = newCode;
+                });
+              },
+              required: true,
+              searchable: true,
+            ),
+            loading: () => Container(
+              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Country *',
+                    style: AppTypography.h3.copyWith(color: textColor),
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  Container(
+                    padding: EdgeInsets.all(AppSpacing.spacingMD),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.surfaceElevatedDark
+                          : AppColors.surfaceElevatedLight,
+                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.borderMediumDark
+                            : AppColors.borderMediumLight,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.accentPurple,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.spacingMD),
+                        Text(
+                          'Loading countries...',
+                          style: AppTypography.body.copyWith(color: secondaryTextColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            error: (error, stack) => Container(
+              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Country *',
+                    style: AppTypography.h3.copyWith(color: textColor),
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  Container(
+                    padding: EdgeInsets.all(AppSpacing.spacingMD),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                      border: Border.all(color: Colors.red),
+                    ),
+                    child: Text(
+                      'Failed to load countries: ${error.toString()}',
+                      style: AppTypography.body.copyWith(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: AppSpacing.spacingMD),
+          // City Bottom Sheet Field (depends on country)
+          if (_countryId != null)
+            citiesAsync.when(
+              data: (cities) => ReferenceBottomSheetField(
+                label: 'City',
+                hint: 'Select your city',
+                selectedId: _cityId,
+                items: cities,
+                onChanged: (value) {
+                  setState(() {
+                    _cityId = value;
+                  });
+                },
+                required: true,
+                enabled: cities.isNotEmpty,
+                searchable: true,
+              ),
+              loading: () => Container(
+                padding: EdgeInsets.all(AppSpacing.spacingLG),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'City *',
+                      style: AppTypography.h3.copyWith(color: textColor),
+                    ),
+                    SizedBox(height: AppSpacing.spacingMD),
+                    Container(
+                      padding: EdgeInsets.all(AppSpacing.spacingMD),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.surfaceElevatedDark
+                            : AppColors.surfaceElevatedLight,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.borderMediumDark
+                              : AppColors.borderMediumLight,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.accentPurple,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.spacingMD),
+                          Text(
+                            'Loading cities...',
+                            style: AppTypography.body.copyWith(color: secondaryTextColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              error: (error, stack) => Container(
+                padding: EdgeInsets.all(AppSpacing.spacingLG),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'City *',
+                      style: AppTypography.h3.copyWith(color: textColor),
+                    ),
+                    SizedBox(height: AppSpacing.spacingMD),
+                    Container(
+                      padding: EdgeInsets.all(AppSpacing.spacingMD),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                        border: Border.all(color: Colors.red),
+                      ),
+                      child: Text(
+                        'Failed to load cities: ${error.toString()}',
+                        style: AppTypography.body.copyWith(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          SizedBox(height: AppSpacing.spacingMD),
           // Phone Number Field
           countriesAsync.when(
             data: (countries) {
@@ -1436,192 +1622,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               ),
             ),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Country Bottom Sheet Field
-          countriesAsync.when(
-            data: (countries) => ReferenceBottomSheetField(
-              label: 'Country',
-              hint: 'Select your country',
-              selectedId: _countryId,
-              items: countries,
-              onChanged: (value) {
-                setState(() {
-                  _countryId = value;
-                  _cityId = null; // Reset city when country changes
-                  final selectedCountry = countries.firstWhere(
-                    (c) => c.id == value,
-                    orElse: () => ReferenceItem(id: -1, title: '', phoneCode: _countryCode),
-                  );
-                  final newCode = selectedCountry.phoneCode ?? _countryCode ?? '+1';
-                  _countryCode = newCode;
-                  _countryCodeController.text = newCode;
-                });
-              },
-              required: true,
-              searchable: true,
-            ),
-            loading: () => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Country *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceElevatedDark
-                          : AppColors.surfaceElevatedLight,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.borderMediumDark
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.accentPurple,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.spacingMD),
-                        Text(
-                          'Loading countries...',
-                          style: AppTypography.body.copyWith(color: secondaryTextColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            error: (error, stack) => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Country *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(color: Colors.red),
-                    ),
-                    child: Text(
-                      'Failed to load countries: ${error.toString()}',
-                      style: AppTypography.body.copyWith(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // City Bottom Sheet Field (depends on country)
-          if (_countryId != null)
-            citiesAsync.when(
-              data: (cities) => ReferenceBottomSheetField(
-                label: 'City',
-                hint: 'Select your city',
-                selectedId: _cityId,
-                items: cities,
-                onChanged: (value) {
-                  setState(() {
-                    _cityId = value;
-                  });
-                },
-                required: true,
-                enabled: cities.isNotEmpty,
-                searchable: true,
-              ),
-              loading: () => Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'City *',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.borderMediumDark
-                              : AppColors.borderMediumLight,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.accentPurple,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.spacingMD),
-                          Text(
-                            'Loading cities...',
-                            style: AppTypography.body.copyWith(color: secondaryTextColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              error: (error, stack) => Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'City *',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(color: Colors.red),
-                      ),
-                      child: Text(
-                        'Failed to load cities: ${error.toString()}',
-                        style: AppTypography.body.copyWith(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           SizedBox(height: AppSpacing.spacingMD),
           // Gender Bottom Sheet Field
           gendersAsync.when(
@@ -2749,215 +2749,42 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             ),
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          // Education Multi-Select
+          // Education (single select)
           educationLevelsAsync.when(
-            data: (educations) {
-              final selectedEducationItems = educations
-                  .where((e) => _educations.contains(e.id))
-                  .toList();
-              final selectedEducationTitles =
-                  selectedEducationItems.map((e) => e.title).toList();
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Education',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showMultiSelectBottomSheet(
-                        title: 'Select Education',
-                        items: educations,
-                        selectedIds: _educations,
-                        onSelected: (ids) {
-                          setState(() {
-                            _educations = ids;
-                          });
-                        },
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                selectedEducationTitles.isEmpty
-                                    ? 'Select education levels'
-                                    : '${selectedEducationTitles.length} selected',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedEducationTitles.isEmpty
-                                      ? secondaryTextColor
-                                      : textColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (selectedEducationItems.isNotEmpty) ...[
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
-                        children: selectedEducationItems.map((item) {
-                          return InputChip(
-                            label: Text(item.title),
-                            onDeleted: () {
-                              setState(() {
-                                _educations.remove(item.id);
-                              });
-                            },
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            backgroundColor: isDark
-                                ? AppColors.surfaceElevatedDark
-                                : AppColors.surfaceElevatedLight,
-                            labelStyle: AppTypography.caption.copyWith(
-                              color: textColor,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
+            data: (educations) => ReferenceBottomSheetField(
+              label: 'Education',
+              hint: 'Select your education level',
+              selectedId: _educations.isNotEmpty ? _educations.first : null,
+              items: educations,
+              onChanged: (value) {
+                setState(() {
+                  _educations = value != null ? [value] : [];
+                });
+              },
+              required: true,
+              searchable: true,
+            ),
             loading: () => _buildLoadingField('Education', textColor, secondaryTextColor, isDark),
             error: (error, stack) => _buildErrorField('Education', error, textColor, secondaryTextColor, isDark),
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          // Jobs Multi-Select
+          // Job (single select)
           jobsAsync.when(
-            data: (jobs) {
-              final selectedJobItems = jobs
-                  .where((j) => _jobs.contains(j.id))
-                  .toList();
-              final selectedJobTitles = selectedJobItems.map((j) => j.title).toList();
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Jobs',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showMultiSelectBottomSheet(
-                        title: 'Select Jobs',
-                        items: jobs,
-                        selectedIds: _jobs,
-                        onSelected: (ids) {
-                          setState(() {
-                            _jobs = ids;
-                          });
-                        },
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                selectedJobTitles.isEmpty
-                                    ? 'Select jobs'
-                                    : '${selectedJobTitles.length} selected',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedJobTitles.isEmpty
-                                      ? secondaryTextColor
-                                      : textColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (selectedJobItems.isNotEmpty) ...[
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
-                        children: selectedJobItems.map((item) {
-                          return InputChip(
-                            label: Text(item.title),
-                            onDeleted: () {
-                              setState(() {
-                                _jobs.remove(item.id);
-                              });
-                            },
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            backgroundColor: isDark
-                                ? AppColors.surfaceElevatedDark
-                                : AppColors.surfaceElevatedLight,
-                            labelStyle: AppTypography.caption.copyWith(
-                              color: textColor,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-            loading: () => _buildLoadingField('Jobs', textColor, secondaryTextColor, isDark),
-            error: (error, stack) => _buildErrorField('Jobs', error, textColor, secondaryTextColor, isDark),
+            data: (jobs) => ReferenceBottomSheetField(
+              label: 'Job',
+              hint: 'Select your job',
+              selectedId: _jobs.isNotEmpty ? _jobs.first : null,
+              items: jobs,
+              onChanged: (value) {
+                setState(() {
+                  _jobs = value != null ? [value] : [];
+                });
+              },
+              required: true,
+              searchable: true,
+            ),
+            loading: () => _buildLoadingField('Job', textColor, secondaryTextColor, isDark),
+            error: (error, stack) => _buildErrorField('Job', error, textColor, secondaryTextColor, isDark),
           ),
           SizedBox(height: AppSpacing.spacingMD),
           // Languages Multi-Select

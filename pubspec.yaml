@@ -154,7 +154,7 @@ flutter:
     - assets/images/
     - assets/images/logo/
     - assets/logo/
-    # - assets/images/onboarding/
+    - assets/images/onboarding/
     # - assets/images/placeholders/
     # - assets/images/avatars/
     - assets/images/icons/

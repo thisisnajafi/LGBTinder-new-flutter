@@ -11,6 +11,7 @@ import '../core/theme/spacing_constants.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';
+import '../shared/services/onboarding_service.dart';
 import '../widgets/loading/circular_progress.dart';
 import '../widgets/navbar/lgbtfinder_logo.dart';
 import '../routes/app_router.dart';
@@ -30,6 +31,15 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   static const Duration _guardTimeout = Duration(seconds: 5);
 
   bool _redirected = false;
+
+  void _goToOnboarding() {
+    if (_redirected || !mounted) return;
+    _redirected = true;
+    markStartupFlowLeft();
+    startupLog('Splash: first launch → intro onboarding');
+    routeLog('go(${AppRoutes.onboarding})');
+    context.go(AppRoutes.onboarding);
+  }
 
   void _goToWelcome(TokenStorageService tokenStorage) {
     if (_redirected || !mounted) return;
@@ -62,12 +72,25 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     _checkAuthAndNavigate();
   }
 
-  /// After delay: if no token → Welcome; else GET /auth/check-token → 200 Home, else Welcome.
+  /// After delay: if first launch → Intro onboarding; else if no token → Welcome; else GET /auth/check-token → Home or Welcome.
   Future<void> _checkAuthAndNavigate() async {
     try {
       await Future.delayed(_splashDelay);
       if (!mounted) return;
-      startupLog('SplashPage: delay done, checking token');
+      startupLog('SplashPage: delay done');
+
+      final onboardingService = OnboardingService();
+      final hasSeenIntro = await onboardingService.hasSeenIntroOnboarding().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => true,
+      );
+      if (!mounted || _redirected) return;
+      if (!hasSeenIntro) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _goToOnboarding();
+        });
+        return;
+      }
 
       final tokenStorage = ref.read(tokenStorageServiceProvider);
       final dioClient = ref.read(dioClientProvider);
@@ -154,23 +177,9 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     screenLog('SplashPage', 'build');
-    final rainbowGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        const Color(0xFFE40303),
-        const Color(0xFFFF8C00),
-        const Color(0xFFFFED00),
-        const Color(0xFF008026),
-        const Color(0xFF004DFF),
-        const Color(0xFF750787),
-      ],
-      stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-    );
-
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(gradient: rainbowGradient),
+        decoration: const BoxDecoration(gradient: AppColors.prideGradient),
         child: SafeArea(
           child: Center(
             child: Column(

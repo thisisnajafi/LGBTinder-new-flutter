@@ -45,5 +45,22 @@ class AppColors {
   static Color borderSubtleLight = const Color.fromRGBO(0, 0, 0, 0.08);
   static Color borderMediumLight = const Color.fromRGBO(0, 0, 0, 0.12);
   static Color dividerLight = const Color.fromRGBO(0, 0, 0, 0.1);
+
+  // LGBT / Pride gradient (softer palette matching landing page header logo)
+  static const List<Color> lgbtGradient = [
+    Color(0xFFD62828), // red
+    Color(0xFFE76F51), // orange
+    Color(0xFFE9C46A), // yellow/gold
+    Color(0xFF2A9D8F), // green
+    Color(0xFF457B9D), // blue
+    Color(0xFF6A4C93), // violet
+  ];
+
+  static const LinearGradient prideGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: lgbtGradient,
+    stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+  );
 }
 
