@@ -502,6 +502,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       appBar: AppBarCustom(
         title: _isOwnProfile ? 'My Profile' : 'Profile',
         showBackButton: !_isOwnProfile,
+        showPrideAccent: _isOwnProfile,
         actions: _isOwnProfile
             ? [
                 IconButton(
@@ -567,6 +568,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             isVerified: _profile?.isVerified ?? false,
                             isPremium: _profile?.isPremium ?? false,
                             isOnline: _profile?.isOnline ?? false,
+                            showPrideAccent: _isOwnProfile,
                             onAvatarTap: _isOwnProfile
                                 ? () {
                                     // Open image picker - implementation needed

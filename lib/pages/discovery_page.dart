@@ -26,6 +26,7 @@ import '../screens/premium/superlike_packs_screen.dart';
 import '../widgets/match/match_screen.dart';
 import '../pages/chat_page.dart';
 import '../core/utils/app_icons.dart';
+import '../widgets/buttons/scale_tap_feedback.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/auth/providers/auth_provider.dart';
@@ -62,31 +63,33 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     required VoidCallback onPressed,
   }) {
     final baseColor = gradientColors.first;
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: baseColor.withOpacity(0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+    return ScaleTapFeedback(
+      onTap: onPressed,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
-        ],
-      ),
-      child: IconButton(
-        icon: AppSvgIcon(
-          assetPath: icon,
-          size: 24,
-          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: baseColor.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        onPressed: onPressed,
+        child: Center(
+          child: AppSvgIcon(
+            assetPath: icon,
+            size: 24,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
@@ -586,20 +589,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
                   return Row(
                     children: [
-                      // Circular avatar with gradient ring
+                      // Circular avatar with subtle LGBT gradient ring (thin 2px)
                       Container(
                         width: 48,
                         height: 48,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.accentGradientStart,
-                              AppColors.accentGradientEnd,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          gradient: AppColors.prideGradient,
                         ),
                         padding: const EdgeInsets.all(2),
                         child: Container(
@@ -676,15 +672,16 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                       return Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          IconButton(
-                            icon: AppSvgIcon(
-                              assetPath: AppIcons.notification,
-                              size: 24,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ScaleTapFeedback(
+                            onTap: () => context.go('/home/notifications'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.notification,
+                                size: 24,
+                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              ),
                             ),
-                            onPressed: () {
-                              context.go('/home/notifications');
-                            },
                           ),
                           if (notificationCount != null && notificationCount > 0)
                             Positioned(
@@ -716,30 +713,30 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                     },
                   ),
                   // Filter button
-                  IconButton(
-                    icon: AppSvgIcon(
-                      assetPath: AppIcons.filter,
-                      size: 24,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    ),
-                    onPressed: () async {
+                  ScaleTapFeedback(
+                    onTap: () async {
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const FilterScreen(),
                         ),
                       );
-
                       if (result != null && result is Map<String, dynamic>) {
-                        // Convert filter result to API format
                         final filters = await _convertFiltersToApiFormat(ref, result);
                         setState(() {
                           _activeFilters = filters;
                         });
-                        // Reload cards with new filters
                         _loadCards(refresh: true);
                       }
                     },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.filter,
+                        size: 24,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -792,11 +789,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                       onPressed: () => _handleAction('dislike'),
                     ),
                     SizedBox(width: AppSpacing.spacingXL),
-                    // Super Like (star, yellow gradient) — centered
+                    // Super Like (star) — subtle pride tint: yellow → orange from pride palette
                     _buildActionButton(
                       gradientColors: [
                         AppColors.warningYellow,
-                        const Color(0xFFE6B800),
+                        AppColors.lgbtGradient[1], // orange
                       ],
                       icon: AppIcons.star,
                       onPressed: () => _handleAction('superlike'),

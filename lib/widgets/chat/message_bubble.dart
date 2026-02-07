@@ -22,6 +22,8 @@ class MessageBubble extends ConsumerWidget {
   final String? mediaUrl;
   final int? mediaDuration; // For voice/video messages
   final int? remainingSeconds; // For disappearing messages
+  /// When true (free user, message from non-match): show blurred "You have a new message" placeholder.
+  final bool isLocked;
 
   const MessageBubble({
     Key? key,
@@ -33,12 +35,82 @@ class MessageBubble extends ConsumerWidget {
     this.mediaUrl,
     this.mediaDuration,
     this.remainingSeconds,
+    this.isLocked = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Locked message: free user received message from non-match (e.g. superlike or ex-match)
+    if (isLocked && !isSent) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: EdgeInsets.only(
+            left: AppSpacing.spacingSM,
+            right: AppSpacing.spacingXXL,
+            top: AppSpacing.spacingXS,
+            bottom: AppSpacing.spacingXS,
+          ),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingLG,
+            vertical: AppSpacing.spacingMD,
+          ),
+          decoration: BoxDecoration(
+            color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight).withOpacity(0.9),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppRadius.radiusMD),
+              topRight: Radius.circular(AppRadius.radiusMD),
+              bottomRight: Radius.circular(AppRadius.radiusMD),
+              bottomLeft: Radius.zero,
+            ),
+            border: Border.all(
+              color: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.lock_outline,
+                size: 20,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+              SizedBox(width: AppSpacing.spacingSM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'You have a new message',
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      'Upgrade to read messages from people who aren\'t your match yet',
+                      style: AppTypography.caption.copyWith(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
@@ -68,7 +140,7 @@ class MessageBubble extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (messageType == 'image' && mediaUrl != null)
+            if (messageType == 'image' && mediaUrl != null && !isLocked)
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 child: OptimizedImage(

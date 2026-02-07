@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
@@ -27,9 +28,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   late AnimationController _logoController;
   late AnimationController _textController;
   late AnimationController _buttonController;
+  /// Single controller for all floating shapes to avoid 3 separate tickers (prevents animation freeze).
+  late AnimationController _floatingController;
   late Animation<double> _logoAnimation;
   late Animation<double> _textAnimation;
   late Animation<double> _buttonAnimation;
+  late Animation<double> _floatingAnimation;
   /// Defer floating shapes until after first frame to keep first paint light (avoids ANR).
   bool _showFloatingShapes = false;
   /// Minimal first frame: no ShaderMask/AnimatedBuilders so first paint is fast (avoids ANR).
@@ -52,7 +56,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       vsync: this,
     );
     _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
+      CurvedAnimation(parent: _logoController, curve: AppAnimations.curveDefault),
     );
 
     _textController = AnimationController(
@@ -69,6 +73,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
     _buttonAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _buttonController, curve: Curves.easeOut),
+    );
+
+    // One shared controller for all floating shapes (1 ticker instead of 3 — avoids animation freeze).
+    _floatingController = AnimationController(
+      duration: const Duration(seconds: 7),
+      vsync: this,
+    );
+    _floatingAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
     );
 
     // In debug: stay on minimal frame only (no full UI, no animations). Avoids freeze from heavy build + tickers.
@@ -95,6 +108,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         });
         Future.delayed(const Duration(milliseconds: 2000), () {
           if (!mounted) return;
+          _floatingController.repeat(reverse: true);
           setState(() => _showFloatingShapes = true);
         });
       });
@@ -106,6 +120,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _logoController.dispose();
     _textController.dispose();
     _buttonController.dispose();
+    _floatingController.dispose();
     super.dispose();
   }
 
@@ -262,7 +277,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     child: _FloatingShape(
                       size: 80,
                       color: Colors.white.withOpacity(0.1),
-                      animationDuration: const Duration(seconds: 6),
+                      animation: _floatingAnimation,
+                      phaseOffset: 0,
                     ),
                   ),
                   Positioned(
@@ -271,7 +287,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     child: _FloatingShape(
                       size: 60,
                       color: Colors.white.withOpacity(0.08),
-                      animationDuration: const Duration(seconds: 8),
+                      animation: _floatingAnimation,
+                      phaseOffset: 2 * math.pi / 3,
                     ),
                   ),
                   Positioned(
@@ -280,7 +297,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     child: _FloatingShape(
                       size: 40,
                       color: Colors.white.withOpacity(0.12),
-                      animationDuration: const Duration(seconds: 7),
+                      animation: _floatingAnimation,
+                      phaseOffset: 4 * math.pi / 3,
                     ),
                   ),
                 ],
@@ -429,44 +447,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           offset: Offset(0, 30 * (1 - _buttonAnimation.value)),
                           child: Column(
                             children: [
-                              Container(
-                                width: double.infinity,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white,
-                                      Colors.white.withOpacity(0.95),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                  boxShadow: isDebug
-                                      ? null
-                                      : [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.15),
-                                            blurRadius: 20,
-                                            offset: const Offset(0, 8),
-                                          ),
-                                        ],
-                                ),
-                                child: ElevatedButton(
-                                  onPressed: () => context.go('/register'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Create Account',
-                                    style: AppTypography.button.copyWith(
-                                      color: AppColors.accentPurple,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
+                              GradientButton(
+                                text: 'Create Account',
+                                onPressed: () => context.go('/register'),
+                                usePrideGradient: true,
                               ),
                               SizedBox(height: AppSpacing.spacingLG),
                               Container(
@@ -514,66 +498,40 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 }
 
-/// Floating animated shape widget
-class _FloatingShape extends StatefulWidget {
+/// Floating animated shape — uses shared [animation] from parent (single ticker for all shapes).
+class _FloatingShape extends StatelessWidget {
   final double size;
   final Color color;
-  final Duration animationDuration;
+  final Animation<double> animation;
+  final double phaseOffset;
 
   const _FloatingShape({
     required this.size,
     required this.color,
-    required this.animationDuration,
+    required this.animation,
+    this.phaseOffset = 0,
   });
-
-  @override
-  _FloatingShapeState createState() => _FloatingShapeState();
-}
-
-class _FloatingShapeState extends State<_FloatingShape>
-    with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: widget.animationDuration,
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _animation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _animation,
+      animation: animation,
       builder: (context, child) {
+        final value = animation.value + phaseOffset;
         return Transform.translate(
           offset: Offset(
-            math.sin(_animation.value) * 10,
-            math.cos(_animation.value) * 10,
+            math.sin(value) * 10,
+            math.cos(value) * 10,
           ),
           child: Container(
-            width: widget.size,
-            height: widget.size,
+            width: size,
+            height: size,
             decoration: BoxDecoration(
-              color: widget.color,
+              color: color,
               shape: BoxShape.circle,
-              // Light shadow to avoid heavy paint when 3 shapes appear (blur 20+spread 5 was costly)
               boxShadow: [
                 BoxShadow(
-                  color: widget.color.withOpacity(0.2),
+                  color: color.withOpacity(0.2),
                   blurRadius: 8,
                   spreadRadius: 0,
                 ),

@@ -1,13 +1,15 @@
-﻿// Widget: AppBarCustom
+// Widget: AppBarCustom
 // Custom app bar
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../routes/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../badges/notification_badge.dart';
+import '../buttons/scale_tap_feedback.dart';
 
 /// Custom app bar widget
 /// Styled app bar with title, actions, and optional notification badge
@@ -18,6 +20,8 @@ class AppBarCustom extends ConsumerWidget implements PreferredSizeWidget {
   final bool showBackButton;
   final int? notificationCount;
   final VoidCallback? onNotificationTap;
+  /// When true, show a thin pride gradient line at the bottom (use on Profile or Settings only).
+  final bool showPrideAccent;
 
   const AppBarCustom({
     Key? key,
@@ -27,6 +31,7 @@ class AppBarCustom extends ConsumerWidget implements PreferredSizeWidget {
     this.showBackButton = true,
     this.notificationCount,
     this.onNotificationTap,
+    this.showPrideAccent = false,
   }) : super(key: key);
 
   @override
@@ -77,23 +82,28 @@ class AppBarCustom extends ConsumerWidget implements PreferredSizeWidget {
       elevation: 0,
       leading: leading ??
           (showBackButton
-              ? IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.arrowLeft,
-                    size: 24,
-                    color: textColor,
-                  ),
-                  onPressed: () {
-                    // Use go_router's pop method, with fallback to Navigator if needed
+              ? ScaleTapFeedback(
+                  onTap: () {
+                    // Try Navigator first (e.g. Settings pushed from Profile)
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                      return;
+                    }
                     if (context.canPop()) {
                       context.pop();
-                    } else {
-                      // If there's no route to pop, navigate to welcome screen
-                      context.go('/welcome');
+                      return;
                     }
+                    // Never send to welcome from back; go to home instead
+                    context.go(AppRoutes.home);
                   },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: AppSvgIcon(
+                      assetPath: AppIcons.arrowLeft,
+                      size: 24,
+                      color: textColor,
+                    ),
+                  ),
                 )
               : null),
       title: title != null
@@ -104,11 +114,19 @@ class AppBarCustom extends ConsumerWidget implements PreferredSizeWidget {
           : null,
       actions: appBarActions,
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          height: 1,
-          color: borderColor,
-        ),
+        preferredSize: Size.fromHeight(showPrideAccent ? 2 : 1),
+        child: showPrideAccent
+            ? Container(
+                height: 2,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: AppColors.lgbtGradient,
+                  ),
+                ),
+              )
+            : Container(height: 1, color: borderColor),
       ),
     );
   }

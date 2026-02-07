@@ -14,6 +14,7 @@ import '../features/notifications/providers/notification_providers.dart';
 import '../shared/models/api_error.dart';
 import '../pages/chat_page.dart';
 import 'package:go_router/go_router.dart';
+import '../core/widgets/staggered_list_item.dart';
 
 /// Chat list page - Displays list of conversations
 class ChatListPage extends ConsumerStatefulWidget {
@@ -29,6 +30,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   String? _errorMessage;
   String _searchQuery = '';
   List<Map<String, dynamic>> _chats = [];
+  bool _didInitialLoadAnimation = false;
 
   @override
   void initState() {
@@ -49,10 +51,15 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
 
       if (mounted) {
         setState(() {
-          // Convert Chat objects to Map format for ChatListItem
           _chats = chats.map((chat) => _chatToMap(chat)).toList();
           _isLoading = false;
         });
+        Future.delayed(
+          const Duration(milliseconds: 800),
+          () {
+            if (mounted) setState(() => _didInitialLoadAnimation = true);
+          },
+        );
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -178,7 +185,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                               itemCount: _filteredChats.length,
                               itemBuilder: (context, index) {
                                 final chat = _filteredChats[index];
-                                return ChatListItem(
+                                final item = ChatListItem(
                                   userId: chat['id'],
                                   name: chat['name'],
                                   avatarUrl: chat['avatar_url'],
@@ -188,6 +195,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                                   isOnline: chat['is_online'],
                                   isTyping: chat['is_typing'],
                                   onTap: () => _handleChatTap(chat['id']),
+                                );
+                                return StaggeredListItem(
+                                  index: index,
+                                  animateAppear: !_didInitialLoadAnimation && index < 8,
+                                  child: item,
                                 );
                               },
                             ),

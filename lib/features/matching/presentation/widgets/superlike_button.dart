@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/constants/animation_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/matching_provider.dart';
@@ -40,28 +41,28 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: AppAnimations.tapDuration,
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.elasticOut,
+        curve: AppAnimations.curveDefault,
       ),
     );
 
     _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeInOut,
+        curve: AppAnimations.curveDefault,
       ),
     );
 
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.02).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.elasticOut,
+        curve: AppAnimations.curveDefault,
       ),
     );
   }

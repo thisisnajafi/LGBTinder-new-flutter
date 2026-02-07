@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart' as radius;
@@ -60,18 +61,18 @@ class _IncomingCallOverlayState extends ConsumerState<IncomingCallOverlay>
   void initState() {
     super.initState();
 
-    // Animation setup
+    // Fade in + slight scale (~200 ms), minimal — no bounce
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: AppAnimations.transitionModal,
       vsync: this,
     );
 
     _scaleAnimation = Tween<double>(
-      begin: 0.8,
+      begin: 0.98,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: Curves.elasticOut,
+      curve: AppAnimations.curveDefault,
     ));
 
     _opacityAnimation = Tween<double>(
@@ -79,7 +80,7 @@ class _IncomingCallOverlayState extends ConsumerState<IncomingCallOverlay>
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: Curves.easeIn,
+      curve: AppAnimations.curveDefault,
     ));
 
     // Start animation

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/constants/animation_constants.dart';
 import 'swipeable_card.dart';
 import '../error_handling/empty_state.dart';
 import '../../core/widgets/loading_indicator.dart';
@@ -30,8 +31,55 @@ class CardStackManager extends ConsumerStatefulWidget {
   ConsumerState<CardStackManager> createState() => _CardStackManagerState();
 }
 
-class _CardStackManagerState extends ConsumerState<CardStackManager> {
+class _CardStackManagerState extends ConsumerState<CardStackManager>
+    with TickerProviderStateMixin {
   int _currentIndex = 0;
+  int? _exitingIndex;
+  int? _pendingSwipeUserId;
+  String? _pendingSwipeAction;
+  late AnimationController _exitController;
+  late Animation<Offset> _exitSlide;
+  late Animation<double> _exitFade;
+
+  @override
+  void initState() {
+    super.initState();
+    _exitController = AnimationController(
+      duration: AppAnimations.cardExit,
+      vsync: this,
+    );
+    _exitSlide = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(
+      CurvedAnimation(parent: _exitController, curve: AppAnimations.curveDefault),
+    );
+    _exitFade = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(parent: _exitController, curve: AppAnimations.curveDefault),
+    );
+  }
+
+  @override
+  void dispose() {
+    _exitController.removeStatusListener(_onExitStatus);
+    _exitController.dispose();
+    super.dispose();
+  }
+
+  void _onExitStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed) return;
+    _exitController.removeStatusListener(_onExitStatus);
+    final userId = _pendingSwipeUserId;
+    final action = _pendingSwipeAction;
+    _pendingSwipeUserId = null;
+    _pendingSwipeAction = null;
+    if (mounted) {
+      setState(() {
+        _exitingIndex = null;
+        _currentIndex++;
+      });
+      if (userId != null && action != null) {
+        widget.onSwipe?.call(userId, action);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,9 +132,21 @@ class _CardStackManagerState extends ConsumerState<CardStackManager> {
               child: _buildCard(widget.cards[_currentIndex + 2], 2),
             ),
           ),
-        // Current card
-        _buildCard(currentCard, 0),
+        // Current card (with exit animation when swiping)
+        _buildCurrentCard(currentCard),
       ],
+    );
+  }
+
+  Widget _buildCurrentCard(Map<String, dynamic> currentCard) {
+    final content = _buildCard(currentCard, 0);
+    if (_exitingIndex == null) return content;
+    return SlideTransition(
+      position: _exitSlide,
+      child: FadeTransition(
+        opacity: _exitFade,
+        child: content,
+      ),
     );
   }
 
@@ -119,13 +179,35 @@ class _CardStackManagerState extends ConsumerState<CardStackManager> {
   }
 
   void _handleAction(String action) {
-    if (_currentIndex >= widget.cards.length) return;
+    if (_currentIndex >= widget.cards.length || _exitingIndex != null) return;
 
     final currentCard = widget.cards[_currentIndex];
-    widget.onSwipe?.call(currentCard['id'] ?? 0, action);
+    final userId = currentCard['id'] as int? ?? 0;
 
-    setState(() {
-      _currentIndex++;
-    });
+    final direction = action == 'like'
+        ? const Offset(-1.2, 0)
+        : action == 'dislike'
+            ? const Offset(1.2, 0)
+            : const Offset(0, 1.2);
+
+    if (!AppAnimations.animationsEnabled(context)) {
+      setState(() => _currentIndex++);
+      widget.onSwipe?.call(userId, action);
+      return;
+    }
+
+    _pendingSwipeUserId = userId;
+    _pendingSwipeAction = action;
+    _exitSlide = Tween<Offset>(begin: Offset.zero, end: direction).animate(
+      CurvedAnimation(
+        parent: _exitController,
+        curve: AppAnimations.curveDefault,
+      ),
+    );
+    setState(() => _exitingIndex = _currentIndex);
+    _exitController
+      ..reset()
+      ..addStatusListener(_onExitStatus)
+      ..forward();
   }
 }

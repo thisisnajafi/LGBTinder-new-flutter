@@ -12,7 +12,10 @@ class SkeletonDiscovery extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    // Dark: use clearly visible gray + border so card stands out on black background
+    final cardColor = isDark
+        ? const Color(0xFF252528)
+        : AppColors.backgroundLight;
 
     return Center(
       child: Column(
@@ -24,11 +27,19 @@ class SkeletonDiscovery extends StatelessWidget {
             height: 500,
             margin: EdgeInsets.all(AppSpacing.spacingLG),
             decoration: BoxDecoration(
-              color: backgroundColor,
+              color: cardColor,
               borderRadius: BorderRadius.circular(AppRadius.radiusXL),
+              border: isDark
+                  ? Border.all(
+                      color: Colors.white.withOpacity(0.08),
+                      width: 1,
+                    )
+                  : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: isDark
+                      ? Colors.black.withOpacity(0.5)
+                      : Colors.black.withOpacity(0.1),
                   blurRadius: 10,
                   offset: Offset(0, 5),
                 ),
@@ -36,7 +47,7 @@ class SkeletonDiscovery extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // Image skeleton
+                // Image skeleton with soft pride shimmer (discovery only); stronger in dark mode so visible
                 Expanded(
                   child: SkeletonLoader(
                     width: double.infinity,
@@ -45,6 +56,9 @@ class SkeletonDiscovery extends StatelessWidget {
                       topLeft: Radius.circular(AppRadius.radiusXL),
                       topRight: Radius.circular(AppRadius.radiusXL),
                     ),
+                    highlightColorOverride: isDark
+                        ? Colors.white.withOpacity(0.22)
+                        : AppColors.lgbtGradient[4].withOpacity(0.12),
                   ),
                 ),
                 // Info skeleton
@@ -83,12 +97,15 @@ class SkeletonDiscovery extends StatelessWidget {
             ),
           ),
           SizedBox(height: AppSpacing.spacingXL),
-          // Loading text
+          // Loading text — explicit color so visible in dark mode
           Text(
             'Finding your perfect matches...',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
         ],

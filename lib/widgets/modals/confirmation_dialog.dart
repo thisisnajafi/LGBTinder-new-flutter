@@ -7,6 +7,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../buttons/gradient_button.dart';
+import 'app_dialog.dart';
 
 /// Confirmation dialog widget
 /// Custom styled confirmation dialog with title, message, and action buttons
@@ -38,7 +39,7 @@ class ConfirmationDialog extends ConsumerWidget {
     String cancelText = 'Cancel',
     bool isDestructive = false,
   }) {
-    return showDialog<bool>(
+    return showAppDialog<bool>(
       context: context,
       builder: (context) => ConfirmationDialog(
         title: title,

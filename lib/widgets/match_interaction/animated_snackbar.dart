@@ -1,5 +1,6 @@
-﻿// Widget: AnimatedSnackbar
-// Animated snackbar notifications
+// Widget: AnimatedSnackbar
+// Animated snackbar notifications — slide up + fade using AppAnimations.snackbarTransition
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/constants/animation_constants.dart';
 
 /// Animated snackbar widget
 /// Custom snackbar with slide-in animation and gradient background
@@ -34,22 +36,28 @@ class AnimatedSnackbar extends ConsumerWidget {
     VoidCallback? onAction,
     String? actionLabel,
   }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: AnimatedSnackbar(
-          message: message,
-          type: type,
-          duration: duration,
-          onAction: onAction,
-          actionLabel: actionLabel,
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) => _SnackbarOverlay(
+        entry: entry,
+        displayDuration: duration,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.spacingLG),
+            child: AnimatedSnackbar(
+            message: message,
+            type: type,
+            duration: duration,
+            onAction: onAction,
+            actionLabel: actionLabel,
+          ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(AppSpacing.spacingLG),
+      ),
       ),
     );
+    overlay.insert(entry);
   }
 
   @override
@@ -144,4 +152,86 @@ enum SnackbarType {
   error,
   warning,
   info,
+}
+
+class _SnackbarOverlay extends StatefulWidget {
+  final OverlayEntry entry;
+  final Duration displayDuration;
+  final Widget child;
+
+  const _SnackbarOverlay({
+    required this.entry,
+    required this.displayDuration,
+    required this.child,
+  });
+
+  @override
+  State<_SnackbarOverlay> createState() => _SnackbarOverlayState();
+}
+
+class _SnackbarOverlayState extends State<_SnackbarOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slide;
+  late Animation<double> _fade;
+  Timer? _holdTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: AppAnimations.snackbarTransition,
+      vsync: this,
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
+    );
+    _fade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
+    );
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed) {
+        widget.entry.remove();
+      }
+    });
+    // Start after first frame so context is valid and we don't block build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _controller.forward();
+      _holdTimer = Timer(widget.displayDuration, () {
+        if (mounted) _controller.reverse();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(child: const SizedBox.expand()),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SlideTransition(
+            position: _slide,
+            child: FadeTransition(
+              opacity: _fade,
+              child: widget.child,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

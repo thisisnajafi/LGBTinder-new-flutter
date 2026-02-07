@@ -53,6 +53,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBarCustom(
         title: 'Settings',
         showBackButton: true,
+        showPrideAccent: true,
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -96,7 +97,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       size: 24,
                     ),
                     onPressed: () {
-                      context.go('/profile');
+                      context.go('/home/profile');
                     },
                   ),
                 ],

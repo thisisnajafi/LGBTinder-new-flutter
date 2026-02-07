@@ -1,8 +1,9 @@
-﻿// Widget: ShimmerEffect
+// Widget: ShimmerEffect
 // Shimmer loading effect
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/constants/animation_constants.dart';
 
 /// Shimmer loading effect widget
 /// Creates a shimmer animation for loading states
@@ -17,7 +18,7 @@ class ShimmerEffect extends ConsumerStatefulWidget {
     required this.child,
     this.baseColor,
     this.highlightColor,
-    this.duration = const Duration(milliseconds: 1500),
+    this.duration = AppAnimations.shimmerDuration,
   }) : super(key: key);
 
   @override
@@ -37,7 +38,7 @@ class _ShimmerEffectState extends ConsumerState<ShimmerEffect>
       vsync: this,
     )..repeat();
     _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _controller, curve: AppAnimations.curveEmphasized),
     );
   }
 

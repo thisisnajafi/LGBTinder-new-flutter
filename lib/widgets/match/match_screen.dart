@@ -10,6 +10,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/matching/data/models/match.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/constants/animation_constants.dart';
 import '../../features/auth/providers/auth_provider.dart';
 
 /// Match screen - Celebration screen when a match is detected
@@ -45,31 +46,29 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     // Haptic feedback
     HapticFeedback.mediumImpact();
     
-    // Heart animation
+    // Short celebration burst (~1–1.2 s total), minimal — no bounce
     _heartController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _heartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _heartController, curve: Curves.elasticOut),
+      CurvedAnimation(parent: _heartController, curve: AppAnimations.curveDefault),
     );
-    
-    // Confetti animation
+
     _confettiController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     _confettiAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _confettiController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _confettiController, curve: AppAnimations.curveDefault),
     );
-    
-    // Scale animation
+
     _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 350),
       vsync: this,
     );
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+      CurvedAnimation(parent: _scaleController, curve: AppAnimations.curveDefault),
     );
     
     // Start animations
@@ -106,24 +105,26 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.accentPurple.withOpacity(0.1),
-              AppColors.accentPink.withOpacity(0.1),
+              AppColors.lgbtGradient[0].withOpacity(0.12),
+              AppColors.lgbtGradient[2].withOpacity(0.08),
+              AppColors.lgbtGradient[4].withOpacity(0.1),
               backgroundColor,
             ],
+            stops: const [0.0, 0.35, 0.7, 1.0],
           ),
         ),
         child: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Confetti effect (simplified)
+              // Celebration icon — fade + slight scale, minimal
               AnimatedBuilder(
                 animation: _confettiAnimation,
                 builder: (context, child) {
                   return Opacity(
                     opacity: _confettiAnimation.value,
                     child: Transform.scale(
-                      scale: 1.0 + (_confettiAnimation.value * 0.5),
+                      scale: 0.98 + (_confettiAnimation.value * 0.04),
                       child: Icon(
                         Icons.celebration,
                         size: 200,

@@ -1,4 +1,4 @@
-﻿// Widget: ProfileHeader
+// Widget: ProfileHeader
 // Profile header with avatar and name
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +24,8 @@ class ProfileHeader extends ConsumerWidget {
   final bool isOnline;
   final VoidCallback? onAvatarTap;
   final VoidCallback? onEdit;
+  /// When true (e.g. own profile), show a thin pride gradient ring around the avatar.
+  final bool showPrideAccent;
 
   const ProfileHeader({
     Key? key,
@@ -36,6 +38,7 @@ class ProfileHeader extends ConsumerWidget {
     this.isOnline = false,
     this.onAvatarTap,
     this.onEdit,
+    this.showPrideAccent = false,
   }) : super(key: key);
 
   @override
@@ -53,13 +56,38 @@ class ProfileHeader extends ConsumerWidget {
             children: [
               GestureDetector(
                 onTap: onAvatarTap,
-                child: AvatarWithStatus(
-                  imageUrl: avatarUrl,
-                  name: name,
-                  isOnline: isOnline,
-                  size: 120.0,
-                  showRing: true,
-                ),
+                child: showPrideAccent
+                    ? Container(
+                        width: 124,
+                        height: 124,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppColors.prideGradient,
+                        ),
+                        padding: const EdgeInsets.all(2),
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.scaffoldBackgroundColor,
+                          ),
+                          child: AvatarWithStatus(
+                            imageUrl: avatarUrl,
+                            name: name,
+                            isOnline: isOnline,
+                            size: 120.0,
+                            showRing: false,
+                          ),
+                        ),
+                      )
+                    : AvatarWithStatus(
+                        imageUrl: avatarUrl,
+                        name: name,
+                        isOnline: isOnline,
+                        size: 120.0,
+                        showRing: true,
+                      ),
               ),
               if (onEdit != null)
                 Positioned(

@@ -1,4 +1,4 @@
-﻿// Widget: AnimatedButton
+// Widget: AnimatedButton
 // Animated button with effects
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/constants/animation_constants.dart';
 
 /// Animated button widget
 /// Button with scale animation and ripple effect
@@ -45,11 +46,11 @@ class _AnimatedButtonState extends ConsumerState<AnimatedButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: AppAnimations.tapDuration,
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: AppAnimations.buttonPressScale).animate(
+      CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
     );
   }
 
@@ -60,7 +61,7 @@ class _AnimatedButtonState extends ConsumerState<AnimatedButton>
   }
 
   void _handleTapDown(TapDownDetails details) {
-    _controller.forward();
+    if (AppAnimations.animationsEnabled(context)) _controller.forward();
   }
 
   void _handleTapUp(TapUpDetails details) {

@@ -1,4 +1,4 @@
-﻿// Widget: GradientButton
+// Widget: GradientButton
 // Gradient button
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +8,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/constants/animation_constants.dart';
 
 /// Gradient button widget
 /// Primary CTA button with accent gradient
@@ -20,6 +21,8 @@ class GradientButton extends ConsumerStatefulWidget {
   final IconData? icon; // Legacy support
   final String? iconPath; // SVG icon path
   final bool isFullWidth;
+  /// When true, use pride/LGBT gradient instead of accent purple. Use on 1–2 key CTAs (e.g. Complete profile, Upgrade).
+  final bool usePrideGradient;
 
   const GradientButton({
     Key? key,
@@ -31,6 +34,7 @@ class GradientButton extends ConsumerStatefulWidget {
     this.icon,
     this.iconPath,
     this.isFullWidth = true,
+    this.usePrideGradient = false,
   }) : super(key: key);
 
   @override
@@ -46,11 +50,11 @@ class _GradientButtonState extends ConsumerState<GradientButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: AppAnimations.tapDuration,
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: AppAnimations.buttonPressScale).animate(
+      CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
     );
   }
 
@@ -61,7 +65,7 @@ class _GradientButtonState extends ConsumerState<GradientButton>
   }
 
   void _handleTapDown(TapDownDetails details) {
-    _controller.forward();
+    if (AppAnimations.animationsEnabled(context)) _controller.forward();
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -95,18 +99,22 @@ class _GradientButtonState extends ConsumerState<GradientButton>
           decoration: BoxDecoration(
             gradient: isDisabled
                 ? LinearGradient(
-                    colors: [
-                      AppColors.accentPurple.withOpacity(0.5),
-                      AppColors.accentGradientEnd.withOpacity(0.5),
-                    ],
+                    colors: widget.usePrideGradient
+                        ? AppColors.lgbtGradient.map((c) => c.withOpacity(0.5)).toList()
+                        : [
+                            AppColors.accentPurple.withOpacity(0.5),
+                            AppColors.accentGradientEnd.withOpacity(0.5),
+                          ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   )
-                : AppTheme.accentGradient,
+                : (widget.usePrideGradient ? AppColors.prideGradient : AppTheme.accentGradient),
             borderRadius: BorderRadius.circular(AppRadius.radiusRound),
             boxShadow: isDisabled
                 ? null
                 : [
                     BoxShadow(
-                      color: AppColors.accentPurple.withOpacity(0.3),
+                      color: (widget.usePrideGradient ? AppColors.lgbtGradient.first : AppColors.accentPurple).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),

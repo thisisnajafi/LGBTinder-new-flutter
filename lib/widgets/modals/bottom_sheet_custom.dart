@@ -1,10 +1,11 @@
-﻿// Widget: BottomSheetCustom
+// Widget: BottomSheetCustom
 // Custom bottom sheet
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/constants/animation_constants.dart';
 
 /// Custom bottom sheet widget
 /// Styled bottom sheet with rounded corners and drag handle
@@ -29,17 +30,43 @@ class BottomSheetCustom extends ConsumerWidget {
     bool isDismissible = true,
     bool enableDrag = true,
   }) {
-    return showModalBottomSheet<T>(
+    final duration = AppAnimations.animationsEnabled(context)
+        ? AppAnimations.transitionModal
+        : Duration.zero;
+    return showGeneralDialog<T>(
       context: context,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      backgroundColor: Colors.transparent,
-      builder: (context) => BottomSheetCustom(
-        title: title,
-        isDismissible: isDismissible,
-        enableDrag: enableDrag,
-        child: child,
-      ),
+      barrierDismissible: isDismissible,
+      barrierColor: Colors.black54,
+      transitionDuration: duration,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: BottomSheetCustom(
+              title: title,
+              isDismissible: isDismissible,
+              enableDrag: enableDrag,
+              child: child,
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curve = CurvedAnimation(
+          parent: animation,
+          curve: AppAnimations.curveDefault,
+        );
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(curve);
+        final fade = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
+        return SlideTransition(
+          position: slide,
+          child: FadeTransition(opacity: fade, child: child),
+        );
+      },
     );
   }
 

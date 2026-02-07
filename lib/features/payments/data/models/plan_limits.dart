@@ -67,13 +67,17 @@ class PlanLimits {
   }
 
   /// Check if user has reached a specific limit
+  /// Logic: if user has used 0 today, they have not reached the limit (avoids backend returning wrong remaining).
   bool hasReachedLimit(String limitType) {
     switch (limitType) {
       case 'swipes':
+        if (usage.swipes.usedToday == 0) return false;
         return usage.swipes.remaining <= 0 && !usage.swipes.isUnlimited;
       case 'likes':
+        if (usage.likes.usedToday == 0) return false;
         return usage.likes.remaining <= 0 && !usage.likes.isUnlimited;
       case 'superlikes':
+        if (usage.superlikes.usedToday == 0) return false;
         return usage.superlikes.remaining <= 0 && !usage.superlikes.isUnlimited;
       case 'messages':
         return !usage.messages.isUnlimited && 
@@ -278,10 +282,17 @@ class UsageDetail {
   });
 
   factory UsageDetail.fromJson(Map<String, dynamic> json) {
+    final usedToday = _SafeParser.parseInt(json['used_today']);
+    final limit = _SafeParser.parseInt(json['limit']);
+    // If backend omits or sends wrong remaining, derive it so 0 swipes used = limit remaining
+    int remaining = _SafeParser.parseInt(json['remaining'], defaultValue: -1);
+    if (remaining < 0 && limit >= 0) {
+      remaining = (limit - usedToday).clamp(0, limit);
+    }
     return UsageDetail(
-      usedToday: _SafeParser.parseInt(json['used_today']),
-      limit: _SafeParser.parseInt(json['limit']),
-      remaining: _SafeParser.parseInt(json['remaining']),
+      usedToday: usedToday,
+      limit: limit,
+      remaining: remaining,
       isUnlimited: _SafeParser.parseBool(json['is_unlimited']),
     );
   }

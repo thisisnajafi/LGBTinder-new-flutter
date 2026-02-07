@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/constants/animation_constants.dart';
 import '../pages/splash_page.dart';
 import '../pages/home_page.dart';
 import '../pages/onboarding_page.dart';
@@ -55,6 +56,31 @@ class AppRoutes {
   static const String googlePlayBillingTest = '/google-play-billing-test';
 }
 
+/// Builds a page with slide-from-right + fade using [AppAnimations.transitionPage].
+Page<void> slideFadePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: AppAnimations.transitionPage,
+    reverseTransitionDuration: AppAnimations.transitionPage,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: AppAnimations.curveDefault,
+      );
+      final slide = Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).animate(curve);
+      final fade = Tween<double>(begin: 0, end: 1).animate(curve);
+      return SlideTransition(
+        position: slide,
+        child: FadeTransition(opacity: fade, child: child),
+      );
+    },
+  );
+}
+
 // Note: Route guards are implemented as redirect functions in individual routes
 // This allows access to Riverpod providers through the ref parameter
 
@@ -84,40 +110,43 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         name: 'splash',
-        builder: (context, state) => const SplashPage(),
+        pageBuilder: (context, state) => slideFadePage(state, const SplashPage()),
       ),
 
       // Welcome Screen (no guard - public)
       GoRoute(
         path: AppRoutes.welcome,
         name: 'welcome',
-        builder: (context, state) => const WelcomeScreen(),
+        pageBuilder: (context, state) => slideFadePage(state, const WelcomeScreen()),
       ),
       
       // Login Screen (no guard - public)
       GoRoute(
         path: AppRoutes.login,
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => slideFadePage(state, const LoginScreen()),
       ),
       
       // Register Screen (no guard - public)
       GoRoute(
         path: AppRoutes.register,
         name: 'register',
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) => slideFadePage(state, const RegisterScreen()),
       ),
       
       // Email Verification Screen (no guard - public, but requires email param)
       GoRoute(
         path: AppRoutes.emailVerification,
         name: 'email-verification',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final email = state.uri.queryParameters['email'] ?? '';
           final isNewUser = state.uri.queryParameters['isNewUser'] == 'true';
-          return EmailVerificationScreen(
-            email: email,
-            isNewUser: isNewUser,
+          return slideFadePage(
+            state,
+            EmailVerificationScreen(
+              email: email,
+              isNewUser: isNewUser,
+            ),
           );
         },
       ),
@@ -126,9 +155,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.profileWizard,
         name: 'profile-wizard',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final firstName = state.uri.queryParameters['firstName'] ?? '';
-          return ProfileWizardPage(initialFirstName: firstName.isNotEmpty ? firstName : null);
+          return slideFadePage(
+            state,
+            ProfileWizardPage(initialFirstName: firstName.isNotEmpty ? firstName : null),
+          );
         },
       ),
       
@@ -136,51 +168,54 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         name: 'onboarding',
-        builder: (context, state) => const OnboardingPage(),
+        pageBuilder: (context, state) => slideFadePage(state, const OnboardingPage()),
       ),
       
       // Onboarding Preferences Screen (requires auth and profile completion)
       GoRoute(
         path: AppRoutes.onboardingPreferences,
         name: 'onboarding-preferences',
-        builder: (context, state) => const OnboardingPreferencesScreen(),
+        pageBuilder: (context, state) => slideFadePage(state, const OnboardingPreferencesScreen()),
       ),
       
       // Home Page (requires auth - onboarding is optional and can be done later)
       GoRoute(
         path: AppRoutes.home,
         name: 'home',
-        builder: (context, state) => const HomePage(),
+        pageBuilder: (context, state) => slideFadePage(state, const HomePage()),
         routes: [
           // Discovery Tab (inherits auth from parent)
           GoRoute(
             path: 'discovery',
             name: 'discovery',
-            builder: (context, state) => const DiscoveryPage(),
+            pageBuilder: (context, state) => slideFadePage(state, const DiscoveryPage()),
           ),
 
           // Chat List Tab (inherits auth from parent)
           GoRoute(
             path: 'chat-list',
             name: 'chat-list',
-            builder: (context, state) => const ChatListPage(),
+            pageBuilder: (context, state) => slideFadePage(state, const ChatListPage()),
           ),
 
           // Notifications Tab (inherits auth from parent)
           GoRoute(
             path: 'notifications',
             name: 'notifications',
-            builder: (context, state) => const NotificationsScreen(),
+            pageBuilder: (context, state) => slideFadePage(state, const NotificationsScreen()),
           ),
 
           // Profile Tab (inherits auth from parent)
           GoRoute(
             path: 'profile',
             name: 'profile',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final userId = state.uri.queryParameters['userId'];
-              return ProfilePage(
-                userId: userId != null ? int.tryParse(userId) : null,
+              return slideFadePage(
+                state,
+                ProfilePage(
+                  userId: userId != null ? int.tryParse(userId) : null,
+                ),
               );
             },
           ),
@@ -189,28 +224,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'settings',
             name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
+            pageBuilder: (context, state) => slideFadePage(state, const SettingsScreen()),
           ),
           
           // Blocked Users (inherits auth from parent)
           GoRoute(
             path: 'blocked-users',
             name: 'blocked-users',
-            builder: (context, state) => const BlockedUsersScreen(),
+            pageBuilder: (context, state) => slideFadePage(state, const BlockedUsersScreen()),
           ),
           
           // Matches (inherits auth from parent)
           GoRoute(
             path: 'matches',
             name: 'matches',
-            builder: (context, state) => const MatchesScreen(),
+            pageBuilder: (context, state) => slideFadePage(state, const MatchesScreen()),
           ),
 
           // Google Play Billing Test (inherits auth from parent)
           GoRoute(
             path: 'google-play-billing-test',
             name: 'google-play-billing-test',
-            builder: (context, state) => const GooglePlayBillingTestScreen(),
+            pageBuilder: (context, state) => slideFadePage(state, const GooglePlayBillingTestScreen()),
           ),
         ],
       ),
@@ -219,21 +254,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.profileEdit,
         name: 'profile-edit',
-        builder: (context, state) => const ProfileEditPage(),
+        pageBuilder: (context, state) => slideFadePage(state, const ProfileEditPage()),
       ),
       
       // Profile Detail (requires auth)
       GoRoute(
         path: AppRoutes.profileDetail,
         name: 'profile-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final userId = state.uri.queryParameters['userId'];
           if (userId == null) {
-            // Invalid - redirect to home
-            return const HomePage();
+            return slideFadePage(state, const HomePage());
           }
-          return ProfileDetailScreen(
-            userId: int.parse(userId),
+          return slideFadePage(
+            state,
+            ProfileDetailScreen(userId: int.parse(userId)),
           );
         },
       ),
@@ -242,7 +277,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.billingHistory,
         name: 'billing-history',
-        builder: (context, state) => const BillingHistoryScreen(),
+        pageBuilder: (context, state) => slideFadePage(state, const BillingHistoryScreen()),
         redirect: (context, state) async {
           if (state.matchedLocation == AppRoutes.welcome) return null;
           final tokenStorage = ref.read(tokenStorageServiceProvider);
@@ -259,21 +294,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.chat,
         name: 'chat',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final userId = state.uri.queryParameters['userId'];
           final userName = state.uri.queryParameters['userName'];
           final avatarUrl = state.uri.queryParameters['avatarUrl'];
-          
-          if (userId == null) {
-            // Invalid - redirect to chat list
-            return const ChatListPage();
-          }
-          
-          return ChatPage(
-            userId: int.parse(userId),
-            userName: userName,
-            avatarUrl: avatarUrl,
-          );
+          final child = userId == null
+              ? const ChatListPage()
+              : ChatPage(
+                  userId: int.parse(userId),
+                  userName: userName,
+                  avatarUrl: avatarUrl,
+                );
+          return slideFadePage(state, child);
         },
       ),
     ],

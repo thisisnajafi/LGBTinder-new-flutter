@@ -37,6 +37,8 @@ class Message {
   final bool isDeleted;
   final String? attachmentUrl;
   final Map<String, dynamic>? metadata;
+  /// When true (free user, message from non-match): show blurred "You have a new message" in UI.
+  final bool isLocked;
 
   Message({
     required this.id,
@@ -49,6 +51,7 @@ class Message {
     this.isDeleted = false,
     this.attachmentUrl,
     this.metadata,
+    this.isLocked = false,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -67,6 +70,7 @@ class Message {
       metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : null,
+      isLocked: _safeParseBool(json['is_locked']),
     );
   }
   
@@ -85,6 +89,7 @@ class Message {
       'is_deleted': isDeleted,
       if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       if (metadata != null) 'metadata': metadata,
+      'is_locked': isLocked,
     };
   }
 }

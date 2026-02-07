@@ -246,6 +246,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'is_read': message.isRead,
       'type': message.messageType,
       'attachment_url': message.attachmentUrl,
+      'is_locked': message.isLocked,
     };
   }
 
@@ -375,11 +376,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  static const String _chatBgLight = 'assets/images/chat/chat-light.png';
+  static const String _chatBgDark = 'assets/images/chat/chat-dark.png';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final chatBgAsset = isDark ? _chatBgDark : _chatBgLight;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -426,8 +431,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           },
         ),
       ),
-      body: Column(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
+          // Themed chat background (assets/images/chat/chat-light.png | chat-dark.png)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(chatBgAsset),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          Column(
+            children: [
           // Pinned messages banner
           FutureBuilder<int>(
             future: _getPinnedMessagesCount(),
@@ -497,6 +516,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                         isRead: message['is_read'] ?? false,
                                         messageType: message['type'] ?? 'text',
                                         remainingSeconds: message['remaining_seconds'],
+                                        mediaUrl: message['attachment_url']?.toString(),
+                                        isLocked: message['is_locked'] == true,
                                       );
                                     },
                                   ),
@@ -532,6 +553,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             onEmojiTap: _handleEmojiTap,
             hintText: 'Type a message...',
             onTextChanged: _onTypingChanged,
+          ),
+            ],
           ),
         ],
       ),

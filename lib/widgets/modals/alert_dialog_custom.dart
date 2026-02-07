@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../buttons/gradient_button.dart';
 import '../../core/utils/app_icons.dart';
+import 'app_dialog.dart';
 
 /// Custom alert dialog widget
 /// Styled alert dialog with title, message, and action button
@@ -40,7 +41,7 @@ class AlertDialogCustom extends ConsumerWidget {
     String? iconPath, // SVG icon path
     Color? iconColor,
   }) {
-    return showDialog(
+    return showAppDialog(
       context: context,
       builder: (context) => AlertDialogCustom(
         title: title,

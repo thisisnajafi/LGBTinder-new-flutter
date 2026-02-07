@@ -7,6 +7,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../badges/notification_badge.dart';
+import '../buttons/scale_tap_feedback.dart';
 
 /// Bottom navigation bar widget
 /// Glass-style bottom navigation with 5 main tabs
@@ -125,10 +126,21 @@ class BottomNavbar extends ConsumerWidget {
     final isActive = currentIndex == index;
     final iconColor = isActive ? activeColor : inactiveColor;
 
+    final iconWidget = svgIcon != null
+        ? AppSvgIcon(
+            assetPath: svgIcon,
+            size: 24,
+            color: isActive ? Colors.white : inactiveColor,
+          )
+        : Icon(
+            icon!,
+            color: isActive ? Colors.white : inactiveColor,
+            size: 24,
+          );
+
     return Expanded(
-      child: GestureDetector(
+      child: ScaleTapFeedback(
         onTap: () => onTap(index),
-        behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -141,17 +153,13 @@ class BottomNavbar extends ConsumerWidget {
                     color: isActive ? activeColor.withOpacity(0.1) : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
-                  child: svgIcon != null
-                      ? AppSvgIcon(
-                          assetPath: svgIcon,
-                          size: 24,
-                          color: iconColor,
+                  child: isActive
+                      ? ShaderMask(
+                          blendMode: BlendMode.srcIn,
+                          shaderCallback: (bounds) => AppColors.prideGradient.createShader(bounds),
+                          child: iconWidget,
                         )
-                      : Icon(
-                          icon!,
-                          color: iconColor,
-                          size: 24,
-                        ),
+                      : iconWidget,
                 ),
                 if (badge != null)
                   Positioned(
@@ -170,9 +178,22 @@ class BottomNavbar extends ConsumerWidget {
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
+            // Thin gradient underline for active tab only
+            if (isActive) ...[
+              SizedBox(height: AppSpacing.spacingXS),
+              Container(
+                width: 24,
+                height: 2,
+                decoration: const BoxDecoration(
+                  gradient: AppColors.prideGradient,
+                  borderRadius: BorderRadius.all(Radius.circular(1)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
+

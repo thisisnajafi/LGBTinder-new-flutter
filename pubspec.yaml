@@ -152,6 +152,7 @@ flutter:
   # Assets (images, animations, lottie, sounds)
   assets:
     - assets/images/
+    - assets/images/chat/
     - assets/images/logo/
     - assets/logo/
     - assets/images/onboarding/

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/constants/animation_constants.dart';
 
 /// Auth text field widget - reusable text input for authentication forms
 class AuthTextField extends ConsumerStatefulWidget {
@@ -108,78 +109,90 @@ class _AuthTextFieldState extends ConsumerState<AuthTextField> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = _hasFocus
-        ? AppColors.primaryLight
-        : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
+    final unfocusedColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final focusedColor = AppColors.primaryLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final hintColor = textColor.withValues(alpha: 0.6);
+    final duration = AppAnimations.animationsEnabled(context)
+        ? AppAnimations.feedbackShort
+        : Duration.zero;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: _controller,
-          focusNode: _focusNode,
-          keyboardType: widget.keyboardType,
-          textInputAction: widget.textInputAction,
-          obscureText: widget.obscureText,
-          autocorrect: widget.autocorrect,
-          enableSuggestions: widget.enableSuggestions,
-          maxLength: widget.maxLength,
-          maxLines: widget.maxLines,
-          minLines: widget.minLines,
-          inputFormatters: widget.inputFormatters,
-          autofocus: widget.autofocus,
-          readOnly: widget.readOnly,
-          enabled: widget.enabled,
-          style: AppTypography.bodyLarge.copyWith(color: textColor),
-          decoration: InputDecoration(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            hintStyle: AppTypography.bodyMedium.copyWith(color: hintColor),
-            labelStyle: AppTypography.bodyMedium.copyWith(
-              color: _hasFocus ? AppColors.primaryLight : textColor,
-            ),
-            prefixIcon: widget.prefixIcon,
-            suffixIcon: widget.suffixIcon,
-            prefixText: widget.prefixText,
-            suffixText: widget.suffixText,
-            prefixStyle: AppTypography.bodyMedium.copyWith(color: textColor),
-            suffixStyle: AppTypography.bodyMedium.copyWith(color: textColor),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: AppColors.feedbackError, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: AppColors.feedbackError, width: 2),
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            contentPadding: widget.contentPadding ?? EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingMD,
-              vertical: AppSpacing.spacingMD,
-            ),
-            counterStyle: AppTypography.bodySmall.copyWith(color: hintColor),
-          ),
-          validator: (value) {
-            _errorText = widget.validator?.call(value);
-            return _errorText;
+        TweenAnimationBuilder<double>(
+          key: ValueKey(_hasFocus),
+          tween: Tween(begin: _hasFocus ? 0.0 : 1.0, end: _hasFocus ? 1.0 : 0.0),
+          duration: duration,
+          curve: AppAnimations.curveDefault,
+          builder: (context, value, _) {
+            final borderColor = Color.lerp(unfocusedColor, focusedColor, value)!;
+            final borderWidth = 1.0 + value;
+            return TextFormField(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              obscureText: widget.obscureText,
+              autocorrect: widget.autocorrect,
+              enableSuggestions: widget.enableSuggestions,
+              maxLength: widget.maxLength,
+              maxLines: widget.maxLines,
+              minLines: widget.minLines,
+              inputFormatters: widget.inputFormatters,
+              autofocus: widget.autofocus,
+              readOnly: widget.readOnly,
+              enabled: widget.enabled,
+              style: AppTypography.bodyLarge.copyWith(color: textColor),
+              decoration: InputDecoration(
+                labelText: widget.labelText,
+                hintText: widget.hintText,
+                hintStyle: AppTypography.bodyMedium.copyWith(color: hintColor),
+                labelStyle: AppTypography.bodyMedium.copyWith(
+                  color: Color.lerp(textColor, focusedColor, value),
+                ),
+                prefixIcon: widget.prefixIcon,
+                suffixIcon: widget.suffixIcon,
+                prefixText: widget.prefixText,
+                suffixText: widget.suffixText,
+                prefixStyle: AppTypography.bodyMedium.copyWith(color: textColor),
+                suffixStyle: AppTypography.bodyMedium.copyWith(color: textColor),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  borderSide: BorderSide(color: borderColor, width: borderWidth),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  borderSide: BorderSide(color: borderColor, width: borderWidth),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  borderSide: BorderSide(color: borderColor, width: borderWidth),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  borderSide: BorderSide(color: AppColors.feedbackError, width: 1),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  borderSide: BorderSide(color: AppColors.feedbackError, width: 2),
+                ),
+                filled: true,
+                fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                contentPadding: widget.contentPadding ?? EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spacingMD,
+                  vertical: AppSpacing.spacingMD,
+                ),
+                counterStyle: AppTypography.bodySmall.copyWith(color: hintColor),
+              ),
+              validator: (value) {
+                _errorText = widget.validator?.call(value);
+                return _errorText;
+              },
+              onChanged: widget.onChanged,
+              onFieldSubmitted: (_) => widget.onSubmitted?.call(),
+            );
           },
-          onChanged: widget.onChanged,
-          onFieldSubmitted: (_) => widget.onSubmitted?.call(),
         ),
 
         // Error message with animation

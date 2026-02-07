@@ -6,6 +6,7 @@ import 'package:record/record.dart';
 import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/constants/animation_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../models/message_attachment.dart';
@@ -204,39 +205,44 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
 
                 const SizedBox(width: 8),
 
-                // Send button
+                // Send button — color and opacity transition when text is entered (~150 ms)
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final size = (MediaQuery.sizeOf(context).width * 0.12).clamp(44.0, 56.0);
-                    return Container(
+                    final hasText = _textController.text.trim().isNotEmpty;
+                    return AnimatedContainer(
+                      duration: AppAnimations.feedbackShort,
+                      curve: AppAnimations.curveDefault,
                       width: size,
                       height: size,
                       decoration: BoxDecoration(
-                    color: _textController.text.trim().isNotEmpty
-                        ? AppColors.primaryLight
-                        : Colors.grey[400],
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: _textController.text.trim().isNotEmpty
-                        ? _sendMessage
-                        : null,
-                    icon: chatState.isSendingMessage
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : AppSvgIcon(
-                            assetPath: AppIcons.send,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                    tooltip: 'Send message',
-                  ),
+                        color: hasText
+                            ? AppColors.primaryLight
+                            : Colors.grey[400],
+                        shape: BoxShape.circle,
+                      ),
+                      child: AnimatedOpacity(
+                        duration: AppAnimations.feedbackShort,
+                        opacity: hasText ? 1.0 : 0.7,
+                        child: IconButton(
+                          onPressed: hasText ? _sendMessage : null,
+                          icon: chatState.isSendingMessage
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : AppSvgIcon(
+                                  assetPath: AppIcons.send,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                          tooltip: 'Send message',
+                        ),
+                      ),
                     );
                   },
                 ),
