@@ -67,7 +67,7 @@ class DeepLinkingService {
 
     // General notification → Navigate to notifications screen
     registerHandler('notification', (data) async {
-      _router?.go('/notifications');
+      _router?.go('/home/notifications');
     });
 
     // Profile view → Navigate to user profile
@@ -199,7 +199,7 @@ class DeepLinkingService {
           }
           break;
         case 'notifications':
-          _router?.go('/notifications');
+          _router?.go('/home/notifications');
           break;
         case 'discover':
           _router?.go('/discover');

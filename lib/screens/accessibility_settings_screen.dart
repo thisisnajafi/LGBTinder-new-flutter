@@ -1,4 +1,4 @@
-﻿// Screen: AccessibilitySettingsScreen
+// Screen: AccessibilitySettingsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -120,7 +120,7 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
                     Text(
                       '${(_fontSizeScale * 100).toInt()}%',
                       style: AppTypography.body.copyWith(
-                        color: AppColors.accentPurple,
+                        color: textColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -374,7 +374,7 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
                       Text(
                         '${_touchTargetSize.toInt()}x${_touchTargetSize.toInt()}',
                         style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
+                          color: textColor,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -572,7 +572,7 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
                       if (isSelected)
                         Icon(
                           Icons.check_circle,
-                          color: AppColors.accentPurple,
+                          color: textColor,
                           size: 20,
                         ),
                     ],

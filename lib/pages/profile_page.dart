@@ -1,5 +1,6 @@
-﻿// Screen: ProfilePage
+// Screen: ProfilePage
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -83,6 +84,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         });
       }
     } on ApiError catch (e) {
+      if (kDebugMode) {
+        debugPrint('[PROFILE] _loadProfile ApiError: ${e.message}');
+        debugPrint('[PROFILE] ApiError code: ${e.code}');
+      }
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -90,7 +95,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('[PROFILE] _loadProfile exception: $e');
+        debugPrint('[PROFILE] stack: $stack');
+      }
       if (mounted) {
         setState(() {
           _hasError = true;

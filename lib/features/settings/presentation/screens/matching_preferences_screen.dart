@@ -6,6 +6,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../widgets/navbar/app_bar_custom.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/common/section_header.dart';
 import '../../data/models/matching_preferences.dart';
@@ -36,6 +37,7 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     _ageMax = 100;
     _distance = 50;
     _discoveryVisibility = 'everyone';
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   Future<void> _load() async {
@@ -46,6 +48,9 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     try {
       final service = ref.read(matchingPreferencesServiceProvider);
       final prefs = await service.getPreferences();
+      if (kDebugMode) {
+        debugPrint('[DISCOVERY_PREFS] loaded: ageMin=${prefs.ageMin} ageMax=${prefs.ageMax} distance=${prefs.distance} visibility=${prefs.discoveryVisibility}');
+      }
       if (mounted) {
         setState(() {
           _ageMin = prefs.ageMin;
@@ -56,7 +61,11 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
           _initialLoadDone = true;
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('[DISCOVERY_PREFS] _load error: $e');
+        debugPrint('[DISCOVERY_PREFS] stack: $stack');
+      }
       if (mounted) {
         setState(() {
           _error = e.toString().replaceFirst(RegExp(r'^Exception:?\s*'), '');
@@ -79,15 +88,28 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
         distance: _distance,
         discoveryVisibility: _discoveryVisibility,
       );
-      await service.updatePreferences(prefs);
+      final updated = await service.updatePreferences(prefs);
       ref.invalidate(matchingPreferencesProvider);
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _ageMin = updated.ageMin;
+          _ageMax = updated.ageMax;
+          _distance = updated.distance;
+          _discoveryVisibility = updated.discoveryVisibility;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Discovery preferences saved')),
         );
       }
-    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[DISCOVERY_PREFS] saved: ageMin=${updated.ageMin} ageMax=${updated.ageMax} distance=${updated.distance}');
+      }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('[DISCOVERY_PREFS] _save error: $e');
+        debugPrint('[DISCOVERY_PREFS] stack: $stack');
+      }
       if (mounted) {
         setState(() {
           _saving = false;
@@ -106,11 +128,6 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
-
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBarCustom(
@@ -119,7 +136,9 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
       ),
       body: _loading && _error == null
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
               padding: EdgeInsets.all(AppSpacing.spacingLG),
               children: [
                 if (_error != null) ...[
@@ -287,6 +306,7 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                 ),
               ],
             ),
+              ),
     );
   }
 }

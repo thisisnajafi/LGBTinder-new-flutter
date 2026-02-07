@@ -68,6 +68,19 @@ class DiscoveryService {
       List<dynamic>? dataList;
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
+        // API returns { suggestions: [{ user: {...}, match_score, ... }], total_suggestions, view_limit }
+        if (data['suggestions'] != null && data['suggestions'] is List) {
+          final suggestions = data['suggestions'] as List;
+          return suggestions
+              .map((item) {
+                final map = item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map);
+                final user = map['user'];
+                if (user == null || user is! Map<String, dynamic>) return null;
+                return DiscoveryProfile.fromJson(user as Map<String, dynamic>);
+              })
+              .whereType<DiscoveryProfile>()
+              .toList();
+        }
         if (data['data'] != null && data['data'] is List) {
           dataList = data['data'] as List;
         }
@@ -199,6 +212,18 @@ class DiscoveryService {
       List<dynamic>? dataList;
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
+        if (data['suggestions'] != null && data['suggestions'] is List) {
+          final suggestions = data['suggestions'] as List;
+          return suggestions
+              .map((item) {
+                final map = item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map);
+                final user = map['user'];
+                if (user == null || user is! Map<String, dynamic>) return null;
+                return DiscoveryProfile.fromJson(user as Map<String, dynamic>);
+              })
+              .whereType<DiscoveryProfile>()
+              .toList();
+        }
         if (data['data'] != null && data['data'] is List) {
           dataList = data['data'] as List;
         }

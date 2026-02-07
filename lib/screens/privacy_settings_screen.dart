@@ -523,7 +523,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                       if (isSelected)
                         Icon(
                           Icons.check_circle,
-                          color: AppColors.accentPurple,
+                          color: textColor,
                           size: 20,
                         ),
                     ],

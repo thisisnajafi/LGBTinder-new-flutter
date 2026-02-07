@@ -26,7 +26,7 @@ import '../features/payments/providers/payment_providers.dart';
 import '../features/payments/data/models/subscription_plan.dart';
 import '../features/payments/presentation/screens/subscription_management_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
-import '../pages/onboarding_page.dart';
+import '../screens/onboarding/onboarding_preferences_screen.dart';
 
 /// Settings screen - Main settings overview (Task 5: summary from GET /api/settings)
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -186,7 +186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const OnboardingPage(),
+                    builder: (context) => const OnboardingPreferencesScreen(),
                   ),
                 );
               },
@@ -437,10 +437,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       leading: iconPath != null
           ? AppSvgIcon(
               assetPath: iconPath,
-              color: AppColors.accentPurple,
+              color: textColor,
               size: 24,
             )
-          : Icon(icon, color: AppColors.accentPurple),
+          : Icon(icon, color: textColor),
       title: Text(
         title,
         style: AppTypography.body.copyWith(color: textColor),

@@ -349,12 +349,12 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.accentPurple.withOpacity(0.2),
+                color: textColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(AppRadius.radiusSM),
               ),
               child: Icon(
                 icon,
-                color: AppColors.accentPurple,
+                color: textColor,
                 size: 20,
               ),
             ),

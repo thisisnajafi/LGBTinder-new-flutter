@@ -64,12 +64,12 @@ class DiscoveryProfile {
       city: json['city']?.toString(),
       country: json['country']?.toString(),
       gender: json['gender']?.toString(),
-      profileBio: json['profile_bio']?.toString(),
+      profileBio: json['profile_bio']?.toString() ?? json['bio']?.toString(),
       height: json['height'] != null ? ((json['height'] is int) ? json['height'] as int : int.tryParse(json['height'].toString())) : null,
       imageUrls: json['images'] != null && json['images'] is List
           ? (json['images'] as List).map((e) => e.toString()).toList()
           : null,
-      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString() ?? json['avatar']?.toString(),
       distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
       compatibilityScore: json['compatibility_score'] != null ? ((json['compatibility_score'] is int) ? json['compatibility_score'] as int : int.tryParse(json['compatibility_score'].toString())) : null,
       isSuperliked: json['is_superliked'] == true || json['is_superliked'] == 1,

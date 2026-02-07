@@ -1,4 +1,4 @@
-﻿// Screen: SafetySettingsScreen
+// Screen: SafetySettingsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -280,7 +280,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     required Color secondaryTextColor,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.accentPurple),
+      leading: Icon(icon, color: textColor),
       title: Text(
         title,
         style: AppTypography.body.copyWith(

@@ -571,7 +571,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                             ),
                             onPressed: () {
-                              context.go('/notifications');
+                              context.go('/home/notifications');
                             },
                           ),
                           if (notificationCount != null && notificationCount > 0)
