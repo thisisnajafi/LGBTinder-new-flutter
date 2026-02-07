@@ -57,19 +57,24 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Widget _buildActionButton({
-    required Color color,
+    required List<Color> gradientColors,
     required String icon,
     required VoidCallback onPressed,
   }) {
+    final baseColor = gradientColors.first;
     return Container(
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: color,
         shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: baseColor.withOpacity(0.4),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -89,21 +94,121 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   void _handleAction(String action) {
     if (_cards.isEmpty) return;
 
-    // Get the current top card
     final currentCard = _cards.first;
     final userId = currentCard['id'] as int;
 
     switch (action) {
       case 'like':
       case 'dislike':
+        _handleSwipe(userId, action, fromRow: true);
+        break;
       case 'superlike':
-        _handleSwipe(userId, action);
+        _showSuperlikeBottomSheet(userId);
         break;
       case 'message':
-        // Navigate to chat if there's a match or open profile
         _handleCardTap(userId);
         break;
     }
+  }
+
+  void _showSuperlikeBottomSheet(int userId) {
+    final controller = TextEditingController();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final hasText = controller.text.trim().isNotEmpty;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: EdgeInsets.all(AppSpacing.spacingLG),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Send a Super Like',
+                        style: AppTypography.h3.copyWith(
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.spacingMD),
+                      Text(
+                        'Add a message to stand out (required)',
+                        style: AppTypography.body.copyWith(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.spacingMD),
+                      TextField(
+                        controller: controller,
+                        maxLines: 3,
+                        maxLength: 200,
+                        decoration: InputDecoration(
+                          hintText: 'Type your message...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                          ),
+                          filled: true,
+                          fillColor: isDark
+                              ? AppColors.backgroundDark
+                              : AppColors.backgroundLight,
+                        ),
+                        onChanged: (_) => setModalState(() {}),
+                      ),
+                      SizedBox(height: AppSpacing.spacingLG),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed: hasText
+                                ? () {
+                                    final message = controller.text.trim();
+                                    Navigator.pop(context);
+                                    _handleSwipe(userId, 'superlike', fromRow: true);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Super Like sent!'),
+                                          backgroundColor: AppColors.onlineGreen,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.warningYellow,
+                              foregroundColor: Colors.black87,
+                            ),
+                            child: const Text('Send Super Like'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() => controller.dispose());
   }
 
   @override
@@ -185,7 +290,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     };
   }
 
-  Future<void> _handleSwipe(int userId, String action) async {
+  Future<void> _handleSwipe(int userId, String action, {bool fromRow = false}) async {
     try {
       // Check limits before action
       final planLimitsService = ref.read(planLimitsServiceProvider);
@@ -223,26 +328,26 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       switch (action) {
         case 'like':
           final response = await likesService.likeUser(userId);
-          // Increment usage locally (optimistic update)
           planLimitsService.incrementUsage('swipes');
           planLimitsService.incrementUsage('likes');
           if (response.isMatch && mounted) {
             _showMatchDialog(response.match as match_models.Match?);
           }
+          if (fromRow) _advanceCardIfCurrent(userId);
           break;
         case 'dislike':
           await likesService.dislikeUser(userId);
-          // Increment usage
           planLimitsService.incrementUsage('swipes');
+          if (fromRow) _advanceCardIfCurrent(userId);
           break;
         case 'superlike':
           final response = await likesService.superlikeUser(userId);
-          // Increment usage
           planLimitsService.incrementUsage('swipes');
           planLimitsService.incrementUsage('superlikes');
           if (response.isMatch && mounted) {
             _showMatchDialog(response.match as match_models.Match?);
           }
+          if (fromRow) _advanceCardIfCurrent(userId);
           break;
       }
     } on ApiError catch (e) {
@@ -304,6 +409,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         },
       ),
     );
+  }
+
+  void _advanceCardIfCurrent(int userId) {
+    if (!mounted || _cards.isEmpty) return;
+    if ((_cards.first['id'] as int) == userId) {
+      setState(() => _cards.removeAt(0));
+    }
   }
 
   void _handleCardTap(int userId) {
@@ -640,9 +752,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           children: [
             // Limit indicator
             _buildLimitIndicator(),
-            // Card stack
+            // Card stack with top/bottom margin so shadow doesn't sit under header or buttons
             Expanded(
-              child: _isLoading
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 16),
+                child: _isLoading
                   ? SkeletonDiscovery()
                   : _hasError
                       ? ErrorDisplayWidget(
@@ -656,8 +770,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                           isLoading: _isLoading,
                           onRefresh: () => _loadCards(refresh: true),
                         ),
+              ),
             ),
-            // Action buttons row
+            // Action buttons row: Nope, Super Like (center), Like — Chat removed
             if (!_isLoading && !_hasError && _cards.isNotEmpty)
               Container(
                 padding: EdgeInsets.symmetric(
@@ -667,32 +782,34 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Dislike button (X, blue)
+                    // Nope (X, blue gradient)
                     _buildActionButton(
-                      color: const Color(0xFF4A90E2), // Light blue
-                      icon: AppIcons.close, // X icon
+                      gradientColors: [
+                        const Color(0xFF5B9BD5),
+                        const Color(0xFF4A90E2),
+                      ],
+                      icon: AppIcons.close,
                       onPressed: () => _handleAction('dislike'),
                     ),
                     SizedBox(width: AppSpacing.spacingXL),
-                    // Message button (chat, purple)
+                    // Super Like (star, yellow gradient) — centered
                     _buildActionButton(
-                      color: AppColors.accentPurple,
-                      icon: AppIcons.message, // Chat icon
-                      onPressed: () => _handleAction('message'),
-                    ),
-                    SizedBox(width: AppSpacing.spacingXL),
-                    // Like button (heart, red)
-                    _buildActionButton(
-                      color: AppColors.notificationRed,
-                      icon: AppIcons.heart,
-                      onPressed: () => _handleAction('like'),
-                    ),
-                    SizedBox(width: AppSpacing.spacingXL),
-                    // Super Like button (star, yellow)
-                    _buildActionButton(
-                      color: AppColors.warningYellow,
+                      gradientColors: [
+                        AppColors.warningYellow,
+                        const Color(0xFFE6B800),
+                      ],
                       icon: AppIcons.star,
                       onPressed: () => _handleAction('superlike'),
+                    ),
+                    SizedBox(width: AppSpacing.spacingXL),
+                    // Like (heart, red gradient)
+                    _buildActionButton(
+                      gradientColors: [
+                        const Color(0xFFE84A5F),
+                        AppColors.notificationRed,
+                      ],
+                      icon: AppIcons.heart,
+                      onPressed: () => _handleAction('like'),
                     ),
                   ],
                 ),

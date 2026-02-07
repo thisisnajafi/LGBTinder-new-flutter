@@ -1,4 +1,4 @@
-﻿// Widget: SwipeableCard
+// Widget: SwipeableCard
 // Swipeable card component
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -92,14 +92,19 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+        margin: EdgeInsets.only(
+          left: AppSpacing.spacingLG,
+          right: AppSpacing.spacingLG,
+          top: AppSpacing.spacingMD,
+          bottom: AppSpacing.spacingMD,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.radiusLG),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
