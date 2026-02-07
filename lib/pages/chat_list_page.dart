@@ -1,4 +1,4 @@
-﻿// Screen: ChatListPage
+// Screen: ChatListPage
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -107,6 +107,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   }
 
   void _handleChatTap(int userId) {
+    if (userId <= 0) return;
     Navigator.push(
       context,
       MaterialPageRoute(

@@ -37,23 +37,25 @@ class Chat {
       chatId = (json['chat_id'] is int) ? json['chat_id'] as int : int.tryParse(json['chat_id'].toString()) ?? 0;
     }
     
-    // Get user ID
+    // Get user ID (other user in conversation). Backend getChatUsers returns 'id' for the other user, not 'user_id'.
     int userId = 0;
     if (json['user_id'] != null) {
       userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
+    } else if (json['id'] != null) {
+      userId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
     }
-    
+
     // Get first name - provide default if missing
-    String firstName = json['first_name']?.toString() ?? 
-                       json['name']?.toString() ?? 
+    String firstName = json['first_name']?.toString() ??
+                       json['name']?.toString() ??
                        'User';
-    
+
     return Chat(
       id: chatId,
       userId: userId,
       firstName: firstName,
       lastName: json['last_name']?.toString(),
-      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString() ?? json['avatar_url']?.toString(),
       lastMessage: json['last_message'] != null && json['last_message'] is Map
           ? Message.fromJson(Map<String, dynamic>.from(json['last_message'] as Map))
           : null,

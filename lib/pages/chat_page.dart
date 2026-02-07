@@ -1,4 +1,4 @@
-﻿// Screen: ChatPage
+// Screen: ChatPage
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,8 +65,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
     _loadCurrentUserId();
-    _loadMessages();
-    _initializeWebSocket();
+    if (widget.userId > 0) {
+      _loadMessages();
+      _initializeWebSocket();
+    } else {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Invalid conversation. Please go back and try again.';
+      });
+    }
   }
 
   @override
@@ -173,6 +181,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _loadMessages() async {
+    if (widget.userId <= 0) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = 'Invalid conversation. Please go back and try again.';
+        });
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -240,6 +259,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<int> _getPinnedMessagesCount() async {
+    if (widget.userId <= 0) return 0;
     try {
       final chatService = ref.read(chatServiceProvider);
       final count = await chatService.getPinnedMessagesCount(widget.userId);
