@@ -16,6 +16,7 @@ class LikesService {
         ApiEndpoints.likesLike,
         data: LikeActionRequest(likedUserId: likedUserId).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
+        deduplicateIdempotent: true,
       );
 
       if (response.isSuccess && response.data != null) {
@@ -35,6 +36,7 @@ class LikesService {
         ApiEndpoints.likesDislike,
         data: LikeActionRequest(likedUserId: likedUserId).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
+        deduplicateIdempotent: true,
       );
 
       if (!response.isSuccess) {
@@ -58,6 +60,7 @@ class LikesService {
         ApiEndpoints.likesSuperlike,
         data: LikeActionRequest(likedUserId: likedUserId).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
+        deduplicateIdempotent: true,
       );
 
       if (response.isSuccess && response.data != null) {

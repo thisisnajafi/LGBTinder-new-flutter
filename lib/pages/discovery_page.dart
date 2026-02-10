@@ -11,8 +11,10 @@ import '../widgets/cards/card_stack_manager.dart';
 import '../core/widgets/loading_indicator.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_discovery.dart';
+import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/discover/providers/discovery_providers.dart';
 import '../features/discover/data/models/discovery_profile.dart';
+import '../features/profile/providers/profile_page_cache_provider.dart';
 import '../features/matching/providers/likes_providers.dart';
 import '../features/matching/data/models/match.dart' as match_models;
 import '../features/payments/providers/payment_providers.dart';
@@ -34,59 +36,50 @@ import '../features/user/providers/user_providers.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
-  const DiscoveryPage({Key? key}) : super(key: key);
+  const DiscoveryPage({
+    Key? key,
+    this.selectedTabIndex,
+    this.discoveryTabIndex,
+  }) : super(key: key);
+
+  /// When used inside a tab shell (e.g. HomePage), pass current tab index so we call nearby-suggestions when user switches to this tab.
+  final int? selectedTabIndex;
+  final int? discoveryTabIndex;
 
   @override
   ConsumerState<DiscoveryPage> createState() => _DiscoveryPageState();
 }
 
 class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
-  bool _isLoading = false;
-  bool _hasError = false;
-  String? _errorMessage;
-  Object? _error;
-  StackTrace? _errorStackTrace;
-  List<Map<String, dynamic>> _cards = [];
-  int _currentPage = 1;
-  final int _pageSize = 20;
-
   // Filter state
   Map<String, dynamic>? _activeFilters;
-
-  /// Build debug-friendly error details for discover load failures
-  String _buildErrorDebugDetails() {
-    final parts = <String>[];
-    if (_error != null) {
-      parts.add('Type: ${_error.runtimeType}');
-      parts.add('Message: ${_error.toString()}');
-      if (_error is ApiError) {
-        final ae = _error! as ApiError;
-        if (ae.code != null) parts.add('HTTP: ${ae.code}');
-        if (ae.errorCode != null) parts.add('Code: ${ae.errorCode}');
-        if (ae.responseData != null && ae.responseData!.isNotEmpty) {
-          try {
-            parts.add('Response: ${ae.responseData}');
-          } catch (_) {
-            parts.add('Response: (unable to serialize)');
-          }
-        }
-      }
-    }
-    if (_errorStackTrace != null) {
-      final lines = _errorStackTrace.toString().split('\n').take(12);
-      parts.add('Stack:\n${lines.join('\n')}');
-    }
-    return parts.join('\n');
-  }
 
   @override
   void initState() {
     super.initState();
-    // Refresh cached current user when discover page is shown (cache first, then API)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(cachedCurrentUserProvider.notifier).load();
+      ref.read(profilePageCacheProvider.notifier).refresh();
+      ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
     });
-    _loadCards();
+  }
+
+  @override
+  void didUpdateWidget(DiscoveryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nowSelected = widget.selectedTabIndex != null &&
+        widget.discoveryTabIndex != null &&
+        widget.selectedTabIndex == widget.discoveryTabIndex;
+    final wasSelected = oldWidget.selectedTabIndex != null &&
+        oldWidget.discoveryTabIndex != null &&
+        oldWidget.selectedTabIndex == oldWidget.discoveryTabIndex;
+    if (nowSelected && !wasSelected) {
+      ref.read(profilePageCacheProvider.notifier).refresh();
+      ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
+      ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
+        threshold: kDiscoverStackBufferThreshold,
+        filters: _activeFilters,
+      );
+    }
   }
 
   String _getGreeting() {
@@ -214,10 +207,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   void _handleAction(String action) {
-    if (_cards.isEmpty) return;
+    final stack = ref.read(discoverCacheProvider).stack;
+    if (stack.isEmpty) return;
 
-    final currentCard = _cards.first;
-    final userId = currentCard['id'] as int;
+    final userId = stack.first.id;
 
     switch (action) {
       case 'like':
@@ -333,67 +326,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     ).whenComplete(() => controller.dispose());
   }
 
-  @override
-  Future<void> _loadCards({bool refresh = false}) async {
-    if (refresh) {
-      _currentPage = 1;
-      _cards.clear();
-    }
-
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = null;
-      _error = null;
-      _errorStackTrace = null;
-    });
-
-    try {
-      final discoveryService = ref.read(discoveryServiceProvider);
-      List<DiscoveryProfile> profiles;
-      
-      // Always use nearby suggestions with optional filters
-      profiles = await discoveryService.getNearbySuggestions(
-        page: _currentPage,
-        limit: _pageSize,
-        filters: _activeFilters,
-      );
-
-      if (mounted) {
-        setState(() {
-          // Convert DiscoveryProfile to Map format for CardStackManager
-          final newCards = profiles.map((profile) => _profileToCardMap(profile)).toList();
-          if (refresh) {
-            _cards = newCards;
-          } else {
-            _cards.addAll(newCards);
-          }
-          _isLoading = false;
-        });
-      }
-    } on ApiError catch (e, st) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.message;
-          _error = e;
-          _errorStackTrace = st;
-          _isLoading = false;
-        });
-      }
-    } catch (e, st) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.toString();
-          _error = e;
-          _errorStackTrace = st;
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   Map<String, dynamic> _profileToCardMap(DiscoveryProfile profile) {
     return {
       'id': profile.id,
@@ -414,100 +346,93 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Future<void> _handleSwipe(int userId, String action, {bool fromRow = false}) async {
-    try {
-      // Check limits before action
-      final planLimitsService = ref.read(planLimitsServiceProvider);
-      
-      // Check swipe limit
-      if (action == 'like' || action == 'dislike') {
-        final hasReached = await planLimitsService.hasReachedSwipeLimit();
-        if (hasReached && mounted) {
-          final limits = await planLimitsService.getPlanLimits();
-          UpgradeDialog.showSwipeLimitDialog(
-            context, 
-            limits.usage.swipes.usedToday,
-            limits.usage.swipes.limit,
-          );
-          return;
-        }
+    final planLimitsService = ref.read(planLimitsServiceProvider);
+
+    if (action == 'like' || action == 'dislike') {
+      final hasReached = await planLimitsService.hasReachedSwipeLimit();
+      if (hasReached && mounted) {
+        final limits = await planLimitsService.getPlanLimits();
+        UpgradeDialog.showSwipeLimitDialog(
+          context,
+          limits.usage.swipes.usedToday,
+          limits.usage.swipes.limit,
+        );
+        return;
       }
-      
-      // Check superlike limit
-      if (action == 'superlike') {
-        final hasReached = await planLimitsService.hasReachedSuperlikeLimit();
-        if (hasReached && mounted) {
-          final limits = await planLimitsService.getPlanLimits();
-          UpgradeDialog.showSuperlikeLimitDialog(
-            context,
-            limits.usage.superlikes.usedToday,
-            limits.usage.superlikes.limit,
-          );
-          return;
-        }
+    }
+
+    if (action == 'superlike') {
+      final hasReached = await planLimitsService.hasReachedSuperlikeLimit();
+      if (hasReached && mounted) {
+        final limits = await planLimitsService.getPlanLimits();
+        UpgradeDialog.showSuperlikeLimitDialog(
+          context,
+          limits.usage.superlikes.usedToday,
+          limits.usage.superlikes.limit,
+        );
+        return;
       }
-      
-      final likesService = ref.read(likesServiceProvider);
-      
-      switch (action) {
-        case 'like':
-          final response = await likesService.likeUser(userId);
-          planLimitsService.incrementUsage('swipes');
-          planLimitsService.incrementUsage('likes');
-          if (response.isMatch && mounted) {
-            _showMatchDialog(response.match as match_models.Match?);
-          }
-          _advanceCardIfCurrent(userId);
-          break;
-        case 'dislike':
-          final dislikeResponse = await likesService.dislikeUser(userId);
-          planLimitsService.incrementUsage('swipes');
-          _advanceCardIfCurrent(userId);
-          if (mounted && dislikeResponse.theyLikedYou) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("They liked you — you passed."),
-                backgroundColor: AppColors.accentPurple,
-              ),
+    }
+
+    ref.read(discoveryActedOnUserIdsProvider.notifier).update((s) => {...s, userId});
+    ref.read(discoverCacheProvider.notifier).recordSwipe(
+      userId,
+      action,
+      onMatch: (m) {
+        if (m != null && mounted) _showMatchDialog(m);
+      },
+      onLimitError: (e) {
+        if (!mounted) return;
+        _showLimitError(e, action);
+      },
+      onTheyLikedYou: () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("They liked you — you passed."),
+              backgroundColor: AppColors.accentPurple,
+            ),
+          );
+        }
+      },
+    );
+    ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
+      threshold: kDiscoverStackBufferThreshold,
+      filters: _activeFilters,
+    );
+  }
+
+  void _showLimitError(dynamic e, String action) {
+    if (e is ApiError) {
+      final errorCode = e.responseData?['error_code'] as String?;
+      final data = e.responseData?['data'] as Map<String, dynamic>?;
+      if (errorCode == 'DAILY_LIKE_LIMIT_REACHED') {
+        final used = (data?['used_today'] as num?)?.toInt() ?? 0;
+        final limit = (data?['daily_limit'] as num?)?.toInt() ?? 8;
+        UpgradeDialog.showLikeLimitDialog(context, used, limit);
+      } else if (errorCode == 'DAILY_LIMIT_REACHED') {
+        ref.read(planLimitsServiceProvider).getPlanLimits().then((limits) {
+          if (mounted) {
+            UpgradeDialog.showSwipeLimitDialog(
+              context,
+              limits.usage.swipes.usedToday,
+              limits.usage.swipes.limit,
             );
           }
-          break;
-        case 'superlike':
-          final response = await likesService.superlikeUser(userId);
-          planLimitsService.incrementUsage('swipes');
-          planLimitsService.incrementUsage('superlikes');
-          if (response.isMatch && mounted) {
-            _showMatchDialog(response.match as match_models.Match?);
-          }
-          _advanceCardIfCurrent(userId);
-          break;
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        // Check if error is DAILY_LIMIT_REACHED
-        final errorCode = e.responseData?['error_code'] as String?;
-        if (errorCode == 'DAILY_LIMIT_REACHED') {
-          final limits = await ref.read(planLimitsServiceProvider).getPlanLimits();
-          UpgradeDialog.showSwipeLimitDialog(
-            context,
-            limits.usage.swipes.usedToday,
-            limits.usage.swipes.limit,
-          );
-        } else {
-          ErrorHandlerService.showErrorSnackBar(
-            context,
-            e,
-            customMessage: 'Failed to $action',
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorHandlerService.handleError(
+        });
+      } else {
+        ErrorHandlerService.showErrorSnackBar(
           context,
           e,
           customMessage: 'Failed to $action',
         );
       }
+    } else {
+      ErrorHandlerService.handleError(
+        context,
+        e,
+        customMessage: 'Failed to $action',
+      );
     }
   }
 
@@ -619,13 +544,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         );
       },
     ).whenComplete(() => messageController.dispose());
-  }
-
-  void _advanceCardIfCurrent(int userId) {
-    if (!mounted || _cards.isEmpty) return;
-    if ((_cards.first['id'] as int) == userId) {
-      setState(() => _cards.removeAt(0));
-    }
   }
 
   void _handleCardTap(int userId) {
@@ -773,6 +691,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final cacheState = ref.watch(discoverCacheProvider);
+    final stack = cacheState.stack;
+    final cards = stack.map(_profileToCardMap).toList();
+    final showSkeleton = !cacheState.initialLoadComplete && stack.isEmpty;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -787,21 +709,28 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           ),
           child: Row(
             children: [
-              // Left side: Avatar + greeting and name (cached /api/user, fallback to auth user)
+              // Left side: Avatar + greeting and name (cache-first from GET /profile; fallback to auth)
               Consumer(
                 builder: (context, ref, child) {
                   final authState = ref.watch(authProvider);
                   final authUser = authState.user;
-                  final userAsync = ref.watch(cachedCurrentUserProvider);
-                  return userAsync.when(
-                    data: (user) => Row(
+                  final profileCache = ref.watch(profilePageCacheProvider);
+                  final profile = profileCache.valueOrNull?.profile;
+                  if (profile != null) {
+                    final avatarUrl = profile.images?.isNotEmpty == true
+                        ? profile.images!.first.imageUrl
+                        : null;
+                    final displayName = profile.lastName.isNotEmpty
+                        ? '${profile.firstName} ${profile.lastName}'
+                        : profile.firstName;
+                    return Row(
                       children: [
                         _buildAvatarFrame(
                           backgroundColor,
                           isDark,
-                          child: user.primaryAvatarUrl != null
+                          child: avatarUrl != null && avatarUrl.isNotEmpty
                               ? Image.network(
-                                  user.primaryAvatarUrl!,
+                                  avatarUrl,
                                   width: 44,
                                   height: 44,
                                   fit: BoxFit.cover,
@@ -823,7 +752,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                               ),
                             ),
                             Text(
-                              'Hello ${user.fullName ?? user.firstName}',
+                              'Hello $displayName',
                               style: AppTypography.h3.copyWith(
                                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                               ),
@@ -831,27 +760,17 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                           ],
                         ),
                       ],
-                    ),
-                    loading: () => _buildAppBarUserRow(
-                      context,
-                      backgroundColor,
-                      isDark,
-                      avatarUrl: authUser?.avatarUrl ??
-                          ((authUser?.images?.isNotEmpty == true)
-                              ? authUser!.images!.first.toString()
-                              : null),
-                      name: authUser != null ? 'Hello ${authUser.firstName}' : 'Hello...',
-                    ),
-                    error: (_, __) => _buildAppBarUserRow(
-                      context,
-                      backgroundColor,
-                      isDark,
-                      avatarUrl: authUser?.avatarUrl ??
-                          ((authUser?.images?.isNotEmpty == true)
-                              ? authUser!.images!.first.toString()
-                              : null),
-                      name: authUser != null ? 'Hello ${authUser.firstName}' : 'Hello User',
-                    ),
+                    );
+                  }
+                  return _buildAppBarUserRow(
+                    context,
+                    backgroundColor,
+                    isDark,
+                    avatarUrl: authUser?.avatarUrl ??
+                        ((authUser?.images?.isNotEmpty == true)
+                            ? authUser!.images!.first.toString()
+                            : null),
+                    name: authUser != null ? 'Hello ${authUser.firstName}' : 'Hello...',
                   );
                 },
               ),
@@ -925,7 +844,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                         setState(() {
                           _activeFilters = filters;
                         });
-                        _loadCards(refresh: true);
+                        ref.read(discoverCacheProvider.notifier).refresh(filters: filters);
                       }
                     },
                     child: Padding(
@@ -952,26 +871,19 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(top: 16, bottom: 16),
-                child: _isLoading
+                child: showSkeleton
                   ? SkeletonDiscovery()
-                  : _hasError
-                      ? ErrorDisplayWidget(
-                          error: _error,
-                          errorMessage: _errorMessage ?? 'Failed to load profiles',
-                          debugDetails: _buildErrorDebugDetails(),
-                          onRetry: () => _loadCards(refresh: true),
-                        )
-                      : CardStackManager(
-                          cards: _cards,
-                          onSwipe: _handleSwipe,
-                          onCardTap: _handleCardTap,
-                          isLoading: _isLoading,
-                          onRefresh: () => _loadCards(refresh: true),
-                        ),
+                  : CardStackManager(
+                      cards: cards,
+                      onSwipe: _handleSwipe,
+                      onCardTap: _handleCardTap,
+                      isLoading: false,
+                      onRefresh: () => ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters),
+                    ),
               ),
             ),
             // Action buttons row: Nope, Super Like (center), Like — Chat removed
-            if (!_isLoading && !_hasError && _cards.isNotEmpty)
+            if (!showSkeleton && cards.isNotEmpty)
               Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.contentPadding,

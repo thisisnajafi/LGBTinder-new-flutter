@@ -24,6 +24,7 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../screens/blocked_users_screen.dart';
 import '../features/matching/presentation/screens/matches_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
+import '../features/payments/presentation/screens/subscription_plans_screen.dart' as payments;
 import '../screens/billing_history_screen.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../core/providers/api_providers.dart';
@@ -54,6 +55,7 @@ class AppRoutes {
   static const String blockedUsers = '/blocked-users';
   static const String matches = '/matches';
   static const String googlePlayBillingTest = '/google-play-billing-test';
+  static const String subscriptionPlans = '/subscription-plans';
 }
 
 /// Builds a page with slide-from-right + fade using [AppAnimations.transitionPage].
@@ -284,6 +286,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final isAuthenticated = await tokenStorage.isAuthenticated();
           if (!isAuthenticated) {
             routeLog('billing-history: not authenticated → ${AppRoutes.welcome}');
+            return AppRoutes.welcome;
+          }
+          return null;
+        },
+      ),
+
+      // Subscription Plans (requires auth)
+      GoRoute(
+        path: AppRoutes.subscriptionPlans,
+        name: 'subscription-plans',
+        pageBuilder: (context, state) => slideFadePage(state, const payments.SubscriptionPlansScreen()),
+        redirect: (context, state) async {
+          if (state.matchedLocation == AppRoutes.welcome) return null;
+          final tokenStorage = ref.read(tokenStorageServiceProvider);
+          final isAuthenticated = await tokenStorage.isAuthenticated();
+          if (!isAuthenticated) {
+            routeLog('subscription-plans: not authenticated → ${AppRoutes.welcome}');
             return AppRoutes.welcome;
           }
           return null;

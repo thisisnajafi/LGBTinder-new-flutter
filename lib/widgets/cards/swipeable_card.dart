@@ -111,23 +111,28 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.radiusLG),
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Image
+              // Image — fill card and cover (no stretch; crop to fill)
               if (currentImage != null)
-                OptimizedImage(
-                  imageUrl: currentImage,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.cover,
+                Positioned.fill(
+                  child: OptimizedImage(
+                    imageUrl: currentImage,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 )
               else
-                Container(
-                  color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                  child: Center(
-                    child: Icon(
-                      Icons.person,
-                      size: 100,
-                      color: secondaryTextColor,
+                Positioned.fill(
+                  child: Container(
+                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    child: Center(
+                      child: Icon(
+                        Icons.person,
+                        size: 100,
+                        color: secondaryTextColor,
+                      ),
                     ),
                   ),
                 ),

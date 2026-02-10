@@ -1,5 +1,6 @@
-﻿// Widget: ChatListItem
+// Widget: ChatListItem
 // Individual chat list item
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -10,6 +11,7 @@ import '../avatar/avatar_with_status.dart';
 import '../badges/unread_badge.dart';
 import 'typing_indicator.dart';
 import 'last_seen_widget.dart';
+import '../../features/payments/data/services/plan_limits_service.dart';
 
 /// Chat list item widget
 /// Displays a single chat conversation in the chat list
@@ -44,7 +46,29 @@ class ChatListItem extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final planLimits = ref.watch(planLimitsProvider);
+    final bool hasPlan = planLimits.whenOrNull(
+          data: (limits) => limits.planInfo.isPremium,
+        ) ?? false;
+
+    Widget messagePreview = isTyping
+        ? TypingIndicator()
+        : Text(
+            lastMessage ?? 'No messages yet',
+            style: AppTypography.body.copyWith(
+              color: secondaryTextColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          );
+    if (!hasPlan) {
+      messagePreview = ClipRect(
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+          child: messagePreview,
+        ),
+      );
+    }
 
     return InkWell(
       onTap: onTap,
@@ -89,18 +113,7 @@ class ChatListItem extends ConsumerWidget {
                   SizedBox(height: AppSpacing.spacingXS),
                   Row(
                     children: [
-                      Expanded(
-                        child: isTyping
-                            ? TypingIndicator()
-                            : Text(
-                                lastMessage ?? 'No messages yet',
-                                style: AppTypography.body.copyWith(
-                                  color: secondaryTextColor,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                      ),
+                      Expanded(child: messagePreview),
                       if (unreadCount > 0) ...[
                         SizedBox(width: AppSpacing.spacingSM),
                         UnreadBadge(count: unreadCount),

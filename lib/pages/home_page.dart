@@ -24,8 +24,8 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const DiscoveryPage(),
+  List<Widget> _buildPages() => [
+    DiscoveryPage(selectedTabIndex: _currentIndex, discoveryTabIndex: 0),
     const ChatListPage(),
     const NotificationsScreen(),
     const ProfilePage(),
@@ -56,7 +56,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       backgroundColor: backgroundColor,
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: _buildPages(),
       ),
       bottomNavigationBar: BottomNavbar(
         currentIndex: _currentIndex,

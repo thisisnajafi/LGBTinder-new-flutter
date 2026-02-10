@@ -11,3 +11,7 @@ final discoveryServiceProvider = Provider<DiscoveryService>((ref) {
   return DiscoveryService(apiService, cacheService, planLimitsService);
 });
 
+/// User IDs the current user has already liked/disliked/superliked this session.
+/// Used to filter them out from suggestions after refresh so they don't reappear.
+final discoveryActedOnUserIdsProvider = StateProvider<Set<int>>((ref) => <int>{});
+

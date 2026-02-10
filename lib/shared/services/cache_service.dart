@@ -334,6 +334,12 @@ class CacheKeys {
   // User-specific keys
   /// Current user (GET /api/user) — cache-first on discover, refresh in background
   static const String currentUser = 'current_user';
+  /// My profile (GET /api/profile) — cache-first on Profile page, refresh in background
+  static const String myProfile = 'my_profile';
+  /// Plan limits (GET /api/plan-limits) — cache-first on Profile page
+  static const String planLimits = 'plan_limits';
+  /// Discover feed: cache-first stack with interaction state (single source of truth for Discover page)
+  static const String discoverFeed = 'discover_feed';
   /// Nearby suggestions (GET /matching/nearby-suggestions) — cache per page/limit; limits applied when reading
   static String nearbySuggestions(int page, int limit) => 'nearby_suggestions_${page}_$limit';
   static String userProfile(int userId) => 'user_profile_$userId';

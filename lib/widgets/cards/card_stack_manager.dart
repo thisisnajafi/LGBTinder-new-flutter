@@ -130,8 +130,10 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
               child: _buildCard(widget.cards[_currentIndex + 2], 2),
             ),
           ),
-        // Current card (with exit animation when swiping)
-        _buildCurrentCard(currentCard),
+        // Current card (with exit animation when swiping) — Positioned.fill so card has bounded size and image can cover without stretching
+        Positioned.fill(
+          child: _buildCurrentCard(currentCard),
+        ),
       ],
     );
   }

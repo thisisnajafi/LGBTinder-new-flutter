@@ -83,7 +83,7 @@ class LikeActionRequest {
   LikeActionRequest({required this.likedUserId});
 
   Map<String, dynamic> toJson() {
-    return {'liked_user_id': likedUserId};
+    return {'target_user_id': likedUserId};
   }
 }
 

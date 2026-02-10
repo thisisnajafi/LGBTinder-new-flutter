@@ -77,9 +77,11 @@ class DiscoveryService {
         if (filters['premiumOnly'] == true) queryParams['premium_only'] = '1';
       }
 
+      // Always hit the API (no ApiService-level cache) so discover/refresh always calls nearby-suggestions
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.matchingNearbySuggestions,
         queryParameters: queryParams,
+        useCache: false,
       );
 
       final payload = response.data;
@@ -105,6 +107,50 @@ class DiscoveryService {
   ) {
     if (cap == null || list.length <= cap) return list;
     return list.sublist(0, cap);
+  }
+
+  /// Fetch nearby suggestions from API only (no cache read). Used by discover cache to merge into feed.
+  Future<List<DiscoveryProfile>> fetchNearbySuggestionsFromApi({
+    int page = 1,
+    int limit = 20,
+    Map<String, dynamic>? filters,
+  }) async {
+    int? cap;
+    try {
+      final limits = await _planLimitsService.getPlanLimits();
+      final remaining = limits.usage.swipes.remaining;
+      final isUnlimited = limits.usage.swipes.isUnlimited;
+      cap = isUnlimited ? null : (remaining > 0 ? remaining : null);
+    } catch (_) {
+      cap = null;
+    }
+    final queryParams = <String, dynamic>{'page': page, 'limit': limit};
+    if (filters != null) {
+      if (filters['ageRange'] != null) {
+        final ageRange = filters['ageRange'] as RangeValues;
+        queryParams['min_age'] = ageRange.start.toInt();
+        queryParams['max_age'] = ageRange.end.toInt();
+      }
+      if (filters['maxDistance'] != null) {
+        queryParams['max_distance'] = filters['maxDistance'];
+      }
+      if (filters['genders'] != null) {
+        final genders = filters['genders'] as List<String>;
+        if (!genders.contains('All')) {
+          queryParams['gender_ids'] = genders.join(',');
+        }
+      }
+      if (filters['verifiedOnly'] == true) queryParams['verified_only'] = '1';
+      if (filters['onlineOnly'] == true) queryParams['online_only'] = '1';
+      if (filters['premiumOnly'] == true) queryParams['premium_only'] = '1';
+    }
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.matchingNearbySuggestions,
+      queryParameters: queryParams,
+      useCache: false,
+    );
+    final list = _parseNearbySuggestionsResponse(response.data);
+    return _applyLimit(list, cap);
   }
 
   /// Get advanced matches with filters

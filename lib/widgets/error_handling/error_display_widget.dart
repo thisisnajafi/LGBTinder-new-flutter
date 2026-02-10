@@ -1,6 +1,5 @@
 // Widget: ErrorDisplayWidget
 // Error display widget
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -14,11 +13,10 @@ import 'retry_button.dart';
 /// Error display widget
 /// Displays error message with retry option
 /// Can accept either ApiError or String error message
-/// [debugDetails] when set and kDebugMode, shows expandable technical details for debugging
+/// Debug/stack details are not shown to the user.
 class ErrorDisplayWidget extends ConsumerWidget {
   final dynamic error; // Can be ApiError, String, or Exception
   final String? errorMessage; // Fallback if error is not provided
-  final String? debugDetails; // Shown in debug mode for easier troubleshooting
   final VoidCallback? onRetry;
   final String? title;
   final IconData? icon;
@@ -27,7 +25,6 @@ class ErrorDisplayWidget extends ConsumerWidget {
     Key? key,
     this.error,
     this.errorMessage,
-    this.debugDetails,
     this.onRetry,
     this.title,
     this.icon,
@@ -69,70 +66,12 @@ class ErrorDisplayWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final showDebug = kDebugMode && debugDetails != null && debugDetails!.isNotEmpty;
-
-    if (!showDebug) {
-      return EmptyState(
-        title: _getErrorTitle(),
-        message: _getErrorMessage(),
-        icon: _getErrorIcon(),
-        actionLabel: onRetry != null ? 'Retry' : null,
-        onAction: onRetry,
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      child: Column(
-        children: [
-          EmptyState(
-            title: _getErrorTitle(),
-            message: _getErrorMessage(),
-            icon: _getErrorIcon(),
-            actionLabel: onRetry != null ? 'Retry' : null,
-            onAction: onRetry,
-          ),
-          const SizedBox(height: 16),
-          Theme(
-            data: theme.copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              initiallyExpanded: true,
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(top: 8),
-              title: Text(
-                'Debug details',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: (isDark ? Colors.black : Colors.grey.shade200).withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDark ? AppColors.borderSubtleDark : AppColors.borderSubtleLight,
-                    ),
-                  ),
-                  child: SelectableText(
-                    debugDetails!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return EmptyState(
+      title: _getErrorTitle(),
+      message: _getErrorMessage(),
+      icon: _getErrorIcon(),
+      actionLabel: onRetry != null ? 'Retry' : null,
+      onAction: onRetry,
     );
   }
 }

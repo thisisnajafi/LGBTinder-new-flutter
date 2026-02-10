@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/network/dio_client.dart';
 import '../models/api_response.dart';
@@ -8,6 +9,12 @@ import 'cache_service.dart';
 import 'offline_queue_service.dart';
 import 'retry_service.dart';
 import 'dart:io';
+
+/// In-flight GET requests by request key (endpoint + params). Prevents duplicate calls.
+final Map<String, Future<ApiResponse<dynamic>>> _inFlightGet = {};
+
+/// In-flight POST requests by request key (endpoint + body hash). Prevents duplicate idempotent calls.
+final Map<String, Future<ApiResponse<dynamic>>> _inFlightPost = {};
 
 /// Base API service with common HTTP methods
 class ApiService {
@@ -24,7 +31,7 @@ class ApiService {
     this._queueService,
   );
 
-  /// GET request with offline support
+  /// GET request with offline support, cache-first, and in-flight deduplication.
   Future<ApiResponse<T>> get<T>(
     String endpoint, {
     Map<String, dynamic>? queryParameters,
@@ -33,13 +40,50 @@ class ApiService {
     bool useCache = true,
     bool forceRefresh = false,
   }) async {
-    // Generate cache key
-    final cacheKey = _generateCacheKey('GET', endpoint, queryParameters);
+    final requestKey = _generateCacheKey('GET', endpoint, queryParameters);
 
+    // Deduplicate: reuse in-flight request for same key
+    final existing = _inFlightGet[requestKey];
+    if (existing != null) {
+      try {
+        final result = await existing;
+        return result as ApiResponse<T>;
+      } catch (_) {
+        _inFlightGet.remove(requestKey);
+        rethrow;
+      }
+    }
+
+    final future = _executeGet<T>(
+      requestKey: requestKey,
+      endpoint: endpoint,
+      queryParameters: queryParameters,
+      fromJson: fromJson,
+      options: options,
+      useCache: useCache,
+      forceRefresh: forceRefresh,
+    );
+    _inFlightGet[requestKey] = future as Future<ApiResponse<dynamic>>;
+    try {
+      return await future;
+    } finally {
+      _inFlightGet.remove(requestKey);
+    }
+  }
+
+  Future<ApiResponse<T>> _executeGet<T>(
+    {required String requestKey,
+    required String endpoint,
+    Map<String, dynamic>? queryParameters,
+    T Function(dynamic)? fromJson,
+    Options? options,
+    bool useCache = true,
+    bool forceRefresh = false,
+  }) async {
     // Try to get from cache if online and cache is enabled
     if (useCache && !forceRefresh) {
       final cached = await _cacheService.getCached<T>(
-        cacheKey,
+        requestKey,
         (json) => fromJson != null ? fromJson(json) : json as T,
       );
       if (cached != null) {
@@ -49,10 +93,9 @@ class ApiService {
 
     // Check connectivity
     if (!_connectivityService.isOnline) {
-      // Try to get from cache as fallback
       if (useCache) {
         final cached = await _cacheService.getCached<T>(
-          cacheKey,
+          requestKey,
           (json) => fromJson != null ? fromJson(json) : json as T,
         );
         if (cached != null) {
@@ -66,7 +109,6 @@ class ApiService {
     }
 
     try {
-      // Use retry service for network requests
       final apiResponse = await RetryService.executeWithRetry<ApiResponse<T>>(
         operation: () async {
           final response = await _dioClient.dio.get(
@@ -104,7 +146,7 @@ class ApiService {
       // Cache successful GET responses
       if (useCache && apiResponse.isSuccess && apiResponse.data != null) {
         if (apiResponse.data is Map<String, dynamic>) {
-          await _cacheService.cacheData(cacheKey, apiResponse.data as Map<String, dynamic>);
+          await _cacheService.cacheData(requestKey, apiResponse.data as Map<String, dynamic>);
         }
       }
 
@@ -115,7 +157,7 @@ class ApiService {
           e.type == DioExceptionType.unknown) {
         if (useCache) {
           final cached = await _cacheService.getCached<T>(
-            cacheKey,
+            requestKey,
             (json) => fromJson != null ? fromJson(json) : json as T,
           );
           if (cached != null) {
@@ -136,18 +178,48 @@ class ApiService {
     }
   }
 
-  /// POST request with offline queue support
+  /// POST request with offline queue support. Set [deduplicateIdempotent] true for like/dislike/superlike to reuse in-flight same request.
   Future<ApiResponse<T>> post<T>(
     String endpoint, {
     dynamic data,
     T Function(dynamic)? fromJson,
     Options? options,
     bool queueIfOffline = true,
+    bool deduplicateIdempotent = false,
   }) async {
-    // Check connectivity
+    if (deduplicateIdempotent && data is Map<String, dynamic>) {
+      final requestKey = _generateCacheKey('POST', endpoint, data);
+      final existing = _inFlightPost[requestKey];
+      if (existing != null) {
+        try {
+          final result = await existing;
+          return result as ApiResponse<T>;
+        } catch (_) {
+          _inFlightPost.remove(requestKey);
+          rethrow;
+        }
+      }
+      final future = _executePost<T>(endpoint: endpoint, data: data, fromJson: fromJson, options: options, queueIfOffline: queueIfOffline);
+      _inFlightPost[requestKey] = future as Future<ApiResponse<dynamic>>;
+      try {
+        return await future;
+      } finally {
+        _inFlightPost.remove(requestKey);
+      }
+    }
+
+    return _executePost<T>(endpoint: endpoint, data: data, fromJson: fromJson, options: options, queueIfOffline: queueIfOffline);
+  }
+
+  Future<ApiResponse<T>> _executePost<T>(
+    {required String endpoint,
+    required dynamic data,
+    T Function(dynamic)? fromJson,
+    Options? options,
+    bool queueIfOffline = true,
+  }) async {
     if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
-        // Queue the request for later
         await _queueService.queueRequest(
           QueuedRequest(
             id: _uuid.v4(),
@@ -170,7 +242,6 @@ class ApiService {
     }
 
     try {
-      // Use retry service for network requests
       return await RetryService.executeWithRetry<ApiResponse<T>>(
         operation: () async {
           final response = await _dioClient.dio.post(
@@ -186,16 +257,12 @@ class ApiService {
           backoffMultiplier: 2.0,
           maxDelay: const Duration(seconds: 30),
           shouldRetry: (error) {
-            // Don't retry if it's a client error (4xx except 429)
-            // Validation errors (422) should never be retried
             if (error is ApiError) {
               if (error.code != null) {
-                // All 4xx errors except 429 (rate limit) should not be retried
                 if (error.code! >= 400 && error.code! < 500 && error.code != 429) {
                   return false;
                 }
               }
-              // Also check if it has validation errors - these should never be retried
               if (error.errors != null && error.errors!.isNotEmpty) {
                 return false;
               }
@@ -205,10 +272,9 @@ class ApiService {
         ),
       );
     } on DioException catch (e) {
-      // If offline error and queueing is enabled, queue the request
-      if (queueIfOffline && 
-          (e.type == DioExceptionType.connectionTimeout || 
-           e.type == DioExceptionType.unknown)) {
+      if (queueIfOffline &&
+          (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.unknown)) {
         await _queueService.queueRequest(
           QueuedRequest(
             id: _uuid.v4(),
@@ -221,10 +287,7 @@ class ApiService {
       }
       throw ApiError.fromDioException(e);
     } catch (e) {
-      // If it's already an ApiError, rethrow it
-      if (e is ApiError) {
-        rethrow;
-      }
+      if (e is ApiError) rethrow;
       throw ApiError(
         message: 'An unexpected error occurred: ${e.toString()}',
         originalError: e,

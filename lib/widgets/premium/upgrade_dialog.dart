@@ -215,6 +215,26 @@ class UpgradeDialog extends StatelessWidget {
     );
   }
 
+  /// Show like limit dialog (daily likes exhausted)
+  static void showLikeLimitDialog(BuildContext context, int used, int limit) {
+    showDialog(
+      context: context,
+      builder: (context) => UpgradeDialog(
+        title: 'Daily Like Limit Reached',
+        message: 'You\'ve used all your free likes for today!',
+        limitInfo: 'Used: $used/$limit likes',
+        features: const [
+          'Unlimited daily likes',
+          'Unlimited daily swipes',
+          '5 superlikes per day',
+          'See who liked you',
+          'Advanced filters',
+          'Rewind last swipe',
+        ],
+      ),
+    );
+  }
+
   /// Show superlike limit dialog
   static void showSuperlikeLimitDialog(BuildContext context, int used, int limit) {
     showDialog(
