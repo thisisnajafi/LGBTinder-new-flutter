@@ -34,8 +34,8 @@ class DiscoveryService {
       final limits = await _planLimitsService.getPlanLimits();
       final remaining = limits.usage.swipes.remaining;
       final isUnlimited = limits.usage.swipes.isUnlimited;
-      cap = isUnlimited ? null : remaining;
-      if (cap != null && cap <= 0) return [];
+      cap = isUnlimited ? null : (remaining > 0 ? remaining : null);
+      // When remaining is 0 we still fetch and show suggestions; limit is enforced when user tries to like
     } catch (_) {
       // Plan limits API failed (e.g. 403, missing endpoint) — don't block discover; treat as unlimited
       cap = null;

@@ -110,6 +110,13 @@ class LikeResponse {
   }
 }
 
+/// Response from dislike endpoint. [theyLikedYou] when the other user had liked us (we passed on them).
+class DislikeResponse {
+  final bool theyLikedYou;
+
+  DislikeResponse({this.theyLikedYou = false});
+}
+
 /// Response from likes/rewind (undo last like/dislike). Premium only.
 class RewindResponse {
   final Map<String, dynamic>? restoredUser;

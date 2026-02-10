@@ -71,13 +71,11 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     _pendingSwipeUserId = null;
     _pendingSwipeAction = null;
     if (mounted) {
-      setState(() {
-        _exitingIndex = null;
-        _currentIndex++;
-      });
+      setState(() => _exitingIndex = null);
       if (userId != null && action != null) {
         widget.onSwipe?.call(userId, action);
       }
+      // Parent removes the top card and updates list; we keep _currentIndex at 0 so next card shows correctly
     }
   }
 
@@ -184,10 +182,11 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     final currentCard = widget.cards[_currentIndex];
     final userId = currentCard['id'] as int? ?? 0;
 
+    // Like = card exits right; dislike = card exits left (Tinder convention)
     final direction = action == 'like'
-        ? const Offset(-1.2, 0)
+        ? const Offset(1.2, 0)
         : action == 'dislike'
-            ? const Offset(1.2, 0)
+            ? const Offset(-1.2, 0)
             : const Offset(0, 1.2);
 
     if (!AppAnimations.animationsEnabled(context)) {

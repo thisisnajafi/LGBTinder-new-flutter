@@ -23,8 +23,8 @@ import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/profile_detail_screen.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
-import '../widgets/match/match_screen.dart';
 import '../pages/chat_page.dart';
+import '../features/chat/providers/chat_providers.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/buttons/scale_tap_feedback.dart';
 import '../features/notifications/providers/notification_providers.dart';
@@ -48,7 +48,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   StackTrace? _errorStackTrace;
   List<Map<String, dynamic>> _cards = [];
   int _currentPage = 1;
-  final int _pageSize = 10;
+  final int _pageSize = 20;
 
   // Filter state
   Map<String, dynamic>? _activeFilters;
@@ -456,12 +456,20 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           if (response.isMatch && mounted) {
             _showMatchDialog(response.match as match_models.Match?);
           }
-          if (fromRow) _advanceCardIfCurrent(userId);
+          _advanceCardIfCurrent(userId);
           break;
         case 'dislike':
-          await likesService.dislikeUser(userId);
+          final dislikeResponse = await likesService.dislikeUser(userId);
           planLimitsService.incrementUsage('swipes');
-          if (fromRow) _advanceCardIfCurrent(userId);
+          _advanceCardIfCurrent(userId);
+          if (mounted && dislikeResponse.theyLikedYou) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("They liked you — you passed."),
+                backgroundColor: AppColors.accentPurple,
+              ),
+            );
+          }
           break;
         case 'superlike':
           final response = await likesService.superlikeUser(userId);
@@ -470,7 +478,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           if (response.isMatch && mounted) {
             _showMatchDialog(response.match as match_models.Match?);
           }
-          if (fromRow) _advanceCardIfCurrent(userId);
+          _advanceCardIfCurrent(userId);
           break;
       }
     } on ApiError catch (e) {
@@ -505,33 +513,112 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   void _showMatchDialog(match_models.Match? match) {
     if (match == null) return;
-    
-    // Show match screen as a full-screen dialog
-    showDialog(
+
+    // Bottom sheet: "It's a match!" + text field to start conversation
+    final messageController = TextEditingController();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet<void>(
       context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black87,
-      builder: (context) => MatchScreen(
-        match: match,
-        onSendMessage: () {
-          Navigator.pop(context);
-          // Navigate to chat with match.userId
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatPage(
-                userId: match.userId,
-                userName: match.firstName,
-                avatarUrl: match.primaryImageUrl,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: EdgeInsets.all(AppSpacing.spacingXL),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "It's a Match! 🎉",
+                    style: AppTypography.h1Large.copyWith(
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSpacing.spacingSM),
+                  Text(
+                    'You and ${match.firstName} liked each other! Say hi to start the conversation.',
+                    style: AppTypography.body.copyWith(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: AppSpacing.spacingLG),
+                  TextField(
+                    controller: messageController,
+                    maxLines: 3,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                      ),
+                      filled: true,
+                      fillColor: isDark
+                          ? AppColors.backgroundDark
+                          : AppColors.backgroundLight,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final text = messageController.text.trim();
+                      Navigator.pop(context);
+                      if (!mounted) return;
+                      if (text.isNotEmpty) {
+                        try {
+                          final chatService = ref.read(chatServiceProvider);
+                          await chatService.sendMessage(match.userId, text);
+                        } catch (_) {}
+                      }
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatPage(
+                            userId: match.userId,
+                            userName: match.firstName,
+                            avatarUrl: match.primaryImageUrl,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
+                      backgroundColor: AppColors.accentPurple,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Send message'),
+                  ),
+                  SizedBox(height: AppSpacing.spacingSM),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Keep swiping',
+                      style: AppTypography.button.copyWith(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
-        onKeepSwiping: () {
-          Navigator.pop(context);
-        },
-      ),
-    );
+          ),
+        );
+      },
+    ).whenComplete(() => messageController.dispose());
   }
 
   void _advanceCardIfCurrent(int userId) {

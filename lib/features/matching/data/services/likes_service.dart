@@ -28,8 +28,8 @@ class LikesService {
     }
   }
 
-  /// Dislike a user
-  Future<void> dislikeUser(int likedUserId) async {
+  /// Dislike a user. Returns [DislikeResponse] with [theyLikedYou] when the other user had liked us.
+  Future<DislikeResponse> dislikeUser(int likedUserId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesDislike,
@@ -40,6 +40,12 @@ class LikesService {
       if (!response.isSuccess) {
         throw Exception(response.message);
       }
+      final data = response.data;
+      if (data != null && data is Map<String, dynamic>) {
+        final theyLikedYou = data['they_liked_you'] == true;
+        return DislikeResponse(theyLikedYou: theyLikedYou);
+      }
+      return DislikeResponse(theyLikedYou: false);
     } catch (e) {
       rethrow;
     }

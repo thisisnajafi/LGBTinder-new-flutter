@@ -130,20 +130,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       _buildCount++;
       screenLog('WelcomeScreen', 'build #$_buildCount');
     }
-    final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
-
-    final modernGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        const Color(0xFF6366F1),
-        const Color(0xFF8B5CF6),
-        const Color(0xFFEC4899),
-        const Color(0xFFF97316),
-      ],
-      stops: const [0.0, 0.4, 0.7, 1.0],
-    );
 
     // Minimal first frame: no ShaderMask, no AnimatedBuilders, no shadows — fast paint to avoid ANR.
     if (_minimalFirstFrame) {
@@ -156,7 +143,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       }
       return Scaffold(
         body: Container(
-          decoration: BoxDecoration(gradient: modernGradient),
+          decoration: const BoxDecoration(gradient: AppColors.prideGradient),
           child: SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(
@@ -265,7 +252,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       body: Stack(
         children: [
           Container(
-            decoration: BoxDecoration(gradient: modernGradient),
+            decoration: const BoxDecoration(gradient: AppColors.prideGradient),
           ),
           if (_showFloatingShapes && !isDebug)
             RepaintBoundary(
