@@ -30,6 +30,7 @@ import '../widgets/buttons/scale_tap_feedback.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/user/providers/user_providers.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
@@ -43,6 +44,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   bool _isLoading = false;
   bool _hasError = false;
   String? _errorMessage;
+  Object? _error;
+  StackTrace? _errorStackTrace;
   List<Map<String, dynamic>> _cards = [];
   int _currentPage = 1;
   final int _pageSize = 10;
@@ -50,11 +53,127 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   // Filter state
   Map<String, dynamic>? _activeFilters;
 
+  /// Build debug-friendly error details for discover load failures
+  String _buildErrorDebugDetails() {
+    final parts = <String>[];
+    if (_error != null) {
+      parts.add('Type: ${_error.runtimeType}');
+      parts.add('Message: ${_error.toString()}');
+      if (_error is ApiError) {
+        final ae = _error! as ApiError;
+        if (ae.code != null) parts.add('HTTP: ${ae.code}');
+        if (ae.errorCode != null) parts.add('Code: ${ae.errorCode}');
+        if (ae.responseData != null && ae.responseData!.isNotEmpty) {
+          try {
+            parts.add('Response: ${ae.responseData}');
+          } catch (_) {
+            parts.add('Response: (unable to serialize)');
+          }
+        }
+      }
+    }
+    if (_errorStackTrace != null) {
+      final lines = _errorStackTrace.toString().split('\n').take(12);
+      parts.add('Stack:\n${lines.join('\n')}');
+    }
+    return parts.join('\n');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh cached current user when discover page is shown (cache first, then API)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(cachedCurrentUserProvider.notifier).load();
+    });
+    _loadCards();
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+
+  Widget _buildAvatarPlaceholder(bool isDark) {
+    return Container(
+      width: 44,
+      height: 44,
+      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      child: Icon(
+        Icons.person,
+        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildAvatarFrame(Color backgroundColor, bool isDark, {required Widget child}) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppColors.prideGradient,
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: backgroundColor,
+        ),
+        child: ClipOval(child: child),
+      ),
+    );
+  }
+
+  /// App bar user row (used when cached user is loading/error — fallback to auth user)
+  Widget _buildAppBarUserRow(
+    BuildContext context,
+    Color backgroundColor,
+    bool isDark, {
+    String? avatarUrl,
+    required String name,
+  }) {
+    return Row(
+      children: [
+        _buildAvatarFrame(
+          backgroundColor,
+          isDark,
+          child: avatarUrl != null && avatarUrl.isNotEmpty
+              ? Image.network(
+                  avatarUrl,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildAvatarPlaceholder(isDark);
+                  },
+                )
+              : _buildAvatarPlaceholder(isDark),
+        ),
+        SizedBox(width: AppSpacing.spacingMD),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _getGreeting(),
+              style: AppTypography.caption.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+            Text(
+              name,
+              style: AppTypography.h3.copyWith(
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildActionButton({
@@ -215,11 +334,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _loadCards();
-  }
-
   Future<void> _loadCards({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
@@ -230,6 +344,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       _isLoading = true;
       _hasError = false;
       _errorMessage = null;
+      _error = null;
+      _errorStackTrace = null;
     });
 
     try {
@@ -255,19 +371,23 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           _isLoading = false;
         });
       }
-    } on ApiError catch (e) {
+    } on ApiError catch (e, st) {
       if (mounted) {
         setState(() {
           _hasError = true;
           _errorMessage = e.message;
+          _error = e;
+          _errorStackTrace = st;
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (e, st) {
       if (mounted) {
         setState(() {
           _hasError = true;
           _errorMessage = e.toString();
+          _error = e;
+          _errorStackTrace = st;
           _isLoading = false;
         });
       }
@@ -580,79 +700,71 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           ),
           child: Row(
             children: [
-              // Left side: Avatar with gradient ring + greeting and name
+              // Left side: Avatar + greeting and name (cached /api/user, fallback to auth user)
               Consumer(
                 builder: (context, ref, child) {
-                  // Get actual user data from auth provider
                   final authState = ref.watch(authProvider);
-                  final user = authState.user;
-
-                  return Row(
-                    children: [
-                      // Circular avatar with subtle LGBT gradient ring (thin 2px)
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppColors.prideGradient,
+                  final authUser = authState.user;
+                  final userAsync = ref.watch(cachedCurrentUserProvider);
+                  return userAsync.when(
+                    data: (user) => Row(
+                      children: [
+                        _buildAvatarFrame(
+                          backgroundColor,
+                          isDark,
+                          child: user.primaryAvatarUrl != null
+                              ? Image.network(
+                                  user.primaryAvatarUrl!,
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _buildAvatarPlaceholder(isDark);
+                                  },
+                                )
+                              : _buildAvatarPlaceholder(isDark),
                         ),
-                        padding: const EdgeInsets.all(2),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: backgroundColor,
-                          ),
-                          child: ClipOval(
-                            child: user?.images != null && user!.images!.isNotEmpty
-                                ? Image.network(
-                                    user.images!.first.toString(),
-                                    width: 44,
-                                    height: 44,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                                        child: Icon(
-                                          Icons.person,
-                                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                          size: 24,
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : Container(
-                                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                                    child: Icon(
-                                      Icons.person,
-                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                      size: 24,
-                                    ),
-                                  ),
-                          ),
+                        SizedBox(width: AppSpacing.spacingMD),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getGreeting(),
+                              style: AppTypography.caption.copyWith(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                            Text(
+                              'Hello ${user.fullName ?? user.firstName}',
+                              style: AppTypography.h3.copyWith(
+                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: AppSpacing.spacingMD),
-                      // Greeting and name
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getGreeting(),
-                            style: AppTypography.caption.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                            ),
-                          ),
-                          Text(
-                            user != null ? 'Hello ${user.firstName}' : 'Hello User',
-                            style: AppTypography.h3.copyWith(
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
+                    loading: () => _buildAppBarUserRow(
+                      context,
+                      backgroundColor,
+                      isDark,
+                      avatarUrl: authUser?.avatarUrl ??
+                          ((authUser?.images?.isNotEmpty == true)
+                              ? authUser!.images!.first.toString()
+                              : null),
+                      name: authUser != null ? 'Hello ${authUser.firstName}' : 'Hello...',
+                    ),
+                    error: (_, __) => _buildAppBarUserRow(
+                      context,
+                      backgroundColor,
+                      isDark,
+                      avatarUrl: authUser?.avatarUrl ??
+                          ((authUser?.images?.isNotEmpty == true)
+                              ? authUser!.images!.first.toString()
+                              : null),
+                      name: authUser != null ? 'Hello ${authUser.firstName}' : 'Hello User',
+                    ),
                   );
                 },
               ),
@@ -757,7 +869,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   ? SkeletonDiscovery()
                   : _hasError
                       ? ErrorDisplayWidget(
+                          error: _error,
                           errorMessage: _errorMessage ?? 'Failed to load profiles',
+                          debugDetails: _buildErrorDebugDetails(),
                           onRetry: () => _loadCards(refresh: true),
                         )
                       : CardStackManager(

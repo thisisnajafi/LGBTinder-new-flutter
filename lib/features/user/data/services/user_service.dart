@@ -27,6 +27,22 @@ class UserService {
     }
   }
 
+  /// Get current user as raw map (for caching full API response)
+  Future<Map<String, dynamic>?> getUserInfoRaw() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.user,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (response.isSuccess && response.data != null) {
+        return response.data!;
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Save OneSignal player ID
   Future<void> saveOneSignalPlayerId(String playerId) async {
     try {

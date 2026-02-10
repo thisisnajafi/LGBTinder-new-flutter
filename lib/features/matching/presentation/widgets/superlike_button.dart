@@ -179,27 +179,30 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
       return;
     }
 
-    // Start animation
-    await _animationController.forward();
+    // Run tap animation without blocking (don't await) so UI stays responsive
+    _animationController.forward().then((_) {
+      if (mounted) _animationController.reverse();
+    });
 
     final matchingNotifier = ref.read(matchingProvider.notifier);
 
     try {
       final response = await matchingNotifier.superlikeProfile(widget.profileId);
 
+      if (!mounted) return;
       if (response != null && response.isMatch) {
-        // Show enhanced match celebration for superlikes
         _showSuperMatchCelebration();
         widget.onSuperlikeSuccess?.call();
       } else {
         widget.onSuperlikeSuccess?.call();
       }
     } catch (e) {
-      widget.onSuperlikeError?.call();
+      if (mounted) widget.onSuperlikeError?.call();
     }
-
-    // Reset animation
-    await _animationController.reverse();
+    // Ensure button returns to normal if reverse hasn't run yet
+    if (mounted && _animationController.status == AnimationStatus.completed) {
+      _animationController.reverse();
+    }
   }
 
   void _showPremiumRequiredDialog() {

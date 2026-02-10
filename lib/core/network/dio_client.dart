@@ -123,10 +123,16 @@ class DioClient {
             }
           }
 
-          // Treat 401 as unauthenticated: clear in-memory auth and notify (storage cleared in logout)
+          // Treat 401 as unauthenticated — except login/register where 401 = wrong credentials (stay on screen)
           if (response.statusCode == 401) {
+            final path = response.requestOptions.path;
+            final isLoginOrRegister = path.contains('/auth/login') ||
+                path.contains('login-password') ||
+                path.contains('/auth/register');
             clearAuthToken();
-            _notifyUnauthorized();
+            if (!isLoginOrRegister) {
+              _notifyUnauthorized();
+            }
           }
 
           return handler.next(response);
@@ -146,13 +152,14 @@ class DioClient {
           // Handle 401 Unauthorized - Token expired or invalid
           if (error.response?.statusCode == 401) {
             final requestOptions = error.requestOptions;
-            
-            // Skip refresh for auth endpoints
-            if (requestOptions.path.contains('/auth/') || 
-                requestOptions.path.contains('/login') ||
-                requestOptions.path.contains('/register')) {
+            final path = requestOptions.path;
+
+            // Login/register: 401 means wrong credentials — do NOT redirect to welcome; let screen show error
+            final isLoginOrRegisterRequest = path.contains('/auth/login') ||
+                path.contains('login-password') ||
+                path.contains('/auth/register');
+            if (isLoginOrRegisterRequest) {
               clearAuthToken();
-              _notifyUnauthorized();
               return handler.next(error);
             }
 

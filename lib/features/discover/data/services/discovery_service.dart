@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../../../shared/services/cache_service.dart';
+import '../../../payments/data/services/plan_limits_service.dart';
 import '../models/discovery_profile.dart';
 import '../models/discovery_filters.dart';
 import '../../../matching/data/models/compatibility_score.dart';
@@ -8,95 +10,101 @@ import '../../../matching/data/models/compatibility_score.dart';
 /// Discovery service for finding nearby users and matches
 class DiscoveryService {
   final ApiService _apiService;
+  final CacheService _cacheService;
+  final PlanLimitsService _planLimitsService;
 
-  DiscoveryService(this._apiService);
+  DiscoveryService(
+    this._apiService,
+    this._cacheService,
+    this._planLimitsService,
+  );
 
-  /// Get nearby suggestions
+  /// Get nearby suggestions (cache-first; plan limits applied to cached and API results)
   Future<List<DiscoveryProfile>> getNearbySuggestions({
     int? page,
     int? limit,
     Map<String, dynamic>? filters,
   }) async {
-    try {
-      final queryParams = <String, dynamic>{};
-      if (page != null) queryParams['page'] = page;
-      if (limit != null) queryParams['limit'] = limit;
+    final pageNum = page ?? 1;
+    final limitNum = limit ?? 20;
+    List<DiscoveryProfile>? fromCache;
 
-      // Add filter parameters if provided
+    int? cap;
+    try {
+      final limits = await _planLimitsService.getPlanLimits();
+      final remaining = limits.usage.swipes.remaining;
+      final isUnlimited = limits.usage.swipes.isUnlimited;
+      cap = isUnlimited ? null : remaining;
+      if (cap != null && cap <= 0) return [];
+    } catch (_) {
+      // Plan limits API failed (e.g. 403, missing endpoint) — don't block discover; treat as unlimited
+      cap = null;
+    }
+    try {
+
+      final cacheKey = CacheKeys.nearbySuggestions(pageNum, limitNum);
+
+      final cachedPayload = await _cacheService.getCached<Map<String, dynamic>>(
+        cacheKey,
+        (json) => Map<String, dynamic>.from(json),
+        customExpiry: CacheDuration.matches,
+      );
+      if (cachedPayload != null) {
+        fromCache = _parseNearbySuggestionsResponse(cachedPayload);
+        fromCache = _applyLimit(fromCache, cap);
+      }
+
+      final queryParams = <String, dynamic>{};
+      queryParams['page'] = pageNum;
+      queryParams['limit'] = limitNum;
       if (filters != null) {
-        // Age range
         if (filters['ageRange'] != null) {
           final ageRange = filters['ageRange'] as RangeValues;
           queryParams['min_age'] = ageRange.start.toInt();
           queryParams['max_age'] = ageRange.end.toInt();
         }
-
-        // Max distance
         if (filters['maxDistance'] != null) {
           queryParams['max_distance'] = filters['maxDistance'];
         }
-
-        // Gender filters
         if (filters['genders'] != null) {
           final genders = filters['genders'] as List<String>;
           if (!genders.contains('All')) {
             queryParams['gender_ids'] = genders.join(',');
           }
         }
-
-        // Verification filter
-        if (filters['verifiedOnly'] == true) {
-          queryParams['verified_only'] = '1';
-        }
-
-        // Online status filter
-        if (filters['onlineOnly'] == true) {
-          queryParams['online_only'] = '1';
-        }
-
-        // Premium filter
-        if (filters['premiumOnly'] == true) {
-          queryParams['premium_only'] = '1';
-        }
+        if (filters['verifiedOnly'] == true) queryParams['verified_only'] = '1';
+        if (filters['onlineOnly'] == true) queryParams['online_only'] = '1';
+        if (filters['premiumOnly'] == true) queryParams['premium_only'] = '1';
       }
 
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.matchingNearbySuggestions,
-        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        queryParameters: queryParams,
       );
 
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        // API returns { suggestions: [{ user: {...}, match_score, ... }], total_suggestions, view_limit }
-        if (data['suggestions'] != null && data['suggestions'] is List) {
-          final suggestions = data['suggestions'] as List;
-          return suggestions
-              .map((item) {
-                final map = item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map);
-                final user = map['user'];
-                if (user == null || user is! Map<String, dynamic>) return null;
-                return DiscoveryProfile.fromJson(user as Map<String, dynamic>);
-              })
-              .whereType<DiscoveryProfile>()
-              .toList();
-        }
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
+      final payload = response.data;
+      if (payload != null && payload is Map<String, dynamic>) {
+        await _cacheService.cacheData(
+          cacheKey,
+          Map<String, dynamic>.from(payload),
+          duration: CacheDuration.matches,
+        );
       }
-
-      if (dataList != null) {
-        return dataList
-            .map((item) => DiscoveryProfile.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
+      final list = _parseNearbySuggestionsResponse(response.data);
+      return _applyLimit(list, cap);
     } catch (e) {
+      if (fromCache != null) return fromCache;
       rethrow;
     }
+  }
+
+  /// Cap list to remaining swipes when not unlimited
+  static List<DiscoveryProfile> _applyLimit(
+    List<DiscoveryProfile> list,
+    int? cap,
+  ) {
+    if (cap == null || list.length <= cap) return list;
+    return list.sublist(0, cap);
   }
 
   /// Get advanced matches with filters
@@ -209,34 +217,7 @@ class DiscoveryService {
         queryParameters: queryParams,
       );
 
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['suggestions'] != null && data['suggestions'] is List) {
-          final suggestions = data['suggestions'] as List;
-          return suggestions
-              .map((item) {
-                final map = item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map);
-                final user = map['user'];
-                if (user == null || user is! Map<String, dynamic>) return null;
-                return DiscoveryProfile.fromJson(user as Map<String, dynamic>);
-              })
-              .whereType<DiscoveryProfile>()
-              .toList();
-        }
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-
-      if (dataList != null) {
-        return dataList
-            .map((item) => DiscoveryProfile.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
+      return _parseNearbySuggestionsResponse(response.data);
     } catch (e) {
       rethrow;
     }
@@ -365,6 +346,46 @@ class DiscoveryService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Parses response from GET matching/nearby-suggestions.
+  /// Handles both shapes: { suggestions: [...] } or { status, data: { suggestions: [...] } }.
+  /// Each suggestion has { user: {...}, match_score, liked_me, suggestion_reasons, matching_criteria }.
+  static List<DiscoveryProfile> _parseNearbySuggestionsResponse(dynamic responseData) {
+    if (responseData == null) return [];
+
+    Map<String, dynamic>? payload;
+    if (responseData is Map<String, dynamic>) {
+      final map = responseData;
+      if (map['data'] is Map<String, dynamic>) {
+        payload = map['data'] as Map<String, dynamic>;
+      } else {
+        payload = map;
+      }
+    }
+
+    if (payload == null) return [];
+
+    final suggestions = payload['suggestions'];
+    if (suggestions == null || suggestions is! List) {
+      final dataList = payload['data'];
+      if (dataList is List) {
+        return dataList
+            .map((item) => DiscoveryProfile.fromJson(item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map)))
+            .toList();
+      }
+      return [];
+    }
+
+    return (suggestions as List)
+        .map((item) {
+          final map = item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map);
+          final user = map['user'];
+          if (user == null || user is! Map<String, dynamic>) return null;
+          return DiscoveryProfile.fromJson(user as Map<String, dynamic>);
+        })
+        .whereType<DiscoveryProfile>()
+        .toList();
   }
 }
 

@@ -9,6 +9,7 @@ import '../domain/use_cases/get_nearby_suggestions_use_case.dart';
 import '../domain/use_cases/apply_filters_use_case.dart';
 import '../../matching/providers/matching_provider.dart';
 import '../../../core/providers/api_providers.dart';
+import '../../payments/data/services/plan_limits_service.dart';
 
 /// Discovery provider - manages discovery state and operations
 final discoveryProvider = StateNotifierProvider<DiscoveryNotifier, DiscoveryState>((ref) {
@@ -260,7 +261,9 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
 /// Discovery Service Provider
 final discoveryServiceProvider = Provider<DiscoveryService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
-  return DiscoveryService(apiService);
+  final cacheService = ref.watch(cacheServiceProvider);
+  final planLimitsService = ref.watch(planLimitsServiceProvider);
+  return DiscoveryService(apiService, cacheService, planLimitsService);
 });
 
 /// Discovery Repository Provider

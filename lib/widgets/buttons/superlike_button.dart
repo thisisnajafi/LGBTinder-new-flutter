@@ -1,4 +1,4 @@
-﻿// Widget: SuperlikeButton
+// Widget: SuperlikeButton
 // Superlike action button
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,11 +34,11 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 180),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
   }
 
@@ -49,12 +49,15 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   }
 
   void _handleTap() {
-    if (widget.onTap != null) {
-      _controller.forward().then((_) {
-        _controller.reverse();
-      });
-      widget.onTap!();
-    }
+    if (widget.onTap == null) return;
+    _controller.forward().then((_) {
+      if (!mounted) return;
+      _controller.reverse();
+    });
+    // Run callback on next frame so animation start isn't blocked by heavy work
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onTap!();
+    });
   }
 
   @override

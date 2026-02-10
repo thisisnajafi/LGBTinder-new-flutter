@@ -332,6 +332,10 @@ class CacheKeys {
   static const String preferredGenders = 'ref_preferred_genders';
   
   // User-specific keys
+  /// Current user (GET /api/user) — cache-first on discover, refresh in background
+  static const String currentUser = 'current_user';
+  /// Nearby suggestions (GET /matching/nearby-suggestions) — cache per page/limit; limits applied when reading
+  static String nearbySuggestions(int page, int limit) => 'nearby_suggestions_${page}_$limit';
   static String userProfile(int userId) => 'user_profile_$userId';
   static String userPlan(int userId) => 'user_plan_$userId';
   static String userMatches(int userId) => 'user_matches_$userId';

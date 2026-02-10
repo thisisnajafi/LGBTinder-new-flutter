@@ -1,4 +1,4 @@
-import '../../../core/constants/api_endpoints.dart';
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../profile/data/models/user_profile.dart';
 
 /// Discovery profile model (simplified user profile for discovery)

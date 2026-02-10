@@ -1,4 +1,4 @@
-﻿// Screen: ProfileDetailScreen
+// Screen: ProfileDetailScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -75,7 +75,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.message;
+          _errorMessage = _userFriendlyProfileError(e);
           _isLoading = false;
         });
       }
@@ -83,11 +83,27 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.toString();
+          _errorMessage = _userFriendlyProfileError(null, fallback: e.toString());
           _isLoading = false;
         });
       }
     }
+  }
+
+  /// Show a user-friendly message for profile load errors; hide raw SQL/server messages.
+  String _userFriendlyProfileError(ApiError? e, {String? fallback}) {
+    if (e != null) {
+      if (e.code == 500 ||
+          (e.message.contains('SQLSTATE') || e.message.contains("doesn't exist"))) {
+        return "We're having trouble loading this profile. Please try again later.";
+      }
+      return e.message;
+    }
+    final msg = fallback ?? 'Something went wrong';
+    if (msg.contains('SQLSTATE') || msg.contains("doesn't exist") || msg.contains('500')) {
+      return "We're having trouble loading this profile. Please try again later.";
+    }
+    return msg;
   }
 
   Future<void> _handleLike() async {
