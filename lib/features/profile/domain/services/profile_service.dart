@@ -57,6 +57,60 @@ class ProfileService {
     }
   }
 
+  /// Get profile badge info (API: GET profile/badge/info). Returns data or throws on error.
+  Future<Map<String, dynamic>> getProfileBadgeInfo() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.profileBadgeInfo,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// Get match status with a user (API: GET profile/:id/match-status). Returns { is_matched, target_user_id }.
+  Future<Map<String, dynamic>> getProfileMatchStatus(int userId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.profileMatchStatus(userId),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// Get profiles by filter (by-job, by-language, etc.). Returns list of UserProfile.
+  Future<List<UserProfile>> _getProfilesByEndpoint(String path) async {
+    final response = await _apiService.get<dynamic>(path);
+    List<dynamic>? list;
+    if (response.data is List) {
+      list = response.data as List;
+    } else if (response.data is Map<String, dynamic>) {
+      final data = response.data as Map<String, dynamic>;
+      list = data['data'] as List<dynamic>? ?? data['profiles'] as List<dynamic>?;
+    }
+    if (list == null) return [];
+    return list
+        .where((e) => e is Map<String, dynamic>)
+        .map((e) => UserProfile.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<UserProfile>> getProfilesByJob(int jobId) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByJob(jobId));
+  Future<List<UserProfile>> getProfilesByLanguage(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByLanguage(id));
+  Future<List<UserProfile>> getProfilesByRelationGoal(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByRelationGoal(id));
+  Future<List<UserProfile>> getProfilesByInterest(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByInterest(id));
+  Future<List<UserProfile>> getProfilesByMusicGenre(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByMusicGenre(id));
+  Future<List<UserProfile>> getProfilesByEducation(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByEducation(id));
+  Future<List<UserProfile>> getProfilesByPreferredGender(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByPreferredGender(id));
+  Future<List<UserProfile>> getProfilesByGender(int id) async =>
+      _getProfilesByEndpoint(ApiEndpoints.profileByGender(id));
+
   /// Update user profile
   Future<UserProfile> updateProfile(UpdateProfileRequest request) async {
     try {

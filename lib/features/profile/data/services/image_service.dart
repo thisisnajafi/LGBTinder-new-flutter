@@ -92,18 +92,51 @@ class ImageService {
     }
   }
 
-  /// Reorder images
+  /// Reorder images. API: POST images/reorder body { "order": [1, 2, 3] }.
   Future<void> reorderImages(List<int> imageOrder) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.imagesReorder,
-        data: {'image_order': imageOrder},
+        data: {'order': imageOrder},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (!response.isSuccess) {
         throw Exception(response.message);
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete profile picture (API: DELETE profile-pictures/:id).
+  Future<void> deleteProfilePicture(int imageId) async {
+    try {
+      final response = await _apiService.delete<Map<String, dynamic>>(
+        ApiEndpoints.profilePicturesById(imageId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get profile pictures list (API: GET profile-pictures/list). Returns data.images.
+  Future<List<UserImage>> getProfilePicturesList() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.profilePicturesList,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess || response.data == null) return [];
+      final images = response.data!['images'] as List<dynamic>? ?? [];
+      return images
+          .where((e) => e != null)
+          .map((e) => UserImage.fromJson(e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map)))
+          .toList();
     } catch (e) {
       rethrow;
     }

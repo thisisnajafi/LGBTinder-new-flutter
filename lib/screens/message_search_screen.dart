@@ -1,4 +1,4 @@
-﻿// Screen: MessageSearchScreen
+// Screen: MessageSearchScreen
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,7 +77,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     try {
       final apiService = ref.read(apiServiceProvider);
       final response = await apiService.get<Map<String, dynamic>>(
-        ApiEndpoints.messageSearch,
+        ApiEndpoints.chatSearch,
         queryParameters: {
           'query': query,
           'limit': 20,

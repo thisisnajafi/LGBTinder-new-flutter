@@ -113,7 +113,7 @@ class NotificationService {
     }
   }
 
-  /// Delete a notification
+  /// Delete a notification (DELETE notifications/:id)
   Future<void> deleteNotification(int notificationId) async {
     try {
       final response = await _apiService.delete<Map<String, dynamic>>(
@@ -127,6 +127,32 @@ class NotificationService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Delete all notifications (API: DELETE /notifications).
+  Future<void> deleteAllNotifications() async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiEndpoints.notifications,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+  }
+
+  /// Get notification permissions (API: GET notifications/permissions).
+  /// Returns data with permissions, available_types, can_customize, can_set_quiet_hours.
+  Future<Map<String, dynamic>> getPermissions() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.notificationsPermissions,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (response.isSuccess && response.data != null) {
+        return response.data!;
+      }
+    } catch (e) {
+      rethrow;
+    }
+    return {};
   }
 
   /// Get notification preferences

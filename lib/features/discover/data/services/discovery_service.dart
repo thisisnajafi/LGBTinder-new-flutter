@@ -269,6 +269,20 @@ class DiscoveryService {
     }
   }
 
+  /// GET matching/location-based — location-based matches (may require profile picture).
+  Future<Map<String, dynamic>> getLocationBased({int? page, int? limit}) async {
+    final queryParams = <String, dynamic>{};
+    if (page != null) queryParams['page'] = page;
+    if (limit != null) queryParams['limit'] = limit;
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.matchingLocationBased,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
   /// Apply filters to discovery
   Future<List<DiscoveryProfile>> applyFilters(DiscoveryFilters filters) async {
     try {

@@ -194,6 +194,46 @@ class AuthService {
     }
   }
 
+  /// Magic-link login: request a login code sent to email (POST auth/login). Body: email, device_name.
+  Future<Map<String, dynamic>> requestMagicLink({
+    required String email,
+    String deviceName = 'app',
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.login,
+      data: {'email': email, 'device_name': deviceName},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// Magic-link login: verify the code received by email (POST auth/verify-login-code). Body: email, code, device_name.
+  Future<LoginResponse> verifyMagicLinkCode({
+    required String email,
+    required String code,
+    String deviceName = 'app',
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.verifyLoginCode,
+      data: {'email': email, 'code': code, 'device_name': deviceName},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+    final loginResponse = LoginResponse.fromJson(response.data!);
+    if (loginResponse.token != null) {
+      await _tokenStorage.saveAuthToken(loginResponse.token!);
+      await _dioClient.updateAuthToken(loginResponse.token);
+    }
+    final refreshToken = response.data!['refresh_token'] as String?;
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await _tokenStorage.saveRefreshToken(refreshToken);
+    }
+    return loginResponse;
+  }
+
   /// Check user state (for app launch)
   Future<UserStateResponse> checkUserState(String email) async {
     try {
@@ -445,6 +485,35 @@ class AuthService {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// Get linked accounts (API: GET auth/linked-accounts). Returns data.linked_accounts.
+  Future<List<Map<String, dynamic>>> getLinkedAccounts() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.authLinkedAccounts,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess || response.data == null) return [];
+      final list = response.data!['linked_accounts'] as List<dynamic>? ?? [];
+      return list
+          .where((e) => e is Map<String, dynamic>)
+          .cast<Map<String, dynamic>>()
+          .toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Unlink Google account (API: DELETE auth/google/unlink).
+  Future<void> unlinkGoogle() async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiEndpoints.authGoogleUnlink,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
   }
 

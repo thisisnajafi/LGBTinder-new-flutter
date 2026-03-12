@@ -11,6 +11,7 @@ class ApiEndpoints {
   static const String register = '/auth/register';
   static const String login = '/auth/login';
   static const String loginPassword = '/auth/login-password';
+  static const String verifyLoginCode = '/auth/verify-login-code';
   /// Lightweight token validation for splash (GET, Bearer token). 200 = valid, 401 = invalid.
   static const String checkToken = '/auth/check-token';
   static const String checkUserState = '/auth/check-user-state';
@@ -29,10 +30,28 @@ class ApiEndpoints {
   // FIXED: Updated to match backend routes (api.php lines 103-104)
   static const String googleAuthUrl = '/auth/google/url';
   static const String googleCallback = '/auth/google/callback';
+  static const String authLinkedAccounts = '/auth/linked-accounts';
+  static const String authGoogleUnlink = '/auth/google/unlink';
+
+  // ==================== Landing (public, no auth) ====================
+  static const String landingBlogs = '/landing/blogs';
+  static const String landingSettings = '/landing/settings';
+  static const String landingContact = '/landing/contact';
+  static const String landingAppImages = '/landing/app-images';
+  static const String landingStats = '/landing/stats';
+  static const String landingTestimonials = '/landing/testimonials';
+
+  // ==================== Locales (i18n) ====================
+  static const String locales = '/locales';
+  static const String localesTranslations = '/locales/translations';
+  static const String localesCurrent = '/locales/current';
 
   // ==================== Reference Data ====================
   static const String countries = '/countries';
+  static String countryById(int id) => '/countries/$id';
+  static const String cities = '/cities';
   static String citiesByCountry(int countryId) => '/cities/country/$countryId';
+  static String cityById(int id) => '/cities/$id';
   static const String genders = '/genders';
   static const String jobs = '/jobs';
   static const String education = '/education';
@@ -49,12 +68,28 @@ class ApiEndpoints {
   static const String userNotificationPreferences = '/user/notification-preferences';
   static const String userNotificationHistory = '/user/notification-history';
 
+  // OneSignal (push notification player & preferences)
+  static const String onesignalUpdatePlayerId = '/onesignal/update-player-id';
+  static const String onesignalRemovePlayerId = '/onesignal/remove-player-id';
+  static const String onesignalNotificationInfo = '/onesignal/notification-info';
+  static const String onesignalUpdatePreferences = '/onesignal/update-preferences';
+  static const String onesignalResetPreferences = '/onesignal/reset-preferences';
+  static const String onesignalDeliveryStatus = '/onesignal/delivery-status';
+
   // ==================== Profile Management ====================
   static const String profile = '/profile';
   static String profileById(int userId) => '/profile/$userId';
   static const String profileBadgeInfo = '/profile/badge/info';
   static const String profileUpdate = '/profile/update';
   static String profileByJob(int jobId) => '/profile/by-job/$jobId';
+  static String profileByLanguage(int id) => '/profile/by-language/$id';
+  static String profileByRelationGoal(int id) => '/profile/by-relation-goal/$id';
+  static String profileByInterest(int id) => '/profile/by-interest/$id';
+  static String profileByMusicGenre(int id) => '/profile/by-music-genre/$id';
+  static String profileByEducation(int id) => '/profile/by-education/$id';
+  static String profileByPreferredGender(int id) => '/profile/by-preferred-gender/$id';
+  static String profileByGender(int id) => '/profile/by-gender/$id';
+  static String profileMatchStatus(int userId) => '/profile/$userId/match-status';
 
   // ==================== Profile Verification ====================
   // FIXED: Updated to match backend routes (api.php lines 614-623)
@@ -68,6 +103,11 @@ class ApiEndpoints {
 
   // ==================== Profile Completion ====================
   static const String profileCompletionStatus = '/profile/completion-status';
+
+  // ==================== Profile Wizard ====================
+  static const String profileWizardCurrentStep = '/profile-wizard/current-step';
+  static String profileWizardStepOptions(int stepId) => '/profile-wizard/step-options/$stepId';
+  static String profileWizardSaveStep(int stepId) => '/profile-wizard/save-step/$stepId';
 
   // ==================== Image Management ====================
   static const String imagesUpload = '/images/upload';
@@ -87,6 +127,7 @@ class ApiEndpoints {
   static const String matchingNearbySuggestions = '/matching/nearby-suggestions';
   static const String matchingAdvanced = '/matching/advanced';
   static const String matchingCompatibilityScore = '/matching/compatibility-score';
+  static const String matchingLocationBased = '/matching/location-based';
   static const String matchingAiSuggestions = '/matching/ai-suggestions';
   static const String matchingDebug = '/matching/debug';
 
@@ -96,14 +137,20 @@ class ApiEndpoints {
   static const String likesSuperlike = '/likes/superlike';
   static const String likesRespond = '/likes/respond';
   static const String likesMatches = '/likes/matches';
+  static const String likesMatchesCount = '/likes/matches/count';
+  static String likesMatchById(int id) => '/likes/matches/$id';
   static const String likesPending = '/likes/pending';
   static const String likesSuperlikeHistory = '/likes/superlike-history';
   static const String likesRewind = '/likes/rewind';
+  // Matches namespace (alternative to likes/dislike, likes/superlike)
+  static const String matchesDislike = '/matches/dislike';
+  static const String matchesSuperlike = '/matches/superlike';
 
   // ==================== Chat & Messaging ====================
   static const String chatSend = '/chat/send';
   static const String chatHistory = '/chat/history';
   static const String chatUsers = '/chat/users';
+  static const String chatAccessUsers = '/chat/access-users';
   static const String chatMessage = '/chat/message';
   static const String chatTyping = '/chat/typing';
   static const String chatRead = '/chat/read';
@@ -127,29 +174,68 @@ class ApiEndpoints {
   static String notificationsRead(int id) => '/notifications/$id/read';
   static const String notificationsReadAll = '/notifications/read-all';
   static String notificationsById(int id) => '/notifications/$id';
+  static const String notificationsPermissions = '/notifications/permissions';
   static const String notificationPreferences = '/notification-preferences';
   static const String notificationsTest = '/notifications/test';
   static const String notificationsRegisterDevice = '/notifications/register-device';
   static const String notificationsUnregisterDevice = '/notifications/unregister-device';
 
   // ==================== Settings ====================
+  /// GET /settings — full settings summary (account, profile, discovery, etc.)
+  static const String settings = '/settings';
   static const String userSettings = '/user/settings';
   static const String privacySettings = '/privacy/settings';
   static const String preferencesMatching = '/preferences/matching';
+  static const String preferencesAge = '/preferences/age';
   static const String deviceSessions = '/device-sessions';
   static String deviceSessionById(int id) => '/device-sessions/$id';
   static String deviceSessionTrust(int id) => '/device-sessions/$id/trust';
   static const String changePassword = '/auth/change-password';
   static const String changeEmail = '/profile/change-email';
+  static const String accountChangeEmail = '/account/change-email';
+  static const String accountChangePassword = '/account/change-password';
+  static const String accountReactivate = '/account/reactivate';
+
+  // Call management (voice/video)
+  static const String callManagementInitiate = '/call-management/initiate';
+  static String callManagementAccept(int callId) => '/call-management/$callId/accept';
+  static String callManagementReject(int callId) => '/call-management/$callId/reject';
+  static String callManagementEnd(int callId) => '/call-management/$callId/end';
+  static const String callManagementHistory = '/call-management/history';
+  static String callManagementHistoryDelete(int id) => '/call-management/history/$id';
+  static const String callManagementStatistics = '/call-management/statistics';
+
   static const String verifyEmailChange = '/profile/verify-email-change';
   static const String deleteAccount = '/auth/delete-account';
   static const String subscriptionStatus = '/subscriptions/status';
   static const String subscriptionCancel = '/subscriptions/cancel';
   static const String subscriptionReactivate = '/subscriptions/reactivate';
   static const String userPaymentMethods = '/user/payment-methods';
+  static const String userPaymentMethodsDefault = '/user/payment-methods/default';
+  static const String userPaymentsHistory = '/user/payments/history';
+  static const String userPaymentsSubscription = '/user/payments/subscription';
+  static String userPaymentsReceipt(int id) => '/user/payments/receipt/$id';
+  static const String userPaymentsFailed = '/user/payments/failed';
+  static String userPaymentsRefund(int id) => '/user/payments/refund/$id';
   static const String paymentMethodsList = '/payment-methods';
+  static String paymentMethodById(int id) => '/payment-methods/$id';
+  static String paymentMethodsCurrency(String currency) => '/payment-methods/currency/$currency';
+  static String paymentMethodsType(String type) => '/payment-methods/type/$type';
+  static const String paymentMethodsValidateAmount = '/payment-methods/validate-amount';
   static const String emergencyTrigger = '/emergency/trigger';
+  static const String safetyGuidelines = '/safety/guidelines';
+  static const String safetyEmergencyAlert = '/safety/emergency-alert';
+  static const String safetyShareLocation = '/safety/share-location';
+  static const String safetyNearbySafePlaces = '/safety/nearby-safe-places';
+  static const String safetyReport = '/safety/report';
+  static const String safetyReportCategories = '/safety/report-categories';
+  static const String safetyReportHistory = '/safety/report-history';
+  static const String safetyModerateContent = '/safety/moderate-content';
+  static const String safetyStatistics = '/safety/statistics';
   static const String reports = '/reports';
+  static String reportById(int id) => '/reports/$id';
+  static const String tickets = '/tickets';
+  static String ticketById(int id) => '/tickets/$id';
   static const String twoFactorStatus = '/2fa/status';
   static const String twoFactorEnable = '/2fa/enable';
   static const String twoFactorVerify = '/2fa/verify';
@@ -157,7 +243,14 @@ class ApiEndpoints {
   static const String twoFactorQrCode = '/2fa/qr-code';
   static const String twoFactorBackupCodes = '/2fa/backup-codes';
   static const String userSessions = '/sessions';
+  static const String sessionsStore = '/sessions/store';
   static const String sessionActivity = '/sessions/activity';
+  static String sessionRevoke(int id) => '/sessions/revoke/$id';
+  // API tokens (list, current, validate, revoke)
+  static const String tokens = '/tokens';
+  static const String tokensCurrent = '/tokens/current';
+  static const String tokensValidate = '/tokens/validate';
+  static String tokenById(int id) => '/tokens/$id';
   static const String userSearch = '/profile/search';
   static const String emergencyContacts = '/safety/emergency-contacts';
   static const String exportData = '/user/export-data';
@@ -207,34 +300,106 @@ class ApiEndpoints {
 
   // ==================== Analytics ====================
   static const String analyticsMyAnalytics = '/analytics/my-analytics';
+  static const String analyticsEngagement = '/analytics/engagement';
+  static const String analyticsRetention = '/analytics/retention';
+  static const String analyticsInteractions = '/analytics/interactions';
+  static const String analyticsProfileMetrics = '/analytics/profile-metrics';
   static const String analyticsTrackActivity = '/analytics/track-activity';
 
   // ==================== User Actions ====================
   static const String blockUser = '/block/user';
   static const String blockList = '/block/list';
+  /// GET /block/check?user_id= — check if a user is blocked
+  static const String blockCheck = '/block/check';
   static const String reportsHistory = '/reports/history';
   static const String mutesMute = '/mutes/mute';
+  static const String mutesUnmute = '/mutes/unmute';
+  static const String mutesList = '/mutes/list';
+  static const String mutesSettings = '/mutes/settings';
+  static const String mutesCheck = '/mutes/check';
   static const String favoritesAdd = '/favorites/add';
   static const String favoritesRemove = '/favorites/remove';
   static const String favoritesList = '/favorites/list';
+  static const String favoritesCheck = '/favorites/check';
+  static const String favoritesNote = '/favorites/note';
+  static const String emergencyContactsBase = '/emergency-contacts';
   static const String emergencyContactsAdd = '/emergency-contacts/add';
   static const String emergencyContactsList = '/emergency-contacts/list';
   static String emergencyContactById(int id) => '/emergency-contacts/$id';
+  static String emergencyContactVerify(int id) => '/emergency-contacts/$id/verify';
+  static String emergencyContactConfirm(int id) => '/emergency-contacts/$id/confirm';
   static const String emergencyAlert = '/emergency/alert';
 
   // ==================== Payments & Subscriptions ====================
-  // Stripe checkout/payment-intent removed; cancel-by-id kept for backend compatibility
+  // Stripe
   static String stripeSubscriptionById(String id) => '/stripe/subscription/$id';
+  static const String stripeCheckout = '/stripe/checkout';
+  static const String stripeVerifyPayment = '/stripe/verify-payment';
+  static const String stripeCreatePaymentIntent = '/stripe/create-payment-intent';
+  static const String stripeVerifyPaymentIntent = '/stripe/verify-payment-intent';
+  static const String stripeCreateUpgradePaymentIntent = '/stripe/create-upgrade-payment-intent';
+  static const String stripeVerifyUpgradePaymentIntent = '/stripe/verify-upgrade-payment-intent';
+  static const String stripePaymentIntent = '/stripe/payment-intent';
+  static const String stripeSubscription = '/stripe/subscription';
+  static const String stripeRefund = '/stripe/refund';
+  static const String stripeAnalytics = '/stripe/analytics';
   static const String subscriptionsStatus = '/subscriptions/status';
+  static const String subscriptionsPlans = '/subscriptions/plans';
+  static const String subscriptionsCreateCheckout = '/subscriptions/create-checkout';
+  static const String subscriptionsCalculateUpgrade = '/subscriptions/calculate-upgrade';
+  static const String subscriptionsUpgradeWithPenalty = '/subscriptions/upgrade-with-penalty';
+  static const String subscriptionsUpdate = '/subscriptions/update';
+  static String subscriptionsVerify(String sessionOrToken) => '/subscriptions/verify/$sessionOrToken';
   static const String subscriptionsSubscribe = '/subscriptions/subscribe';
   static const String subscriptionsUpgrade = '/subscriptions/upgrade';
   static const String plans = '/plans';
+  static String planById(int id) => '/plans/$id';
+  static String planSubPlans(int planId) => '/plans/$planId/sub-plans';
+  static String planSubPlanById(int planId, int subPlanId) => '/plans/$planId/sub-plans/$subPlanId';
   static const String subPlans = '/sub-plans';
+  static const String subPlansDuration = '/sub-plans/duration';
+  static const String subPlansCompare = '/sub-plans/compare';
+  static String subPlansByPlan(int planId) => '/sub-plans/plan/$planId';
+  static const String subPlansUpgradeOptions = '/sub-plans/upgrade-options';
+  static const String subPlansUpgrade = '/sub-plans/upgrade';
+  static String subPlanById(int id) => '/sub-plans/$id';
+
+  // Plan purchases (user's plan purchase records)
+  static const String planPurchases = '/plan-purchases';
+  static const String planPurchasesHistory = '/plan-purchases/history';
+  static const String planPurchasesActive = '/plan-purchases/active';
+  static const String planPurchasesExpired = '/plan-purchases/expired';
+  static const String planPurchasesUpgradeOptions = '/plan-purchases/upgrade-options';
+  static String planPurchaseById(int id) => '/plan-purchases/$id';
+
+  // Plan purchase actions (transaction records)
+  static const String planPurchaseActions = '/plan-purchase-actions';
+  static const String planPurchaseActionsStatistics = '/plan-purchase-actions/statistics';
+  static const String planPurchaseActionsToday = '/plan-purchase-actions/today';
+  static const String planPurchaseActionsStatus = '/plan-purchase-actions/status';
+  static String planPurchaseActionsUser(int userId) => '/plan-purchase-actions/user/$userId';
+  static String planPurchaseActionById(int id) => '/plan-purchase-actions/$id';
+  static String planPurchaseActionStatus(int id) => '/plan-purchase-actions/$id/status';
+
+  // ==================== Plan Limits ====================
+  static const String planLimits = '/plan-limits';
+  static const String planLimitsCheck = '/plan-limits/check';
 
   // ==================== Superlikes ====================
   static const String superlikePacksAvailable = '/superlike-packs/available';
   static const String superlikePacksPurchase = '/superlike-packs/purchase';
+  static const String superlikePacksStripeCheckout = '/superlike-packs/stripe-checkout';
+  static const String superlikePacksCreatePaymentIntent = '/superlike-packs/create-payment-intent';
+  static const String superlikePacksVerifyPaymentIntent = '/superlike-packs/verify-payment-intent';
+  static const String superlikePacksStripeVerifyPayment = '/superlike-packs/stripe-verify-payment';
+  static const String superlikePacksPaypalCheckout = '/superlike-packs/paypal-checkout';
   static const String superlikePacksUserPacks = '/superlike-packs/user-packs';
+  static const String superlikePacksPurchaseHistory = '/superlike-packs/purchase-history';
+  static const String superlikePacksActivatePending = '/superlike-packs/activate-pending';
+  // PayPal (subscription/plan orders)
+  static const String paypalCreateOrderPlan = '/paypal/create-order-plan';
+  static const String paypalCaptureOrder = '/paypal/capture-order';
+  static String paypalOrderById(String orderId) => '/paypal/order/$orderId';
   // ==================== Payments ====================
   static const String validateReceipt = '/payments/validate-receipt';
   static const String restorePurchases = '/payments/restore-purchases';
@@ -242,7 +407,11 @@ class ApiEndpoints {
   static const String paymentHistory = '/payments/history';
 
   // ==================== Google Play Billing ====================
+  static const String googlePlayProducts = '/google-play/products';
   static const String googlePlayValidatePurchase = '/google-play/validate-purchase';
+  static const String googlePlayValidateOneTimePurchase = '/google-play/validate-one-time-purchase';
+  static const String googlePlayAcknowledgePurchase = '/google-play/acknowledge-purchase';
+  static const String googlePlayConsumePurchase = '/google-play/consume-purchase';
   static const String googlePlaySubscriptionStatus = '/google-play/subscription/status';
   static const String googlePlayPurchasesHistory = '/google-play/purchases/history';
   static String googlePlayPurchaseDetails(int purchaseId) => '/google-play/purchases/$purchaseId';
@@ -250,6 +419,11 @@ class ApiEndpoints {
   static const String googlePlaySubscriptionsHistory = '/google-play/subscriptions/history';
   static String googlePlaySubscriptionDetails(int subscriptionId) => '/google-play/subscriptions/$subscriptionId';
   static String googlePlayCancelSubscription(int subscriptionId) => '/google-play/subscriptions/$subscriptionId/cancel';
+  static const String googlePlaySubscriptionCancel = '/google-play/subscription/cancel';
+  static const String googlePlayAnalyticsPurchases = '/google-play/analytics/purchases';
+  static const String googlePlayAnalyticsSubscriptions = '/google-play/analytics/subscriptions';
+  static const String googlePlayAnalyticsWebhooks = '/google-play/analytics/webhooks';
+  static const String googlePlayAnalyticsErrors = '/google-play/analytics/errors';
 
   // ==================== Community Forums ====================
   static const String communityForums = '/community-forums';
@@ -267,6 +441,15 @@ class ApiEndpoints {
   static const String marketingPromoCodes = '/marketing/promo-codes';
   static const String marketingTrackImpression = '/marketing/track-impression';
   static const String marketingTrackClick = '/marketing/track-click';
+
+  // ==================== Referrals ====================
+  static const String referralsStats = '/referrals/stats';
+  static const String referralsCode = '/referrals/code';
+  static const String referralsHistory = '/referrals/history';
+  static const String referralsTiers = '/referrals/tiers';
+  static const String referralsValidateCode = '/referrals/validate-code';
+  static const String referralsProcessMilestone = '/referrals/process-milestone';
+  static const String referralsMarkCompleted = '/referrals/mark-completed';
 
   // ==================== Daily Rewards ====================
   static const String dailyRewardsStatus = '/daily-rewards/status';

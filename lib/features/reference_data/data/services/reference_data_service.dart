@@ -18,7 +18,17 @@ class ReferenceDataService {
     }
   }
 
-  /// Get cities by country ID
+  /// Get all cities (API: GET cities). Full list — may be large; prefer getCitiesByCountry when possible.
+  Future<List<ReferenceItem>> getCities() async {
+    try {
+      final response = await _apiService.get<dynamic>(ApiEndpoints.cities);
+      return _extractListFromResponse(response.data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get cities by country ID (API: GET cities/country/:id)
   Future<List<ReferenceItem>> getCitiesByCountry(int countryId) async {
     try {
       final response = await _apiService.get<dynamic>(
@@ -28,6 +38,39 @@ class ReferenceDataService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Get single country by ID (API: GET countries/:id). Returns null if not found.
+  Future<ReferenceItem?> getCountryById(int id) async {
+    try {
+      final response = await _apiService.get<dynamic>(ApiEndpoints.countryById(id));
+      final data = _extractSingleFromResponse(response.data);
+      return data != null ? ReferenceItem.fromJson(data) : null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get single city by ID (API: GET cities/:id). Returns null if not found.
+  Future<ReferenceItem?> getCityById(int id) async {
+    try {
+      final response = await _apiService.get<dynamic>(ApiEndpoints.cityById(id));
+      final data = _extractSingleFromResponse(response.data);
+      return data != null ? ReferenceItem.fromJson(data) : null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Extract single object from API response (data may be wrapped in status/data).
+  Map<String, dynamic>? _extractSingleFromResponse(dynamic responseData) {
+    if (responseData is Map<String, dynamic>) {
+      if (responseData['data'] != null && responseData['data'] is Map<String, dynamic>) {
+        return responseData['data'] as Map<String, dynamic>;
+      }
+      if (responseData['id'] != null) return responseData;
+    }
+    return null;
   }
 
   /// Helper method to extract list from response

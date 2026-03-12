@@ -73,6 +73,28 @@ class LikesService {
     }
   }
 
+  /// POST matches/dislike. Body: disliked_user_id. Alternative to likes/dislike.
+  Future<Map<String, dynamic>> matchDislike(int dislikedUserId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.matchesDislike,
+      data: {'disliked_user_id': dislikedUserId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// POST matches/superlike. Body: superliked_user_id. Alternative to likes/superlike.
+  Future<Map<String, dynamic>> matchSuperlike(int superlikedUserId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.matchesSuperlike,
+      data: {'superliked_user_id': superlikedUserId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
   /// Rewind (undo) the last like or dislike. Premium only. Returns restored user map or null.
   /// Backend: POST /api/likes/rewind; 403 REWIND_PREMIUM_REQUIRED, 404 NOTHING_TO_REWIND.
   Future<RewindResponse> rewind() async {
@@ -99,7 +121,33 @@ class LikesService {
     }
   }
 
-  /// Get all matches
+  /// Get matches count (API: GET likes/matches/count). Returns data.count.
+  Future<int> getMatchesCount() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.likesMatchesCount,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess || response.data == null) return 0;
+      final data = response.data!['data'] as Map<String, dynamic>?;
+      return data?['count'] as int? ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get a single match by id (API: GET likes/matches/:id).
+  Future<Match> getMatchById(int matchId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.likesMatchById(matchId),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess || response.data == null) throw Exception(response.message);
+    final data = response.data!['data'] as Map<String, dynamic>? ?? response.data!;
+    return Match.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  /// Get all matches (from likes/matches)
   Future<List<Match>> getMatches() async {
     try {
       final response = await _apiService.get<dynamic>(
@@ -116,6 +164,28 @@ class LikesService {
         dataList = response.data as List;
       }
 
+      if (dataList != null) {
+        return dataList.map((item) => Match.fromJson(item as Map<String, dynamic>)).toList();
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get matches from matching/matches (API: GET matching/matches). Same shape as likes/matches.
+  Future<List<Match>> getMatchingMatches() async {
+    try {
+      final response = await _apiService.get<dynamic>(ApiEndpoints.matchingMatches);
+      List<dynamic>? dataList;
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['data'] != null && data['data'] is List) {
+          dataList = data['data'] as List;
+        }
+      } else if (response.data is List) {
+        dataList = response.data as List;
+      }
       if (dataList != null) {
         return dataList.map((item) => Match.fromJson(item as Map<String, dynamic>)).toList();
       }

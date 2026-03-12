@@ -37,7 +37,7 @@ class PlanLimitsService {
       }
 
       final response = await _apiService.get<Map<String, dynamic>>(
-        '${ApiEndpoints.baseUrl}/plan-limits',
+        ApiEndpoints.planLimits,
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -61,7 +61,7 @@ class PlanLimitsService {
   Future<LimitCheckResponse> checkLimit(String limitType) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        '${ApiEndpoints.baseUrl}/plan-limits/check',
+        ApiEndpoints.planLimitsCheck,
         data: {'feature': limitType},
         fromJson: (json) => json as Map<String, dynamic>,
       );

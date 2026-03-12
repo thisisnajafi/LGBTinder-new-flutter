@@ -7,6 +7,16 @@ import '../../shared/services/cache_service.dart';
 import '../../shared/services/offline_queue_service.dart';
 import '../../shared/services/sync_service.dart';
 import '../../shared/services/error_handler_service.dart';
+import '../../shared/services/landing_service.dart';
+import '../../shared/services/locale_api_service.dart';
+import '../../shared/services/token_api_service.dart';
+import '../../shared/services/ticket_api_service.dart';
+import '../../shared/services/safety_api_service.dart';
+import '../../shared/services/referral_api_service.dart';
+import '../../shared/services/session_api_service.dart';
+import '../../shared/services/account_api_service.dart';
+import '../../shared/services/call_management_api_service.dart';
+import '../../shared/services/onesignal_api_service.dart';
 
 /// Token Storage Service Provider
 final tokenStorageServiceProvider = Provider<TokenStorageService>((ref) {
@@ -60,6 +70,56 @@ final apiServiceProvider = Provider<ApiService>((ref) {
   final queueService = ref.watch(offlineQueueServiceProvider);
   
   return ApiService(dioClient, connectivityService, cacheService, queueService);
+});
+
+/// Landing Service Provider (public landing API)
+final landingServiceProvider = Provider<LandingService>((ref) {
+  return LandingService(ref.watch(apiServiceProvider));
+});
+
+/// Locale API Service Provider (GET/PUT locales, translations)
+final localeApiServiceProvider = Provider<LocaleApiService>((ref) {
+  return LocaleApiService(ref.watch(apiServiceProvider));
+});
+
+/// Token API Service Provider (GET/DELETE tokens — list, current, validate, revoke)
+final tokenApiServiceProvider = Provider<TokenApiService>((ref) {
+  return TokenApiService(ref.watch(apiServiceProvider));
+});
+
+/// Ticket API Service Provider (GET/POST tickets — list, get by id, create)
+final ticketApiServiceProvider = Provider<TicketApiService>((ref) {
+  return TicketApiService(ref.watch(apiServiceProvider));
+});
+
+/// Safety API Service Provider (GET safety/guidelines)
+final safetyApiServiceProvider = Provider<SafetyApiService>((ref) {
+  return SafetyApiService(ref.watch(apiServiceProvider));
+});
+
+/// Referral API Service Provider (referrals stats, code, history, tiers, validate, etc.)
+final referralApiServiceProvider = Provider<ReferralApiService>((ref) {
+  return ReferralApiService(ref.watch(apiServiceProvider));
+});
+
+/// Session API Service Provider (sessions/store, activity, revoke)
+final sessionApiServiceProvider = Provider<SessionApiService>((ref) {
+  return SessionApiService(ref.watch(apiServiceProvider));
+});
+
+/// Account API Service Provider (account/change-email, change-password, reactivate)
+final accountApiServiceProvider = Provider<AccountApiService>((ref) {
+  return AccountApiService(ref.watch(apiServiceProvider));
+});
+
+/// Call Management API Service Provider (initiate, accept, reject, end, history, statistics)
+final callManagementApiServiceProvider = Provider<CallManagementApiService>((ref) {
+  return CallManagementApiService(ref.watch(apiServiceProvider));
+});
+
+/// OneSignal API Service Provider (update/remove player-id, notification-info, preferences, delivery-status)
+final oneSignalApiServiceProvider = Provider<OneSignalApiService>((ref) {
+  return OneSignalApiService(ref.watch(apiServiceProvider));
 });
 
 /// Error Handler Service Provider (static methods, no instance needed)

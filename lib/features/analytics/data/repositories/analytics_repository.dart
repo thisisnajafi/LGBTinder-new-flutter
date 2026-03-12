@@ -50,6 +50,46 @@ class AnalyticsRepository {
       rethrow;
     }
   }
+
+  /// GET analytics/engagement
+  Future<Map<String, dynamic>> getEngagement() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.analyticsEngagement,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// GET analytics/retention
+  Future<Map<String, dynamic>> getRetention() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.analyticsRetention,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// GET analytics/interactions
+  Future<Map<String, dynamic>> getInteractions() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.analyticsInteractions,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// GET analytics/profile-metrics
+  Future<Map<String, dynamic>> getProfileMetrics() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.analyticsProfileMetrics,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
 }
 
 /// Analytics repository provider

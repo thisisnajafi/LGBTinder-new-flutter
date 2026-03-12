@@ -66,20 +66,22 @@ class BlockedUser {
   }
 }
 
-/// Block user request
+/// Block user request.
+/// API: POST /block/user expects body { "user_id": int, "reason": string } (reason required).
 class BlockUserRequest {
   final int blockedUserId;
-  final String? reason;
+  /// Required by API. Use default "Blocked by user" if not provided.
+  final String reason;
 
   BlockUserRequest({
     required this.blockedUserId,
-    this.reason,
-  });
+    String? reason,
+  }) : reason = reason?.trim().isNotEmpty == true ? reason!.trim() : 'Blocked by user';
 
   Map<String, dynamic> toJson() {
     return {
-      'blocked_user_id': blockedUserId,
-      if (reason != null && reason!.isNotEmpty) 'reason': reason,
+      'user_id': blockedUserId,
+      'reason': reason,
     };
   }
 }

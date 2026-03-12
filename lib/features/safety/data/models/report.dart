@@ -25,14 +25,16 @@ class Report {
       throw FormatException('Report.fromJson: reason is required but was null');
     }
     
-    // Get user ID - validate it exists
+    // Get user ID - API returns reportable_id when reportable_type is user
     int reportedUserId;
     if (json['reported_user_id'] != null) {
       reportedUserId = (json['reported_user_id'] is int) ? json['reported_user_id'] as int : int.parse(json['reported_user_id'].toString());
+    } else if (json['reportable_id'] != null && (json['reportable_type'] == null || json['reportable_type'].toString().toLowerCase().contains('user'))) {
+      reportedUserId = (json['reportable_id'] is int) ? json['reportable_id'] as int : int.parse(json['reportable_id'].toString());
     } else if (json['user_id'] != null) {
       reportedUserId = (json['user_id'] is int) ? json['user_id'] as int : int.parse(json['user_id'].toString());
     } else {
-      throw FormatException('Report.fromJson: reported_user_id (or user_id) is required but was null');
+      throw FormatException('Report.fromJson: reported_user_id, reportable_id, or user_id is required but was null');
     }
     
     return Report(
@@ -59,23 +61,25 @@ class Report {
   }
 }
 
-/// Report user request
+/// Report user request.
+/// API: POST /reports expects reportable_type, reportable_id, reason, description (all required).
 class ReportUserRequest {
   final int reportedUserId;
   final String reason;
-  final String? description;
+  final String description;
 
   ReportUserRequest({
     required this.reportedUserId,
     required this.reason,
-    this.description,
-  });
+    String? description,
+  }) : description = description?.trim() ?? '';
 
   Map<String, dynamic> toJson() {
     return {
-      'reported_user_id': reportedUserId,
+      'reportable_type': 'user',
+      'reportable_id': reportedUserId,
       'reason': reason,
-      if (description != null && description!.isNotEmpty) 'description': description,
+      'description': description.isEmpty ? 'No additional details' : description,
     };
   }
 }

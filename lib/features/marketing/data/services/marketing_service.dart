@@ -168,6 +168,20 @@ class MarketingService {
     }
   }
 
+  /// GET marketing/analytics/google-play. Returns period, total_purchases, total_revenue, by_campaign, etc.
+  Future<Map<String, dynamic>> getGooglePlayAnalytics() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      MarketingEndpoints.analyticsGooglePlay,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    final data = response.data;
+    if (data != null && data['data'] is Map<String, dynamic>) {
+      return data['data'] as Map<String, dynamic>;
+    }
+    return data ?? {};
+  }
+
   Map<String, dynamic>? _extractData(dynamic responseData) {
     if (responseData is Map<String, dynamic>) {
       if (responseData.containsKey('data')) {
@@ -225,10 +239,14 @@ class PersonalizedPrice {
 class MarketingEndpoints {
   static const String promotions = '/marketing/promotions';
   static const String validatePromoCode = '/marketing/validate-promo';
+  /// API doc path (alternative): use when backend expects this path.
+  static const String promoCodeValidate = '/marketing/promo-code/validate';
   static const String applyPromotion = '/marketing/apply-promotion';
+  static const String promoCodeApply = '/marketing/promo-code/apply';
   static const String personalizedPricing = '/marketing/pricing';
   static const String productPrice = '/marketing/price';
   static const String publicPromoCodes = '/marketing/promo-codes';
   static const String trackImpression = '/marketing/track-impression';
   static const String trackClick = '/marketing/track-click';
+  static const String analyticsGooglePlay = '/marketing/analytics/google-play';
 }

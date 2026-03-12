@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/api_providers.dart';
 import '../data/services/profile_service.dart';
 import '../data/services/image_service.dart';
+import '../data/services/profile_wizard_service.dart';
 import '../data/models/user_profile.dart';
 
 /// Profile Service Provider
@@ -14,6 +15,12 @@ final profileServiceProvider = Provider<ProfileService>((ref) {
 final imageServiceProvider = Provider<ImageService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   return ImageService(apiService);
+});
+
+/// Profile Wizard Service Provider (profile completion steps)
+final profileWizardServiceProvider = Provider<ProfileWizardService>((ref) {
+  final apiService = ref.watch(apiServiceProvider);
+  return ProfileWizardService(apiService);
 });
 
 /// My Profile Provider (current user's profile)

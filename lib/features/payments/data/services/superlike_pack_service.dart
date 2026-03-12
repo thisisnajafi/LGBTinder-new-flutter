@@ -114,5 +114,92 @@ class SuperlikePackService {
     }
   }
 
+  /// Get superlike pack purchase history (API: GET superlike-packs/purchase-history).
+  Future<Map<String, dynamic>> getPurchaseHistory({int? page, int? limit}) async {
+    final queryParams = <String, dynamic>{};
+    if (page != null) queryParams['page'] = page;
+    if (limit != null) queryParams['limit'] = limit;
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksPurchaseHistory,
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {'purchases': [], 'pagination': {}};
+  }
+
+  /// Activate a pending superlike pack (API: POST superlike-packs/activate-pending). Body: pack_id.
+  Future<Map<String, dynamic>> activatePendingPack(int packId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksActivatePending,
+      data: {'pack_id': packId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// POST superlike-packs/stripe-checkout. Body: pack_id, success_url, cancel_url.
+  Future<Map<String, dynamic>> stripeCheckout({
+    required int packId,
+    required String successUrl,
+    required String cancelUrl,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksStripeCheckout,
+      data: {
+        'pack_id': packId,
+        'success_url': successUrl,
+        'cancel_url': cancelUrl,
+      },
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// POST superlike-packs/create-payment-intent. Body: pack_id.
+  Future<Map<String, dynamic>> createPaymentIntent(int packId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksCreatePaymentIntent,
+      data: {'pack_id': packId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// POST superlike-packs/verify-payment-intent. Body: payment_intent_id.
+  Future<Map<String, dynamic>> verifyPaymentIntent(String paymentIntentId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksVerifyPaymentIntent,
+      data: {'payment_intent_id': paymentIntentId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// POST superlike-packs/stripe-verify-payment. Body: session_id.
+  Future<Map<String, dynamic>> stripeVerifyPayment(String sessionId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksStripeVerifyPayment,
+      data: {'session_id': sessionId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
+  /// POST superlike-packs/paypal-checkout. Body: pack_id.
+  Future<Map<String, dynamic>> paypalCheckout(int packId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.superlikePacksPaypalCheckout,
+      data: {'pack_id': packId},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
 }
 

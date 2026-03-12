@@ -10,6 +10,20 @@ class SettingsSummaryService {
 
   SettingsSummaryService(this._apiService);
 
+  /// Get full settings (API: GET /settings). Same shape as user/settings; use for settings overview.
+  Future<SettingsSummary> getSettings() async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.settings,
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (response.isSuccess && response.data != null) {
+        return _parseSettingsToSummary(response.data!);
+      }
+    } catch (_) {}
+    return const SettingsSummary();
+  }
+
   /// Get settings summary for the overview screen.
   /// Uses user settings and maps to SettingsSummary; can be extended with a dedicated endpoint.
   Future<SettingsSummary> getSummary() async {
@@ -20,35 +34,38 @@ class SettingsSummaryService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!;
-        final settings = UserSettings.fromJson(data);
-        final profileMap = data['profile'] is Map
-            ? Map<String, dynamic>.from(data['profile'] as Map)
-            : (data['first_name'] != null || data['display_name'] != null
-                ? {
-                    'display_name': data['display_name'] ?? data['first_name'],
-                    'first_name': data['first_name'],
-                    'last_name': data['last_name'],
-                  }
-                : null);
-        final accountMap = data['account'] is Map
-            ? Map<String, dynamic>.from(data['account'] as Map)
-            : (data['email'] != null ? {'email': data['email']} : null);
-        return SettingsSummary(
-          hasProfile: true,
-          profileComplete: (settings.discoveryPreferences['profile_complete'] == true) ||
-              (data['profile_complete'] == true),
-          unreadNotifications: 0,
-          twoFactorEnabled: settings.twoFactorEnabled,
-          discoveryVisibility: settings.discoveryPreferences['discovery_visibility']?.toString(),
-          profile: SettingsSummaryProfile.fromJson(profileMap),
-          account: SettingsSummaryAccount.fromJson(accountMap),
-          notifications: const SettingsSummaryNotifications(),
-        );
+        return _parseSettingsToSummary(response.data!);
       }
     } catch (_) {
       // Fallback when endpoint fails or returns unexpected shape
     }
     return const SettingsSummary();
+  }
+
+  SettingsSummary _parseSettingsToSummary(Map<String, dynamic> data) {
+    final settings = UserSettings.fromJson(data);
+    final profileMap = data['profile'] is Map
+        ? Map<String, dynamic>.from(data['profile'] as Map)
+        : (data['first_name'] != null || data['display_name'] != null
+            ? {
+                'display_name': data['display_name'] ?? data['first_name'],
+                'first_name': data['first_name'],
+                'last_name': data['last_name'],
+              }
+            : null);
+    final accountMap = data['account'] is Map
+        ? Map<String, dynamic>.from(data['account'] as Map)
+        : (data['email'] != null ? {'email': data['email']} : null);
+    return SettingsSummary(
+      hasProfile: true,
+      profileComplete: (settings.discoveryPreferences['profile_complete'] == true) ||
+          (data['profile_complete'] == true),
+      unreadNotifications: 0,
+      twoFactorEnabled: settings.twoFactorEnabled,
+      discoveryVisibility: settings.discoveryPreferences['discovery_visibility']?.toString(),
+      profile: SettingsSummaryProfile.fromJson(profileMap),
+      account: SettingsSummaryAccount.fromJson(accountMap),
+      notifications: const SettingsSummaryNotifications(),
+    );
   }
 }

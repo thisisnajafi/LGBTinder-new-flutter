@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../core/services/offline_payment_service.dart';
 import 'marketing_attribution_service.dart';
@@ -232,7 +233,7 @@ class GooglePlayBillingService {
       debugPrint('Validating purchase with backend: ${purchaseDetails.productID}');
 
       final response = await _apiService.post<Map<String, dynamic>>(
-        isSubscription ? '/api/google-play/validate-purchase' : '/api/google-play/validate-one-time-purchase',
+        isSubscription ? ApiEndpoints.googlePlayValidatePurchase : ApiEndpoints.googlePlayValidateOneTimePurchase,
         data: requestData,
         fromJson: (json) => json as Map<String, dynamic>,
       );
@@ -322,7 +323,7 @@ class GooglePlayBillingService {
       debugPrint('Acknowledging purchase: ${purchaseDetails.productID}');
 
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/api/google-play/acknowledge-purchase',
+        ApiEndpoints.googlePlayAcknowledgePurchase,
         data: requestData,
         fromJson: (json) => json as Map<String, dynamic>,
       );
@@ -624,7 +625,7 @@ class GooglePlayBillingService {
       debugPrint('Syncing subscription status with backend...');
 
       final response = await _apiService.get<Map<String, dynamic>>(
-        '/api/google-play/subscription/status',
+        ApiEndpoints.googlePlaySubscriptionStatus,
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

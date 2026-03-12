@@ -50,6 +50,20 @@ class ChatService {
     }
   }
 
+  /// GET chat/access-users — users with chat access (users, total_count, matches_count, superlikes_count).
+  Future<Map<String, dynamic>> getAccessUsers() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.chatAccessUsers,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    final data = response.data;
+    if (data != null && data['data'] is Map<String, dynamic>) {
+      return data['data'] as Map<String, dynamic>;
+    }
+    return data ?? {};
+  }
+
   /// Get list of users with conversations
   Future<List<Chat>> getChatUsers() async {
     try {

@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/network/dio_client.dart';
 import '../models/api_response.dart';
@@ -382,6 +381,87 @@ class ApiService {
       if (e is ApiError) {
         rethrow;
       }
+      throw ApiError(
+        message: 'An unexpected error occurred: ${e.toString()}',
+        originalError: e,
+      );
+    }
+  }
+
+  /// PATCH request with offline queue support
+  Future<ApiResponse<T>> patch<T>(
+    String endpoint, {
+    Map<String, dynamic>? data,
+    T Function(dynamic)? fromJson,
+    Options? options,
+    bool queueIfOffline = true,
+  }) async {
+    if (!_connectivityService.isOnline) {
+      if (queueIfOffline) {
+        await _queueService.queueRequest(
+          QueuedRequest(
+            id: _uuid.v4(),
+            method: 'PATCH',
+            endpoint: endpoint,
+            data: data,
+            createdAt: DateTime.now(),
+          ),
+        );
+        throw ApiError(
+          message: 'No internet connection. Request queued and will be sent when online.',
+          code: 0,
+        );
+      } else {
+        throw ApiError(
+          message: 'No internet connection. Please check your network and try again.',
+          code: 0,
+        );
+      }
+    }
+    try {
+      return await RetryService.executeWithRetry<ApiResponse<T>>(
+        operation: () async {
+          final response = await _dioClient.dio.patch(
+            endpoint,
+            data: data,
+            options: options,
+          );
+          return _handleResponse<T>(response, fromJson);
+        },
+        config: RetryConfig(
+          maxRetries: 3,
+          initialDelay: const Duration(seconds: 1),
+          backoffMultiplier: 2.0,
+          maxDelay: const Duration(seconds: 30),
+          shouldRetry: (error) {
+            if (error is ApiError) {
+              if (error.code != null &&
+                  error.code! >= 400 &&
+                  error.code! < 500 &&
+                  error.code != 429) return false;
+              if (error.errors != null && error.errors!.isNotEmpty) return false;
+            }
+            return RetryService.isRetryableError(error);
+          },
+        ),
+      );
+    } on DioException catch (e) {
+      if (queueIfOffline &&
+          (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.unknown)) {
+        await _queueService.queueRequest(
+          QueuedRequest(
+            id: _uuid.v4(),
+            method: 'PATCH',
+            endpoint: endpoint,
+            data: data,
+            createdAt: DateTime.now(),
+          ),
+        );
+      }
+      throw ApiError.fromDioException(e);
+    } catch (e) {
+      if (e is ApiError) rethrow;
       throw ApiError(
         message: 'An unexpected error occurred: ${e.toString()}',
         originalError: e,
