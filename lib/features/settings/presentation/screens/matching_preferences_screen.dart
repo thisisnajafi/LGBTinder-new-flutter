@@ -47,14 +47,25 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     });
     try {
       final service = ref.read(matchingPreferencesServiceProvider);
+      // Load age from GET preferences/age (backend preferences/age endpoint)
+      int? loadedAgeMin;
+      int? loadedAgeMax;
+      try {
+        final ageData = await service.getAgePreferences();
+        final min = ageData['min_age'];
+        final max = ageData['max_age'];
+        if (min != null) loadedAgeMin = min is int ? min : int.tryParse(min.toString());
+        if (max != null) loadedAgeMax = max is int ? max : int.tryParse(max.toString());
+      } catch (_) {}
+      // Load full preferences (distance, visibility; fallback for age if preferences/age had no data)
       final prefs = await service.getPreferences();
       if (kDebugMode) {
-        debugPrint('[DISCOVERY_PREFS] loaded: ageMin=${prefs.ageMin} ageMax=${prefs.ageMax} distance=${prefs.distance} visibility=${prefs.discoveryVisibility}');
+        debugPrint('[DISCOVERY_PREFS] loaded: ageMin=${loadedAgeMin ?? prefs.ageMin} ageMax=${loadedAgeMax ?? prefs.ageMax} distance=${prefs.distance} visibility=${prefs.discoveryVisibility}');
       }
       if (mounted) {
         setState(() {
-          _ageMin = prefs.ageMin;
-          _ageMax = prefs.ageMax;
+          _ageMin = loadedAgeMin ?? prefs.ageMin;
+          _ageMax = loadedAgeMax ?? prefs.ageMax;
           _distance = prefs.distance;
           _discoveryVisibility = prefs.discoveryVisibility;
           _loading = false;
@@ -82,6 +93,9 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     });
     try {
       final service = ref.read(matchingPreferencesServiceProvider);
+      // Save age via PUT preferences/age (backend preferences/age endpoint)
+      await service.updateAgePreferences(minAge: _ageMin, maxAge: _ageMax);
+      // Save full preferences (age + distance + visibility) via PUT preferences/matching
       final prefs = MatchingPreferences(
         ageMin: _ageMin,
         ageMax: _ageMax,
@@ -115,6 +129,29 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
           _saving = false;
           _error = e.toString().replaceFirst(RegExp(r'^Exception:?\s*'), '');
         });
+      }
+    }
+  }
+
+  Future<void> _resetAgeRange() async {
+    if (_loading || _saving) return;
+    try {
+      final service = ref.read(matchingPreferencesServiceProvider);
+      await service.resetAgePreferences();
+      if (mounted) {
+        setState(() {
+          _ageMin = 18;
+          _ageMax = 100;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Age range reset to 18–100')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not reset: ${e.toString().replaceFirst(RegExp(r'^Exception:?\s*'), '')}')),
+        );
       }
     }
   }
@@ -191,6 +228,17 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                         '${_ageMin} – ${_ageMax} years',
                         style: AppTypography.body.copyWith(color: secondaryTextColor),
                       ),
+                      if (!_loading && !_saving)
+                        Padding(
+                          padding: EdgeInsets.only(top: AppSpacing.spacingXS),
+                          child: TextButton(
+                            onPressed: _resetAgeRange,
+                            child: Text(
+                              'Reset age range',
+                              style: AppTypography.labelMedium.copyWith(color: AppColors.accentPurple),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

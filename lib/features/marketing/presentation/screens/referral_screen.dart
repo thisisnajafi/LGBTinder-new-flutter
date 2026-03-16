@@ -7,10 +7,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/providers/api_providers.dart';
 import '../../../../widgets/navbar/app_bar_custom.dart';
 
-/// Enhanced referral screen with tier progress, milestones, and leaderboard
-/// Part of the Marketing System Implementation (Task 3.5.4)
+/// Enhanced referral screen with tier progress, milestones, and leaderboard.
+/// Loads code, stats, history, and tiers from ReferralApiService (GET referrals/code, stats, history, tiers).
 class ReferralScreen extends ConsumerStatefulWidget {
   const ReferralScreen({Key? key}) : super(key: key);
 
@@ -22,17 +23,92 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Mock data - would come from API in production
-  final String _referralCode = 'LGBT2024XYZ';
-  final int _totalReferrals = 7;
-  final int _pendingReferrals = 2;
-  final int _completedReferrals = 5;
-  final int _earnedCredits = 150;
+  // From API (GET referrals/code, stats, history, tiers); fallback to defaults on error
+  String _referralCode = '—';
+  int _totalReferrals = 0;
+  int _pendingReferrals = 0;
+  int _completedReferrals = 0;
+  int _earnedCredits = 0;
+  List<Map<String, dynamic>> _history = [];
+  List<Map<String, dynamic>> _tiers = [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final service = ref.read(referralApiServiceProvider);
+      final codeRes = await service.getCode();
+      final statsRes = await service.getStats();
+      final historyRes = await service.getHistory();
+      final tiersRes = await service.getTiers();
+
+      final dataCode = codeRes['data'] ?? codeRes;
+      final dataStats = statsRes['data'] ?? statsRes;
+      final dataHistory = historyRes['data'] ?? historyRes;
+      final dataTiers = tiersRes['data'] ?? tiersRes;
+
+      String code = dataCode['code']?.toString() ?? dataCode['referral_code']?.toString() ?? '—';
+      int total = _parseInt(dataStats['total_referrals'] ?? dataStats['total']) ?? 0;
+      int pending = _parseInt(dataStats['pending_referrals'] ?? dataStats['pending']) ?? 0;
+      int completed = _parseInt(dataStats['completed_referrals'] ?? dataStats['completed']) ?? 0;
+      int credits = _parseInt(dataStats['earned_credits'] ?? dataStats['credits']) ?? 0;
+
+      List<Map<String, dynamic>> history = [];
+      if (dataHistory is List) {
+        for (final e in dataHistory) {
+          if (e is Map) history.add(Map<String, dynamic>.from(e));
+        }
+      } else if (dataHistory is Map && dataHistory['referrals'] is List) {
+        for (final e in dataHistory['referrals'] as List) {
+          if (e is Map) history.add(Map<String, dynamic>.from(e));
+        }
+      }
+
+      List<Map<String, dynamic>> tiers = [];
+      if (dataTiers is List) {
+        for (final e in dataTiers) {
+          if (e is Map) tiers.add(Map<String, dynamic>.from(e));
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _referralCode = code;
+          _totalReferrals = total;
+          _pendingReferrals = pending;
+          _completedReferrals = completed;
+          _earnedCredits = credits;
+          _history = history;
+          _tiers = tiers;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString().replaceFirst(RegExp(r'^Exception:?\s*'), '');
+        });
+      }
+    }
+  }
+
+  static int? _parseInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
   }
 
   @override
@@ -54,8 +130,30 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
         title: 'Invite Friends',
         showBackButton: true,
       ),
-      body: Column(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accentPurple))
+          : Column(
         children: [
+          if (_error != null)
+            Padding(
+              padding: EdgeInsets.all(AppSpacing.spacingMD),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.accentYellow, size: 20),
+                  SizedBox(width: AppSpacing.spacingSM),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: AppTypography.bodySmall.copyWith(color: textColor),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _load,
+                    child: Text('Retry', style: AppTypography.labelMedium.copyWith(color: AppColors.accentPurple)),
+                  ),
+                ],
+              ),
+            ),
           // Tab bar
           Container(
             margin: EdgeInsets.all(AppSpacing.spacingMD),
@@ -104,12 +202,16 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        children: [
-          // Stats card
-          _buildStatsCard(),
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.accentPurple,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        child: Column(
+          children: [
+            // Stats card
+            _buildStatsCard(),
 
           SizedBox(height: AppSpacing.spacingXL),
 
@@ -206,6 +308,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
           // Recent referrals
           _buildRecentReferrals(),
         ],
+        ),
       ),
     );
   }
@@ -459,13 +562,6 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
-    // Mock data
-    final referrals = [
-      {'name': 'Alex M.', 'status': 'completed', 'date': '2 days ago'},
-      {'name': 'Jamie K.', 'status': 'completed', 'date': '5 days ago'},
-      {'name': 'Sam R.', 'status': 'pending', 'date': '1 week ago'},
-    ];
-
     return Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
       decoration: BoxDecoration(
@@ -480,14 +576,24 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
             style: AppTypography.h4.copyWith(color: textColor),
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          ...referrals.map((r) => _buildReferralItem(r)),
+          if (_history.isEmpty)
+            Text(
+              'No referrals yet. Share your code to get started!',
+              style: AppTypography.body.copyWith(color: textColor.withOpacity(0.7)),
+            )
+          else
+            ..._history.take(10).map((r) => _buildReferralItemFromMap(r)),
         ],
       ),
     );
   }
 
-  Widget _buildReferralItem(Map<String, String> referral) {
-    final isCompleted = referral['status'] == 'completed';
+  Widget _buildReferralItemFromMap(Map<String, dynamic> referral) {
+    final name = referral['name']?.toString() ?? referral['referred_user_name']?.toString() ?? referral['email']?.toString() ?? '—';
+    final displayName = name.length > 1 ? name[0].toUpperCase() + name.substring(1) : name;
+    final status = referral['status']?.toString().toLowerCase() ?? 'pending';
+    final isCompleted = status == 'completed' || status == 'converted';
+    final date = referral['date']?.toString() ?? referral['created_at']?.toString() ?? '';
 
     return Padding(
       padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
@@ -497,7 +603,7 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
             radius: 20,
             backgroundColor: Colors.grey.withOpacity(0.3),
             child: Text(
-              referral['name']![0],
+              displayName.isNotEmpty ? displayName[0] : '?',
               style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
@@ -506,8 +612,54 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(referral['name']!, style: AppTypography.body),
-                Text(referral['date']!, style: AppTypography.caption),
+                Text(displayName, style: AppTypography.body),
+                if (date.isNotEmpty) Text(date, style: AppTypography.caption),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: (isCompleted ? AppColors.onlineGreen : AppColors.accentYellow).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              isCompleted ? 'Completed' : 'Pending',
+              style: AppTypography.caption.copyWith(
+                color: isCompleted ? AppColors.onlineGreen : AppColors.accentYellow,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferralItem(Map<String, String> referral) {
+    final isCompleted = referral['status'] == 'completed';
+    final name = referral['name'] ?? '—';
+    final date = referral['date'] ?? '';
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.grey.withOpacity(0.3),
+            child: Text(
+              name.isNotEmpty ? name[0] : '?',
+              style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          SizedBox(width: AppSpacing.spacingMD),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: AppTypography.body),
+                Text(date, style: AppTypography.caption),
               ],
             ),
           ),
@@ -762,13 +914,27 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
     );
   }
 
-  void _claimMilestone(int count) {
-    // Would call API to claim
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Claimed milestone for $count referrals!'),
-        backgroundColor: AppColors.onlineGreen,
-      ),
-    );
+  Future<void> _claimMilestone(int count) async {
+    try {
+      final service = ref.read(referralApiServiceProvider);
+      await service.processMilestone();
+      if (mounted) {
+        await _load();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Milestone claimed!'),
+            backgroundColor: AppColors.onlineGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not claim: ${e.toString().replaceFirst(RegExp(r'^Exception:?\s*'), '')}'),
+          ),
+        );
+      }
+    }
   }
 }

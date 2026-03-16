@@ -1,4 +1,4 @@
-﻿// Screen: EmailVerificationScreen
+// Screen: EmailVerificationScreen
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +8,8 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/navbar/app_bar_custom.dart';
+import '../../widgets/buttons/scale_tap_feedback.dart';
+import '../../core/utils/app_icons.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
@@ -17,6 +19,7 @@ import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../pages/profile_wizard_page.dart';
+import '../../routes/app_router.dart';
 
 /// Email verification screen - Email verification flow with 6-digit code
 class EmailVerificationScreen extends ConsumerStatefulWidget {
@@ -41,10 +44,16 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   int _resendCountdown = 0;
   Timer? _countdownTimer;
 
+  static const String _defaultCode = '123456';
+
   @override
   void initState() {
     super.initState();
     _startResendCountdown(120); // 2 minutes initial countdown
+    // Pre-fill default verification code for now (emailed in this step)
+    for (var i = 0; i < 6; i++) {
+      _codeControllers[i].text = _defaultCode[i];
+    }
   }
 
   @override
@@ -250,6 +259,17 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
       appBar: AppBarCustom(
         title: 'Verify Email',
         showBackButton: true,
+        leading: ScaleTapFeedback(
+          onTap: () => context.go(AppRoutes.register),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: AppSvgIcon(
+              assetPath: AppIcons.arrowLeft,
+              size: 24,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -288,6 +308,14 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 style: AppTypography.body.copyWith(
                   color: AppColors.accentPurple,
                   fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSpacing.spacingXS),
+              Text(
+                'For now, use the code $_defaultCode (emailed to you in this step).',
+                style: AppTypography.caption.copyWith(
+                  color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -172,6 +172,39 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
   }
 
+  Future<void> _clearAllNotifications() async {
+    if (_notifications.isEmpty) return;
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      await notificationService.deleteAllNotifications();
+      if (mounted) {
+        setState(() {
+          _notifications.clear();
+          _currentPage = 1;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All notifications cleared')),
+        );
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        ErrorHandlerService.showErrorSnackBar(
+          context,
+          e,
+          customMessage: 'Failed to clear notifications',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandlerService.handleError(
+          context,
+          e,
+          customMessage: 'Failed to clear notifications',
+        );
+      }
+    }
+  }
+
   Future<void> _deleteNotification(int notificationId) async {
     try {
       final notificationService = ref.read(notificationServiceProvider);
@@ -246,6 +279,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         title: 'Notifications',
         showBackButton: true,
         actions: [
+          if (_notifications.isNotEmpty)
+            TextButton(
+              onPressed: _clearAllNotifications,
+              child: Text(
+                'Clear all',
+                style: AppTypography.button.copyWith(
+                  color: AppColors.accentPurple,
+                ),
+              ),
+            ),
           if (unreadCount > 0)
             TextButton(
               onPressed: _markAllAsRead,

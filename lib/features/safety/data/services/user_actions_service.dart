@@ -297,31 +297,29 @@ class UserActionsService {
     return [];
   }
 
-  /// Get a single report by id (API: GET reports/:id).
-  Future<Report> getReportById(int reportId) async {
-    final response = await _apiService.get<Map<String, dynamic>>(
-      ApiEndpoints.reportById(reportId),
-      fromJson: (json) => json as Map<String, dynamic>,
-    );
-    if (!response.isSuccess || response.data == null) throw Exception(response.message);
-    final data = response.data!;
-    final reportMap = data['report'] as Map<String, dynamic>? ?? data;
-    return Report.fromJson(Map<String, dynamic>.from(reportMap));
-  }
-
-  /// Get reports history
-  Future<List<Report>> getReportsHistory() async {
+  /// Get reports list (backend: GET /reports?page= — paginated; no /reports/history).
+  Future<List<Report>> getReportsHistory({int page = 1, String? status}) async {
     try {
+      final queryParams = <String, dynamic>{'page': page};
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
       final response = await _apiService.get<dynamic>(
-        ApiEndpoints.reportsHistory,
+        ApiEndpoints.reportsList,
+        queryParameters: queryParams,
       );
 
       List<dynamic>? dataList;
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
+        final inner = data['data'] as Map<String, dynamic>?;
+        if (inner != null && inner['reports'] != null) {
+          final reports = inner['reports'];
+          if (reports is List) {
+            dataList = reports;
+          } else if (reports is Map && reports['data'] is List) {
+            dataList = reports['data'] as List;
+          }
         }
+        if (dataList == null && data['data'] is List) dataList = data['data'] as List;
       } else if (response.data is List) {
         dataList = response.data as List;
       }
@@ -332,6 +330,22 @@ class UserActionsService {
             .toList();
       }
       return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get a single report by id (backend: GET /reports/:id).
+  Future<Report?> getReportById(int reportId) async {
+    try {
+      final response = await _apiService.get<Map<String, dynamic>>(
+        ApiEndpoints.reportById(reportId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess || response.data == null) return null;
+      final data = response.data!;
+      final reportMap = data['data'] as Map<String, dynamic>? ?? data['report'] as Map<String, dynamic>? ?? data;
+      return Report.fromJson(Map<String, dynamic>.from(reportMap));
     } catch (e) {
       rethrow;
     }

@@ -22,6 +22,7 @@ import 'premium_features_screen.dart';
 import 'payment_settings_screen.dart';
 import 'legal/terms_of_service_screen.dart';
 import 'legal/privacy_policy_screen.dart';
+import '../features/marketing/presentation/screens/referral_screen.dart';
 import '../features/payments/providers/payment_providers.dart';
 import '../features/payments/data/models/subscription_plan.dart';
 import '../features/payments/presentation/screens/subscription_management_screen.dart';
@@ -140,6 +141,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const MatchingPreferencesScreen(),
+                  ),
+                );
+              },
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+            _buildSettingsItem(
+              context: context,
+              iconPath: AppIcons.share,
+              title: 'Invite Friends',
+              subtitle: 'Share your referral code, earn rewards',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReferralScreen(),
                   ),
                 );
               },

@@ -35,6 +35,7 @@ class ApiEndpoints {
 
   // ==================== Landing (public, no auth) ====================
   static const String landingBlogs = '/landing/blogs';
+  static String landingBlogBySlug(String slug) => '/landing/blogs/$slug';
   static const String landingSettings = '/landing/settings';
   static const String landingContact = '/landing/contact';
   static const String landingAppImages = '/landing/app-images';
@@ -187,8 +188,13 @@ class ApiEndpoints {
   static const String privacySettings = '/privacy/settings';
   static const String preferencesMatching = '/preferences/matching';
   static const String preferencesAge = '/preferences/age';
-  static const String deviceSessions = '/device-sessions';
-  static String deviceSessionById(int id) => '/device-sessions/$id';
+  /// List sessions: use GET [userSessions] (/sessions). Revoke: use POST [sessionRevoke(id)].
+  /// @deprecated Use [userSessions] and [sessionRevoke] — backend has no /device-sessions.
+  static const String deviceSessions = '/sessions';
+  @Deprecated('Use sessionRevoke(id) with POST')
+  static String deviceSessionById(int id) => '/sessions/revoke/$id';
+  /// Backend has no trust endpoint; do not call.
+  @Deprecated('Backend does not support session trust')
   static String deviceSessionTrust(int id) => '/device-sessions/$id/trust';
   static const String changePassword = '/auth/change-password';
   static const String changeEmail = '/profile/change-email';
@@ -311,7 +317,10 @@ class ApiEndpoints {
   static const String blockList = '/block/list';
   /// GET /block/check?user_id= — check if a user is blocked
   static const String blockCheck = '/block/check';
-  static const String reportsHistory = '/reports/history';
+  /// Paginated list: GET /reports?page= (backend has no /reports/history).
+  static const String reportsList = '/reports';
+  @Deprecated('Backend has no /reports/history; use reportsList with query page=')
+  static const String reportsHistory = '/reports';
   static const String mutesMute = '/mutes/mute';
   static const String mutesUnmute = '/mutes/unmute';
   static const String mutesList = '/mutes/list';

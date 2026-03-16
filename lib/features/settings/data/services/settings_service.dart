@@ -84,11 +84,11 @@ class SettingsService {
     }
   }
 
-  /// Get device sessions
+  /// Get device sessions (backend: GET /sessions).
   Future<List<DeviceSession>> getDeviceSessions() async {
     try {
       final response = await _apiService.get<dynamic>(
-        ApiEndpoints.deviceSessions,
+        ApiEndpoints.userSessions,
       );
 
       List<dynamic>? dataList;
@@ -112,11 +112,11 @@ class SettingsService {
     }
   }
 
-  /// Revoke device session
+  /// Revoke a session (backend: POST /sessions/revoke/:id).
   Future<void> revokeDeviceSession(RevokeSessionRequest request) async {
     try {
-      final response = await _apiService.delete<Map<String, dynamic>>(
-        ApiEndpoints.deviceSessionById(request.sessionId),
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.sessionRevoke(request.sessionId),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -128,20 +128,10 @@ class SettingsService {
     }
   }
 
-  /// Trust device session
+  /// Trust device session. Backend does not support this; no-op to avoid breaking UI.
   Future<void> trustDeviceSession(TrustDeviceRequest request) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.deviceSessionTrust(request.sessionId),
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (!response.isSuccess) {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
-    }
+    // Backend has no POST /sessions/:id/trust (or /device-sessions/:id/trust).
+    await Future<void>.value();
   }
 
   /// Change password

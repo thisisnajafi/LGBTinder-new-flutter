@@ -155,17 +155,19 @@ class MatchingService {
     }
   }
 
-  /// Check if current user is matched with another user
+  /// Check if current user is matched with another user (API: GET profile/:id/match-status).
   Future<bool> checkMatchStatus(int targetUserId) async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
-        'profile/$targetUserId/match-status',
+        ApiEndpoints.profileMatchStatus(targetUserId),
+        fromJson: (json) => json as Map<String, dynamic>,
       );
-
-      if (response.isSuccess && response.data != null && response.data!['is_matched'] != null) {
-        return response.data!['is_matched'] as bool;
-      }
-      return false;
+      if (!response.isSuccess || response.data == null) return false;
+      final data = response.data!;
+      final inner = data['data'] as Map<String, dynamic>?;
+      final isMatched = inner?['is_matched'] ?? data['is_matched'];
+      if (isMatched == null) return false;
+      return isMatched is bool ? isMatched : (isMatched == true || isMatched == 1);
     } catch (e) {
       return false;
     }

@@ -54,18 +54,33 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   UserProfile? _profile;
   int _matchesCount = 0;
   int _pendingLikesCount = 0;
+  /// Badge info from GET profile/badge/info (own profile only).
+  Map<String, dynamic>? _badgeInfo;
 
   @override
   void initState() {
     super.initState();
     if (_isOwnProfile) {
       _loadStatistics();
+      _loadBadgeInfo();
       // Cache-first: render from cache immediately; refresh in background (no blocking).
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(profilePageCacheProvider.notifier).refresh();
+        _loadBadgeInfo();
       });
     } else {
       _loadProfile();
+    }
+  }
+
+  /// Load badge info from GET profile/badge/info for own profile header.
+  Future<void> _loadBadgeInfo() async {
+    if (!_isOwnProfile) return;
+    try {
+      final info = await ref.read(profileServiceProvider).getProfileBadgeInfo();
+      if (mounted) setState(() => _badgeInfo = info);
+    } catch (_) {
+      // Non-blocking; header falls back to profile flags
     }
   }
 
@@ -501,6 +516,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   bool get _isOwnProfile => widget.userId == null;
 
+  /// Resolve verified from GET profile/badge/info or profile (own profile only).
+  bool _badgeVerified(UserProfile? profile) {
+    if (_badgeInfo != null) {
+      final inner = (_badgeInfo!['data'] as Map<String, dynamic>?) ?? _badgeInfo!;
+      final v = inner['verified'] ?? inner['is_verified'];
+      if (v != null) return v == true || v == 1;
+    }
+    return profile?.isVerified ?? false;
+  }
+
+  /// Resolve premium from GET profile/badge/info or profile (own profile only).
+  bool _badgePremium(UserProfile? profile) {
+    if (_badgeInfo != null) {
+      final inner = (_badgeInfo!['data'] as Map<String, dynamic>?) ?? _badgeInfo!;
+      final p = inner['is_premium'] ?? inner['premium'];
+      if (p != null) return p == true || p == 1;
+    }
+    return profile?.isPremium ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -577,6 +612,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         if (isOwn) {
                           await ref.read(profilePageCacheProvider.notifier).refresh();
                           await _loadStatistics();
+                          await _loadBadgeInfo();
                         } else {
                           await _loadProfile();
                         }
@@ -591,8 +627,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             age: _calculateAge(profile),
                             location: _getLocation(profile),
                             avatarUrl: _getImageUrls(profile).isNotEmpty ? _getImageUrls(profile).first : null,
-                            isVerified: profile?.isVerified ?? false,
-                            isPremium: profile?.isPremium ?? false,
+                            isVerified: _badgeVerified(profile),
+                            isPremium: _badgePremium(profile),
                             isOnline: profile?.isOnline ?? false,
                             showPrideAccent: isOwn,
                             onAvatarTap: isOwn

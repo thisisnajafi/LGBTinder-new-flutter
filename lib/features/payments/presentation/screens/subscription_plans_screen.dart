@@ -1,7 +1,7 @@
 // Screen: SubscriptionPlansScreen
+// Plan purchase UI aligned with backend PlanSeeder (Basic, Premium, Golden)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -13,19 +13,19 @@ import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../providers/payment_providers.dart';
 import '../../providers/google_play_billing_provider.dart';
 import '../../data/models/subscription_plan.dart';
-import '../../data/models/subscription_plan.dart' show SubscribeRequest;
 import '../../../../shared/models/api_error.dart';
-import '../../../../shared/services/error_handler_service.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
 import '../widgets/offer_selection_widget.dart';
+import '../utils/plan_theme_helper.dart';
 import 'subscription_management_screen.dart';
 
-/// Subscription plans screen - Display and select subscription plans
+/// Subscription plans screen — plan-themed UI (Basic, Premium, Golden)
 class SubscriptionPlansScreen extends ConsumerStatefulWidget {
   const SubscriptionPlansScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<SubscriptionPlansScreen> createState() => _SubscriptionPlansScreenState();
+  ConsumerState<SubscriptionPlansScreen> createState() =>
+      _SubscriptionPlansScreenState();
 }
 
 class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScreen> {
@@ -61,7 +61,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
           _subPlans = subPlans;
           if (plans.isNotEmpty) {
             _selectedPlanId = plans.first.id;
-            // Select first sub plan for selected plan
             final firstSubPlan = subPlans.firstWhere(
               (sp) => sp.planId == plans.first.id,
               orElse: () => subPlans.first,
@@ -109,7 +108,8 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No payment system available. Enable Google Play Billing in settings.'),
+            content: Text(
+                'No payment system available. Enable Google Play Billing in settings.'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -119,7 +119,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
 
   Future<void> _subscribeWithGooglePlay() async {
     try {
-      // Map plan IDs to Google Play product IDs
       final productId = _getGooglePlayProductId(_selectedPlanId!);
 
       if (productId == null) {
@@ -132,21 +131,19 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         return;
       }
 
-      // Get selected sub-plan and its Google offer ID
       String? offerId;
       if (_selectedSubPlanId != null) {
         final selectedSubPlan = _subPlans.firstWhere(
           (sp) => sp.id == _selectedSubPlanId,
-          orElse: () => _subPlans.firstWhere((sp) => sp.planId == _selectedPlanId),
+          orElse: () =>
+              _subPlans.firstWhere((sp) => sp.planId == _selectedPlanId!),
         );
         offerId = selectedSubPlan.googleOfferId;
       }
 
       final purchaseNotifier = ref.read(googlePlayPurchaseProvider.notifier);
-      await purchaseNotifier.initiatePurchase(productId, true, offerId: offerId); // true for subscription
+      await purchaseNotifier.initiatePurchase(productId, true, offerId: offerId);
 
-      // The purchase notifier will handle success/error states
-      // Listen to the state changes
       ref.listen(googlePlayPurchaseProvider, (previous, next) {
         if (next.isSuccess && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +152,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
               backgroundColor: AppColors.onlineGreen,
             ),
           );
-          // Navigate to subscription management
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -183,41 +179,38 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     }
   }
 
-  /// Map plan IDs to Google Play product IDs
   String? _getGooglePlayProductId(int planId) {
-    // Map your existing plan IDs to Google Play product IDs
-    // This should be configurable based on your backend data
     switch (planId) {
-      case 1: // Bronze plan
+      case 1:
         return 'bronze_base';
-      case 2: // Silver plan
+      case 2:
         return 'silver_base';
-      case 3: // Gold plan
+      case 3:
         return 'gold_base';
       default:
         return null;
     }
   }
 
-  String _formatPrice(double price, String currency) {
-    final symbol = currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
-    return '$symbol${price.toStringAsFixed(2)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBarCustom(
-        title: 'Subscription Plans',
+        title: 'Choose Plan',
         showBackButton: true,
       ),
       body: _isLoading
@@ -228,289 +221,445 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                   onRetry: _loadPlans,
                 )
               : _plans.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.star_outline,
-                            size: 64,
-                            color: secondaryTextColor,
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Text(
-                            'No Plans Available',
-                            style: AppTypography.h3.copyWith(color: textColor),
-                          ),
-                          SizedBox(height: AppSpacing.spacingSM),
-                          Text(
-                            'Subscription plans are not available at the moment.',
-                            style: AppTypography.body.copyWith(color: secondaryTextColor),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? _buildEmptyState(secondaryTextColor, textColor)
                   : RefreshIndicator(
                       onRefresh: _loadPlans,
                       child: ListView(
                         padding: EdgeInsets.all(AppSpacing.spacingLG),
                         children: [
-                          // Header
-                          Text(
-                            'Choose Your Plan',
-                            style: AppTypography.h2.copyWith(color: textColor),
-                          ),
-                          SizedBox(height: AppSpacing.spacingSM),
-                          Text(
-                            'Unlock premium features and enhance your experience',
-                            style: AppTypography.body.copyWith(color: secondaryTextColor),
-                          ),
-
-                          // Payment System Indicator
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final paymentSystem = ref.watch(activePaymentSystemProvider);
-                              return Container(
-                                margin: EdgeInsets.only(top: AppSpacing.spacingLG),
-                                padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentPurple.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                                  border: Border.all(
-                                    color: AppColors.accentPurple.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.payment,
-                                      color: AppColors.accentPurple,
-                                      size: 20,
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingSM),
-                                    Text(
-                                      'Payment via ${paymentSystem.displayName}',
-                                      style: AppTypography.body.copyWith(
-                                        color: AppColors.accentPurple,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-
-                          SizedBox(height: AppSpacing.spacingXXL),
-
-                          // Plans list
-                          ..._plans.map((plan) {
-                            final isSelected = _selectedPlanId == plan.id;
-                            final planSubPlans = _subPlans.where((sp) => sp.planId == plan.id).toList();
-
-                            return Container(
-                              margin: EdgeInsets.only(bottom: AppSpacing.spacingLG),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.accentPurple.withOpacity(0.1)
-                                    : surfaceColor,
-                                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.accentPurple
-                                      : borderColor,
-                                  width: isSelected ? 2 : 1,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Plan header
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedPlanId = plan.id;
-                                        if (planSubPlans.isNotEmpty) {
-                                          _selectedSubPlanId = planSubPlans.first.id;
-                                        }
-                                      });
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.all(AppSpacing.spacingLG),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      plan.name,
-                                                      style: AppTypography.h3.copyWith(
-                                                        color: textColor,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    if (plan.isPopular) ...[
-                                                      SizedBox(width: AppSpacing.spacingSM),
-                                                      Container(
-                                                        padding: EdgeInsets.symmetric(
-                                                          horizontal: AppSpacing.spacingSM,
-                                                          vertical: AppSpacing.spacingXS,
-                                                        ),
-                                                        decoration: BoxDecoration(
-                                                          color: AppColors.accentPurple,
-                                                          borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                                        ),
-                                                        child: Text(
-                                                          'POPULAR',
-                                                          style: AppTypography.caption.copyWith(
-                                                            color: Colors.white,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                                if (plan.description != null) ...[
-                                                  SizedBox(height: AppSpacing.spacingXS),
-                                                  Text(
-                                                    plan.description!,
-                                                    style: AppTypography.body.copyWith(
-                                                      color: secondaryTextColor,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                          Radio<int>(
-                                            value: plan.id,
-                                            groupValue: _selectedPlanId,
-                                            onChanged: (value) {
-                                              setState(() {
-                                                _selectedPlanId = value;
-                                                if (planSubPlans.isNotEmpty) {
-                                                  _selectedSubPlanId = planSubPlans.first.id;
-                                                }
-                                              });
-                                            },
-                                            activeColor: AppColors.accentPurple,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Sub plans (offer selection)
-                                  if (planSubPlans.isNotEmpty && isSelected) ...[
-                                    Divider(height: 1, color: borderColor),
-                                    Padding(
-                                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                      child: OfferSelectionWidget(
-                                        offers: planSubPlans,
-                                        selectedOffer: planSubPlans.firstWhere(
-                                          (sp) => sp.id == _selectedSubPlanId,
-                                          orElse: () => planSubPlans.first,
-                                        ),
-                                        onOfferSelected: (offer) {
-                                          setState(() {
-                                            _selectedSubPlanId = offer.id;
-                                          });
-                                        },
-                                        recommendedOffer: planSubPlans.length > 1
-                                            ? planSubPlans.firstWhere(
-                                                (sp) => sp.duration?.toLowerCase().contains('12') == true ||
-                                                    sp.duration?.toLowerCase().contains('year') == true ||
-                                                    sp.duration?.toLowerCase().contains('annual') == true,
-                                                orElse: () => planSubPlans.last,
-                                              )
-                                            : null,
-                                      ),
-                                    ),
-                                  ],
-
-                                  // Features
-                                  if (plan.features != null && plan.features!.isNotEmpty) ...[
-                                    Divider(height: 1, color: borderColor),
-                                    Padding(
-                                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Features',
-                                            style: AppTypography.body.copyWith(
-                                              color: textColor,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          SizedBox(height: AppSpacing.spacingSM),
-                                          ...plan.features!.map((feature) {
-                                            return Padding(
-                                              padding: EdgeInsets.only(bottom: AppSpacing.spacingXS),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.check_circle,
-                                                    size: 20,
-                                                    color: AppColors.onlineGreen,
-                                                  ),
-                                                  SizedBox(width: AppSpacing.spacingSM),
-                                                  Expanded(
-                                                    child: Text(
-                                                      feature,
-                                                      style: AppTypography.body.copyWith(
-                                                        color: textColor,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            );
-                          }),
-
-                          SizedBox(height: AppSpacing.spacingXXL),
-
-                          // Subscribe button
+                          _buildHeader(textColor, secondaryTextColor),
+                          _buildPaymentBadge(borderColor, textColor),
+                          SizedBox(height: AppSpacing.spacingXL),
+                          ..._plans.map((plan) => _buildPlanCard(
+                                plan,
+                                surfaceColor,
+                                borderColor,
+                                textColor,
+                                secondaryTextColor,
+                                isDark,
+                              )),
+                          SizedBox(height: AppSpacing.spacingXL),
                           GradientButton(
                             text: 'Subscribe Now',
                             onPressed: _subscribe,
                             isFullWidth: true,
                           ),
-
                           SizedBox(height: AppSpacing.spacingMD),
+                          _buildViewSubscriptionLink(textColor),
+                        ],
+                      ),
+                    ),
+    );
+  }
 
-                          // View current subscription
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SubscriptionManagementScreen(),
+  Widget _buildEmptyState(Color secondaryTextColor, Color textColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.star_outline,
+            size: 64,
+            color: secondaryTextColor,
+          ),
+          SizedBox(height: AppSpacing.spacingMD),
+          Text(
+            'No Plans Available',
+            style: AppTypography.h3.copyWith(color: textColor),
+          ),
+          SizedBox(height: AppSpacing.spacingSM),
+          Text(
+            'Subscription plans are not available at the moment.',
+            style: AppTypography.body.copyWith(color: secondaryTextColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Color textColor, Color secondaryTextColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose Your Plan',
+          style: AppTypography.h1.copyWith(
+            color: textColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        SizedBox(height: AppSpacing.spacingSM),
+        Text(
+          'Unlock premium features and enhance your experience.',
+          style: AppTypography.body.copyWith(
+            color: secondaryTextColor,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaymentBadge(Color borderColor, Color textColor) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final paymentSystem = ref.watch(activePaymentSystemProvider);
+        return Container(
+          margin: EdgeInsets.only(top: AppSpacing.spacingLG),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingMD,
+            vertical: AppSpacing.spacingSM,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.accentPurple.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            border: Border.all(
+              color: AppColors.accentPurple.withOpacity(0.25),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.payment_rounded,
+                color: AppColors.accentPurple,
+                size: 20,
+              ),
+              SizedBox(width: AppSpacing.spacingSM),
+              Text(
+                'Payment via ${paymentSystem.displayName}',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.accentPurple,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlanCard(
+    SubscriptionPlan plan,
+    Color surfaceColor,
+    Color borderColor,
+    Color textColor,
+    Color secondaryTextColor,
+    bool isDark,
+  ) {
+    final isSelected = _selectedPlanId == plan.id;
+    final planSubPlans =
+        _subPlans.where((sp) => sp.planId == plan.id).toList();
+    final themeData = getPlanTheme(plan.name);
+    final accent = themeData.accent;
+    final cardBg = isSelected
+        ? (isDark ? accent.withOpacity(0.12) : themeData.accentSoft)
+        : surfaceColor;
+    final border = isSelected ? accent : borderColor;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSpacing.spacingLG),
+      child: _PlanCard(
+        plan: plan,
+        planTheme: themeData,
+        isSelected: isSelected,
+        planSubPlans: planSubPlans,
+        selectedSubPlanId: _selectedSubPlanId,
+        cardBg: cardBg,
+        border: border,
+        textColor: textColor,
+        secondaryTextColor: secondaryTextColor,
+        isDark: isDark,
+        borderColor: borderColor,
+        onPlanTap: () {
+          setState(() {
+            _selectedPlanId = plan.id;
+            if (planSubPlans.isNotEmpty) {
+              _selectedSubPlanId = planSubPlans.first.id;
+            }
+          });
+        },
+        onOfferSelected: (offer) {
+          setState(() => _selectedSubPlanId = offer.id);
+        },
+      ),
+    );
+  }
+
+  Widget _buildViewSubscriptionLink(Color textColor) {
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SubscriptionManagementScreen(),
+            ),
+          );
+        },
+        child: Text(
+          'View current subscription',
+          style: AppTypography.body.copyWith(
+            color: AppColors.accentPurple,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Single plan card with theme, features, and offer selection
+class _PlanCard extends StatelessWidget {
+  final SubscriptionPlan plan;
+  final PlanThemeData planTheme;
+  final bool isSelected;
+  final List<SubPlan> planSubPlans;
+  final int? selectedSubPlanId;
+  final Color cardBg;
+  final Color border;
+  final Color textColor;
+  final Color secondaryTextColor;
+  final bool isDark;
+  final Color borderColor;
+  final VoidCallback onPlanTap;
+  final void Function(SubPlan) onOfferSelected;
+
+  const _PlanCard({
+    required this.plan,
+    required this.planTheme,
+    required this.isSelected,
+    required this.planSubPlans,
+    required this.selectedSubPlanId,
+    required this.cardBg,
+    required this.border,
+    required this.textColor,
+    required this.secondaryTextColor,
+    required this.isDark,
+    required this.borderColor,
+    required this.onPlanTap,
+    required this.onOfferSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final features =
+        plan.features?.isNotEmpty == true ? plan.features! : planTheme.features;
+    final tagline =
+        plan.description?.isNotEmpty == true ? plan.description! : planTheme.tagline;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(color: border, width: isSelected ? 2 : 1),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: planTheme.accent.withOpacity(0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Plan header row with accent bar
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPlanTap,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.radiusLG),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.spacingLG),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left accent bar
+                    Container(
+                      width: 4,
+                      height: 52,
+                      margin: EdgeInsets.only(right: AppSpacing.spacingMD),
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.radiusXS),
+                        gradient: planTheme.gradient,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                plan.name,
+                                style: AppTypography.h2.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
                                 ),
-                              );
-                            },
-                            child: Text(
-                              'View Current Subscription',
-                              style: AppTypography.button.copyWith(
-                                color: AppColors.accentPurple,
                               ),
+                              if (planTheme.isPopular) ...[
+                                SizedBox(width: AppSpacing.spacingSM),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.spacingSM,
+                                    vertical: AppSpacing.spacingXS,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: planTheme.gradient,
+                                    borderRadius: BorderRadius.circular(
+                                        AppRadius.radiusSM),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: planTheme.accent
+                                            .withOpacity(0.35),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    'Most popular',
+                                    style: AppTypography.caption.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          SizedBox(height: AppSpacing.spacingXS),
+                          Text(
+                            tagline,
+                            style: AppTypography.body.copyWith(
+                              color: secondaryTextColor,
+                              height: 1.35,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    SizedBox(width: AppSpacing.spacingSM),
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? planTheme.accent
+                              : borderColor,
+                          width: 2,
+                        ),
+                        color: isSelected
+                            ? planTheme.accent.withOpacity(0.2)
+                            : Colors.transparent,
+                      ),
+                      child: isSelected
+                          ? Icon(
+                              Icons.check_rounded,
+                              size: 16,
+                              color: planTheme.accent,
+                            )
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Sub plans (billing cycle)
+          if (planSubPlans.isNotEmpty && isSelected) ...[
+            Divider(height: 1, color: borderColor),
+            Padding(
+              padding: EdgeInsets.all(AppSpacing.spacingMD),
+              child: OfferSelectionWidget(
+                offers: planSubPlans,
+                selectedOffer: planSubPlans.firstWhere(
+                  (sp) => sp.id == selectedSubPlanId,
+                  orElse: () => planSubPlans.first,
+                ),
+                onOfferSelected: onOfferSelected,
+                recommendedOffer: planSubPlans.length > 1
+                    ? planSubPlans.firstWhere(
+                          (sp) =>
+                              sp.duration
+                                  ?.toLowerCase()
+                                  .contains('12') ==
+                                  true ||
+                              sp.duration
+                                  ?.toLowerCase()
+                                  .contains('year') ==
+                                  true ||
+                              sp.duration
+                                  ?.toLowerCase()
+                                  .contains('annual') ==
+                                  true ||
+                              sp.name
+                                  .toLowerCase()
+                                  .contains('12') ==
+                                  true,
+                          orElse: () => planSubPlans.last,
+                        )
+                    : null,
+              ),
+            ),
+          ],
+
+          // Features
+          if (features.isNotEmpty) ...[
+            Divider(height: 1, color: borderColor),
+            Padding(
+              padding: EdgeInsets.all(AppSpacing.spacingMD),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'What\'s included',
+                    style: AppTypography.body.copyWith(
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.spacingSM),
+                  ...features.map((feature) {
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: AppSpacing.spacingXS),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 20,
+                            color: AppColors.onlineGreen,
+                          ),
+                          SizedBox(width: AppSpacing.spacingSM),
+                          Expanded(
+                            child: Text(
+                              feature,
+                              style: AppTypography.body.copyWith(
+                                color: textColor,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

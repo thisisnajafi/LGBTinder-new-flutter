@@ -65,6 +65,16 @@ class ProfileService {
     }
   }
 
+  /// Get profile badge info (API: GET profile/badge/info). Returns data or throws on error.
+  Future<Map<String, dynamic>> getProfileBadgeInfo() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.profileBadgeInfo,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data ?? {};
+  }
+
   /// Verify email change with verification code
   Future<void> verifyEmailChange(String verificationCode) async {
     try {

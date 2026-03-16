@@ -31,6 +31,13 @@ class AppTypography {
     height: 1.2,
   );
 
+  static const TextStyle h4 = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0,
+    height: 1.25,
+  );
+
   // Body Text
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16,
@@ -66,6 +73,14 @@ class AppTypography {
     fontWeight: FontWeight.w600,
     letterSpacing: 0.2,
     height: 1.2,
+  );
+
+  /// Label / list tile style (medium weight)
+  static const TextStyle labelMedium = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.1,
+    height: 1.3,
   );
 
   static const TextStyle displayScript = TextStyle(

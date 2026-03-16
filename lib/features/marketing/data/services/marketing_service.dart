@@ -238,10 +238,10 @@ class PersonalizedPrice {
 /// Marketing API endpoints
 class MarketingEndpoints {
   static const String promotions = '/marketing/promotions';
-  static const String validatePromoCode = '/marketing/validate-promo';
-  /// API doc path (alternative): use when backend expects this path.
+  /// Backend path (api.php: POST /marketing/promo-code/validate).
+  static const String validatePromoCode = '/marketing/promo-code/validate';
   static const String promoCodeValidate = '/marketing/promo-code/validate';
-  static const String applyPromotion = '/marketing/apply-promotion';
+  static const String applyPromotion = '/marketing/promo-code/apply';
   static const String promoCodeApply = '/marketing/promo-code/apply';
   static const String personalizedPricing = '/marketing/pricing';
   static const String productPrice = '/marketing/price';
