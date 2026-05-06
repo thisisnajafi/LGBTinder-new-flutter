@@ -36,6 +36,10 @@ import '../screens/feature_locked_screen.dart';
 import '../screens/tier_comparison_screen.dart';
 import '../screens/subscription_status_screen.dart';
 import '../screens/help_support_screen.dart';
+import '../screens/support_tickets_screen.dart';
+import '../screens/legal/terms_of_service_screen.dart';
+import '../screens/legal/privacy_policy_screen.dart';
+import '../features/payments/presentation/screens/subscription_management_screen.dart';
 
 /// Route names constants
 class AppRoutes {
@@ -65,6 +69,10 @@ class AppRoutes {
   static const String tierComparison = '/tier-comparison';
   static const String subscriptionStatus = '/subscription-status';
   static const String helpSupport = '/help-support';
+  static const String supportTickets = '/support-tickets';
+  static const String termsOfService = '/terms-of-service';
+  static const String privacyPolicy = '/privacy-policy';
+  static const String subscriptionManagement = '/subscription-management';
 }
 
 /// Builds a page with slide-from-right + fade using [AppAnimations.transitionPage].
@@ -129,6 +137,10 @@ const Set<String> _authOnlyTopLevelRoutes = {
   AppRoutes.tierComparison,
   AppRoutes.subscriptionStatus,
   AppRoutes.helpSupport,
+  AppRoutes.supportTickets,
+  AppRoutes.termsOfService,
+  AppRoutes.privacyPolicy,
+  AppRoutes.subscriptionManagement,
 };
 
 bool _isProtectedRoute(String location) {
@@ -136,22 +148,79 @@ bool _isProtectedRoute(String location) {
   return location.startsWith('${AppRoutes.home}/');
 }
 
-enum _AuthStage {
+enum AuthStage {
   unauthenticated,
   profileCompletion,
   authenticated,
 }
 
-Future<_AuthStage> _getAuthStage(TokenStorageService tokenStorage) async {
+class _GuardDecision {
+  final String? redirectTo;
+  final bool storePending;
+  final bool consumePending;
+
+  const _GuardDecision({
+    this.redirectTo,
+    this.storePending = false,
+    this.consumePending = false,
+  });
+}
+
+Future<AuthStage> _getAuthStage(TokenStorageService tokenStorage) async {
   final hasAuthToken = await tokenStorage.isAuthenticated();
-  if (hasAuthToken) return _AuthStage.authenticated;
+  if (hasAuthToken) return AuthStage.authenticated;
 
   final profileToken = await tokenStorage.getProfileCompletionToken();
   if (profileToken != null && profileToken.isNotEmpty) {
-    return _AuthStage.profileCompletion;
+    return AuthStage.profileCompletion;
   }
 
-  return _AuthStage.unauthenticated;
+  return AuthStage.unauthenticated;
+}
+
+_GuardDecision evaluateGuardDecision({
+  required String location,
+  required bool hasLeftStartupFlow,
+  required AuthStage authStage,
+  required bool isPublicRoute,
+  required bool isAuthEntryRoute,
+  required bool isProtectedRoute,
+  required bool hasPendingProtectedRoute,
+}) {
+  if (location == AppRoutes.splash && hasLeftStartupFlow) {
+    return const _GuardDecision(redirectTo: AppRoutes.welcome);
+  }
+
+  if (isPublicRoute) {
+    if (authStage == AuthStage.authenticated && isAuthEntryRoute && hasPendingProtectedRoute) {
+      return const _GuardDecision(
+        consumePending: true,
+      );
+    }
+    if (authStage == AuthStage.authenticated && isAuthEntryRoute) {
+      return const _GuardDecision(redirectTo: AppRoutes.home);
+    }
+    return const _GuardDecision();
+  }
+
+  if (authStage == AuthStage.unauthenticated && isProtectedRoute) {
+    return const _GuardDecision(
+      redirectTo: AppRoutes.welcome,
+      storePending: true,
+    );
+  }
+
+  if (authStage == AuthStage.profileCompletion && isProtectedRoute) {
+    final allowedDuringCompletion = {
+      AppRoutes.profileWizard,
+      AppRoutes.onboardingPreferences,
+    };
+    if (!allowedDuringCompletion.contains(location)) {
+      return const _GuardDecision(redirectTo: AppRoutes.profileWizard);
+    }
+  }
+
+  return const _GuardDecision();
 }
 
 /// App Router Configuration
@@ -165,11 +234,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirectLimit: 5,
     redirect: (context, state) async {
       final loc = state.matchedLocation;
-      if (loc == AppRoutes.splash && _hasLeftStartupFlow) {
-        routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
-        return AppRoutes.welcome;
-      }
-
       final legacyResolved = _redirector.resolveLegacyRoute(state.uri);
       if (legacyResolved != null && legacyResolved != state.uri.toString()) {
         routeLog('redirect: legacy ${state.uri} → $legacyResolved');
@@ -177,37 +241,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final authStage = await _getAuthStage(tokenStorage);
+      final pending = _redirector.pendingProtectedRoute;
+      final decision = evaluateGuardDecision(
+        location: loc,
+        hasLeftStartupFlow: _hasLeftStartupFlow,
+        authStage: authStage,
+        isPublicRoute: _publicRoutes.contains(loc),
+        isAuthEntryRoute: _authEntryRoutes.contains(loc),
+        isProtectedRoute: _isProtectedRoute(loc),
+        hasPendingProtectedRoute: pending != null,
+      );
 
-      if (_publicRoutes.contains(loc)) {
-        final isAuthenticated = authStage == _AuthStage.authenticated;
-        final pending = _redirector.pendingProtectedRoute;
-        if (isAuthenticated && _authEntryRoutes.contains(loc) && pending != null) {
-          final consumed = _redirector.consumePending()!;
-          routeLog('redirect: authenticated entry route $loc → pending $pending');
-          return consumed;
-        }
-        if (isAuthenticated && _authEntryRoutes.contains(loc)) {
-          routeLog('redirect: authenticated user at $loc → ${AppRoutes.home}');
-          return AppRoutes.home;
-        }
-        return null;
-      }
-
-      if (authStage == _AuthStage.unauthenticated && _isProtectedRoute(loc)) {
+      if (decision.storePending) {
         _redirector.setPendingIfEmpty(state.uri.toString());
         routeLog('redirect: protected $loc without auth → ${AppRoutes.welcome}');
-        return AppRoutes.welcome;
       }
 
-      if (authStage == _AuthStage.profileCompletion && _isProtectedRoute(loc)) {
-        final allowedDuringCompletion = {
-          AppRoutes.profileWizard,
-          AppRoutes.onboardingPreferences,
-        };
-        if (!allowedDuringCompletion.contains(loc)) {
+      if (decision.consumePending && pending != null) {
+        final consumed = _redirector.consumePending()!;
+        routeLog('redirect: authenticated entry route $loc → pending $pending');
+        return consumed;
+      }
+
+      if (decision.redirectTo != null) {
+        if (decision.redirectTo == AppRoutes.profileWizard) {
           routeLog('redirect: profile-completion user from $loc → ${AppRoutes.profileWizard}');
-          return AppRoutes.profileWizard;
+        } else if (decision.redirectTo == AppRoutes.welcome && loc == AppRoutes.splash) {
+          routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
+        } else if (decision.redirectTo == AppRoutes.home && _authEntryRoutes.contains(loc)) {
+          routeLog('redirect: authenticated user at $loc → ${AppRoutes.home}');
         }
+        return decision.redirectTo;
       }
 
       return null;
@@ -423,6 +487,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.helpSupport,
         name: 'help-support',
         pageBuilder: (context, state) => slideFadePage(state, const HelpSupportScreen()),
+      ),
+
+      // Support tickets (requires auth)
+      GoRoute(
+        path: AppRoutes.supportTickets,
+        name: 'support-tickets',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const SupportTicketsScreen()),
+      ),
+
+      // Terms of service (requires auth in-app flow)
+      GoRoute(
+        path: AppRoutes.termsOfService,
+        name: 'terms-of-service',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const TermsOfServiceScreen()),
+      ),
+
+      // Privacy policy (requires auth in-app flow)
+      GoRoute(
+        path: AppRoutes.privacyPolicy,
+        name: 'privacy-policy',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const PrivacyPolicyScreen()),
+      ),
+
+      // Subscription management (requires auth)
+      GoRoute(
+        path: AppRoutes.subscriptionManagement,
+        name: 'subscription-management',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const SubscriptionManagementScreen()),
       ),
 
       // Chat Page (requires auth)

@@ -22,10 +22,8 @@ import '../features/payments/data/services/plan_limits_service.dart';
 import '../widgets/premium/upgrade_dialog.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
-import '../screens/discovery/profile_detail_screen.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
-import '../pages/chat_page.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/buttons/scale_tap_feedback.dart';
@@ -33,6 +31,7 @@ import '../features/notifications/providers/notification_providers.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/user/providers/user_providers.dart';
+import '../routes/app_router.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
@@ -296,7 +295,12 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                 ? () {
                                     final message = controller.text.trim();
                                     Navigator.pop(context);
-                                    _handleSwipe(userId, 'superlike', fromRow: true);
+                                    _handleSwipe(
+                                      userId,
+                                      'superlike',
+                                      fromRow: true,
+                                      superlikeMessage: message,
+                                    );
                                     if (mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
@@ -345,7 +349,12 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     };
   }
 
-  Future<void> _handleSwipe(int userId, String action, {bool fromRow = false}) async {
+  Future<void> _handleSwipe(
+    int userId,
+    String action, {
+    bool fromRow = false,
+    String? superlikeMessage,
+  }) async {
     final planLimitsService = ref.read(planLimitsServiceProvider);
 
     if (action == 'like' || action == 'dislike') {
@@ -378,6 +387,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     ref.read(discoverCacheProvider.notifier).recordSwipe(
       userId,
       action,
+      superlikeMessage: superlikeMessage,
       onMatch: (m) {
         if (m != null && mounted) _showMatchDialog(m);
       },
@@ -399,6 +409,36 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
       threshold: kDiscoverStackBufferThreshold,
       filters: _activeFilters,
+    );
+  }
+
+  Future<void> _openFilters() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const FilterScreen(),
+      ),
+    );
+    if (result != null && result is Map<String, dynamic>) {
+      final filters = await _convertFiltersToApiFormat(ref, result);
+      setState(() {
+        _activeFilters = filters;
+      });
+      ref.read(discoverCacheProvider.notifier).refresh(filters: filters);
+    }
+  }
+
+  void _expandRadiusAndRetry() {
+    final nextFilters = <String, dynamic>{...?_activeFilters};
+    final current = (nextFilters['max_distance'] as num?)?.toInt() ?? 25;
+    final expanded = (current + 25).clamp(25, 200);
+    nextFilters['max_distance'] = expanded;
+    setState(() {
+      _activeFilters = nextFilters;
+    });
+    ref.read(discoverCacheProvider.notifier).refresh(filters: nextFilters);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Expanded distance to $expanded km and retrying...')),
     );
   }
 
@@ -509,16 +549,16 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                         } catch (_) {}
                       }
                       if (!mounted) return;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatPage(
-                            userId: match.userId,
-                            userName: match.firstName,
-                            avatarUrl: match.primaryImageUrl,
-                          ),
-                        ),
-                      );
+                      final target = Uri(
+                        path: AppRoutes.chat,
+                        queryParameters: {
+                          'userId': match.userId.toString(),
+                          'userName': match.firstName,
+                          if ((match.primaryImageUrl ?? '').isNotEmpty)
+                            'avatarUrl': match.primaryImageUrl!,
+                        },
+                      ).toString();
+                      context.push(target);
                     },
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
@@ -547,13 +587,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   void _handleCardTap(int userId) {
-    // Navigate to profile detail screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProfileDetailScreen(userId: userId),
-      ),
-    );
+    final target = Uri(
+      path: AppRoutes.profileDetail,
+      queryParameters: {'userId': userId.toString()},
+    ).toString();
+    context.push(target);
   }
 
   /// Build limit indicator showing remaining swipes
@@ -609,7 +647,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               if (!limits.planInfo.isPremium)
                 TextButton(
                   onPressed: () {
-                    context.push('/subscription-plans');
+                    context.push(AppRoutes.subscriptionPlans);
                   },
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -791,7 +829,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                         clipBehavior: Clip.none,
                         children: [
                           ScaleTapFeedback(
-                            onTap: () => context.go('/home/notifications'),
+                            onTap: () => context.go('${AppRoutes.home}/notifications'),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: AppSvgIcon(
@@ -879,6 +917,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                       onCardTap: _handleCardTap,
                       isLoading: false,
                       onRefresh: () => ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters),
+                      emptyActionLabel: 'Adjust filters',
+                      onEmptyAction: _openFilters,
+                      emptySecondaryActionLabel: 'Increase distance + retry',
+                      onEmptySecondaryAction: _expandRadiusAndRetry,
                     ),
               ),
             ),

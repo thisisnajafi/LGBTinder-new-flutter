@@ -118,7 +118,7 @@ class SubscriptionStatusScreen extends ConsumerWidget {
               if (isActive) ...[
                 GradientButton(
                   text: 'Manage subscription',
-                  onPressed: () => context.push(AppRoutes.subscriptionPlans),
+                  onPressed: () => context.push(AppRoutes.subscriptionManagement),
                   isFullWidth: true,
                 ),
               ] else ...[

@@ -1,6 +1,7 @@
 // Screen: HelpSupportScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
@@ -13,9 +14,7 @@ import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/bottom_sheet_custom.dart';
-import 'legal/terms_of_service_screen.dart';
-import 'legal/privacy_policy_screen.dart';
-import 'support_tickets_screen.dart';
+import '../routes/app_router.dart';
 
 /// Fetches landing/settings for About section (app store links, tagline, description).
 final _landingSettingsProvider = FutureProvider.autoDispose<LandingSettings?>((ref) {
@@ -192,12 +191,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             title: 'My tickets',
             subtitle: 'View and create support tickets',
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SupportTicketsScreen(),
-                ),
-              );
+              context.push(AppRoutes.supportTickets);
             },
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
@@ -223,14 +217,25 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                 if (await canLaunchUrl(emailUri)) {
                   await launchUrl(emailUri);
                 } else {
-                  // Fallback to copying email to clipboard
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Email: support@lgbtfinder.com (copied to clipboard)')),
+                    SnackBar(
+                      content: const Text('Unable to open email app. You can create a support ticket instead.'),
+                      action: SnackBarAction(
+                        label: 'Create ticket',
+                        onPressed: () => context.push(AppRoutes.supportTickets),
+                      ),
+                    ),
                   );
                 }
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Unable to open email app')),
+                  SnackBar(
+                    content: const Text('Unable to open email app. You can create a support ticket instead.'),
+                    action: SnackBarAction(
+                      label: 'Create ticket',
+                      onPressed: () => context.push(AppRoutes.supportTickets),
+                    ),
+                  ),
                 );
               }
             },
@@ -268,14 +273,13 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        // Trigger email support instead
-                        // TODO: Implement actual live chat integration (e.g., Intercom, Zendesk, etc.)
+                        context.push(AppRoutes.supportTickets);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryLight,
                         foregroundColor: Colors.white,
                       ),
-                      child: Text('Use Email Support'),
+                      child: Text('Create ticket'),
                     ),
                   ],
                 ),
@@ -325,12 +329,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             ),
             trailing: Icon(Icons.chevron_right, color: secondaryTextColor),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TermsOfServiceScreen(),
-                ),
-              );
+              context.push(AppRoutes.termsOfService);
             },
           ),
           ListTile(
@@ -344,12 +343,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             ),
             trailing: Icon(Icons.chevron_right, color: secondaryTextColor),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PrivacyPolicyScreen(),
-                ),
-              );
+              context.push(AppRoutes.privacyPolicy);
             },
           ),
           SizedBox(height: AppSpacing.spacingXXL),
@@ -887,7 +881,17 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                     Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(success ? 'Message sent. We\'ll get back to you soon.' : 'Failed to send. Please try again.'),
+                        content: Text(
+                          success
+                              ? 'Message sent. We\'ll get back to you soon.'
+                              : 'Failed to send. You can create a support ticket now.',
+                        ),
+                        action: success
+                            ? null
+                            : SnackBarAction(
+                                label: 'Create ticket',
+                                onPressed: () => context.push(AppRoutes.supportTickets),
+                              ),
                       ),
                     );
                   }

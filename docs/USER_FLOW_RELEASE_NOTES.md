@@ -21,6 +21,10 @@ This release delivers a complete user-flow hardening and monetization readiness 
 - `TierComparisonScreen` (`/tier-comparison`)
 - `SubscriptionStatusScreen` (`/subscription-status`)
 - `HelpSupportScreen` routed directly (`/help-support`)
+- `SupportTicketsScreen` (`/support-tickets`)
+- `TermsOfServiceScreen` (`/terms-of-service`)
+- `PrivacyPolicyScreen` (`/privacy-policy`)
+- `SubscriptionManagementScreen` (`/subscription-management`)
 
 ## Routing and Deep Linking
 
@@ -33,9 +37,11 @@ This release delivers a complete user-flow hardening and monetization readiness 
 - New smoke checklist: `docs/USER_FLOW_SMOKE_TEST_CHECKLIST.md`
 - Added tests:
   - `test/routes/route_redirector_test.dart`
+  - `test/routes/app_router_guard_test.dart`
   - `test/shared/deep_linking_service_test.dart`
   - `test/shared/user_tier_test.dart`
   - `test/shared/user_tier_access_test.dart`
+  - `test/shared/page_tier_rules_test.dart`
 
 ## Notes
 

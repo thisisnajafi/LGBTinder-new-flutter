@@ -1,4 +1,4 @@
-﻿// Screen: PremiumFeaturesScreen
+// Screen: PremiumFeaturesScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -12,9 +12,9 @@ import '../widgets/common/divider_custom.dart';
 import '../widgets/premium/premium_feature_card.dart';
 import '../widgets/badges/premium_badge.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../features/payments/presentation/screens/subscription_plans_screen.dart';
-import '../features/payments/providers/payment_providers.dart';
-import '../features/payments/data/models/subscription_plan.dart';
+import '../shared/models/user_tier.dart';
+import '../shared/providers/user_tier_provider.dart';
+import '../routes/app_router.dart';
 
 /// Premium features screen - Display and manage premium features
 class PremiumFeaturesScreen extends ConsumerWidget {
@@ -28,50 +28,53 @@ class PremiumFeaturesScreen extends ConsumerWidget {
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     
-    // Get subscription status
-    final subscriptionStatusAsync = ref.watch(subscriptionStatusProvider);
-    final isPremium = subscriptionStatusAsync.when(
-      data: (status) => status?.isActive == true,
-      loading: () => false,
-      error: (_, __) => false,
-    );
+    final currentTier = ref.watch(userTierProvider);
+
+    bool unlocked(UserTier minTier) => currentTier.atLeast(minTier);
+    String tierLabel(UserTier tier) => switch (tier) {
+          UserTier.basid => 'Basid',
+          UserTier.silder => 'Silder',
+          UserTier.golden => 'Golden',
+        };
+
+    final isPremium = unlocked(UserTier.silder);
 
     final premiumFeatures = [
       {
         'title': 'Unlimited Likes',
         'description': 'Like as many profiles as you want',
         'icon': Icons.favorite,
-        'unlocked': isPremium,
+        'minTier': UserTier.silder,
       },
       {
         'title': 'See Who Liked You',
         'description': 'View everyone who has liked your profile',
         'icon': Icons.visibility,
-        'unlocked': isPremium,
+        'minTier': UserTier.silder,
       },
       {
         'title': 'Super Likes',
         'description': 'Get 5 super likes per day to stand out',
         'icon': Icons.star,
-        'unlocked': isPremium,
+        'minTier': UserTier.silder,
       },
       {
         'title': 'Rewind',
         'description': 'Undo your last swipe',
         'icon': Icons.undo,
-        'unlocked': isPremium,
+        'minTier': UserTier.silder,
       },
       {
         'title': 'Boost',
         'description': 'Get more profile views for 30 minutes',
         'icon': Icons.trending_up,
-        'unlocked': isPremium,
+        'minTier': UserTier.golden,
       },
       {
         'title': 'No Ads',
         'description': 'Enjoy an ad-free experience',
         'icon': Icons.block,
-        'unlocked': isPremium,
+        'minTier': UserTier.silder,
       },
     ];
 
@@ -96,7 +99,9 @@ class PremiumFeaturesScreen extends ConsumerWidget {
                 PremiumBadge(isPremium: true, fontSize: 16),
                 SizedBox(height: AppSpacing.spacingMD),
                 Text(
-                  isPremium ? 'You\'re Premium!' : 'Upgrade to Premium',
+                  isPremium
+                      ? 'Your tier: ${tierLabel(currentTier)}'
+                      : 'Upgrade to Premium',
                   style: AppTypography.h1.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -106,8 +111,8 @@ class PremiumFeaturesScreen extends ConsumerWidget {
                 SizedBox(height: AppSpacing.spacingSM),
                 Text(
                   isPremium
-                      ? 'Enjoy all premium features'
-                      : 'Unlock all features and get more matches',
+                      ? 'Some features require Golden tier'
+                      : 'Unlock more features and get more matches',
                   style: AppTypography.body.copyWith(
                     color: Colors.white70,
                   ),
@@ -125,21 +130,27 @@ class PremiumFeaturesScreen extends ConsumerWidget {
           ),
           SizedBox(height: AppSpacing.spacingMD),
           ...premiumFeatures.map((feature) {
+            final minTier = feature['minTier'] as UserTier;
+            final isUnlocked = unlocked(minTier);
             return Padding(
               padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
               child: PremiumFeatureCard(
                 title: feature['title'] as String,
-                description: feature['description'] as String,
+                description:
+                    '${feature['description']} (Min: ${tierLabel(minTier)})',
                 icon: feature['icon'] as IconData,
-                isUnlocked: feature['unlocked'] as bool,
+                isUnlocked: isUnlocked,
                 onTap: () {
-                  if (!isPremium) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SubscriptionPlansScreen(),
-                      ),
-                    );
+                  if (!isUnlocked) {
+                    final target = Uri(
+                      path: AppRoutes.featureLocked,
+                      queryParameters: {
+                        'title': feature['title'] as String,
+                        'desc': feature['description'] as String,
+                        'minTier': minTier.key,
+                      },
+                    ).toString();
+                    context.push(target);
                   }
                 },
               ),
@@ -153,12 +164,7 @@ class PremiumFeaturesScreen extends ConsumerWidget {
             GradientButton(
               text: 'Upgrade to Premium',
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SubscriptionPlansScreen(),
-                  ),
-                );
+                context.push(AppRoutes.subscriptionPlans);
               },
               isFullWidth: true,
             ),

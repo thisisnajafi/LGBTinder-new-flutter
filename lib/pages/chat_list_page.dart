@@ -12,9 +12,11 @@ import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/data/models/chat.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../shared/models/api_error.dart';
-import '../pages/chat_page.dart';
 import 'package:go_router/go_router.dart';
 import '../core/widgets/staggered_list_item.dart';
+import '../routes/app_router.dart';
+
+enum _ChatFilter { all, unread, online }
 
 /// Chat list page - Displays list of conversations
 class ChatListPage extends ConsumerStatefulWidget {
@@ -31,6 +33,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   String _searchQuery = '';
   List<Map<String, dynamic>> _chats = [];
   bool _didInitialLoadAnimation = false;
+  _ChatFilter _activeFilter = _ChatFilter.all;
 
   @override
   void initState() {
@@ -97,10 +100,21 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   }
 
   List<Map<String, dynamic>> get _filteredChats {
+    final base = _chats.where((chat) {
+      switch (_activeFilter) {
+        case _ChatFilter.unread:
+          return (chat['unread_count'] as int? ?? 0) > 0;
+        case _ChatFilter.online:
+          return chat['is_online'] == true;
+        case _ChatFilter.all:
+          return true;
+      }
+    }).toList();
+
     if (_searchQuery.isEmpty) {
-      return _chats;
+      return base;
     }
-    return _chats
+    return base
         .where((chat) =>
             chat['name']
                 .toString()
@@ -113,14 +127,64 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         .toList();
   }
 
-  void _handleChatTap(int userId) {
-    if (userId <= 0) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatPage(userId: userId),
-      ),
+  void _openFilterSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('All chats'),
+                trailing: _activeFilter == _ChatFilter.all
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () {
+                  setState(() => _activeFilter = _ChatFilter.all);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Unread only'),
+                trailing: _activeFilter == _ChatFilter.unread
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () {
+                  setState(() => _activeFilter = _ChatFilter.unread);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Online only'),
+                trailing: _activeFilter == _ChatFilter.online
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () {
+                  setState(() => _activeFilter = _ChatFilter.online);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  void _handleChatTap(Map<String, dynamic> chat) {
+    final userId = chat['id'] as int? ?? 0;
+    if (userId <= 0) return;
+    final target = Uri(
+      path: AppRoutes.chat,
+      queryParameters: {
+        'userId': userId.toString(),
+        if ((chat['name'] as String?)?.isNotEmpty == true) 'userName': chat['name'] as String,
+        if ((chat['avatar_url'] as String?)?.isNotEmpty == true)
+          'avatarUrl': chat['avatar_url'] as String,
+      },
+    ).toString();
+    context.push(target);
   }
 
   @override
@@ -140,7 +204,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
               error: (_, __) => null,
             ),
         onNotificationTap: () {
-          context.go('/home/notifications');
+          context.go('${AppRoutes.home}/notifications');
         },
       ),
       body: Column(
@@ -152,12 +216,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
               });
             },
             onFilterTap: () {
-              // Open chat filters - implementation needed
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Chat filters will be implemented'),
-                ),
-              );
+              _openFilterSheet();
             },
           ),
           Expanded(
@@ -194,7 +253,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                                   unreadCount: chat['unread_count'],
                                   isOnline: chat['is_online'],
                                   isTyping: chat['is_typing'],
-                                  onTap: () => _handleChatTap(chat['id']),
+                                  onTap: () => _handleChatTap(chat),
                                 );
                                 return StaggeredListItem(
                                   index: index,

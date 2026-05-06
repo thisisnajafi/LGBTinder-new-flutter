@@ -14,8 +14,6 @@ import '../../data/services/notification_service.dart';
 import '../../data/models/notification.dart' as app_models;
 import '../../providers/notification_providers.dart';
 import '../widgets/notification_tile.dart';
-import '../../../../pages/chat_page.dart';
-import '../../../../pages/profile_page.dart';
 import '../../../../widgets/error_handling/empty_state.dart';
 import '../../../../routes/app_router.dart';
 
@@ -28,7 +26,10 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   bool _hasError = false;
   String? _errorMessage;
   List<app_models.Notification> _notifications = [];
@@ -38,17 +39,39 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _isLoading || _isLoadingMore || !_hasMore) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      _loadNotifications();
+    }
   }
 
   Future<void> _loadNotifications({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
-      _notifications.clear();
+      _hasMore = true;
     }
+    if (!_hasMore && !refresh) return;
 
     setState(() {
-      _isLoading = true;
+      if (refresh || _notifications.isEmpty) {
+        _isLoading = true;
+      } else {
+        _isLoadingMore = true;
+      }
       _hasError = false;
       _errorMessage = null;
     });
@@ -65,9 +88,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           if (refresh) {
             _notifications = notifications;
           } else {
-            _notifications.addAll(notifications);
+            final existingIds = _notifications.map((e) => e.id).toSet();
+            _notifications.addAll(
+              notifications.where((n) => !existingIds.contains(n.id)),
+            );
           }
+          _hasMore = notifications.length >= _pageSize;
+          if (_hasMore) _currentPage++;
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     } on ApiError catch (e) {
@@ -76,6 +105,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           _hasError = true;
           _errorMessage = e.message;
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     } catch (e) {
@@ -84,6 +114,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           _hasError = true;
           _errorMessage = e.toString();
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     }
@@ -112,6 +143,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             );
           }
         });
+        ref.invalidate(unreadNotificationCountProvider);
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -154,6 +186,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             );
           }).toList();
         });
+        ref.invalidate(unreadNotificationCountProvider);
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -183,7 +216,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         setState(() {
           _notifications.clear();
           _currentPage = 1;
+          _hasMore = true;
         });
+        ref.invalidate(unreadNotificationCountProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('All notifications cleared')),
         );
@@ -216,6 +251,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         setState(() {
           _notifications.removeWhere((n) => n.id == notificationId);
         });
+        ref.invalidate(unreadNotificationCountProvider);
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -253,12 +289,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       case 'like':
       case 'superlike':
         if (notification.userId != null) {
-          context.go('/home/profile?userId=${notification.userId}');
+          final target = Uri(
+            path: '${AppRoutes.home}/profile',
+            queryParameters: {'userId': notification.userId.toString()},
+          ).toString();
+          context.go(target);
         }
         break;
       case 'message':
         if (notification.userId != null) {
-          context.go('/chat?userId=${notification.userId}');
+          final target = Uri(
+            path: AppRoutes.chat,
+            queryParameters: {'userId': notification.userId.toString()},
+          ).toString();
+          context.go(target);
         }
         break;
       default:
@@ -323,9 +367,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   : RefreshIndicator(
                       onRefresh: () => _loadNotifications(refresh: true),
                       child: ListView.builder(
+                        controller: _scrollController,
                         padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        itemCount: _notifications.length,
+                        itemCount: _notifications.length + (_isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index >= _notifications.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            );
+                          }
                           final notification = _notifications[index] as app_models.Notification;
                           return NotificationTile(
                             notification: notification,

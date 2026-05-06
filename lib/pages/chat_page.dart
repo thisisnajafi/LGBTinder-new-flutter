@@ -1,8 +1,10 @@
 // Screen: ChatPage
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/chat/chat_header.dart';
 import '../widgets/chat/message_bubble.dart';
@@ -16,11 +18,14 @@ import '../widgets/loading/skeleton_chat.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/data/models/message.dart';
 import '../features/chat/data/services/websocket_service.dart';
+import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/user/providers/user_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
+import '../shared/utils/plan_guard.dart';
 import '../screens/video_call_screen.dart';
 import '../screens/voice_call_screen.dart';
+import '../routes/app_router.dart';
 
 /// Chat page - Individual chat conversation screen
 class ChatPage extends ConsumerStatefulWidget {
@@ -96,6 +101,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         setState(() {
           _currentUserId = userInfo.id;
+          // Recompute send/receive flags once current user is known.
+          _messages = _messages
+              .map((msg) {
+                final senderId = msg['sender_id'] as int?;
+                if (senderId == null) return msg;
+                return {
+                  ...msg,
+                  'is_sent': senderId == userInfo.id,
+                };
+              })
+              .toList();
         });
       }
     } catch (e) {
@@ -237,11 +253,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Map<String, dynamic> _messageToMap(Message message) {
-    final isSent = _currentUserId != null && message.senderId == _currentUserId;
+    final isSent = _currentUserId != null
+        ? message.senderId == _currentUserId
+        : message.senderId != widget.userId;
     return {
       'id': message.id,
       'text': message.message,
       'is_sent': isSent,
+      'sender_id': message.senderId,
       'timestamp': message.createdAt,
       'is_read': message.isRead,
       'type': message.messageType,
@@ -268,6 +287,63 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (e) {
       // Return 0 on error - pinned count is not critical
       return 0;
+    }
+  }
+
+  Future<void> _showPinnedMessages() async {
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      final pinned = await chatService.getPinnedMessages(widget.userId);
+      if (!mounted) return;
+      if (pinned.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No pinned messages found.')),
+        );
+        return;
+      }
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (context) {
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const ListTile(
+                  title: Text('Pinned messages'),
+                ),
+                const Divider(height: 1),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: pinned.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final msg = pinned[index];
+                      return ListTile(
+                        title: Text(
+                          msg.message,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          msg.createdAt.toLocal().toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to load pinned messages.')),
+      );
     }
   }
 
@@ -308,12 +384,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     try {
       final chatService = ref.read(chatServiceProvider);
-      final request = SendMessageRequest(
-        receiverId: widget.userId,
-        message: text,
-        messageType: 'text',
-      );
-
       final sentMessage = await chatService.sendMessage(
         widget.userId,
         text,
@@ -357,13 +427,99 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleMediaTap() {
-    // Open media picker - implementation needed
-    // This would typically show a bottom sheet with camera/gallery options
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Media picker functionality will be implemented'),
-      ),
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Send photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendMedia(ImageSource.gallery, 'image');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam_outlined),
+                title: const Text('Send video'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendMedia(ImageSource.gallery, 'video');
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _pickAndSendMedia(ImageSource source, String type) async {
+    int? tempId;
+    try {
+      final picker = ImagePicker();
+      final file = type == 'video'
+          ? await picker.pickVideo(source: source)
+          : await picker.pickImage(source: source);
+      if (file == null || !mounted) return;
+
+      tempId = DateTime.now().millisecondsSinceEpoch;
+      final now = DateTime.now();
+      setState(() {
+        _messages.add({
+          'id': tempId,
+          'text': type == 'video' ? 'Sending video...' : 'Sending image...',
+          'is_sent': true,
+          'sender_id': _currentUserId,
+          'timestamp': now,
+          'is_read': false,
+          'type': type,
+          'attachment_url': file.path,
+          'is_sending': true,
+        });
+      });
+      _scrollToBottom();
+
+      final sent = await ref.read(chatServiceProvider).sendMessage(
+            widget.userId,
+            '',
+            messageType: type,
+            mediaFile: File(file.path),
+          );
+      if (!mounted) return;
+      setState(() {
+        _messages.removeWhere((m) => m['id'] == tempId);
+        _messages.add(_messageToMap(sent));
+      });
+      _scrollToBottom();
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      if (tempId != null) {
+        setState(() {
+          _messages.removeWhere((m) => m['id'] == tempId);
+        });
+      }
+      ErrorHandlerService.showErrorSnackBar(
+        context,
+        e,
+        customMessage: 'Failed to send media',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (tempId != null) {
+        setState(() {
+          _messages.removeWhere((m) => m['id'] == tempId);
+        });
+      }
+      ErrorHandlerService.handleError(
+        context,
+        e,
+        customMessage: 'Failed to send media',
+      );
+    }
   }
 
   void _handleEmojiTap() {
@@ -378,6 +534,36 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   static const String _chatBgLight = 'assets/images/chat/chat-light.png';
   static const String _chatBgDark = 'assets/images/chat/chat-dark.png';
+
+  Future<void> _handleVideoCallTap() async {
+    final guard = PlanGuard(ref.read(planLimitsServiceProvider));
+    final access = await guard.canMakeVideoCall();
+    if (!mounted) return;
+    if (!access.isAllowed) {
+      final target = Uri(
+        path: AppRoutes.featureLocked,
+        queryParameters: {
+          'title': 'Video calls',
+          'desc': access.errorMessage ??
+              'Upgrade to unlock face-to-face video calling.',
+          'minTier': 'silder',
+        },
+      ).toString();
+      context.push(target);
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VideoCallScreen(
+          userId: widget.userId,
+          userName: widget.userName ?? 'User',
+          userAvatarUrl: widget.avatarUrl,
+          isIncoming: false,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -399,7 +585,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           onBack: () => Navigator.of(context).pop(),
           onInfo: () {
             // Navigate to profile
-            context.go('/profile/${widget.userId}');
+            final target = Uri(
+              path: AppRoutes.profileDetail,
+              queryParameters: {'userId': widget.userId.toString()},
+            ).toString();
+            context.push(target);
           },
           onCall: () {
             // Navigate to voice call screen
@@ -416,18 +606,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             );
           },
           onVideoCall: () {
-            // Navigate to video call screen
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => VideoCallScreen(
-                  userId: widget.userId,
-                  userName: widget.userName ?? 'User',
-                  userAvatarUrl: widget.avatarUrl,
-                  isIncoming: false,
-                ),
-              ),
-            );
+            _handleVideoCallTap();
           },
         ),
       ),
@@ -458,13 +637,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               return PinnedMessagesBanner(
                 pinnedCount: pinnedCount,
                 onTap: () {
-                  // Scroll to pinned messages - implementation needed
-                  // This would scroll to the pinned messages section
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Scroll to pinned messages functionality will be implemented'),
-                    ),
-                  );
+                  _showPinnedMessages();
                 },
               );
             },

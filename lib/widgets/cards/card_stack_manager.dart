@@ -17,6 +17,10 @@ class CardStackManager extends ConsumerStatefulWidget {
   final Function(int userId)? onCardTap;
   final bool isLoading;
   final VoidCallback? onRefresh;
+  final String? emptyActionLabel;
+  final VoidCallback? onEmptyAction;
+  final String? emptySecondaryActionLabel;
+  final VoidCallback? onEmptySecondaryAction;
 
   const CardStackManager({
     Key? key,
@@ -25,6 +29,10 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.onCardTap,
     this.isLoading = false,
     this.onRefresh,
+    this.emptyActionLabel,
+    this.onEmptyAction,
+    this.emptySecondaryActionLabel,
+    this.onEmptySecondaryAction,
   }) : super(key: key);
 
   @override
@@ -88,10 +96,13 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     if (widget.cards.isEmpty) {
       return EmptyState(
         title: 'No more profiles',
-        message: 'Check back later for new matches!',
+        message: 'Try widening filters or expanding distance to find more people.',
         icon: Icons.person_outline,
-        actionLabel: widget.onRefresh != null ? 'Refresh' : null,
-        onAction: widget.onRefresh,
+        actionLabel:
+            widget.emptyActionLabel ?? (widget.onRefresh != null ? 'Refresh' : null),
+        onAction: widget.onEmptyAction ?? widget.onRefresh,
+        secondaryActionLabel: widget.emptySecondaryActionLabel,
+        onSecondaryAction: widget.onEmptySecondaryAction,
       );
     }
 

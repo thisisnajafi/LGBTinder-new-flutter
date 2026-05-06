@@ -150,10 +150,10 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           // Check if profile is completed
           if (response.profileCompleted) {
             // Profile is completed, go to home
-            context.go('/home');
+            context.go(AppRoutes.home);
           } else {
             // Profile not completed, go to profile wizard
-            context.go('/profile-wizard');
+            context.go(AppRoutes.profileWizard);
           }
         }
       }

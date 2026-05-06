@@ -98,7 +98,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               backgroundColor: AppColors.warningYellow,
             ),
           );
-          context.go('/email-verification?email=${Uri.encodeComponent(_emailController.text.trim())}&isNewUser=false');
+          final target = Uri(
+            path: AppRoutes.emailVerification,
+            queryParameters: {
+              'email': _emailController.text.trim(),
+              'isNewUser': 'false',
+            },
+          ).toString();
+          context.go(target);
         } else if (response.userState == 'profile_completion_required' || 
                    response.needsProfileCompletion || 
                    !response.profileCompleted) {
@@ -114,9 +121,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // Pass first_name from login response to profile wizard
           final firstName = response.firstName ?? response.user?.firstName ?? '';
           if (firstName.isNotEmpty) {
-            context.go('/profile-wizard?firstName=${Uri.encodeComponent(firstName)}');
+            final target = Uri(
+              path: AppRoutes.profileWizard,
+              queryParameters: {'firstName': firstName},
+            ).toString();
+            context.go(target);
           } else {
-            context.go('/profile-wizard');
+            context.go(AppRoutes.profileWizard);
           }
         } else {
           ref.read(appEventTrackerProvider).track('auth_success', meta: {'screen': 'login'});
@@ -128,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               duration: const Duration(seconds: 2),
             ),
           );
-          context.go('/home');
+          context.go(AppRoutes.home);
         }
       }
     } on EmailVerificationRequiredException catch (e) {
@@ -153,7 +164,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             );
             
             // Navigate to email verification screen
-            context.go('/email-verification?email=${Uri.encodeComponent(e.email)}&isNewUser=false');
+            final target = Uri(
+              path: AppRoutes.emailVerification,
+              queryParameters: {'email': e.email, 'isNewUser': 'false'},
+            ).toString();
+            context.go(target);
           }
         } catch (codeError) {
           if (mounted) {
@@ -204,7 +219,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 );
                 
                 // Navigate to email verification screen
-                context.go('/email-verification?email=${Uri.encodeComponent(email)}&isNewUser=false');
+                final target = Uri(
+                  path: AppRoutes.emailVerification,
+                  queryParameters: {'email': email, 'isNewUser': 'false'},
+                ).toString();
+                context.go(target);
               }
             } catch (codeError) {
               if (mounted) {

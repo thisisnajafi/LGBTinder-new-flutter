@@ -6,7 +6,7 @@ void main() {
   group('RouteRedirector.resolveLegacyRoute', () {
     test('maps simple legacy paths', () {
       final r = RouteRedirector();
-      expect(r.resolveLegacyRoute(Uri.parse('/help')), '${AppRoutes.home}/settings');
+      expect(r.resolveLegacyRoute(Uri.parse('/help')), AppRoutes.helpSupport);
       expect(r.resolveLegacyRoute(Uri.parse('/discover')), '${AppRoutes.home}/discovery');
       expect(r.resolveLegacyRoute(Uri.parse('/likes')), '${AppRoutes.home}/matches');
       expect(r.resolveLegacyRoute(Uri.parse('/chats')), AppRoutes.chat);

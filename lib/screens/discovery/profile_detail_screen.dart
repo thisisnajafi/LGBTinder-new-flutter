@@ -14,14 +14,15 @@ import '../../core/widgets/loading_indicator.dart';
 import '../../widgets/error_handling/error_display_widget.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../../features/profile/data/models/user_profile.dart';
+import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../features/matching/providers/likes_providers.dart';
 import '../../features/matching/providers/matching_provider.dart';
 import '../../features/matching/data/models/match.dart' as match_models;
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
-import '../../pages/chat_page.dart';
 import '../../widgets/match/match_screen.dart';
 import 'package:go_router/go_router.dart';
+import '../../routes/app_router.dart';
 
 /// Profile detail screen - View detailed user profile
 class ProfileDetailScreen extends ConsumerStatefulWidget {
@@ -184,13 +185,31 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   void _handleMessage() {
     if (_profile == null) return;
-    Navigator.pop(context);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatPage(userId: _profile!.id),
-      ),
-    );
+    final target = Uri(
+      path: AppRoutes.chat,
+      queryParameters: {
+        'userId': _profile!.id.toString(),
+        'userName': '${_profile!.firstName} ${_profile!.lastName}'.trim(),
+      },
+    ).toString();
+    context.push(target);
+  }
+
+  List<String>? _mapIdsToTitles(List<int>? ids, List<dynamic> refs) {
+    if (ids == null || ids.isEmpty) return null;
+    final byId = <int, String>{};
+    for (final item in refs) {
+      final id = item.id as int?;
+      final title = item.title as String?;
+      if (id != null && title != null && title.isNotEmpty) {
+        byId[id] = title;
+      }
+    }
+    final values = ids
+        .map((id) => byId[id] ?? id.toString())
+        .toSet()
+        .toList(growable: false);
+    return values.isEmpty ? null : values;
   }
 
   void _showMatchDialog(match_models.Match? match) {
@@ -259,6 +278,12 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
+    final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
+    final educationsRef = ref.watch(educationLevelsProvider).valueOrNull ?? const [];
+    final languagesRef = ref.watch(languagesProvider).valueOrNull ?? const [];
+    final preferredGendersRef = ref.watch(preferredGendersProvider).valueOrNull ?? const [];
+    final relationGoalsRef = ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -285,9 +310,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                             age: _calculateAge(),
                             location: _getLocation(),
                             avatarUrl: _getPrimaryImageUrl(),
-                            isVerified: false, // UserProfile doesn't have isVerified yet
-                            isPremium: false, // UserProfile doesn't have isPremium yet
-                            isOnline: false, // UserProfile doesn't have isOnline yet
+                            isVerified: _profile!.isVerified ?? false,
+                            isPremium: _profile!.isPremium ?? false,
+                            isOnline: _profile!.isOnline ?? false,
                           ),
                           // Bio
                           if (_profile!.profileBio != null && _profile!.profileBio!.isNotEmpty)
@@ -309,12 +334,13 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                             ),
                           // Profile info sections
                           ProfileInfoSections(
-                            interests: null, // IDs need to be converted to names via reference data
-                            jobs: null, // IDs need to be converted to names via reference data
-                            educations: null, // IDs need to be converted to names via reference data
-                            languages: null, // IDs need to be converted to names via reference data
+                            interests: _mapIdsToTitles(_profile!.interests, interestsRef),
+                            jobs: _mapIdsToTitles(_profile!.jobs, jobsRef),
+                            educations: _mapIdsToTitles(_profile!.educations, educationsRef),
+                            languages: _mapIdsToTitles(_profile!.languages, languagesRef),
                             gender: _profile!.gender,
-                            preferredGenders: null, // IDs need to be converted to names
+                            preferredGenders: _mapIdsToTitles(_profile!.preferredGenders, preferredGendersRef),
+                            relationGoals: _mapIdsToTitles(_profile!.relationGoals, relationGoalsRef),
                             height: _profile!.height,
                             weight: _profile!.weight,
                             smoke: _profile!.smoke,
