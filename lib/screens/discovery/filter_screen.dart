@@ -10,6 +10,10 @@ import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/bottom_sheet_custom.dart';
+import '../../features/payments/data/services/plan_limits_service.dart';
+import '../../shared/utils/plan_guard.dart';
+import '../../routes/app_router.dart';
+import 'package:go_router/go_router.dart';
 
 /// Filter screen - Discovery filters
 class FilterScreen extends ConsumerStatefulWidget {
@@ -279,8 +283,28 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
             ),
             value: _showPremiumOnly,
             onChanged: (value) {
-              setState(() {
-                _showPremiumOnly = value;
+              if (value != true) {
+                setState(() => _showPremiumOnly = false);
+                return;
+              }
+              Future.microtask(() async {
+                final service = ref.read(planLimitsServiceProvider);
+                final guard = PlanGuard(service);
+                final result = await guard.canUseAdvancedFilters();
+                if (!mounted) return;
+                if (!result.isAllowed) {
+                  final target = Uri(
+                    path: AppRoutes.featureLocked,
+                    queryParameters: {
+                      'title': 'Advanced filters',
+                      'desc': 'Upgrade to unlock advanced filters and find better matches faster.',
+                      'minTier': 'silder',
+                    },
+                  ).toString();
+                  context.push(target);
+                  return;
+                }
+                setState(() => _showPremiumOnly = true);
               });
             },
             activeColor: AppColors.accentPurple,

@@ -11,6 +11,7 @@ import 'routes/app_router.dart';
 import 'widgets/error_handling/error_boundary.dart';
 import 'shared/services/push_notification_service.dart';
 import 'shared/services/incoming_call_handler.dart';
+import 'shared/services/deep_linking_service.dart';
 import 'core/providers/feature_flags_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'core/utils/app_logger.dart';
@@ -100,6 +101,7 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     startupLog('MyApp.build()');
     final router = ref.watch(appRouterProvider);
+    DeepLinkingService().initialize(router);
 
     UnauthorizedHandler.setCallback(() {
       authLog('401 Unauthorized: redirecting to welcome');

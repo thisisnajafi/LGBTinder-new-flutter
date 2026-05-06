@@ -21,6 +21,7 @@ import 'forgot_password_screen.dart';
 import '../../core/utils/app_icons.dart';
 import 'register_screen.dart';
 import 'email_verification_screen.dart';
+import '../../shared/analytics/app_event_tracker.dart';
 
 /// Login screen - User authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -71,6 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
+      await ref.read(appEventTrackerProvider).track('auth_submit', meta: {'screen': 'login'});
       final authService = ref.read(authServiceProvider);
       final deviceName = await _getDeviceName();
       
@@ -86,6 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Check user state and navigate accordingly
         // Priority: email verification > profile completion > home
         if (response.userState == 'email_verification_required') {
+          ref.read(appEventTrackerProvider).track('auth_state', meta: {'state': 'email_verification_required'});
           // Email verification needed
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -97,6 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         } else if (response.userState == 'profile_completion_required' || 
                    response.needsProfileCompletion || 
                    !response.profileCompleted) {
+          ref.read(appEventTrackerProvider).track('auth_state', meta: {'state': 'profile_completion_required'});
           // Profile completion needed - token is already saved in auth service
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -113,6 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             context.go('/profile-wizard');
           }
         } else {
+          ref.read(appEventTrackerProvider).track('auth_success', meta: {'screen': 'login'});
           // Everything is complete, go to home
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -165,6 +170,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } on ApiError catch (e) {
+      ref.read(appEventTrackerProvider).track(
+        'auth_error',
+        meta: {'screen': 'login', 'code': e.code, 'message': e.message},
+      );
       // Check if this is a 403 error that might be email verification required
       // This is a fallback in case the exception wasn't thrown in auth service
       if (e.code == 403 && e.responseData != null) {
@@ -223,6 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       }
     } catch (e) {
+      ref.read(appEventTrackerProvider).track('auth_exception', meta: {'screen': 'login', 'error': e.toString()});
       if (mounted) {
         ErrorHandlerService.handleError(
           context,
@@ -241,6 +251,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(appEventTrackerProvider).track('auth_view', meta: {'screen': 'login'});
+    });
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;

@@ -31,6 +31,11 @@ import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';
 import '../shared/services/onboarding_service.dart';
 import '../core/utils/app_logger.dart';
+import 'route_redirector.dart';
+import '../screens/feature_locked_screen.dart';
+import '../screens/tier_comparison_screen.dart';
+import '../screens/subscription_status_screen.dart';
+import '../screens/help_support_screen.dart';
 
 /// Route names constants
 class AppRoutes {
@@ -56,6 +61,10 @@ class AppRoutes {
   static const String matches = '/matches';
   static const String googlePlayBillingTest = '/google-play-billing-test';
   static const String subscriptionPlans = '/subscription-plans';
+  static const String featureLocked = '/feature-locked';
+  static const String tierComparison = '/tier-comparison';
+  static const String subscriptionStatus = '/subscription-status';
+  static const String helpSupport = '/help-support';
 }
 
 /// Builds a page with slide-from-right + fade using [AppAnimations.transitionPage].
@@ -90,6 +99,7 @@ Page<void> slideFadePage(GoRouterState state, Widget child) {
 /// any later navigation to / (e.g. back button, recreated router) redirects to welcome.
 bool _hasLeftStartupFlow = false;
 void markStartupFlowLeft() => _hasLeftStartupFlow = true;
+final RouteRedirector _redirector = RouteRedirector();
 
 const Set<String> _publicRoutes = {
   AppRoutes.splash,
@@ -98,6 +108,12 @@ const Set<String> _publicRoutes = {
   AppRoutes.register,
   AppRoutes.emailVerification,
   AppRoutes.onboarding,
+};
+
+const Set<String> _authEntryRoutes = {
+  AppRoutes.welcome,
+  AppRoutes.login,
+  AppRoutes.register,
 };
 
 const Set<String> _authOnlyTopLevelRoutes = {
@@ -109,6 +125,10 @@ const Set<String> _authOnlyTopLevelRoutes = {
   AppRoutes.billingHistory,
   AppRoutes.subscriptionPlans,
   AppRoutes.chat,
+  AppRoutes.featureLocked,
+  AppRoutes.tierComparison,
+  AppRoutes.subscriptionStatus,
+  AppRoutes.helpSupport,
 };
 
 bool _isProtectedRoute(String location) {
@@ -132,12 +152,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.welcome;
       }
 
+      final legacyResolved = _redirector.resolveLegacyRoute(state.uri);
+      if (legacyResolved != null && legacyResolved != state.uri.toString()) {
+        routeLog('redirect: legacy ${state.uri} → $legacyResolved');
+        return legacyResolved;
+      }
+
       if (_publicRoutes.contains(loc)) {
+        final isAuthenticated = await tokenStorage.isAuthenticated();
+        final pending = _redirector.pendingProtectedRoute;
+        if (isAuthenticated && _authEntryRoutes.contains(loc) && pending != null) {
+          final consumed = _redirector.consumePending()!;
+          routeLog('redirect: authenticated entry route $loc → pending $pending');
+          return consumed;
+        }
         return null;
       }
 
       final isAuthenticated = await tokenStorage.isAuthenticated();
       if (!isAuthenticated && _isProtectedRoute(loc)) {
+        _redirector.setPendingIfEmpty(state.uri.toString());
         routeLog('redirect: protected $loc without auth → ${AppRoutes.welcome}');
         return AppRoutes.welcome;
       }
@@ -317,16 +351,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.billingHistory,
         name: 'billing-history',
         pageBuilder: (context, state) => slideFadePage(state, const BillingHistoryScreen()),
-        redirect: (context, state) async {
-          if (state.matchedLocation == AppRoutes.welcome) return null;
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          if (!isAuthenticated) {
-            routeLog('billing-history: not authenticated → ${AppRoutes.welcome}');
-            return AppRoutes.welcome;
-          }
-          return null;
-        },
       ),
 
       // Subscription Plans (requires auth)
@@ -334,16 +358,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.subscriptionPlans,
         name: 'subscription-plans',
         pageBuilder: (context, state) => slideFadePage(state, const payments.SubscriptionPlansScreen()),
-        redirect: (context, state) async {
-          if (state.matchedLocation == AppRoutes.welcome) return null;
-          final tokenStorage = ref.read(tokenStorageServiceProvider);
-          final isAuthenticated = await tokenStorage.isAuthenticated();
-          if (!isAuthenticated) {
-            routeLog('subscription-plans: not authenticated → ${AppRoutes.welcome}');
-            return AppRoutes.welcome;
-          }
-          return null;
+      ),
+
+      // Feature locked (requires auth; upsell screen)
+      GoRoute(
+        path: AppRoutes.featureLocked,
+        name: 'feature-locked',
+        pageBuilder: (context, state) {
+          final qp = state.uri.queryParameters;
+          return slideFadePage(state, FeatureLockedScreen.fromQueryParams(qp));
         },
+      ),
+
+      // Tier comparison (requires auth; marketing/upsell)
+      GoRoute(
+        path: AppRoutes.tierComparison,
+        name: 'tier-comparison',
+        pageBuilder: (context, state) => slideFadePage(state, const TierComparisonScreen()),
+      ),
+
+      // Subscription status summary (requires auth)
+      GoRoute(
+        path: AppRoutes.subscriptionStatus,
+        name: 'subscription-status',
+        pageBuilder: (context, state) => slideFadePage(state, const SubscriptionStatusScreen()),
+      ),
+
+      // Help & Support (requires auth)
+      GoRoute(
+        path: AppRoutes.helpSupport,
+        name: 'help-support',
+        pageBuilder: (context, state) => slideFadePage(state, const HelpSupportScreen()),
       ),
 
       // Chat Page (requires auth)

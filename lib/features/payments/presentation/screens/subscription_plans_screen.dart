@@ -18,6 +18,7 @@ import '../../../../core/providers/feature_flags_provider.dart';
 import '../widgets/offer_selection_widget.dart';
 import '../utils/plan_theme_helper.dart';
 import 'subscription_management_screen.dart';
+import '../../../../shared/analytics/app_event_tracker.dart';
 
 /// Subscription plans screen — plan-themed UI (Basic, Premium, Golden)
 class SubscriptionPlansScreen extends ConsumerStatefulWidget {
@@ -40,6 +41,10 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(appEventTrackerProvider).track('plans_view', meta: {'screen': 'subscription_plans'});
+    });
     _loadPlans();
   }
 
@@ -103,6 +108,11 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     final paymentSystem = ref.read(activePaymentSystemProvider);
 
     if (paymentSystem == PaymentSystem.googlePlay) {
+      ref.read(appEventTrackerProvider).track('plans_cta_subscribe', meta: {
+        'plan_id': _selectedPlanId,
+        'sub_plan_id': _selectedSubPlanId,
+        'payment_system': 'google_play',
+      });
       await _subscribeWithGooglePlay();
     } else {
       if (mounted) {
@@ -146,6 +156,12 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
 
       ref.listen(googlePlayPurchaseProvider, (previous, next) {
         if (next.isSuccess && mounted) {
+          ref.read(appEventTrackerProvider).track('purchase_success', meta: {
+            'payment_system': 'google_play',
+            'product_id': productId,
+            'plan_id': _selectedPlanId,
+            'sub_plan_id': _selectedSubPlanId,
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Subscription successful!'),
@@ -159,6 +175,13 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
             ),
           );
         } else if (next.errorMessage != null && mounted) {
+          ref.read(appEventTrackerProvider).track('purchase_failed', meta: {
+            'payment_system': 'google_play',
+            'product_id': productId,
+            'plan_id': _selectedPlanId,
+            'sub_plan_id': _selectedSubPlanId,
+            'error': next.errorMessage,
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Purchase failed: ${next.errorMessage}'),
@@ -168,6 +191,12 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         }
       });
     } catch (e) {
+      ref.read(appEventTrackerProvider).track('purchase_exception', meta: {
+        'payment_system': 'google_play',
+        'plan_id': _selectedPlanId,
+        'sub_plan_id': _selectedSubPlanId,
+        'error': e.toString(),
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

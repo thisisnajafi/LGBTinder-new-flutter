@@ -28,6 +28,7 @@ import '../features/payments/data/models/subscription_plan.dart';
 import '../features/payments/presentation/screens/subscription_management_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
 import '../screens/onboarding/onboarding_preferences_screen.dart';
+import '../routes/app_router.dart';
 
 /// Settings screen - Main settings overview (Task 5: summary from GET /api/settings)
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -261,6 +262,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           _buildSettingsItem(
             context: context,
+            iconPath: AppIcons.star,
+            title: 'Compare tiers',
+            subtitle: 'Basid vs Silder vs Golden — see what you get',
+            onTap: () => context.push(AppRoutes.tierComparison),
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+          ),
+          _buildSettingsItem(
+            context: context,
             iconPath: AppIcons.crown,
             title: 'Premium Features',
             subtitle: ref.watch(subscriptionStatusProvider).when(
@@ -322,6 +332,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
+          ),
+          _buildSettingsItem(
+            context: context,
+            iconPath: AppIcons.card,
+            title: 'Subscription status',
+            subtitle: 'View your current plan and expiry',
+            onTap: () => context.push(AppRoutes.subscriptionStatus),
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
           ),
           // Subscription Management (only show if subscribed)
           if (ref.watch(subscriptionStatusProvider).maybeWhen(

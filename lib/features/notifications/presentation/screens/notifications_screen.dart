@@ -16,6 +16,8 @@ import '../../providers/notification_providers.dart';
 import '../widgets/notification_tile.dart';
 import '../../../../pages/chat_page.dart';
 import '../../../../pages/profile_page.dart';
+import '../../../../widgets/error_handling/empty_state.dart';
+import '../../../../routes/app_router.dart';
 
 /// Notifications screen - Displays all user notifications
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -309,29 +311,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   onRetry: () => _loadNotifications(refresh: true),
                 )
               : _notifications.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.notifications_none,
-                            size: 64,
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Text(
-                            'No notifications',
-                            style: AppTypography.h3.copyWith(color: textColor),
-                          ),
-                          SizedBox(height: AppSpacing.spacingSM),
-                          Text(
-                            'You\'re all caught up!',
-                            style: AppTypography.body.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ? EmptyState(
+                      title: 'No notifications',
+                      message: 'You\'re all caught up. Discover new people to spark activity.',
+                      icon: Icons.notifications_none,
+                      actionLabel: 'Go to discovery',
+                      onAction: () => context.go('${AppRoutes.home}/discovery'),
+                      secondaryActionLabel: 'Contact support',
+                      onSecondaryAction: () => context.push(AppRoutes.helpSupport),
                     )
                   : RefreshIndicator(
                       onRefresh: () => _loadNotifications(refresh: true),

@@ -18,6 +18,8 @@ class EmptyState extends ConsumerStatefulWidget {
   final String? iconPath; // SVG icon path
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
   /// When true, show a thin gradient line below the title (subtle pride accent).
   final bool showPrideAccent;
 
@@ -29,6 +31,8 @@ class EmptyState extends ConsumerStatefulWidget {
     this.iconPath,
     this.actionLabel,
     this.onAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
     this.showPrideAccent = true,
   }) : super(key: key);
 
@@ -130,6 +134,19 @@ class _EmptyStateState extends ConsumerState<EmptyState>
                 text: widget.actionLabel!,
                 onPressed: widget.onAction,
                 isFullWidth: false,
+              ),
+            ],
+            if (widget.secondaryActionLabel != null && widget.onSecondaryAction != null) ...[
+              SizedBox(height: AppSpacing.spacingMD),
+              TextButton(
+                onPressed: widget.onSecondaryAction,
+                child: Text(
+                  widget.secondaryActionLabel!,
+                  style: AppTypography.button.copyWith(
+                    color: AppColors.accentPurple,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ],

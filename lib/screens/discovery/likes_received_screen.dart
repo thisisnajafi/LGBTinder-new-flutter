@@ -19,6 +19,11 @@ import '../../widgets/error_handling/empty_state.dart';
 import '../../widgets/loading/skeleton_loader.dart';
 import '../../widgets/modals/bottom_sheet_custom.dart';
 import '../discovery/profile_detail_screen.dart';
+import '../../core/providers/api_providers.dart';
+import '../../features/payments/data/services/plan_limits_service.dart';
+import '../../shared/utils/plan_guard.dart';
+import 'package:go_router/go_router.dart';
+import '../../routes/app_router.dart';
 
 /// Likes received screen - View users who liked you
 class LikesReceivedScreen extends ConsumerStatefulWidget {
@@ -35,7 +40,31 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
   @override
   void initState() {
     super.initState();
-    _loadLikes();
+    _guardAndLoad();
+  }
+
+  Future<void> _guardAndLoad() async {
+    try {
+      final service = ref.read(planLimitsServiceProvider);
+      final guard = PlanGuard(service);
+      final result = await guard.canSeeWhoLikedMe();
+      if (!mounted) return;
+      if (!result.isAllowed) {
+        final target = Uri(
+          path: AppRoutes.featureLocked,
+          queryParameters: {
+            'title': 'See who liked you',
+            'desc': 'Unlock this feature to view everyone who has liked your profile.',
+            'minTier': 'silder',
+          },
+        ).toString();
+        context.push(target);
+        return;
+      }
+    } catch (_) {
+      // If guard fails, do not block the user.
+    }
+    await _loadLikes();
   }
 
   Future<void> _loadLikes() async {
@@ -65,6 +94,9 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
               'is_verified': user['is_verified'] ?? false,
               'is_premium': user['is_premium'] ?? false,
               'liked_at': DateTime.parse(like['created_at']),
+              'age': user['age'],
+              'distance': user['distance'],
+              'bio': user['bio'],
             };
           }).toList();
           _isLoading = false;

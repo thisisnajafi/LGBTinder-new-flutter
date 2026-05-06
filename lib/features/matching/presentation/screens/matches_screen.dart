@@ -18,6 +18,8 @@ import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/error_handler_service.dart';
 import '../../../../pages/chat_page.dart';
 import 'package:intl/intl.dart';
+import '../../../../widgets/error_handling/empty_state.dart';
+import '../../../../routes/app_router.dart';
 
 /// Matches screen - Display all user matches
 class MatchesScreen extends ConsumerStatefulWidget {
@@ -125,45 +127,14 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   onRetry: _loadMatches,
                 )
               : _matches.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.favorite_border,
-                            size: 64,
-                            color: secondaryTextColor,
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Text(
-                            'No Matches Yet',
-                            style: AppTypography.h3.copyWith(color: textColor),
-                          ),
-                          SizedBox(height: AppSpacing.spacingSM),
-                          Text(
-                            'Start swiping to find your perfect match!',
-                            style: AppTypography.body.copyWith(
-                              color: secondaryTextColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: AppSpacing.spacingXXL),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.go('/home');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentPurple,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.spacingXXL,
-                                vertical: AppSpacing.spacingMD,
-                              ),
-                            ),
-                            child: const Text('Start Discovering'),
-                          ),
-                        ],
-                      ),
+                  ? EmptyState(
+                      title: 'No Matches Yet',
+                      message: 'Start swiping to find your perfect match.',
+                      icon: Icons.favorite_border,
+                      actionLabel: 'Start discovering',
+                      onAction: () => context.go('${AppRoutes.home}/discovery'),
+                      secondaryActionLabel: 'Contact support',
+                      onSecondaryAction: () => context.push(AppRoutes.helpSupport),
                     )
                   : RefreshIndicator(
                       onRefresh: _loadMatches,

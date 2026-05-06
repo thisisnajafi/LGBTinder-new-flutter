@@ -9,6 +9,42 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/payments/data/services/marketing_attribution_service.dart';
+import '../../routes/app_router.dart';
+
+String? resolveUrlSchemeRoute(Uri uri) {
+  if (uri.scheme != 'lgbtfinder') return null;
+  final host = uri.host;
+  final pathSegments = uri.pathSegments;
+
+  switch (host) {
+    case 'match':
+      return '${AppRoutes.home}/matches';
+    case 'chat':
+      if (pathSegments.isNotEmpty) {
+        return Uri(
+          path: AppRoutes.chat,
+          queryParameters: {'userId': pathSegments.first},
+        ).toString();
+      }
+      return AppRoutes.chat;
+    case 'profile':
+      if (pathSegments.isNotEmpty) {
+        return Uri(
+          path: AppRoutes.profileDetail,
+          queryParameters: {'userId': pathSegments.first},
+        ).toString();
+      }
+      return null;
+    case 'call':
+      return AppRoutes.chat;
+    case 'notifications':
+      return '${AppRoutes.home}/notifications';
+    case 'discover':
+      return '${AppRoutes.home}/discovery';
+    default:
+      return null;
+  }
+}
 
 /// Deep linking service for navigation from notifications and URLs
 class DeepLinkingService {
@@ -31,17 +67,12 @@ class DeepLinkingService {
   void _registerDefaultHandlers() {
     // Match notification → Navigate to matches screen
     registerHandler('match', (data) async {
-      final matchId = data['match_id']?.toString();
-      if (matchId != null) {
-        _router?.go('/matches/$matchId');
-      } else {
-        _router?.go('/matches');
-      }
+      _router?.go('${AppRoutes.home}/matches');
     });
 
     // Like notification → Navigate to likes screen (if premium)
     registerHandler('like', (data) async {
-      _router?.go('/likes');
+      _router?.go('${AppRoutes.home}/discovery');
     });
 
     // Message notification → Navigate to specific chat
@@ -49,20 +80,25 @@ class DeepLinkingService {
       final userId = data['user_id']?.toString();
       final chatId = data['chat_id']?.toString();
       if (userId != null) {
-        _router?.go('/chat/$userId');
+        final target = Uri(
+          path: AppRoutes.chat,
+          queryParameters: {'userId': userId},
+        ).toString();
+        _router?.go(target);
       } else if (chatId != null) {
-        _router?.go('/chat/$chatId');
+        final target = Uri(
+          path: AppRoutes.chat,
+          queryParameters: {'userId': chatId},
+        ).toString();
+        _router?.go(target);
       } else {
-        _router?.go('/chats');
+        _router?.go(AppRoutes.chat);
       }
     });
 
     // Call notification → Navigate to call screen
     registerHandler('call', (data) async {
-      final callId = data['call_id']?.toString();
-      if (callId != null) {
-        _router?.go('/call/$callId');
-      }
+      _router?.go(AppRoutes.chat);
     });
 
     // General notification → Navigate to notifications screen
@@ -74,13 +110,17 @@ class DeepLinkingService {
     registerHandler('profile', (data) async {
       final userId = data['user_id']?.toString();
       if (userId != null) {
-        _router?.go('/profile/$userId');
+        final target = Uri(
+          path: AppRoutes.profileDetail,
+          queryParameters: {'userId': userId},
+        ).toString();
+        _router?.go(target);
       }
     });
 
     // Superlike notification → Navigate to discovery
     registerHandler('superlike', (data) async {
-      _router?.go('/discover');
+      _router?.go('${AppRoutes.home}/discovery');
     });
   }
 
@@ -162,51 +202,18 @@ class DeepLinkingService {
     try {
       final uri = Uri.parse(url);
       final scheme = uri.scheme;
-      final host = uri.host;
-      final pathSegments = uri.pathSegments;
-
       if (scheme != 'lgbtfinder') {
         debugPrint('⚠️ Unsupported URL scheme: $scheme');
         return;
       }
 
       debugPrint('🔗 Handling URL scheme: $url');
-
-      // Convert URL to route
-      switch (host) {
-        case 'match':
-          if (pathSegments.isNotEmpty) {
-            _router?.go('/matches/${pathSegments.first}');
-          } else {
-            _router?.go('/matches');
-          }
-          break;
-        case 'chat':
-          if (pathSegments.isNotEmpty) {
-            _router?.go('/chat/${pathSegments.first}');
-          } else {
-            _router?.go('/chats');
-          }
-          break;
-        case 'profile':
-          if (pathSegments.isNotEmpty) {
-            _router?.go('/profile/${pathSegments.first}');
-          }
-          break;
-        case 'call':
-          if (pathSegments.isNotEmpty) {
-            _router?.go('/call/${pathSegments.first}');
-          }
-          break;
-        case 'notifications':
-          _router?.go('/home/notifications');
-          break;
-        case 'discover':
-          _router?.go('/discover');
-          break;
-        default:
-          debugPrint('⚠️ Unknown deep link host: $host');
+      final route = resolveUrlSchemeRoute(uri);
+      if (route == null) {
+        debugPrint('⚠️ Unknown deep link host: ${uri.host}');
+        return;
       }
+      _router?.go(route);
     } catch (e) {
       debugPrint('❌ Error parsing URL scheme: $e');
     }

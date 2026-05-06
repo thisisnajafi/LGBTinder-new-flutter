@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../routes/app_router.dart';
 
 /// Marketing deep link handler
 /// Handles deep links for marketing features
@@ -66,17 +67,11 @@ class MarketingDeepLinkHandler {
   ) {
     final promoCode = queryParams['promo'];
     final planId = queryParams['plan'];
-
-    if (promoCode != null) {
-      // Navigate to enhanced plans with promo code
-      context.push('/marketing/plans?promo=$promoCode');
-    } else if (planId != null) {
-      // Navigate to specific plan
-      context.push('/marketing/plans?plan=$planId');
-    } else {
-      // Navigate to plans
-      context.push('/marketing/plans');
-    }
+    final qp = <String, String>{};
+    if (promoCode != null && promoCode.isNotEmpty) qp['promo'] = promoCode;
+    if (planId != null && planId.isNotEmpty) qp['plan'] = planId;
+    final target = Uri(path: AppRoutes.subscriptionPlans, queryParameters: qp.isEmpty ? null : qp).toString();
+    context.push(target);
 
     return true;
   }
@@ -86,7 +81,7 @@ class MarketingDeepLinkHandler {
     BuildContext context,
     Map<String, String> queryParams,
   ) {
-    context.push('/marketing/daily-rewards');
+    context.push(AppRoutes.home);
     return true;
   }
 
@@ -96,13 +91,11 @@ class MarketingDeepLinkHandler {
     Map<String, String> queryParams,
   ) {
     final code = queryParams['code'];
-    if (code != null) {
-      // Store referral code and navigate
-      // This would typically store the code for use during registration
-      context.push('/marketing/referral?code=$code');
-    } else {
-      context.push('/marketing/referral');
-    }
+    final target = Uri(
+      path: AppRoutes.home,
+      queryParameters: code != null && code.isNotEmpty ? {'tab': 'settings', 'referralCode': code} : {'tab': 'settings'},
+    ).toString();
+    context.push(target);
     return true;
   }
 
@@ -111,12 +104,7 @@ class MarketingDeepLinkHandler {
     BuildContext context,
     Map<String, String> queryParams,
   ) {
-    final badgeId = queryParams['id'];
-    if (badgeId != null) {
-      context.push('/marketing/badges?highlight=$badgeId');
-    } else {
-      context.push('/marketing/badges');
-    }
+    context.push('${AppRoutes.home}/profile');
     return true;
   }
 
@@ -126,12 +114,11 @@ class MarketingDeepLinkHandler {
     Map<String, String> queryParams,
   ) {
     final campaignId = queryParams['campaign'];
-    if (campaignId != null) {
-      // Navigate to specific campaign/promotion
-      context.push('/marketing/plans?campaign=$campaignId');
-    } else {
-      context.push('/marketing/plans');
-    }
+    final target = Uri(
+      path: AppRoutes.subscriptionPlans,
+      queryParameters: campaignId != null && campaignId.isNotEmpty ? {'campaign': campaignId} : null,
+    ).toString();
+    context.push(target);
     return true;
   }
 
@@ -145,7 +132,8 @@ class MarketingDeepLinkHandler {
     final segments = path.split('/');
     if (segments.length >= 3) {
       final profileId = segments[2];
-      context.push('/profile/$profileId');
+      final target = Uri(path: AppRoutes.profileDetail, queryParameters: {'userId': profileId}).toString();
+      context.push(target);
       return true;
     }
     return false;
@@ -205,32 +193,27 @@ class MarketingDeepLinkHandler {
 class MarketingRoutes {
   static List<GoRoute> get routes => [
     GoRoute(
-      path: '/marketing/plans',
+      path: AppRoutes.subscriptionPlans,
       builder: (context, state) {
-        final promo = state.uri.queryParameters['promo'];
-        // Return EnhancedPlansScreen with promoCode
-        return const SizedBox(); // Replace with actual screen
+        return const SizedBox.shrink();
       },
     ),
     GoRoute(
-      path: '/marketing/daily-rewards',
+      path: '${AppRoutes.home}/discovery',
       builder: (context, state) {
-        // Return DailyRewardsScreen
-        return const SizedBox(); // Replace with actual screen
+        return const SizedBox.shrink();
       },
     ),
     GoRoute(
-      path: '/marketing/badges',
+      path: '${AppRoutes.home}/profile',
       builder: (context, state) {
-        // Return BadgesScreen
-        return const SizedBox(); // Replace with actual screen
+        return const SizedBox.shrink();
       },
     ),
     GoRoute(
-      path: '/marketing/referral',
+      path: '${AppRoutes.home}/settings',
       builder: (context, state) {
-        // Return ReferralScreen
-        return const SizedBox(); // Replace with actual screen
+        return const SizedBox.shrink();
       },
     ),
   ];
