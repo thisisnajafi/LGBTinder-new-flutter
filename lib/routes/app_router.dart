@@ -91,20 +91,57 @@ Page<void> slideFadePage(GoRouterState state, Widget child) {
 bool _hasLeftStartupFlow = false;
 void markStartupFlowLeft() => _hasLeftStartupFlow = true;
 
+const Set<String> _publicRoutes = {
+  AppRoutes.splash,
+  AppRoutes.welcome,
+  AppRoutes.login,
+  AppRoutes.register,
+  AppRoutes.emailVerification,
+  AppRoutes.onboarding,
+};
+
+const Set<String> _authOnlyTopLevelRoutes = {
+  AppRoutes.home,
+  AppRoutes.profileWizard,
+  AppRoutes.onboardingPreferences,
+  AppRoutes.profileEdit,
+  AppRoutes.profileDetail,
+  AppRoutes.billingHistory,
+  AppRoutes.subscriptionPlans,
+  AppRoutes.chat,
+};
+
+bool _isProtectedRoute(String location) {
+  if (_authOnlyTopLevelRoutes.contains(location)) return true;
+  return location.startsWith('${AppRoutes.home}/');
+}
+
 /// App Router Configuration
 /// Redirect loop prevention: only SplashPage navigates from / to welcome or home.
 /// Route-level redirects return null when already at target (see billing-history).
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final tokenStorage = ref.read(tokenStorageServiceProvider);
   routeLog('GoRouter created, initialLocation=${AppRoutes.splash}');
   return GoRouter(
     initialLocation: AppRoutes.splash,
     redirectLimit: 5,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final loc = state.matchedLocation;
       if (loc == AppRoutes.splash && _hasLeftStartupFlow) {
         routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
         return AppRoutes.welcome;
       }
+
+      if (_publicRoutes.contains(loc)) {
+        return null;
+      }
+
+      final isAuthenticated = await tokenStorage.isAuthenticated();
+      if (!isAuthenticated && _isProtectedRoute(loc)) {
+        routeLog('redirect: protected $loc without auth → ${AppRoutes.welcome}');
+        return AppRoutes.welcome;
+      }
+
       return null;
     },
     routes: [
