@@ -90,3 +90,123 @@ Acceptance criteria:
 - Added post-login intent resume handling for protected destinations.
 - Next: remove duplicate route-level auth checks and add route-guard tests.
 
+---
+
+## Multi-Task Page Audit Backlog (Issues, Missings, Enhancements)
+
+This section is the next audit pass from start-to-end user flow, grouped into executable task batches.
+
+### Batch A - Startup/Auth funnel (highest conversion impact)
+
+- [x] **A1 Splash/auth-state guard consistency**
+  - **Issues:** auth check is token-only; onboarding/profile-complete states can bypass intended flow.
+  - **Missing:** explicit user-state routing contract (`email_verification_required`, `profile_completion_required`, ready).
+  - **Enhancement:** enforce state-aware redirect policy centrally in router/startup service.
+  - **Result (implemented):**
+    - Added auth-stage model in router: `unauthenticated`, `profileCompletion`, `authenticated`.
+    - Protected-route redirect now allows profile-completion users into `profile-wizard`/`onboarding-preferences` and prevents entering main app pages until completion.
+    - Authenticated users visiting auth-entry pages are redirected to home (unless pending protected target exists).
+    - File updated: `lib/routes/app_router.dart`.
+
+- [x] **A2 Email verification hardening**
+  - **Issues:** verification screen has insecure UX artifact (`123456` default code) and back-flow mismatch.
+  - **Missing:** origin-aware back behavior (login vs register), strict email presence validation.
+  - **Enhancement:** add verification attempt/success/failure analytics + resend throttling UX.
+  - **Result (implemented):**
+    - Removed hardcoded default verification code and removed prefill behavior from input fields.
+    - Back action is now origin-aware: returns to register for new users and login for existing users.
+    - Added email presence guard: if email query param is empty, user is redirected to welcome with error snackbar.
+    - File updated: `lib/screens/auth/email_verification_screen.dart`.
+
+- [x] **A3 Profile-wizard/onboarding token alignment**
+  - **Issues:** profile completion routes can dead-end when only profile-completion token exists.
+  - **Missing:** consistent token contract between auth service and route guards.
+  - **Enhancement:** draft autosave + step-dropoff telemetry.
+  - **Result (implemented):**
+    - Unified profile-completion token handling in auth service across login and email verification paths.
+    - Profile-completion flows now persist both `auth_token` and `profile_completion_token` to avoid branch-dependent auth-state drift.
+    - File updated: `lib/features/auth/data/services/auth_service.dart`.
+
+- [x] **A4 Auth page validation + nav normalization**
+  - **Issues:** weak email/password validation and mixed `Navigator`/`GoRouter` patterns.
+  - **Missing:** consistent route-first navigation style across welcome/login/register.
+  - **Enhancement:** improve conversion copy and CTA tracking at each auth step.
+  - **Result (implemented):**
+    - Strengthened email validation in login/register using `EmailValidator` instead of `contains('@')`.
+    - Replaced auth-page cross-navigation with `GoRouter` route-based navigation (`AppRoutes.login` / `AppRoutes.register`).
+    - Normalized register -> email-verification transition to typed URI query parameters instead of raw route string concatenation.
+    - Files updated: `lib/screens/auth/login_screen.dart`, `lib/screens/auth/register_screen.dart`.
+
+### Batch B - Core app tabs (engagement and retention impact)
+
+- [x] **B1 Home shell route synchronization**
+  - **Issues:** `IndexedStack` tab state and route tree can drift.
+  - **Missing:** route<->tab sync mechanism.
+  - **Enhancement:** shell-route architecture for deterministic back/deep-link behavior.
+  - **Result (implemented):**
+    - Refactored home tab selection to be route-driven (`GoRouterState.matchedLocation`) instead of local mutable tab state.
+    - Tab taps now navigate to canonical tab routes (`/home/discovery`, `/home/chat-list`, `/home/notifications`, `/home/profile`, `/home/settings`) using `context.go(...)`.
+    - `IndexedStack` index now derives from current route, keeping deep-link/back behavior consistent with visible active tab.
+    - File updated: `lib/pages/home_page.dart`.
+
+- [ ] **B2 Discovery superlike and empty-journey quality**
+  - **Issues:** superlike message collected but not actually sent.
+  - **Missing:** robust empty deck path (adjust filters, increase radius, retry with reason).
+  - **Enhancement:** pre-limit upsell nudges (not only hard stop).
+
+- [ ] **B3 Chat reliability + route correctness**
+  - **Issues:** sender-state race (`currentUserId` async timing), invalid profile navigation patterns.
+  - **Missing:** completed implementations for media/pinned/filter actions.
+  - **Enhancement:** route-consistent chat open flow + premium gating for call/media features.
+
+- [ ] **B4 Notifications pagination and count consistency**
+  - **Issues:** pagination incomplete (`_currentPage` flow), unread sync risks after read/delete.
+  - **Missing:** deterministic pagination + provider invalidation strategy.
+  - **Enhancement:** richer empty-state reactivation CTAs and prioritized notification routing.
+
+- [ ] **B5 Profile/profile-detail data fidelity**
+  - **Issues:** trust indicators and labels partially placeholder/ID-based.
+  - **Missing:** full reference-data mapping for jobs/interests/languages.
+  - **Enhancement:** premium-aware profile actions and verification funnel polish.
+
+### Batch C - Settings, premium, support, legal, payments (monetization/compliance)
+
+- [ ] **C1 Canonical route coverage for support/legal/subscription-management**
+  - **Issues:** several real screens are not first-class routable paths.
+  - **Missing:** explicit routes for support tickets, terms, privacy, subscription management.
+  - **Enhancement:** deep-linkable support/legal compliance endpoints.
+
+- [ ] **C2 Subscription status/management action correctness**
+  - **Issues:** status page action currently routes to plans instead of management.
+  - **Missing:** clear “status vs manage” separation in UX.
+  - **Enhancement:** provider-aware management flow by payment source.
+
+- [ ] **C3 Tier-driven premium page behavior**
+  - **Issues:** many premium pages still operate as binary premium/non-premium.
+  - **Missing:** explicit `basid/silder/golden` page-level visibility rules.
+  - **Enhancement:** dynamic tier matrix/features from backend limits instead of static copy.
+
+- [ ] **C4 Help/support trust fixes**
+  - **Issues:** live chat still placeholder; email fallback message is misleading in edge cases.
+  - **Missing:** clear escalation linkage between contact form and tickets.
+  - **Enhancement:** add one-click “Create ticket” fallback on support send failure.
+
+- [ ] **C5 Payment flow compliance hardening**
+  - **Issues:** placeholder payment method/token patterns are non-production-safe.
+  - **Missing:** provider SDK tokenization-only flow and secure payment method lifecycle.
+  - **Enhancement:** unify billing history and methods with one canonical API source.
+
+### Batch D - QA rollout tasks per page-flow
+
+- [ ] **D1 Expand guard/navigation tests**
+  - Add page-flow tests for startup->auth->home transitions and protected redirects.
+
+- [ ] **D2 Add page-level role matrix tests**
+  - Validate page visibility/actions for `basid`, `silder`, `golden`.
+
+- [ ] **D3 Execute runtime smoke in 3 profiles**
+  - Run full checklist with basid/silder/golden accounts and attach evidence log.
+
+- [ ] **D4 Release candidate verification**
+  - Final check: route table consistency, analytics event integrity, no dead-end states.
+

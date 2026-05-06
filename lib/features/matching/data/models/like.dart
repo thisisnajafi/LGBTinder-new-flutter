@@ -79,11 +79,15 @@ class Like {
 /// Like action request
 class LikeActionRequest {
   final int likedUserId;
+  final String? message;
 
-  LikeActionRequest({required this.likedUserId});
+  LikeActionRequest({required this.likedUserId, this.message});
 
   Map<String, dynamic> toJson() {
-    return {'target_user_id': likedUserId};
+    return {
+      'target_user_id': likedUserId,
+      if (message != null && message!.trim().isNotEmpty) 'message': message!.trim(),
+    };
   }
 }
 

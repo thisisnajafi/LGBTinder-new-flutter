@@ -44,15 +44,18 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   int _resendCountdown = 0;
   Timer? _countdownTimer;
 
-  static const String _defaultCode = '123456';
-
   @override
   void initState() {
     super.initState();
     _startResendCountdown(120); // 2 minutes initial countdown
-    // Pre-fill default verification code for now (emailed in this step)
-    for (var i = 0; i < 6; i++) {
-      _codeControllers[i].text = _defaultCode[i];
+    if (widget.email.trim().isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email is missing. Please restart verification.')),
+        );
+        context.go(AppRoutes.welcome);
+      });
     }
   }
 
@@ -260,7 +263,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         title: 'Verify Email',
         showBackButton: true,
         leading: ScaleTapFeedback(
-          onTap: () => context.go(AppRoutes.register),
+          onTap: () => context.go(widget.isNewUser ? AppRoutes.register : AppRoutes.login),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: AppSvgIcon(
@@ -308,14 +311,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 style: AppTypography.body.copyWith(
                   color: AppColors.accentPurple,
                   fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: AppSpacing.spacingXS),
-              Text(
-                'For now, use the code $_defaultCode (emailed to you in this step).',
-                style: AppTypography.caption.copyWith(
-                  color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
               ),

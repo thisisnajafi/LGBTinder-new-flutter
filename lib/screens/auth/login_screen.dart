@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:email_validator/email_validator.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -22,6 +23,7 @@ import '../../core/utils/app_icons.dart';
 import 'register_screen.dart';
 import 'email_verification_screen.dart';
 import '../../shared/analytics/app_event_tracker.dart';
+import '../../routes/app_router.dart';
 
 /// Login screen - User authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -337,7 +339,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!value.contains('@')) {
+                    if (!EmailValidator.validate(value.trim())) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -473,12 +475,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
-                          ),
-                        );
+                        context.go(AppRoutes.register);
                       },
                       child: Text(
                         'Sign Up',

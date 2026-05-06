@@ -1,6 +1,7 @@
 // Screen: RegisterScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:email_validator/email_validator.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -12,8 +13,7 @@ import '../../features/auth/data/models/register_request.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import 'package:go_router/go_router.dart';
-import 'login_screen.dart';
-import 'email_verification_screen.dart';
+import '../../routes/app_router.dart';
 
 /// Register screen - User registration
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -92,7 +92,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
         // Navigate to email verification screen
         if (mounted) {
-          context.go('/email-verification?email=${Uri.encodeComponent(response.email)}&isNewUser=true');
+          final target = Uri(
+            path: AppRoutes.emailVerification,
+            queryParameters: {
+              'email': response.email,
+              'isNewUser': 'true',
+            },
+          ).toString();
+          context.go(target);
         }
       }
     } on ApiError catch (e) {
@@ -274,7 +281,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!value.contains('@')) {
+                    if (!EmailValidator.validate(value.trim())) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -481,12 +488,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
+                        context.go(AppRoutes.login);
                       },
                       child: Text(
                         'Sign In',

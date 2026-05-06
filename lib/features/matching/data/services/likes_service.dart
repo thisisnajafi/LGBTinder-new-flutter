@@ -54,11 +54,11 @@ class LikesService {
   }
 
   /// Superlike a user
-  Future<LikeResponse> superlikeUser(int likedUserId) async {
+  Future<LikeResponse> superlikeUser(int likedUserId, {String? message}) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesSuperlike,
-        data: LikeActionRequest(likedUserId: likedUserId).toJson(),
+        data: LikeActionRequest(likedUserId: likedUserId, message: message).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
         deduplicateIdempotent: true,
       );

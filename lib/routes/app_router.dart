@@ -136,6 +136,24 @@ bool _isProtectedRoute(String location) {
   return location.startsWith('${AppRoutes.home}/');
 }
 
+enum _AuthStage {
+  unauthenticated,
+  profileCompletion,
+  authenticated,
+}
+
+Future<_AuthStage> _getAuthStage(TokenStorageService tokenStorage) async {
+  final hasAuthToken = await tokenStorage.isAuthenticated();
+  if (hasAuthToken) return _AuthStage.authenticated;
+
+  final profileToken = await tokenStorage.getProfileCompletionToken();
+  if (profileToken != null && profileToken.isNotEmpty) {
+    return _AuthStage.profileCompletion;
+  }
+
+  return _AuthStage.unauthenticated;
+}
+
 /// App Router Configuration
 /// Redirect loop prevention: only SplashPage navigates from / to welcome or home.
 /// Route-level redirects return null when already at target (see billing-history).
@@ -158,22 +176,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return legacyResolved;
       }
 
+      final authStage = await _getAuthStage(tokenStorage);
+
       if (_publicRoutes.contains(loc)) {
-        final isAuthenticated = await tokenStorage.isAuthenticated();
+        final isAuthenticated = authStage == _AuthStage.authenticated;
         final pending = _redirector.pendingProtectedRoute;
         if (isAuthenticated && _authEntryRoutes.contains(loc) && pending != null) {
           final consumed = _redirector.consumePending()!;
           routeLog('redirect: authenticated entry route $loc → pending $pending');
           return consumed;
         }
+        if (isAuthenticated && _authEntryRoutes.contains(loc)) {
+          routeLog('redirect: authenticated user at $loc → ${AppRoutes.home}');
+          return AppRoutes.home;
+        }
         return null;
       }
 
-      final isAuthenticated = await tokenStorage.isAuthenticated();
-      if (!isAuthenticated && _isProtectedRoute(loc)) {
+      if (authStage == _AuthStage.unauthenticated && _isProtectedRoute(loc)) {
         _redirector.setPendingIfEmpty(state.uri.toString());
         routeLog('redirect: protected $loc without auth → ${AppRoutes.welcome}');
         return AppRoutes.welcome;
+      }
+
+      if (authStage == _AuthStage.profileCompletion && _isProtectedRoute(loc)) {
+        final allowedDuringCompletion = {
+          AppRoutes.profileWizard,
+          AppRoutes.onboardingPreferences,
+        };
+        if (!allowedDuringCompletion.contains(loc)) {
+          routeLog('redirect: profile-completion user from $loc → ${AppRoutes.profileWizard}');
+          return AppRoutes.profileWizard;
+        }
       }
 
       return null;

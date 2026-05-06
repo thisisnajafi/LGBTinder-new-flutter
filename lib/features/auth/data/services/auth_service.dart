@@ -91,6 +91,8 @@ class AuthService {
 
           // Save profile completion token if provided
           if (loginResponse.token != null) {
+            // Keep auth stage consistent: profile completion users are signed-in but constrained.
+            await _tokenStorage.saveAuthToken(loginResponse.token!);
             await _tokenStorage.saveProfileCompletionToken(loginResponse.token!);
             await _dioClient.updateAuthToken(loginResponse.token);
           }
@@ -276,6 +278,8 @@ class AuthService {
 
           // Save profile completion token if provided
           if (verifyResponse.token != null) {
+            // Keep auth stage consistent with login profile-completion flow.
+            await _tokenStorage.saveAuthToken(verifyResponse.token!);
             await _tokenStorage.saveProfileCompletionToken(verifyResponse.token!);
             // Also update Dio client with the token for subsequent requests
             await _dioClient.updateAuthToken(verifyResponse.token);

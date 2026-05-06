@@ -199,6 +199,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
   void recordSwipe(
     int userId,
     String action, {
+    String? superlikeMessage,
     void Function(match_models.Match?)? onMatch,
     void Function(dynamic)? onLimitError,
     void Function()? onTheyLikedYou,
@@ -235,12 +236,24 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     );
     unawaited(_persistState());
 
-    unawaited(_syncSwipeToServer(userId, action, updated, newList, onMatch, onLimitError, onTheyLikedYou));
+    unawaited(
+      _syncSwipeToServer(
+        userId,
+        action,
+        superlikeMessage,
+        updated,
+        newList,
+        onMatch,
+        onLimitError,
+        onTheyLikedYou,
+      ),
+    );
   }
 
   Future<void> _syncSwipeToServer(
     int userId,
     String action,
+    String? superlikeMessage,
     CachedDiscoverItem updated,
     List<CachedDiscoverItem> currentList,
     void Function(match_models.Match?)? onMatch,
@@ -269,7 +282,8 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           break;
         }
         case 'superlike': {
-          final response = await _likesService.superlikeUser(userId);
+          final response =
+              await _likesService.superlikeUser(userId, message: superlikeMessage);
           _planLimitsService.incrementUsage('swipes');
           _planLimitsService.incrementUsage('superlikes');
           _markSynced(userId);
