@@ -17,7 +17,7 @@
 | **Off-router screens** | Many settings/safety flows use `Navigator.push` (e.g. `SafetySettingsScreen`, `EmergencyContactsScreen`, `FilterScreen`) — E2E must drive UI, not only `GoRouter` paths |
 | **Existing tests** | Unit/widget coverage in `test/routes/`, `test/shared/page_tier_rules_test.dart`, `test/integration/*` |
 | **Payments** | Google Play Billing only; Stripe removed from Flutter |
-| **Firebase** | FCM/push only — no phone-auth login in active flow |
+| **Auth verification** | Email + password + email OTP only (no Firebase/mobile phone login in E2E scope) |
 
 **Source-of-truth files:** `lib/routes/app_router.dart`, `lib/shared/models/page_tier_rules.dart`, `docs/USER_PAGE_FLOW_CANVAS.md`, `docs/USER_FLOW_SMOKE_TEST_CHECKLIST.md`
 
@@ -239,14 +239,15 @@ test/e2e/
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Audit & test list (this document) | Done |
-| 2 | Create `test/e2e/config/test_credentials.dart` (placeholders) | Pending |
-| 3 | Implement `test/e2e/` suite per coding rules | Pending |
+| 2 | Create `test/e2e/config/test_credentials.dart` (email auth only) | Done |
+| 3 | Implement `test/e2e/` suite per coding rules | Done (run blocked by Flutter mirror 402) |
 | 4 | Run `flutter test test/e2e/` and publish report | Pending |
 
 ---
 
 ## Constraints
 
+- Auth verification: email + password + email OTP only (no Firebase phone login in E2E)
 - Tier spellings in code: `basid` | `silder` | `golden`
 - Icons are SVG only (`AppSvgIcon` / `AppIcons`) — do not reference `Icons.*` in tests
 - Do not edit `LGBTinder-flutter/` (frozen legacy tree)
