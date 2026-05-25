@@ -1,13 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/models/api_error.dart';
 import '../data/models/chat.dart';
 import '../data/models/message.dart';
 import '../data/models/message_attachment.dart';
+import '../data/models/message_delivery_status.dart';
+import '../data/local/chat_local_repository.dart';
+import '../data/services/chat_outbound_queue_service.dart';
 import '../domain/use_cases/get_chat_history_use_case.dart';
 import '../domain/use_cases/send_message_use_case.dart';
 import '../domain/use_cases/mark_as_read_use_case.dart';
 import '../domain/use_cases/delete_message_use_case.dart';
 import '../domain/use_cases/set_typing_use_case.dart';
 import '../domain/use_cases/get_chats_use_case.dart';
+import 'chat_providers.dart';
 
 /// Chat provider - manages chat state and operations
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
@@ -17,6 +24,8 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final deleteMessageUseCase = ref.watch(deleteMessageUseCaseProvider);
   final setTypingUseCase = ref.watch(setTypingUseCaseProvider);
   final getChatsUseCase = ref.watch(getChatsUseCaseProvider);
+  final outboundQueue = ref.watch(chatOutboundQueueServiceProvider);
+  final localRepo = ref.watch(chatLocalRepositoryProvider);
 
   return ChatNotifier(
     getChatHistoryUseCase: getChatHistoryUseCase,
@@ -25,6 +34,8 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
     deleteMessageUseCase: deleteMessageUseCase,
     setTypingUseCase: setTypingUseCase,
     getChatsUseCase: getChatsUseCase,
+    outboundQueue: outboundQueue,
+    localRepo: localRepo,
   );
 });
 
@@ -93,6 +104,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final DeleteMessageUseCase _deleteMessageUseCase;
   final SetTypingUseCase _setTypingUseCase;
   final GetChatsUseCase _getChatsUseCase;
+  final ChatOutboundQueueService _outboundQueue;
+  final ChatLocalRepository _localRepo;
+  bool _isFlushingQueue = false;
 
   ChatNotifier({
     required GetChatHistoryUseCase getChatHistoryUseCase,
@@ -101,35 +115,75 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required DeleteMessageUseCase deleteMessageUseCase,
     required SetTypingUseCase setTypingUseCase,
     required GetChatsUseCase getChatsUseCase,
+    required ChatOutboundQueueService outboundQueue,
+    required ChatLocalRepository localRepo,
   }) : _getChatHistoryUseCase = getChatHistoryUseCase,
        _sendMessageUseCase = sendMessageUseCase,
        _markAsReadUseCase = markAsReadUseCase,
        _deleteMessageUseCase = deleteMessageUseCase,
        _setTypingUseCase = setTypingUseCase,
        _getChatsUseCase = getChatsUseCase,
+       _outboundQueue = outboundQueue,
+       _localRepo = localRepo,
        super(ChatState());
 
-  /// Load chat list
+  /// Load chat list (cached first, then network refresh).
   Future<void> loadChats() async {
-    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final cached = await _localRepo.getConversations();
+      if (cached.isNotEmpty) {
+        state = state.copyWith(chats: cached, isLoading: false, error: null);
+      } else {
+        state = state.copyWith(isLoading: true, error: null);
+      }
+    } catch (_) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
 
     try {
       final chats = await _getChatsUseCase.execute();
+      await _localRepo.replaceAllConversations(chats);
       state = state.copyWith(chats: chats, isLoading: false);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: state.chats.isEmpty ? e.toString() : null,
       );
     }
   }
 
-  /// Load chat history for a specific user
+  /// Load chat history for a specific user (local DB first, then network).
   Future<void> loadChatHistory(int userId, {bool isRefresh = false}) async {
     if (state.isLoading && !isRefresh) return;
     if (!state.hasMoreMessages && !isRefresh) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    if (isRefresh || state.currentChatUserId != userId) {
+      try {
+        final cached = await _localRepo.getMessagesForOtherUser(userId);
+        if (cached.isNotEmpty) {
+          state = state.copyWith(
+            currentMessages: cached,
+            currentChatUserId: userId,
+            isLoading: false,
+            error: null,
+          );
+        } else {
+          state = state.copyWith(
+            currentChatUserId: userId,
+            isLoading: true,
+            error: null,
+          );
+        }
+      } catch (_) {
+        state = state.copyWith(
+          currentChatUserId: userId,
+          isLoading: true,
+          error: null,
+        );
+      }
+    } else {
+      state = state.copyWith(isLoading: true, error: null);
+    }
 
     try {
       final messages = await _getChatHistoryUseCase.execute(
@@ -137,6 +191,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         page: isRefresh ? 1 : state.currentPage,
         limit: 20,
       );
+
+      await _localRepo.upsertMessages(messages, userId);
 
       state = state.copyWith(
         currentMessages: isRefresh ? messages : [...messages, ...state.currentMessages],
@@ -146,24 +202,40 @@ class ChatNotifier extends StateNotifier<ChatState> {
         currentPage: isRefresh ? 2 : state.currentPage + 1,
       );
 
-      // Mark messages as read if this is the current chat
       if (state.currentChatUserId == userId) {
         await _markAsReadUseCase.execute(userId);
       }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: state.currentMessages.isEmpty ? e.toString() : null,
       );
     }
   }
 
-  /// Send a message
-  Future<Message?> sendMessage(int receiverId, String message, {
+  /// Send a message with optimistic UI (sending → sent | failed).
+  Future<Message?> sendMessage(
+    int receiverId,
+    String message, {
+    required int senderId,
     String messageType = 'text',
     MessageAttachment? attachment,
   }) async {
-    state = state.copyWith(isSendingMessage: true, error: null);
+    final clientId = 'local_${DateTime.now().millisecondsSinceEpoch}';
+    final optimistic = Message.optimistic(
+      clientId: clientId,
+      senderId: senderId,
+      receiverId: receiverId,
+      message: message,
+      messageType: messageType,
+    );
+
+    state = state.copyWith(
+      currentMessages: [optimistic, ...state.currentMessages],
+      isSendingMessage: true,
+      error: null,
+    );
+    unawaited(_localRepo.upsertMessage(optimistic, receiverId));
 
     try {
       final sentMessage = await _sendMessageUseCase.execute(
@@ -173,21 +245,197 @@ class ChatNotifier extends StateNotifier<ChatState> {
         attachment: attachment,
       );
 
-      // Add message to current messages
-      final updatedMessages = [sentMessage, ...state.currentMessages];
+      await _outboundQueue.remove(clientId);
+
+      final delivered = sentMessage.copyWith(
+        deliveryStatus: MessageDeliveryStatus.sent,
+        clearClientId: true,
+      );
+      unawaited(_localRepo.upsertMessage(delivered, receiverId));
+
       state = state.copyWith(
-        currentMessages: updatedMessages,
+        currentMessages: _replaceByClientId(clientId, sentMessage),
         isSendingMessage: false,
       );
 
       return sentMessage;
     } catch (e) {
+      if (_shouldQueueForOffline(e)) {
+        await _outboundQueue.enqueue(
+          QueuedChatMessage(
+            clientId: clientId,
+            receiverId: receiverId,
+            senderId: senderId,
+            message: message,
+            messageType: messageType,
+            createdAt: DateTime.now(),
+          ),
+        );
+
+        state = state.copyWith(
+          currentMessages: _markQueued(clientId),
+          isSendingMessage: false,
+          error: null,
+        );
+        return null;
+      }
+
       state = state.copyWith(
+        currentMessages: _markFailed(clientId),
         isSendingMessage: false,
         error: e.toString(),
       );
       return null;
     }
+  }
+
+  /// Send queued messages when back online.
+  Future<void> flushOutboundQueue() async {
+    if (_isFlushingQueue) return;
+
+    final pending = await _outboundQueue.getPending();
+    if (pending.isEmpty) return;
+
+    _isFlushingQueue = true;
+    try {
+      for (final queued in pending) {
+        final index = state.currentMessages.indexWhere(
+          (m) => m.clientId == queued.clientId,
+        );
+        if (index >= 0) {
+          state = state.copyWith(
+            currentMessages: _replaceAt(
+              index,
+              state.currentMessages[index].copyWith(
+                deliveryStatus: MessageDeliveryStatus.sending,
+              ),
+            ),
+          );
+        }
+
+        try {
+          final sentMessage = await _sendMessageUseCase.execute(
+            queued.receiverId,
+            queued.message,
+            messageType: queued.messageType,
+          );
+          await _outboundQueue.remove(queued.clientId);
+          state = state.copyWith(
+            currentMessages: _replaceByClientId(queued.clientId, sentMessage),
+          );
+        } catch (e) {
+          if (_shouldQueueForOffline(e)) {
+            break;
+          }
+          state = state.copyWith(
+            currentMessages: _markFailed(queued.clientId),
+          );
+          await _outboundQueue.remove(queued.clientId);
+        }
+      }
+    } finally {
+      _isFlushingQueue = false;
+    }
+  }
+
+  bool _shouldQueueForOffline(Object error) {
+    if (error is ApiError) {
+      if (error.code == 0) return true;
+      final message = error.message.toLowerCase();
+      return message.contains('internet') ||
+          message.contains('connection') ||
+          message.contains('queued');
+    }
+    final text = error.toString().toLowerCase();
+    return text.contains('socket') ||
+        text.contains('connection') ||
+        text.contains('network');
+  }
+
+  /// Retry a failed optimistic message.
+  Future<Message?> retryMessage(String clientId) async {
+    final index = state.currentMessages.indexWhere((m) => m.clientId == clientId);
+    if (index < 0) return null;
+
+    final failed = state.currentMessages[index];
+    if (failed.deliveryStatus != MessageDeliveryStatus.failed) return null;
+
+    state = state.copyWith(
+      currentMessages: _replaceAt(
+        index,
+        failed.copyWith(deliveryStatus: MessageDeliveryStatus.sending),
+      ),
+      error: null,
+    );
+
+    try {
+      final sentMessage = await _sendMessageUseCase.execute(
+        failed.receiverId,
+        failed.message,
+        messageType: failed.messageType,
+      );
+      await _outboundQueue.remove(clientId);
+      state = state.copyWith(
+        currentMessages: _replaceByClientId(clientId, sentMessage),
+      );
+      return sentMessage;
+    } catch (e) {
+      if (_shouldQueueForOffline(e)) {
+        await _outboundQueue.enqueue(
+          QueuedChatMessage(
+            clientId: clientId,
+            receiverId: failed.receiverId,
+            senderId: failed.senderId,
+            message: failed.message,
+            messageType: failed.messageType,
+            createdAt: DateTime.now(),
+          ),
+        );
+        state = state.copyWith(
+          currentMessages: _markQueued(clientId),
+          error: null,
+        );
+        return null;
+      }
+      state = state.copyWith(
+        currentMessages: _markFailed(clientId),
+        error: e.toString(),
+      );
+      return null;
+    }
+  }
+
+  List<Message> _replaceByClientId(String clientId, Message serverMessage) {
+    return state.currentMessages
+        .map((m) => m.clientId == clientId
+            ? serverMessage.copyWith(
+                deliveryStatus: MessageDeliveryStatus.sent,
+                clearClientId: true,
+              )
+            : m)
+        .toList();
+  }
+
+  List<Message> _markFailed(String clientId) {
+    return state.currentMessages
+        .map((m) => m.clientId == clientId
+            ? m.copyWith(deliveryStatus: MessageDeliveryStatus.failed)
+            : m)
+        .toList();
+  }
+
+  List<Message> _markQueued(String clientId) {
+    return state.currentMessages
+        .map((m) => m.clientId == clientId
+            ? m.copyWith(deliveryStatus: MessageDeliveryStatus.queued)
+            : m)
+        .toList();
+  }
+
+  List<Message> _replaceAt(int index, Message message) {
+    final updated = [...state.currentMessages];
+    updated[index] = message;
+    return updated;
   }
 
   /// Delete a message
@@ -214,7 +462,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  /// Update typing status for a user (received from websocket)
+  /// Update typing status for a user (from Pusher UserTyping / UserStoppedTyping).
   void updateUserTyping(int userId, bool isTyping) {
     final updatedTypingUsers = Map<int, bool>.from(state.typingUsers);
     if (isTyping) {
@@ -225,11 +473,27 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(typingUsers: updatedTypingUsers);
   }
 
-  /// Add received message
+  /// Add received message (skips duplicates; replaces optimistic when ids match).
   void addReceivedMessage(Message message) {
-    final updatedMessages = [message, ...state.currentMessages];
+    if (message.id > 0 &&
+        state.currentMessages.any((m) => m.id == message.id)) {
+      return;
+    }
 
-    // Update unread count if message is not from current chat
+    final peerId = state.currentChatUserId;
+    if (peerId != null && peerId > 0) {
+      unawaited(_localRepo.upsertMessage(message, peerId));
+    }
+
+    final withoutOptimisticDup = state.currentMessages
+        .where((m) =>
+            !(m.isOptimistic &&
+                m.senderId == message.senderId &&
+                m.message == message.message))
+        .toList();
+
+    final updatedMessages = [message, ...withoutOptimisticDup];
+
     if (state.currentChatUserId != message.senderId) {
       final updatedUnreadCounts = Map<int, int>.from(state.unreadCounts);
       updatedUnreadCounts[message.senderId] = (updatedUnreadCounts[message.senderId] ?? 0) + 1;
@@ -270,27 +534,3 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 }
 
-// Use case providers
-final getChatHistoryUseCaseProvider = Provider<GetChatHistoryUseCase>((ref) {
-  throw UnimplementedError('GetChatHistoryUseCase must be overridden in the provider scope');
-});
-
-final sendMessageUseCaseProvider = Provider<SendMessageUseCase>((ref) {
-  throw UnimplementedError('SendMessageUseCase must be overridden in the provider scope');
-});
-
-final markAsReadUseCaseProvider = Provider<MarkAsReadUseCase>((ref) {
-  throw UnimplementedError('MarkAsReadUseCase must be overridden in the provider scope');
-});
-
-final deleteMessageUseCaseProvider = Provider<DeleteMessageUseCase>((ref) {
-  throw UnimplementedError('DeleteMessageUseCase must be overridden in the provider scope');
-});
-
-final setTypingUseCaseProvider = Provider<SetTypingUseCase>((ref) {
-  throw UnimplementedError('SetTypingUseCase must be overridden in the provider scope');
-});
-
-final getChatsUseCaseProvider = Provider<GetChatsUseCase>((ref) {
-  throw UnimplementedError('GetChatsUseCase must be overridden in the provider scope');
-});
