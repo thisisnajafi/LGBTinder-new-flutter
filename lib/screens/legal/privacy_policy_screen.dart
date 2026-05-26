@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 
 /// Privacy policy screen - Display privacy policy
 class PrivacyPolicyScreen extends ConsumerWidget {
@@ -18,12 +19,10 @@ class PrivacyPolicyScreen extends ConsumerWidget {
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Privacy Policy',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Privacy Policy',
-        showBackButton: true,
-      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         child: Column(

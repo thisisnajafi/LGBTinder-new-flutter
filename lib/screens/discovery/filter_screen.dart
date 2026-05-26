@@ -1,46 +1,50 @@
 ﻿// Screen: FilterScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/bottom_sheet_custom.dart';
+import '../../widgets/discovery/filter_widgets.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../shared/utils/plan_guard.dart';
 import '../../routes/app_router.dart';
-import 'package:go_router/go_router.dart';
 
-/// Filter screen - Discovery filters
+/// Discovery filters — age, distance, gender, and advanced options.
 class FilterScreen extends ConsumerStatefulWidget {
-  const FilterScreen({Key? key}) : super(key: key);
+  const FilterScreen({super.key});
 
   @override
   ConsumerState<FilterScreen> createState() => _FilterScreenState();
 }
 
 class _FilterScreenState extends ConsumerState<FilterScreen> {
-  // Age range
   RangeValues _ageRange = const RangeValues(18, 35);
-  
-  // Distance
-  double _maxDistance = 50.0;
-  
-  // Gender preferences
+  double _maxDistance = 50;
   List<String> _selectedGenders = ['All'];
-  final List<String> _availableGenders = ['All', 'Male', 'Female', 'Non-binary', 'Other'];
-  
-  // Other filters
   bool _showVerifiedOnly = false;
   bool _showOnlineOnly = false;
   bool _showPremiumOnly = false;
 
+  static const List<String> _availableGenders = [
+    'All',
+    'Male',
+    'Female',
+    'Non-binary',
+    'Other',
+  ];
+
+  static final String _iconCake = AppIcons.getIconOutline('cake');
+  static final String _iconLocation = AppIcons.getIconOutline('location');
+  static final String _iconPeople = AppIcons.getIconOutline('people');
+  static final String _iconFilter = AppIcons.getIconOutline('filter');
+
   void _applyFilters() {
-    // TODO: Apply filters and reload discovery cards
     Navigator.of(context).pop({
       'ageRange': _ageRange,
       'maxDistance': _maxDistance,
@@ -54,7 +58,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   void _resetFilters() {
     setState(() {
       _ageRange = const RangeValues(18, 35);
-      _maxDistance = 50.0;
+      _maxDistance = 50;
       _selectedGenders = ['All'];
       _showVerifiedOnly = false;
       _showOnlineOnly = false;
@@ -62,262 +66,250 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     });
   }
 
+  void _toggleGender(String gender) {
+    setState(() {
+      if (gender == 'All') {
+        _selectedGenders = ['All'];
+        return;
+      }
+      _selectedGenders.remove('All');
+      if (_selectedGenders.contains(gender)) {
+        _selectedGenders.remove(gender);
+      } else {
+        _selectedGenders.add(gender);
+      }
+      if (_selectedGenders.isEmpty) {
+        _selectedGenders = ['All'];
+      }
+    });
+  }
+
+  Future<void> _onPremiumToggle(bool value) async {
+    if (!value) {
+      setState(() => _showPremiumOnly = false);
+      return;
+    }
+    final service = ref.read(planLimitsServiceProvider);
+    final guard = PlanGuard(service);
+    final result = await guard.canUseAdvancedFilters();
+    if (!mounted) return;
+    if (!result.isAllowed) {
+      final target = Uri(
+        path: AppRoutes.featureLocked,
+        queryParameters: {
+          'title': 'Advanced filters',
+          'desc': 'Upgrade to unlock advanced filters and find better matches faster.',
+          'minTier': 'silder',
+        },
+      ).toString();
+      context.push(target);
+      return;
+    }
+    setState(() => _showPremiumOnly = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Filters',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Filters',
-        showBackButton: true,
-        actions: [
-          TextButton(
-            onPressed: _resetFilters,
-            child: Text(
-              'Reset',
-              style: AppTypography.button.copyWith(
-                color: AppColors.accentPurple,
-              ),
-            ),
+      action: TextButton(
+        onPressed: _resetFilters,
+        child: Text(
+          'Reset',
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
           ),
-        ],
+        ),
       ),
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+      body: Column(
         children: [
-          // Age range
-          SectionHeader(
-            title: 'Age Range',
-            icon: Icons.cake,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          RangeSlider(
-            values: _ageRange,
-            min: 18,
-            max: 100,
-            divisions: 82,
-            labels: RangeLabels(
-              _ageRange.start.round().toString(),
-              _ageRange.end.round().toString(),
-            ),
-            activeColor: AppColors.accentPurple,
-            onChanged: (RangeValues values) {
-              setState(() {
-                _ageRange = values;
-              });
-            },
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${_ageRange.start.round()}',
-                style: AppTypography.body.copyWith(color: textColor),
+          Expanded(
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppPageHeader.horizontalPadding,
+                AppSpacing.spacingMD,
+                AppPageHeader.horizontalPadding,
+                AppSpacing.spacingLG,
               ),
-              Text(
-                '${_ageRange.end.round()}',
-                style: AppTypography.body.copyWith(color: textColor),
-              ),
-            ],
-          ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Distance
-          SectionHeader(
-            title: 'Maximum Distance',
-            icon: Icons.location_on,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Slider(
-            value: _maxDistance,
-            min: 1,
-            max: 100,
-            divisions: 99,
-            label: '${_maxDistance.round()} km',
-            activeColor: AppColors.accentPurple,
-            onChanged: (double value) {
-              setState(() {
-                _maxDistance = value;
-              });
-            },
-          ),
-          Text(
-            '${_maxDistance.round()} km',
-            style: AppTypography.h3.copyWith(
-              color: AppColors.accentPurple,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Gender preferences
-          SectionHeader(
-            title: 'Show Me',
-            icon: Icons.people,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Wrap(
-            spacing: AppSpacing.spacingSM,
-            runSpacing: AppSpacing.spacingSM,
-            children: _availableGenders.map((gender) {
-              final isSelected = _selectedGenders.contains(gender);
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (gender == 'All') {
-                      _selectedGenders = ['All'];
-                    } else {
-                      _selectedGenders.remove('All');
-                      if (isSelected) {
-                        _selectedGenders.remove(gender);
-                      } else {
-                        _selectedGenders.add(gender);
-                      }
-                      if (_selectedGenders.isEmpty) {
-                        _selectedGenders = ['All'];
-                      }
-                    }
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingSM,
+              children: [
+                // —— Age range ——
+                FilterSectionHeader(
+                  iconPath: _iconCake,
+                  title: 'Age Range',
+                ),
+                SizedBox(height: AppSpacing.spacingLG),
+                FilterSliderTheme(
+                  child: RangeSlider(
+                    values: _ageRange,
+                    min: 18,
+                    max: 100,
+                    divisions: 82,
+                    onChanged: (values) => setState(() => _ageRange = values),
                   ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : surfaceColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                      width: isSelected ? 2 : 1,
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${_ageRange.start.round()}',
+                      style: AppTypography.body.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                    Text(
+                      '${_ageRange.end.round()}',
+                      style: AppTypography.body.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const FilterSectionDivider(),
+
+                // —— Distance ——
+                FilterSectionHeader(
+                  iconPath: _iconLocation,
+                  title: 'Maximum Distance',
+                ),
+                SizedBox(height: AppSpacing.spacingLG),
+                FilterSliderTheme(
+                  child: Slider(
+                    value: _maxDistance,
+                    min: 1,
+                    max: 100,
+                    divisions: 99,
+                    onChanged: (value) => setState(() => _maxDistance = value),
                   ),
-                  child: Text(
-                    gender,
-                    style: AppTypography.body.copyWith(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : textColor,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                ),
+                FilterValuePill(label: '${_maxDistance.round()} km'),
+                const FilterSectionDivider(),
+
+                // —— Show me ——
+                FilterSectionHeader(
+                  iconPath: _iconPeople,
+                  title: 'Show Me',
+                ),
+                SizedBox(height: AppSpacing.spacingMD),
+                Wrap(
+                  spacing: AppSpacing.spacingSM,
+                  runSpacing: AppSpacing.spacingSM,
+                  children: _availableGenders.map((gender) {
+                    return FilterGenderChip(
+                      label: gender,
+                      isSelected: _selectedGenders.contains(gender),
+                      onTap: () => _toggleGender(gender),
+                    );
+                  }).toList(),
+                ),
+                const FilterSectionDivider(),
+
+                // —— Additional filters ——
+                FilterSectionHeader(
+                  iconPath: _iconFilter,
+                  title: 'Additional Filters',
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                FilterToggleRow(
+                  iconPath: AppIcons.verify,
+                  title: 'Verified Only',
+                  subtitle: 'Show only verified profiles',
+                  value: _showVerifiedOnly,
+                  onChanged: (v) => setState(() => _showVerifiedOnly = v),
+                ),
+                FilterToggleRow(
+                  iconPath: AppIcons.online,
+                  title: 'Online Only',
+                  subtitle: 'Show only online users',
+                  value: _showOnlineOnly,
+                  onChanged: (v) => setState(() => _showOnlineOnly = v),
+                ),
+                FilterToggleRow(
+                  iconPath: AppIcons.crown,
+                  title: 'Premium Only',
+                  subtitle: 'Show only premium members',
+                  value: _showPremiumOnly,
+                  onChanged: _onPremiumToggle,
+                  trailing: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingSM,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.brandGradient,
+                      borderRadius: BorderRadius.circular(AppRadius.radiusXS),
+                    ),
+                    child: Text(
+                      'PRO',
+                      style: AppTypography.caption.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                 ),
-              );
-            }).toList(),
+                SizedBox(height: AppSpacing.spacingMD),
+                Text(
+                  'Tip: widen age or distance if you see fewer profiles nearby.',
+                  style: AppTypography.caption.copyWith(color: secondaryColor),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Additional filters
-          SectionHeader(
-            title: 'Additional Filters',
-            icon: Icons.tune,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          SwitchListTile(
-            title: Text(
-              'Verified Only',
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              border: Border(
+                top: BorderSide(
+                  color: isDark
+                      ? AppColors.borderSubtleDark
+                      : AppColors.borderSubtleLight,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.spacingLG,
+                  AppSpacing.spacingMD,
+                  AppSpacing.spacingLG,
+                  AppSpacing.spacingMD,
+                ),
+                child: GradientButton(
+                  text: 'Apply Filters',
+                  iconPath: AppIcons.getIconOutline('filter-tick'),
+                  onPressed: _applyFilters,
+                  isFullWidth: true,
+                  height: 52,
+                ),
               ),
             ),
-            subtitle: Text(
-              'Show only verified profiles',
-              style: AppTypography.caption.copyWith(color: secondaryTextColor),
-            ),
-            value: _showVerifiedOnly,
-            onChanged: (value) {
-              setState(() {
-                _showVerifiedOnly = value;
-              });
-            },
-            activeColor: AppColors.accentPurple,
           ),
-          SwitchListTile(
-            title: Text(
-              'Online Only',
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            subtitle: Text(
-              'Show only online users',
-              style: AppTypography.caption.copyWith(color: secondaryTextColor),
-            ),
-            value: _showOnlineOnly,
-            onChanged: (value) {
-              setState(() {
-                _showOnlineOnly = value;
-              });
-            },
-            activeColor: AppColors.accentPurple,
-          ),
-          SwitchListTile(
-            title: Text(
-              'Premium Only',
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            subtitle: Text(
-              'Show only premium members',
-              style: AppTypography.caption.copyWith(color: secondaryTextColor),
-            ),
-            value: _showPremiumOnly,
-            onChanged: (value) {
-              if (value != true) {
-                setState(() => _showPremiumOnly = false);
-                return;
-              }
-              Future.microtask(() async {
-                final service = ref.read(planLimitsServiceProvider);
-                final guard = PlanGuard(service);
-                final result = await guard.canUseAdvancedFilters();
-                if (!mounted) return;
-                if (!result.isAllowed) {
-                  final target = Uri(
-                    path: AppRoutes.featureLocked,
-                    queryParameters: {
-                      'title': 'Advanced filters',
-                      'desc': 'Upgrade to unlock advanced filters and find better matches faster.',
-                      'minTier': 'silder',
-                    },
-                  ).toString();
-                  context.push(target);
-                  return;
-                }
-                setState(() => _showPremiumOnly = true);
-              });
-            },
-            activeColor: AppColors.accentPurple,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-
-          // Apply button
-          GradientButton(
-            text: 'Apply Filters',
-            onPressed: _applyFilters,
-            isFullWidth: true,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
     );

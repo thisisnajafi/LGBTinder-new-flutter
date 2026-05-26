@@ -1,4 +1,4 @@
-﻿// Widget: MessageInput
+// Widget: MessageInput
 // Message input field with actions
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_icons.dart';
 
 /// Message input field widget
 /// Text input with send button and media options
@@ -14,7 +15,10 @@ class MessageInput extends ConsumerStatefulWidget {
   final Function(String)? onSend;
   final Function(String)? onTextChanged;
   final Function()? onMediaTap;
+  final Function()? onMediaLongPress;
+  final Function()? onVoiceTap;
   final Function()? onEmojiTap;
+  final Function()? onShareTap;
   final String? hintText;
   final bool enabled;
 
@@ -23,7 +27,10 @@ class MessageInput extends ConsumerStatefulWidget {
     this.onSend,
     this.onTextChanged,
     this.onMediaTap,
+    this.onMediaLongPress,
+    this.onVoiceTap,
     this.onEmojiTap,
+    this.onShareTap,
     this.hintText,
     this.enabled = true,
   }) : super(key: key);
@@ -79,10 +86,25 @@ class _MessageInputState extends ConsumerState<MessageInput> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            if (widget.onShareTap != null)
+              IconButton(
+                icon: AppSvgIcon(
+                  assetPath: AppIcons.share,
+                  size: 22,
+                  color: secondaryTextColor,
+                ),
+                onPressed: widget.enabled ? widget.onShareTap : null,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 44,
+                ),
+              ),
             if (widget.onEmojiTap != null)
               IconButton(
-                icon: Icon(
-                  Icons.emoji_emotions_outlined,
+                icon: AppSvgIcon(
+                  assetPath: AppIcons.emoji,
+                  size: 22,
                   color: secondaryTextColor,
                 ),
                 onPressed: widget.enabled ? widget.onEmojiTap : null,
@@ -131,17 +153,35 @@ class _MessageInputState extends ConsumerState<MessageInput> {
               ),
             ),
             SizedBox(width: AppSpacing.spacingSM),
-            if (widget.onMediaTap != null)
+            if (widget.onVoiceTap != null)
               IconButton(
-                icon: Icon(
-                  Icons.attach_file,
+                icon: AppSvgIcon(
+                  assetPath: AppIcons.microphone,
+                  size: 22,
                   color: secondaryTextColor,
                 ),
-                onPressed: widget.enabled ? widget.onMediaTap : null,
+                onPressed: widget.enabled ? widget.onVoiceTap : null,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(
                   minWidth: 44,
                   minHeight: 44,
+                ),
+              ),
+            if (widget.onMediaTap != null)
+              GestureDetector(
+                onLongPress: widget.enabled ? widget.onMediaLongPress : null,
+                child: IconButton(
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.attach,
+                    size: 22,
+                    color: secondaryTextColor,
+                  ),
+                  onPressed: widget.enabled ? widget.onMediaTap : null,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                 ),
               ),
             SizedBox(width: AppSpacing.spacingXS),

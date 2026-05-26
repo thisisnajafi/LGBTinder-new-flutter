@@ -8,7 +8,10 @@ import '../../core/theme/spacing_constants.dart';
 /// Animated typing indicator widget
 /// Shows animated dots when user is typing
 class TypingIndicator extends ConsumerStatefulWidget {
-  const TypingIndicator({Key? key}) : super(key: key);
+  /// Optional peer name, e.g. "Alex is typing…"
+  final String? displayName;
+
+  const TypingIndicator({Key? key, this.displayName}) : super(key: key);
 
   @override
   ConsumerState<TypingIndicator> createState() => _TypingIndicatorState();
@@ -61,9 +64,23 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
     final isDark = theme.brightness == Brightness.dark;
     final dotColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
+    final label = widget.displayName?.trim();
+    final showLabel = label != null && label.isNotEmpty;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (index) {
+      children: [
+        if (showLabel) ...[
+          Text(
+            '$label is typing',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: dotColor,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          SizedBox(width: AppSpacing.spacingSM),
+        ],
+        ...List.generate(3, (index) {
         return AnimatedBuilder(
           animation: _animations[index],
           builder: (context, child) {
@@ -84,6 +101,7 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
           },
         );
       }),
+      ],
     );
   }
 }

@@ -7,8 +7,11 @@ import 'dart:async' as _i5;
 import 'dart:io' as _i6;
 
 import 'package:dio/dio.dart' as _i3;
-import 'package:lgbtindernew/core/network/dio_client.dart' as _i8;
+import 'package:lgbtindernew/core/network/dio_client.dart' as _i10;
+import 'package:lgbtindernew/features/auth/data/models/login_response.dart'
+    as _i8;
 import 'package:lgbtindernew/shared/models/api_response.dart' as _i2;
+import 'package:lgbtindernew/shared/models/stored_user_session.dart' as _i9;
 import 'package:lgbtindernew/shared/services/api_service.dart' as _i4;
 import 'package:lgbtindernew/shared/services/token_storage_service.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
@@ -94,6 +97,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
     T Function(dynamic)? fromJson,
     _i3.Options? options,
     bool? queueIfOffline = true,
+    bool? deduplicateIdempotent = false,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -104,6 +108,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
                 #fromJson: fromJson,
                 #options: options,
                 #queueIfOffline: queueIfOffline,
+                #deduplicateIdempotent: deduplicateIdempotent,
               },
             ),
             returnValue: _i5.Future<_i2.ApiResponse<T>>.value(
@@ -117,6 +122,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
                     #fromJson: fromJson,
                     #options: options,
                     #queueIfOffline: queueIfOffline,
+                    #deduplicateIdempotent: deduplicateIdempotent,
                   },
                 ),
               ),
@@ -162,6 +168,43 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
           as _i5.Future<_i2.ApiResponse<T>>);
 
   @override
+  _i5.Future<_i2.ApiResponse<T>> patch<T>(
+    String? endpoint, {
+    Map<String, dynamic>? data,
+    T Function(dynamic)? fromJson,
+    _i3.Options? options,
+    bool? queueIfOffline = true,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #patch,
+              [endpoint],
+              {
+                #data: data,
+                #fromJson: fromJson,
+                #options: options,
+                #queueIfOffline: queueIfOffline,
+              },
+            ),
+            returnValue: _i5.Future<_i2.ApiResponse<T>>.value(
+              _FakeApiResponse_0<T>(
+                this,
+                Invocation.method(
+                  #patch,
+                  [endpoint],
+                  {
+                    #data: data,
+                    #fromJson: fromJson,
+                    #options: options,
+                    #queueIfOffline: queueIfOffline,
+                  },
+                ),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.ApiResponse<T>>);
+
+  @override
   _i5.Future<_i2.ApiResponse<T>> delete<T>(
     String? endpoint, {
     Map<String, dynamic>? data,
@@ -189,6 +232,46 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
                   {
                     #data: data,
                     #fromJson: fromJson,
+                    #options: options,
+                    #queueIfOffline: queueIfOffline,
+                  },
+                ),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.ApiResponse<T>>);
+
+  @override
+  _i5.Future<_i2.ApiResponse<T>> postFormData<T>(
+    String? endpoint, {
+    required _i3.FormData? data,
+    T Function(dynamic)? fromJson,
+    _i3.ProgressCallback? onSendProgress,
+    _i3.Options? options,
+    bool? queueIfOffline = false,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #postFormData,
+              [endpoint],
+              {
+                #data: data,
+                #fromJson: fromJson,
+                #onSendProgress: onSendProgress,
+                #options: options,
+                #queueIfOffline: queueIfOffline,
+              },
+            ),
+            returnValue: _i5.Future<_i2.ApiResponse<T>>.value(
+              _FakeApiResponse_0<T>(
+                this,
+                Invocation.method(
+                  #postFormData,
+                  [endpoint],
+                  {
+                    #data: data,
+                    #fromJson: fromJson,
+                    #onSendProgress: onSendProgress,
                     #options: options,
                     #queueIfOffline: queueIfOffline,
                   },
@@ -342,6 +425,40 @@ class MockTokenStorageService extends _i1.Mock
           as _i5.Future<String?>);
 
   @override
+  _i5.Future<void> saveUserSession({
+    required _i8.UserData? user,
+    bool? profileCompleted = false,
+    String? userState,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#saveUserSession, [], {
+              #user: user,
+              #profileCompleted: profileCompleted,
+              #userState: userState,
+            }),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<_i9.StoredUserSession?> getUserSession() =>
+      (super.noSuchMethod(
+            Invocation.method(#getUserSession, []),
+            returnValue: _i5.Future<_i9.StoredUserSession?>.value(),
+          )
+          as _i5.Future<_i9.StoredUserSession?>);
+
+  @override
+  _i5.Future<void> clearUserSession() =>
+      (super.noSuchMethod(
+            Invocation.method(#clearUserSession, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<void> clearAllTokens() =>
       (super.noSuchMethod(
             Invocation.method(#clearAllTokens, []),
@@ -380,7 +497,7 @@ class MockTokenStorageService extends _i1.Mock
 /// A class which mocks [DioClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockDioClient extends _i1.Mock implements _i8.DioClient {
+class MockDioClient extends _i1.Mock implements _i10.DioClient {
   MockDioClient() {
     _i1.throwOnMissingStub(this);
   }

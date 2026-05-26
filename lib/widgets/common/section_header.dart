@@ -15,6 +15,8 @@ class SectionHeader extends ConsumerWidget {
   final VoidCallback? onAction;
   final IconData? icon; // Legacy support
   final String? iconPath; // SVG icon path
+  /// When null, matches section title color (same as list row icons in settings).
+  final Color? iconColor;
 
   const SectionHeader({
     Key? key,
@@ -23,6 +25,7 @@ class SectionHeader extends ConsumerWidget {
     this.onAction,
     this.icon,
     this.iconPath,
+    this.iconColor,
   }) : super(key: key);
 
   @override
@@ -30,6 +33,7 @@ class SectionHeader extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final resolvedIconColor = iconColor ?? textColor;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -43,11 +47,11 @@ class SectionHeader extends ConsumerWidget {
                 ? AppSvgIcon(
                     assetPath: iconPath!,
                     size: 24,
-                    color: AppColors.accentPurple,
+                    color: resolvedIconColor,
                   )
                 : Icon(
                     icon!,
-                    color: AppColors.accentPurple,
+                    color: resolvedIconColor,
                     size: 24,
                   ),
             SizedBox(width: AppSpacing.spacingSM),

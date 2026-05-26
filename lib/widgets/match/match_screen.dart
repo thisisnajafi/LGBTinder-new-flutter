@@ -10,6 +10,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/matching/data/models/match.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/widgets/avatar_widget.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../features/auth/providers/auth_provider.dart';
 
@@ -203,6 +204,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               ? user.images!.first.toString()
                               : null,
                           isDark: isDark,
+                          fallbackInitial: user?.firstName,
                         ),
                         SizedBox(width: AppSpacing.spacingLG),
                         // Heart icon
@@ -231,6 +233,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                         _buildProfileImage(
                           imageUrl: widget.match.primaryImageUrl,
                           isDark: isDark,
+                          fallbackInitial: widget.match.firstName,
                         ),
                       ],
                     ),
@@ -276,7 +279,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     );
   }
 
-  Widget _buildProfileImage({String? imageUrl, required bool isDark}) {
+  Widget _buildProfileImage({
+    String? imageUrl,
+    required bool isDark,
+    String? fallbackInitial,
+  }) {
     return Container(
       width: 120,
       height: 120,
@@ -294,25 +301,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           ),
         ],
       ),
-      child: ClipOval(
-        child: imageUrl != null
-            ? Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: isDark
-                        ? AppColors.surfaceDark
-                        : AppColors.surfaceLight,
-                    child: Icon(
-                      Icons.person,
-                      size: 60,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  );
-                },
+      child: imageUrl != null
+            ? AvatarWidget(
+                imageUrl: imageUrl,
+                radius: 70,
+                fallbackInitial: fallbackInitial,
               )
             : Container(
                 color: isDark
@@ -326,7 +319,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       : AppColors.textSecondaryLight,
                 ),
               ),
-      ),
     );
   }
 }

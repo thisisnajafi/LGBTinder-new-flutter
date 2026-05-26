@@ -38,12 +38,14 @@ class CallRepository {
   Future<List<Call>> getCallHistory({
     int? page,
     int? limit,
+    int? peerUserId,
     String? status,
     String? callType,
   }) async {
     return await _callService.getCallHistory(
       page: page,
       limit: limit,
+      peerUserId: peerUserId,
       status: status,
       callType: callType,
     );

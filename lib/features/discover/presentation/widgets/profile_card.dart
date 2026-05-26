@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/discovery_profile.dart';
+import '../../../../core/widgets/profile_image_widget.dart';
+import '../../data/models/discovery_profile.dart';
 
 /// Profile card widget for discovery
 /// Displays a user profile in card format with image, info, and actions
@@ -74,41 +73,12 @@ class ProfileCard extends ConsumerWidget {
     final imageUrl = profile.primaryImageUrl ??
                      (profile.imageUrls?.isNotEmpty == true ? profile.imageUrls!.first : null);
 
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: imageUrl,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        placeholder: (context, url) => Container(
-          color: Colors.grey[300],
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.grey[300],
-          child: const Center(
-            child: Icon(
-              Icons.person,
-              size: 64,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-      );
-    } else {
-      return Container(
-        color: Colors.grey[300],
-        child: const Center(
-          child: Icon(
-            Icons.person,
-            size: 64,
-            color: Colors.grey,
-          ),
-        ),
-      );
-    }
+    return ProfileImageWidget(
+      imageUrl: imageUrl,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.cover,
+    );
   }
 
   Widget _buildContentOverlay(BuildContext context, ThemeData theme) {

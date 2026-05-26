@@ -87,6 +87,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
     T Function(dynamic)? fromJson,
     _i5.Options? options,
     bool? queueIfOffline = true,
+    bool? deduplicateIdempotent = false,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -97,6 +98,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
                 #fromJson: fromJson,
                 #options: options,
                 #queueIfOffline: queueIfOffline,
+                #deduplicateIdempotent: deduplicateIdempotent,
               },
             ),
             returnValue: _i4.Future<_i2.ApiResponse<T>>.value(
@@ -110,6 +112,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
                     #fromJson: fromJson,
                     #options: options,
                     #queueIfOffline: queueIfOffline,
+                    #deduplicateIdempotent: deduplicateIdempotent,
                   },
                 ),
               ),
@@ -155,6 +158,43 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
           as _i4.Future<_i2.ApiResponse<T>>);
 
   @override
+  _i4.Future<_i2.ApiResponse<T>> patch<T>(
+    String? endpoint, {
+    Map<String, dynamic>? data,
+    T Function(dynamic)? fromJson,
+    _i5.Options? options,
+    bool? queueIfOffline = true,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #patch,
+              [endpoint],
+              {
+                #data: data,
+                #fromJson: fromJson,
+                #options: options,
+                #queueIfOffline: queueIfOffline,
+              },
+            ),
+            returnValue: _i4.Future<_i2.ApiResponse<T>>.value(
+              _FakeApiResponse_0<T>(
+                this,
+                Invocation.method(
+                  #patch,
+                  [endpoint],
+                  {
+                    #data: data,
+                    #fromJson: fromJson,
+                    #options: options,
+                    #queueIfOffline: queueIfOffline,
+                  },
+                ),
+              ),
+            ),
+          )
+          as _i4.Future<_i2.ApiResponse<T>>);
+
+  @override
   _i4.Future<_i2.ApiResponse<T>> delete<T>(
     String? endpoint, {
     Map<String, dynamic>? data,
@@ -182,6 +222,46 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
                   {
                     #data: data,
                     #fromJson: fromJson,
+                    #options: options,
+                    #queueIfOffline: queueIfOffline,
+                  },
+                ),
+              ),
+            ),
+          )
+          as _i4.Future<_i2.ApiResponse<T>>);
+
+  @override
+  _i4.Future<_i2.ApiResponse<T>> postFormData<T>(
+    String? endpoint, {
+    required _i5.FormData? data,
+    T Function(dynamic)? fromJson,
+    _i5.ProgressCallback? onSendProgress,
+    _i5.Options? options,
+    bool? queueIfOffline = false,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #postFormData,
+              [endpoint],
+              {
+                #data: data,
+                #fromJson: fromJson,
+                #onSendProgress: onSendProgress,
+                #options: options,
+                #queueIfOffline: queueIfOffline,
+              },
+            ),
+            returnValue: _i4.Future<_i2.ApiResponse<T>>.value(
+              _FakeApiResponse_0<T>(
+                this,
+                Invocation.method(
+                  #postFormData,
+                  [endpoint],
+                  {
+                    #data: data,
+                    #fromJson: fromJson,
+                    #onSendProgress: onSendProgress,
                     #options: options,
                     #queueIfOffline: queueIfOffline,
                   },

@@ -83,6 +83,23 @@ class AppTypography {
     height: 1.3,
   );
 
+  /// Material-style aliases (used across calls, chat, profile).
+  static const TextStyle headlineSmall = h2;
+  static const TextStyle titleLarge = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0,
+    height: 1.25,
+  );
+  static const TextStyle titleMedium = h4;
+  static const TextStyle bodyMedium = body;
+  static const TextStyle labelSmall = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.1,
+    height: 1.3,
+  );
+
   static const TextStyle displayScript = TextStyle(
     fontSize: 36,
     fontWeight: FontWeight.w400,

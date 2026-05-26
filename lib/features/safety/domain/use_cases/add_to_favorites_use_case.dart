@@ -1,4 +1,5 @@
 import '../../data/repositories/safety_repository.dart';
+import '../../data/models/favorite.dart';
 
 /// Use case for adding a user to favorites
 class AddToFavoritesUseCase {

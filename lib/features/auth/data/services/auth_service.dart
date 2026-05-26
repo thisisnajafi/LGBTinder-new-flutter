@@ -18,6 +18,8 @@ import '../models/otp_request.dart';
 import '../models/otp_response.dart';
 import '../models/social_auth_request.dart';
 import '../models/social_auth_response.dart';
+import '../models/verify_email_response.dart';
+import '../models/complete_registration_response.dart';
 import '../../../../shared/models/api_error.dart';
 
 /// Authentication service for handling all auth-related API calls
@@ -31,6 +33,57 @@ class AuthService {
     this._tokenStorage,
     this._dioClient,
   );
+
+  Future<void> _persistLoginResponse(LoginResponse response) async {
+    final user = response.user;
+    if (user == null) return;
+    await _tokenStorage.saveUserSession(
+      user: user,
+      profileCompleted: response.profileCompleted,
+      userState: response.userState,
+    );
+  }
+
+  Future<void> _persistVerifyEmailResponse(VerifyEmailResponse response) async {
+    await _tokenStorage.saveUserSession(
+      user: UserData(
+        id: response.userId,
+        firstName: 'User',
+        lastName: '',
+        email: response.email,
+      ),
+      profileCompleted: response.profileCompleted,
+      userState: response.profileCompletionRequired
+          ? 'profile_completion_required'
+          : null,
+    );
+  }
+
+  Future<void> _persistSocialResponse(SocialAuthResponse response) async {
+    final userId = response.userId;
+    final email = response.email;
+    if (userId == null || email == null || email.isEmpty) return;
+    await _tokenStorage.saveUserSession(
+      user: UserData(
+        id: userId,
+        firstName: response.firstName ?? 'User',
+        lastName: '',
+        email: email,
+      ),
+      profileCompleted: response.profileCompleted,
+      userState: response.userState,
+    );
+  }
+
+  Future<void> _persistCompleteRegistration(CompleteRegistrationResponse response) async {
+    final user = response.user;
+    if (user == null) return;
+    await _tokenStorage.saveUserSession(
+      user: user,
+      profileCompleted: response.profileCompleted,
+      userState: response.userState,
+    );
+  }
 
   /// Register a new user
   Future<RegisterResponse> register(RegisterRequest request) async {
@@ -96,6 +149,7 @@ class AuthService {
             await _tokenStorage.saveProfileCompletionToken(loginResponse.token!);
             await _dioClient.updateAuthToken(loginResponse.token);
           }
+          await _persistLoginResponse(loginResponse);
 
           return loginResponse;
         }
@@ -116,6 +170,7 @@ class AuthService {
             await _tokenStorage.saveRefreshToken(refreshToken);
           }
 
+          await _persistLoginResponse(loginResponse);
           return loginResponse;
         }
       }
@@ -175,6 +230,7 @@ class AuthService {
                   // Update Dio client with the token for subsequent requests
                   await _dioClient.updateAuthToken(loginResponse.token);
                 }
+                await _persistLoginResponse(loginResponse);
 
                 return loginResponse;
               }
@@ -233,6 +289,7 @@ class AuthService {
     if (refreshToken != null && refreshToken.isNotEmpty) {
       await _tokenStorage.saveRefreshToken(refreshToken);
     }
+    await _persistLoginResponse(loginResponse);
     return loginResponse;
   }
 
@@ -284,6 +341,7 @@ class AuthService {
             // Also update Dio client with the token for subsequent requests
             await _dioClient.updateAuthToken(verifyResponse.token);
           }
+          await _persistVerifyEmailResponse(verifyResponse);
 
           return verifyResponse;
         } catch (e) {
@@ -370,6 +428,7 @@ class AuthService {
           await _tokenStorage.clearProfileCompletionToken();
           await _dioClient.updateAuthToken(completeResponse.token);
         }
+        await _persistCompleteRegistration(completeResponse);
 
         return completeResponse;
       } else {
@@ -480,6 +539,7 @@ class AuthService {
           await _tokenStorage.saveAuthToken(socialResponse.token!);
           await _dioClient.updateAuthToken(socialResponse.token);
         }
+        await _persistSocialResponse(socialResponse);
 
         return socialResponse;
       } else {

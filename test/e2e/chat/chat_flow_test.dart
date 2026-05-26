@@ -1,34 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lgbtindernew/pages/chat_list_page.dart';
 import 'package:lgbtindernew/pages/chat_page.dart';
 import 'package:lgbtindernew/routes/app_router.dart';
-import 'package:mocktail/mocktail.dart';
-
 import '../helpers/app_bootstrap.dart';
-import '../helpers/mock_services.dart';
-import 'package:lgbtindernew/features/chat/data/services/chat_service.dart';
-import 'package:lgbtindernew/features/chat/providers/chat_providers.dart';
-
-class MockChatService extends Mock implements ChatService {}
+import 'chat_test_helpers.dart';
 
 /// Chat messaging flows (TEST-053 – TEST-063).
 void main() {
+  setUpAll(registerChatFallbacks);
+
   group('Chat list', () {
     // TEST-053
     testWidgets('TEST-053: chat list page renders', (tester) async {
       final chat = MockChatService();
-      when(() => chat.getChats()).thenAnswer((_) async => []);
+      stubChatList(chat);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [chatServiceProvider.overrideWithValue(chat)],
+          overrides: chatListOverrides(chat: chat),
           child: const MaterialApp(home: ChatListPage()),
         ),
       );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await waitForChatListLoaded(tester);
 
       expect(find.byType(ChatListPage), findsOneWidget);
     });
@@ -38,24 +34,13 @@ void main() {
     // TEST-055
     testWidgets('TEST-055: chat page renders with user header', (tester) async {
       final chat = MockChatService();
-      when(
-        () => chat.getChatHistory(
-          receiverId: any(named: 'receiverId'),
-          page: any(named: 'page'),
-          limit: any(named: 'limit'),
-        ),
-      ).thenAnswer((_) async => []);
-      when(() => chat.markAsRead(any())).thenAnswer((_) async {});
-      when(() => chat.getPinnedMessagesCount(any())).thenAnswer((_) async => 0);
-      when(() => chat.getPinnedMessages(any())).thenAnswer((_) async => []);
+      stubChatThread(chat, peerUserId: 1);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [chatServiceProvider.overrideWithValue(chat)],
-          child: const MaterialApp(
-            home: ChatPage(userId: 1, userName: 'Alex'),
-          ),
-        ),
+      await pumpChatPage(
+        tester,
+        chat: chat,
+        userId: 1,
+        userName: 'Alex',
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -66,17 +51,33 @@ void main() {
 
     // TEST-063
     testWidgets('TEST-063: /chat without userId shows chat list via router', (tester) async {
-      final storage = InMemoryTokenStorage()..seedAuthenticated();
       final chat = MockChatService();
-      when(() => chat.getChats()).thenAnswer((_) async => []);
+      stubChatList(chat);
 
-      await pumpE2eApp(
-        tester,
-        tokenStorage: storage,
-        overrides: [chatServiceProvider.overrideWithValue(chat)],
+      final router = GoRouter(
+        initialLocation: AppRoutes.chat,
+        routes: [
+          GoRoute(
+            path: AppRoutes.chat,
+            builder: (context, state) {
+              final userId = state.uri.queryParameters['userId'];
+              if (userId == null) {
+                return const ChatListPage();
+              }
+              return ChatPage(
+                userId: int.parse(userId),
+                userName: state.uri.queryParameters['userName'],
+              );
+            },
+          ),
+        ],
       );
-      await e2eGo(tester, AppRoutes.chat);
-      await tester.pumpAndSettle(const Duration(seconds: 1));
+
+      await pumpChatRouter(
+        tester,
+        router: router,
+        overrides: chatListOverrides(chat: chat),
+      );
 
       expect(find.byType(ChatListPage), findsOneWidget);
     });

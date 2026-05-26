@@ -1,4 +1,5 @@
 import '../../data/repositories/safety_repository.dart';
+import '../../data/models/block.dart';
 
 /// Use case for getting blocked users
 class GetBlockedUsersUseCase {

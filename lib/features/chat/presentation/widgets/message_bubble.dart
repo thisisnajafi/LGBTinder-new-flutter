@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/message.dart';
-import '../models/message_attachment.dart';
+import '../../data/models/message.dart';
+import '../../data/models/message_delivery_status.dart';
+import '../../data/models/message_attachment.dart';
+import '../../../../widgets/chat/message_status_indicator.dart';
 
 /// Message bubble widget
 /// Displays chat messages with different styles for sent/received messages
@@ -18,6 +22,7 @@ class MessageBubble extends ConsumerStatefulWidget {
   final String? senderAvatar;
   final VoidCallback? onLongPress;
   final VoidCallback? onAttachmentTap;
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     Key? key,
@@ -28,6 +33,7 @@ class MessageBubble extends ConsumerStatefulWidget {
     this.senderAvatar,
     this.onLongPress,
     this.onAttachmentTap,
+    this.onRetry,
   }) : super(key: key);
 
   @override
@@ -80,22 +86,10 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!widget.isSentByCurrentUser && widget.showAvatar) ...[
-              CircleAvatar(
+              AvatarWidget(
+                imageUrl: widget.senderAvatar,
                 radius: 16,
-                backgroundColor: AppColors.primaryLight.withOpacity(0.2),
-                backgroundImage: widget.senderAvatar != null
-                    ? NetworkImage(widget.senderAvatar!)
-                    : null,
-                child: widget.senderAvatar == null
-                    ? Text(
-                        widget.senderName?.substring(0, 1).toUpperCase() ?? '?',
-                        style: TextStyle(
-                          color: AppColors.primaryLight,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      )
-                    : null,
+                fallbackInitial: widget.senderName,
               ),
               const SizedBox(width: 8),
             ],
@@ -110,7 +104,10 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: widget.isSentByCurrentUser
-                        ? AppColors.primaryLight
+                        ? (widget.message.deliveryStatus ==
+                                MessageDeliveryStatus.failed
+                            ? AppColors.feedbackError
+                            : AppColors.primaryLight)
                         : (isDark ? AppColors.backgroundDark : Colors.white),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(18),
@@ -213,6 +210,8 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
           child: widget.message.attachmentUrl != null
               ? CachedNetworkImage(
                   imageUrl: widget.message.attachmentUrl!,
+                  cacheManager: ref.read(imageCacheServiceProvider),
+                  fadeInDuration: const Duration(milliseconds: 200),
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     height: maxH,
@@ -321,19 +320,11 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
   }
 
   Widget _buildMessageStatus() {
-    if (widget.message.isRead) {
-      return const Icon(
-        Icons.done_all,
-        size: 14,
-        color: Colors.white,
-      );
-    } else {
-      return const Icon(
-        Icons.done,
-        size: 14,
-        color: Colors.white,
-      );
-    }
+    return MessageStatusIndicator(
+      isRead: widget.message.isRead,
+      deliveryStatus: widget.message.deliveryStatus,
+      onRetry: widget.onRetry,
+    );
   }
 
   String _formatMessageTime(DateTime dateTime) {

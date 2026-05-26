@@ -5,7 +5,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
@@ -182,12 +183,10 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Emergency Contacts',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Emergency Contacts',
-        showBackButton: true,
-      ),
       body: Column(
         children: [
           // Info banner

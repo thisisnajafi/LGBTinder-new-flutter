@@ -26,9 +26,8 @@ final tokenStorageServiceProvider = Provider<TokenStorageService>((ref) {
 /// Connectivity Service Provider (singleton)
 final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
   final service = ConnectivityService();
-  // Initialize on first access
-  service.initialize();
-  // Dispose when provider is disposed
+  // Defer so first frame / splash never waits on platform connectivity checks.
+  Future.microtask(() => service.initialize());
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -50,9 +49,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final dioClient = ref.watch(dioClientProvider);
   
   final syncService = SyncService(queueService, connectivityService, dioClient);
-  // Initialize sync service to listen for connectivity changes
-  syncService.initialize();
-  
+  Future.microtask(() => syncService.initialize());
   return syncService;
 });
 

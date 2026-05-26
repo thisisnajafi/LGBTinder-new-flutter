@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 
 /// Typing indicator widget
 /// Shows animated dots when someone is typing
@@ -70,22 +71,10 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
       child: Row(
         children: [
           if (widget.showAvatar) ...[
-            CircleAvatar(
+            AvatarWidget(
+              imageUrl: widget.avatarUrl,
               radius: 16,
-              backgroundColor: AppColors.primaryLight.withOpacity(0.2),
-              backgroundImage: widget.avatarUrl != null
-                  ? NetworkImage(widget.avatarUrl!)
-                  : null,
-              child: widget.avatarUrl == null
-                  ? Text(
-                      widget.typingUserName.substring(0, 1).toUpperCase(),
-                      style: TextStyle(
-                        color: AppColors.primaryLight,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    )
-                  : null,
+              fallbackInitial: widget.typingUserName,
             ),
             const SizedBox(width: 8),
           ],

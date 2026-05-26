@@ -11,6 +11,7 @@ import 'package:lgbtindernew/shared/services/cache_service.dart' as _i6;
 import 'package:lgbtindernew/shared/services/connectivity_service.dart' as _i5;
 import 'package:lgbtindernew/shared/services/offline_queue_service.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:mockito/src/dummies.dart' as _i8;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -130,18 +131,61 @@ class MockCacheService extends _i1.Mock implements _i6.CacheService {
   @override
   _i4.Future<T?> getCached<T>(
     String? key,
-    T Function(Map<String, dynamic>)? fromJson,
-  ) =>
+    T Function(Map<String, dynamic>)? fromJson, {
+    Duration? customExpiry,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#getCached, [key, fromJson]),
+            Invocation.method(
+              #getCached,
+              [key, fromJson],
+              {#customExpiry: customExpiry},
+            ),
             returnValue: _i4.Future<T?>.value(),
           )
           as _i4.Future<T?>);
 
   @override
-  _i4.Future<void> cacheData(String? key, Map<String, dynamic>? data) =>
+  _i4.Future<List<T>?> getCachedList<T>(
+    String? key,
+    T Function(Map<String, dynamic>)? fromJson, {
+    Duration? customExpiry,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#cacheData, [key, data]),
+            Invocation.method(
+              #getCachedList,
+              [key, fromJson],
+              {#customExpiry: customExpiry},
+            ),
+            returnValue: _i4.Future<List<T>?>.value(),
+          )
+          as _i4.Future<List<T>?>);
+
+  @override
+  _i4.Future<void> cacheData(
+    String? key,
+    Map<String, dynamic>? data, {
+    Duration? duration = const Duration(hours: 1),
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#cacheData, [key, data], {#duration: duration}),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> cacheListData<T>(
+    String? key,
+    List<T>? data,
+    Map<String, dynamic> Function(T)? toJson, {
+    Duration? duration = const Duration(hours: 1),
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #cacheListData,
+              [key, data, toJson],
+              {#duration: duration},
+            ),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
@@ -166,12 +210,35 @@ class MockCacheService extends _i1.Mock implements _i6.CacheService {
           as _i4.Future<void>);
 
   @override
-  _i4.Future<bool> isCacheValid(String? key) =>
+  _i4.Future<void> clearCacheByPattern(String? pattern) =>
       (super.noSuchMethod(
-            Invocation.method(#isCacheValid, [key]),
+            Invocation.method(#clearCacheByPattern, [pattern]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<bool> isCacheValid(String? key, {Duration? customExpiry}) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #isCacheValid,
+              [key],
+              {#customExpiry: customExpiry},
+            ),
             returnValue: _i4.Future<bool>.value(false),
           )
           as _i4.Future<bool>);
+
+  @override
+  _i4.Future<Map<String, dynamic>> getCacheStats() =>
+      (super.noSuchMethod(
+            Invocation.method(#getCacheStats, []),
+            returnValue: _i4.Future<Map<String, dynamic>>.value(
+              <String, dynamic>{},
+            ),
+          )
+          as _i4.Future<Map<String, dynamic>>);
 }
 
 /// A class which mocks [OfflineQueueService].
@@ -227,4 +294,65 @@ class MockOfflineQueueService extends _i1.Mock
             returnValue: _i4.Future<int>.value(0),
           )
           as _i4.Future<int>);
+
+  @override
+  _i4.Future<String> queueAction({
+    required _i7.QueuedActionType? actionType,
+    required String? method,
+    required String? endpoint,
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#queueAction, [], {
+              #actionType: actionType,
+              #method: method,
+              #endpoint: endpoint,
+              #data: data,
+              #queryParameters: queryParameters,
+            }),
+            returnValue: _i4.Future<String>.value(
+              _i8.dummyValue<String>(
+                this,
+                Invocation.method(#queueAction, [], {
+                  #actionType: actionType,
+                  #method: method,
+                  #endpoint: endpoint,
+                  #data: data,
+                  #queryParameters: queryParameters,
+                }),
+              ),
+            ),
+          )
+          as _i4.Future<String>);
+
+  @override
+  _i4.Future<void> syncQueue({_i2.Dio? dio}) =>
+      (super.noSuchMethod(
+            Invocation.method(#syncQueue, [], {#dio: dio}),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<List<_i7.QueuedRequest>> getQueuedRequestsByType(
+    _i7.QueuedActionType? actionType,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getQueuedRequestsByType, [actionType]),
+            returnValue: _i4.Future<List<_i7.QueuedRequest>>.value(
+              <_i7.QueuedRequest>[],
+            ),
+          )
+          as _i4.Future<List<_i7.QueuedRequest>>);
+
+  @override
+  _i4.Future<void> clearRequestsByType(_i7.QueuedActionType? actionType) =>
+      (super.noSuchMethod(
+            Invocation.method(#clearRequestsByType, [actionType]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
 }

@@ -1,380 +1,470 @@
-// FEATURE ENHANCEMENT (Task 9.1.1): Pusher WebSocket Service
-// 
-// Complete WebSocket integration using Pusher for real-time features:
-// - Real-time message updates
-// - Typing indicators
-// - Online status updates
-// - Read receipts
-//
-// Note: Add pusher_client package to pubspec.yaml:
-//   pusher_channels_flutter: ^2.0.0
-
 import 'dart:async';
-import 'package:flutter/foundation.dart';
-import '../models/api_error.dart';
-import '../../features/chat/data/models/message.dart';
-import '../../core/constants/api_endpoints.dart';
+import 'dart:convert';
 
-/// Pusher WebSocket Service for real-time communication
-/// 
-/// Handles:
-/// - Private channel subscriptions (chat.{userId})
-/// - User status channel (user.status.{userId})
-/// - Event listeners for messages, typing, online status
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
+
+import '../../core/config/pusher_config.dart';
+import '../../core/services/app_logger.dart';
+import '../../features/chat/data/models/message.dart';
+
+/// Real-time chat via Pusher Channels (replaces socket.io for production).
+///
+/// Subscribes to:
+/// - `private-user.{userId}` — matches / global user events
+/// - `private-chat.{userId}` — legacy inbox (dual-publish from backend)
+/// - `private-conversation.{id}` — per-thread messages, typing, read receipts
 class PusherWebSocketService {
-  // Pusher instance (uncomment when package is added)
-  // PusherChannelsFlutter? _pusher;
-  
-  // Stream controllers for real-time updates
+  PusherChannelsFlutter? _pusher;
+  Dio? _authDio;
+  Future<String?> Function()? _tokenProvider;
+
   final _messageController = StreamController<Message>.broadcast();
   final _typingController = StreamController<TypingEvent>.broadcast();
-  final _onlineStatusController = StreamController<OnlineStatusEvent>.broadcast();
   final _readReceiptController = StreamController<ReadReceiptEvent>.broadcast();
+  final _messageExpiredController = StreamController<MessageExpiredEvent>.broadcast();
+  final _matchController = StreamController<MatchEvent>.broadcast();
+  final _callEventController = StreamController<CallSignalingEvent>.broadcast();
   final _connectionController = StreamController<ConnectionStatus>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
-  // Subscribed channels
-  final Map<String, dynamic> _subscribedChannels = {};
-  
-  // Current user ID
+  final Set<String> _subscribedChannels = {};
   int? _currentUserId;
-  
-  // Connection status
   bool _isConnected = false;
   bool _isConnecting = false;
 
-  /// Message stream - emits new messages in real-time
   Stream<Message> get messageStream => _messageController.stream;
-
-  /// Typing status stream - emits when user starts/stops typing
   Stream<TypingEvent> get typingStream => _typingController.stream;
-
-  /// Online status stream - emits when user comes online/goes offline
-  Stream<OnlineStatusEvent> get onlineStatusStream => _onlineStatusController.stream;
-
-  /// Read receipt stream - emits when message is read
   Stream<ReadReceiptEvent> get readReceiptStream => _readReceiptController.stream;
-
-  /// Connection status stream
+  Stream<MessageExpiredEvent> get messageExpiredStream => _messageExpiredController.stream;
+  Stream<MatchEvent> get matchStream => _matchController.stream;
+  Stream<CallSignalingEvent> get callEventStream => _callEventController.stream;
   Stream<ConnectionStatus> get connectionStream => _connectionController.stream;
-
-  /// Error stream
   Stream<String> get errorStream => _errorController.stream;
 
-  /// Check if connected
   bool get isConnected => _isConnected;
+  int? get currentUserId => _currentUserId;
 
-  /// Initialize Pusher connection
-  /// 
-  /// Requires:
-  /// - Pusher app key, secret, cluster from backend config
-  /// - User authentication token for private channels
+  /// Initialize Pusher client (idempotent).
   Future<void> initialize({
-    required String pusherKey,
-    required String pusherCluster,
-    required String authEndpoint,
-    String? host,
-    int? port,
-    bool encrypted = true,
+    required Future<String?> Function() tokenProvider,
+    Dio? authDio,
   }) async {
-    if (_isConnecting || _isConnected) {
-      debugPrint('Pusher already initialized');
+    if (!PusherConfig.isConfigured) {
+      AppLogger.warning(
+        'PUSHER_APP_KEY not set — real-time disabled',
+        tag: 'Pusher',
+      );
       return;
     }
+
+    if (_isConnecting || _isConnected) return;
+
+    _tokenProvider = tokenProvider;
+    _authDio = authDio ?? Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+    ));
 
     _isConnecting = true;
     _connectionController.add(ConnectionStatus.connecting);
 
     try {
-      // TODO: Initialize Pusher when package is added
-      // _pusher = PusherChannelsFlutter.getInstance();
-      // await _pusher!.init(
-      //   apiKey: pusherKey,
-      //   cluster: pusherCluster,
-      //   onConnectionStateChange: _onConnectionStateChange,
-      //   onError: _onError,
-      //   onSubscriptionSucceeded: _onSubscriptionSucceeded,
-      //   onEvent: _onEvent,
-      //   onSubscriptionError: _onSubscriptionError,
-      //   onDecryptionFailure: _onDecryptionFailure,
-      //   onMemberAdded: _onMemberAdded,
-      //   onMemberRemoved: _onMemberRemoved,
-      //   endpoint: host ?? 'api-$pusherCluster.pusher.com',
-      //   port: port ?? (encrypted ? 443 : 80),
-      //   encrypted: encrypted,
-      //   authEndpoint: authEndpoint,
-      // );
-      
-      _isConnected = true;
-      _isConnecting = false;
-      _connectionController.add(ConnectionStatus.connected);
-      
-      debugPrint('✅ Pusher initialized successfully');
-    } catch (e) {
+      _pusher = PusherChannelsFlutter.getInstance();
+      await _pusher!.init(
+        apiKey: PusherConfig.appKey,
+        cluster: PusherConfig.cluster,
+        onConnectionStateChange: _onConnectionStateChange,
+        onError: _onError,
+        onEvent: _onPusherEvent,
+        onSubscriptionSucceeded: (channelName, data) {
+          AppLogger.info('Subscribed: $channelName', tag: 'Pusher');
+        },
+        onSubscriptionError: (message, error) {
+          AppLogger.error(
+            'Subscription error: $message',
+            tag: 'Pusher',
+            error: error,
+          );
+          _errorController.add('Subscription error: $message');
+        },
+        onAuthorizer: _authorizeChannel,
+      );
+      await _pusher!.connect();
+    } catch (e, stack) {
       _isConnecting = false;
       _isConnected = false;
       _connectionController.add(ConnectionStatus.disconnected);
+      AppLogger.error(
+        'Failed to initialize Pusher',
+        tag: 'Pusher',
+        error: e,
+        stackTrace: stack,
+      );
       _errorController.add('Failed to initialize Pusher: $e');
-      debugPrint('❌ Pusher initialization failed: $e');
       rethrow;
     }
   }
 
-  /// Connect and subscribe to user's channels
-  /// 
-  /// Subscribes to:
-  /// - private-chat.{userId} - For receiving messages
-  /// - private-user.{userId} - For user-specific notifications
-  Future<void> connect(int userId) async {
-    if (!_isConnected) {
-      throw Exception('Pusher not initialized. Call initialize() first.');
+  /// Subscribe to user-global channels after login.
+  Future<void> connectUser(int userId) async {
+    if (_pusher == null) {
+      throw StateError('Pusher not initialized');
     }
 
     _currentUserId = userId;
+    await subscribe('private-user.$userId');
+    await subscribe('private-chat.$userId');
+    AppLogger.info('User channels ready for $userId', tag: 'Pusher');
+  }
+
+  /// Subscribe to a 1:1 conversation channel (canonical).
+  Future<void> subscribeConversation(int conversationId) async {
+    await subscribe('private-conversation.$conversationId');
+  }
+
+  Future<void> unsubscribeConversation(int conversationId) async {
+    await unsubscribe('private-conversation.$conversationId');
+  }
+
+  Future<void> subscribe(String channelName) async {
+    if (_pusher == null || _subscribedChannels.contains(channelName)) return;
 
     try {
-      // Subscribe to private chat channel
-      await _subscribeToChannel('private-chat.$userId');
-      
-      // Subscribe to user status channel
-      await _subscribeToChannel('private-user.$userId');
-      
-      debugPrint('✅ Connected to Pusher channels for user $userId');
+      await _pusher!.subscribe(channelName: channelName);
+      _subscribedChannels.add(channelName);
     } catch (e) {
-      _errorController.add('Failed to connect: $e');
-      debugPrint('❌ Failed to connect to Pusher: $e');
+      _errorController.add('Failed to subscribe $channelName: $e');
       rethrow;
     }
   }
 
-  /// Subscribe to a specific channel
-  Future<void> _subscribeToChannel(String channelName) async {
-    if (_subscribedChannels.containsKey(channelName)) {
-      debugPrint('Already subscribed to $channelName');
-      return;
-    }
+  Future<void> unsubscribe(String channelName) async {
+    if (_pusher == null || !_subscribedChannels.contains(channelName)) return;
 
     try {
-      // TODO: Subscribe when package is added
-      // await _pusher!.subscribe(
-      //   channelName: channelName,
-      //   onEvent: (event) => _handleChannelEvent(channelName, event),
-      // );
-      
-      _subscribedChannels[channelName] = true;
-      debugPrint('✅ Subscribed to channel: $channelName');
-    } catch (e) {
-      _errorController.add('Failed to subscribe to $channelName: $e');
-      debugPrint('❌ Failed to subscribe to $channelName: $e');
-      rethrow;
-    }
-  }
-
-  /// Unsubscribe from a channel
-  Future<void> unsubscribeFromChannel(String channelName) async {
-    if (!_subscribedChannels.containsKey(channelName)) {
-      return;
-    }
-
-    try {
-      // TODO: Unsubscribe when package is added
-      // await _pusher!.unsubscribe(channelName: channelName);
-      
+      await _pusher!.unsubscribe(channelName: channelName);
       _subscribedChannels.remove(channelName);
-      debugPrint('✅ Unsubscribed from channel: $channelName');
-    } catch (e) {
-      debugPrint('❌ Failed to unsubscribe from $channelName: $e');
+    } catch (e, stack) {
+      AppLogger.warning(
+        'Unsubscribe failed: $channelName',
+        tag: 'Pusher',
+        error: e,
+      );
+      AppLogger.debug('Unsubscribe stack: $stack', tag: 'Pusher');
     }
   }
 
-  /// Handle channel events
-  void _handleChannelEvent(String channelName, Map<String, dynamic> event) {
-    final eventName = event['event'] as String?;
-    final data = event['data'] as Map<String, dynamic>?;
+  Future<void> disconnect() async {
+    for (final name in _subscribedChannels.toList()) {
+      await unsubscribe(name);
+    }
+    await _pusher?.disconnect();
+    _isConnected = false;
+    _isConnecting = false;
+    _currentUserId = null;
+    _connectionController.add(ConnectionStatus.disconnected);
+  }
 
-    if (eventName == null || data == null) return;
+  void dispose() {
+    unawaited(disconnect());
+    _messageController.close();
+    _typingController.close();
+    _readReceiptController.close();
+    _messageExpiredController.close();
+    _matchController.close();
+    _callEventController.close();
+    _connectionController.close();
+    _errorController.close();
+  }
 
-    switch (eventName) {
+  Future<dynamic> _authorizeChannel(
+    String channelName,
+    String socketId,
+    dynamic options,
+  ) async {
+    final token = await _tokenProvider?.call();
+    if (token == null || token.isEmpty) {
+      throw Exception('No auth token for Pusher');
+    }
+
+    final dio = _authDio!;
+    final response = await dio.post<Map<String, dynamic>>(
+      PusherConfig.authEndpoint,
+      data: {
+        'socket_id': socketId,
+        'channel_name': channelName,
+      },
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    final data = response.data;
+    if (data == null) {
+      throw Exception('Empty broadcasting auth response');
+    }
+    return data;
+  }
+
+  void _onPusherEvent(PusherEvent event) {
+    if (event.data == null || event.data!.isEmpty) return;
+
+    Map<String, dynamic> payload;
+    try {
+      final decoded = jsonDecode(event.data!);
+      payload = decoded is Map<String, dynamic>
+          ? decoded
+          : Map<String, dynamic>.from(decoded as Map);
+    } catch (e) {
+      AppLogger.warning(
+        'Invalid JSON for ${event.eventName}',
+        tag: 'Pusher',
+        error: e,
+      );
+      return;
+    }
+
+    switch (event.eventName) {
+      case 'MessageSent':
       case 'message.sent':
-        _handleMessageSent(data);
+        _handleMessageSent(payload);
         break;
-      case 'user.typing':
-        _handleUserTyping(data);
-        break;
-      case 'user.status':
-        _handleUserStatus(data);
-        break;
+      case 'MessageRead':
       case 'message.read':
-        _handleMessageRead(data);
+        _handleMessageRead(payload);
+        break;
+      case 'UserTyping':
+      case 'user.typing':
+        _handleUserTyping(payload, isTyping: true);
+        break;
+      case 'UserStoppedTyping':
+      case 'user.stopped_typing':
+        _handleUserTyping(payload, isTyping: false);
+        break;
+      case 'MessageDeleted':
+      case 'message.deleted':
+        break;
+      case 'MessageExpired':
+      case 'message.expired':
+        _handleMessageExpired(payload);
+        break;
+      case 'call.incoming':
+      case 'call.accepted':
+      case 'call.rejected':
+      case 'call.ended':
+      case 'call.busy':
+        _callEventController.add(CallSignalingEvent(
+          name: event.eventName,
+          payload: payload,
+        ));
         break;
       default:
-        debugPrint('Unhandled event: $eventName');
+        if (event.eventName.contains('Match') ||
+            event.eventName == 'match.created' ||
+            event.eventName == 'new_match') {
+          _handleNewMatch(payload);
+        }
     }
   }
 
-  /// Handle message.sent event
   void _handleMessageSent(Map<String, dynamic> data) {
     try {
-      final messageData = data['message'] as Map<String, dynamic>?;
-      if (messageData != null) {
-        final message = Message.fromJson(messageData);
-        _messageController.add(message);
-        debugPrint('📨 New message received: ${message.id}');
+      final messageData = data['message'];
+      if (messageData is Map) {
+        final message = Message.fromJson(
+          Map<String, dynamic>.from(messageData),
+        );
+        if (message.isValid) {
+          _messageController.add(message);
+        }
       }
     } catch (e) {
-      debugPrint('❌ Error parsing message: $e');
-      _errorController.add('Failed to parse message: $e');
-    }
-  }
-
-  /// Handle user.typing event
-  void _handleUserTyping(Map<String, dynamic> data) {
-    try {
-      final event = TypingEvent(
-        userId: data['user_id'] as int? ?? 0,
-        isTyping: data['is_typing'] as bool? ?? false,
-        timestamp: DateTime.tryParse(data['timestamp']?.toString() ?? '') ?? DateTime.now(),
+      AppLogger.warning(
+        'Parse MessageSent failed',
+        tag: 'Pusher',
+        error: e,
       );
-      _typingController.add(event);
-      debugPrint('⌨️ User ${event.userId} typing: ${event.isTyping}');
-    } catch (e) {
-      debugPrint('❌ Error parsing typing event: $e');
     }
   }
 
-  /// Handle user.status event
-  void _handleUserStatus(Map<String, dynamic> data) {
-    try {
-      final event = OnlineStatusEvent(
-        userId: data['user_id'] as int? ?? 0,
-        isOnline: data['is_online'] as bool? ?? false,
-        lastSeen: DateTime.tryParse(data['last_seen']?.toString() ?? ''),
-        timestamp: DateTime.tryParse(data['timestamp']?.toString() ?? '') ?? DateTime.now(),
-      );
-      _onlineStatusController.add(event);
-      debugPrint('🟢 User ${event.userId} status: ${event.isOnline ? "online" : "offline"}');
-    } catch (e) {
-      debugPrint('❌ Error parsing status event: $e');
-    }
-  }
-
-  /// Handle message.read event
   void _handleMessageRead(Map<String, dynamic> data) {
     try {
-      final event = ReadReceiptEvent(
-        messageId: data['message_id'] as int? ?? 0,
-        userId: data['user_id'] as int? ?? 0,
-        readAt: DateTime.tryParse(data['read_at']?.toString() ?? '') ?? DateTime.now(),
-      );
-      _readReceiptController.add(event);
-      debugPrint('✓ Message ${event.messageId} read by user ${event.userId}');
+      final ids = <int>[];
+      final rawIds = data['message_ids'];
+      if (rawIds is List) {
+        for (final id in rawIds) {
+          final parsed = int.tryParse(id.toString());
+          if (parsed != null) ids.add(parsed);
+        }
+      }
+      final singleId = int.tryParse(data['message_id']?.toString() ?? '');
+      if (singleId != null && !ids.contains(singleId)) {
+        ids.add(singleId);
+      }
+
+      _readReceiptController.add(ReadReceiptEvent(
+        conversationId: int.tryParse(data['conversation_id']?.toString() ?? ''),
+        readerId: int.tryParse(data['reader_id']?.toString() ?? '') ?? 0,
+        messageIds: ids,
+        readAt: DateTime.tryParse(data['read_at']?.toString() ?? '') ??
+            DateTime.now(),
+      ));
     } catch (e) {
-      debugPrint('❌ Error parsing read receipt: $e');
+      AppLogger.warning(
+        'Parse MessageRead failed',
+        tag: 'Pusher',
+        error: e,
+      );
     }
   }
 
-  /// Connection state change handler
-  void _onConnectionStateChange(String currentState, String previousState) {
-    debugPrint('Pusher connection state: $previousState → $currentState');
-    
-    switch (currentState) {
+  void _handleUserTyping(Map<String, dynamic> data, {required bool isTyping}) {
+    try {
+      _typingController.add(TypingEvent(
+        userId: int.tryParse(data['user_id']?.toString() ?? '') ?? 0,
+        conversationId:
+            int.tryParse(data['conversation_id']?.toString() ?? ''),
+        isTyping: data['is_typing'] == false ? false : isTyping,
+        timestamp: DateTime.tryParse(data['timestamp']?.toString() ?? '') ??
+            DateTime.now(),
+      ));
+    } catch (e) {
+      AppLogger.warning(
+        'Parse typing failed',
+        tag: 'Pusher',
+        error: e,
+      );
+    }
+  }
+
+  void _handleMessageExpired(Map<String, dynamic> data) {
+    try {
+      final messageId = int.tryParse(data['message_id']?.toString() ?? '');
+      if (messageId == null) return;
+
+      _messageExpiredController.add(MessageExpiredEvent(
+        messageId: messageId,
+        conversationId: int.tryParse(data['conversation_id']?.toString() ?? ''),
+        timestamp: DateTime.tryParse(data['timestamp']?.toString() ?? '') ??
+            DateTime.now(),
+      ));
+    } catch (e) {
+      AppLogger.warning(
+        'Parse MessageExpired failed',
+        tag: 'Pusher',
+        error: e,
+      );
+    }
+  }
+
+  void _handleNewMatch(Map<String, dynamic> data) {
+    _matchController.add(MatchEvent(
+      matchId: int.tryParse(data['match_id']?.toString() ?? '') ??
+          int.tryParse(data['id']?.toString() ?? ''),
+      userId: int.tryParse(data['user_id']?.toString() ?? ''),
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  void _onConnectionStateChange(dynamic currentState, dynamic previousState) {
+    final state = currentState?.toString() ?? '';
+    AppLogger.info(
+      '$previousState → $state',
+      tag: 'Pusher',
+    );
+
+    switch (state) {
       case 'CONNECTED':
         _isConnected = true;
+        _isConnecting = false;
         _connectionController.add(ConnectionStatus.connected);
         break;
       case 'DISCONNECTED':
         _isConnected = false;
+        _isConnecting = false;
         _connectionController.add(ConnectionStatus.disconnected);
         break;
       case 'CONNECTING':
-        _connectionController.add(ConnectionStatus.connecting);
-        break;
       case 'RECONNECTING':
         _connectionController.add(ConnectionStatus.reconnecting);
         break;
     }
   }
 
-  /// Error handler
   void _onError(String message, int? code, dynamic e) {
-    debugPrint('❌ Pusher error: $message (code: $code)');
-    _errorController.add('$message (code: $code)');
-  }
-
-  /// Disconnect from Pusher
-  Future<void> disconnect() async {
-    try {
-      // Unsubscribe from all channels
-      for (final channelName in _subscribedChannels.keys.toList()) {
-        await unsubscribeFromChannel(channelName);
-      }
-      
-      // TODO: Disconnect when package is added
-      // await _pusher?.disconnect();
-      
-      _isConnected = false;
-      _currentUserId = null;
-      _connectionController.add(ConnectionStatus.disconnected);
-      debugPrint('✅ Disconnected from Pusher');
-    } catch (e) {
-      debugPrint('❌ Error disconnecting: $e');
-    }
-  }
-
-  /// Dispose resources
-  void dispose() {
-    disconnect();
-    _messageController.close();
-    _typingController.close();
-    _onlineStatusController.close();
-    _readReceiptController.close();
-    _connectionController.close();
-    _errorController.close();
+    AppLogger.error(
+      'Connection error: $message ($code)',
+      tag: 'Pusher',
+      error: e,
+    );
+    _errorController.add(message);
   }
 }
 
-/// Typing event model
+class MatchEvent {
+  final int? matchId;
+  final int? userId;
+  final DateTime timestamp;
+
+  MatchEvent({
+    this.matchId,
+    this.userId,
+    required this.timestamp,
+  });
+}
+
 class TypingEvent {
   final int userId;
+  final int? conversationId;
   final bool isTyping;
   final DateTime timestamp;
 
   TypingEvent({
     required this.userId,
+    this.conversationId,
     required this.isTyping,
     required this.timestamp,
   });
 }
 
-/// Online status event model
-class OnlineStatusEvent {
-  final int userId;
-  final bool isOnline;
-  final DateTime? lastSeen;
-  final DateTime timestamp;
-
-  OnlineStatusEvent({
-    required this.userId,
-    required this.isOnline,
-    this.lastSeen,
-    required this.timestamp,
-  });
-}
-
-/// Read receipt event model
 class ReadReceiptEvent {
-  final int messageId;
-  final int userId;
+  final int? conversationId;
+  final int readerId;
+  final List<int> messageIds;
   final DateTime readAt;
 
   ReadReceiptEvent({
-    required this.messageId,
-    required this.userId,
+    this.conversationId,
+    required this.readerId,
+    required this.messageIds,
     required this.readAt,
   });
 }
 
-/// Connection status enum
+class MessageExpiredEvent {
+  final int messageId;
+  final int? conversationId;
+  final DateTime timestamp;
+
+  MessageExpiredEvent({
+    required this.messageId,
+    this.conversationId,
+    required this.timestamp,
+  });
+}
+
+class CallSignalingEvent {
+  final String name;
+  final Map<String, dynamic> payload;
+
+  CallSignalingEvent({required this.name, required this.payload});
+}
+
 enum ConnectionStatus {
   disconnected,
   connecting,

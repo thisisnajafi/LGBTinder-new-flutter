@@ -1,16 +1,25 @@
 // Screen: ProfilePage
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import '../core/theme/app_colors.dart';
-import '../widgets/navbar/app_bar_custom.dart';
-import '../widgets/profile/profile_header.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/widgets/app_page_header.dart';
+import '../features/profile/presentation/widgets/profile_hub_view.dart';
+import '../features/profile/widgets/profile_photo_carousel.dart';
+import '../features/profile/widgets/tier_badge.dart';
+import '../features/profile/widgets/profile_completeness_indicator.dart';
+import '../features/profile/data/models/profile_completion.dart';
+import '../features/reference_data/providers/reference_data_providers.dart';
+import '../shared/providers/user_tier_provider.dart';
+import '../shared/models/user_tier.dart';
 import '../widgets/profile/profile_bio.dart';
-import '../widgets/profile/photo_gallery.dart';
 import '../widgets/profile/profile_info_sections.dart';
 import '../widgets/profile/profile_action_buttons.dart';
 import '../widgets/profile/safety_verification_section.dart';
@@ -19,7 +28,10 @@ import '../core/widgets/profile_stats_card.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
 import '../widgets/match/match_screen.dart';
-import '../features/profile/providers/profile_page_cache_provider.dart';
+import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
+import '../core/cache/image_cache_service.dart';
+import '../features/profile/providers/profile_page_cache_provider.dart'
+    show ProfilePageCacheNotifier, ProfilePageData, profilePageCacheProvider;
 import '../features/profile/providers/profile_providers.dart';
 import '../features/profile/providers/profile_provider.dart';
 import '../features/profile/data/models/user_image.dart';
@@ -31,8 +43,10 @@ import '../features/safety/data/models/report.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../pages/profile_edit_page.dart';
-import '../screens/settings_screen.dart';
+import '../features/settings/presentation/screens/matching_preferences_screen.dart';
+import '../routes/app_router.dart';
 import '../core/utils/app_icons.dart';
+import '../core/utils/app_logger.dart';
 import '../features/safety/data/models/favorite.dart';
 import '../features/safety/presentation/screens/report_user_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -61,6 +75,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   void initState() {
     super.initState();
     if (_isOwnProfile) {
+      profileLog('ProfilePage: own profile — init cache refresh');
       _loadStatistics();
       _loadBadgeInfo();
       // Cache-first: render from cache immediately; refresh in background (no blocking).
@@ -196,7 +211,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       
       if (mounted) {
         if (response.isMatch) {
-          // Show match dialog
+          unawaited(notifyNewMatch(ref));
           _showMatchDialog(response.match);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -235,7 +250,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       
       if (mounted) {
         if (response.isMatch) {
-          // Show match dialog
+          unawaited(notifyNewMatch(ref));
           _showMatchDialog(response.match);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -527,6 +542,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   /// Resolve premium from GET profile/badge/info or profile (own profile only).
+  String _formatProfileCacheError(AsyncValue<ProfilePageData> cacheState) {
+    final error = cacheState.error;
+    final stack = cacheState.stackTrace;
+    if (error != null) {
+      profileLogError('ProfilePage UI error state', error, stack);
+    }
+    if (error is ApiError) {
+      return error.message;
+    }
+    if (error != null) {
+      final text = error.toString();
+      if (text.contains('SocketException') || text.contains('Connection')) {
+        return 'Could not reach the server. Check your connection and try again.';
+      }
+      if (kDebugMode) {
+        return 'Could not load your profile ($text). Tap retry.';
+      }
+      return 'Could not load your profile. Tap retry to try again.';
+    }
+    return 'Could not load your profile. Tap retry to try again.';
+  }
+
   bool _badgePremium(UserProfile? profile) {
     if (_badgeInfo != null) {
       final inner = (_badgeInfo!['data'] as Map<String, dynamic>?) ?? _badgeInfo!;
@@ -536,6 +573,254 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return profile?.isPremium ?? false;
   }
 
+  List<String>? _mapIdsToTitles(List<int>? ids, List<dynamic> refs) {
+    if (ids == null || ids.isEmpty) return null;
+    final byId = <int, String>{};
+    for (final item in refs) {
+      final id = item.id as int?;
+      final title = item.title as String?;
+      if (id != null && title != null && title.isNotEmpty) {
+        byId[id] = title;
+      }
+    }
+    final values = ids.map((id) => byId[id] ?? id.toString()).toSet().toList(growable: false);
+    return values.isEmpty ? null : values;
+  }
+
+  UserTier _resolveTier(UserProfile? profile) {
+    if (_badgePremium(profile)) return UserTier.silder;
+    return ref.watch(userTierProvider);
+  }
+
+  String _activityLabel(UserProfile profile) {
+    final views = profile.viewsCount ?? 0;
+    if (views >= 50) return 'High';
+    if (views >= 10) return 'Moderate';
+    return 'Very low';
+  }
+
+  String _creditsLabel(UserProfile profile) {
+    return '${profile.viewsCount ?? _matchesCount}';
+  }
+
+  List<ProfileHubSection> _profileHubSections(UserProfile profile) {
+    return [
+      ProfileHubSection(
+        title: 'Main info',
+        items: [
+          ProfileHubMenuItem(
+            iconPath: AppIcons.userEdit,
+            label: 'Edit profile',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileEditPage(),
+                ),
+              );
+            },
+          ),
+          ProfileHubMenuItem(
+            iconPath: AppIcons.verify,
+            label: 'Verification',
+            onTap: () => context.go('/profile/verification'),
+          ),
+          ProfileHubMenuItem(
+            iconPath: AppIcons.discover,
+            label: 'Discovery preferences',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MatchingPreferencesScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      ProfileHubSection(
+        title: 'Account',
+        items: [
+          ProfileHubMenuItem(
+            iconPath: AppIcons.settings,
+            label: 'Settings',
+            onTap: () => context.go('${AppRoutes.home}/settings'),
+          ),
+          ProfileHubMenuItem(
+            iconPath: AppIcons.notification,
+            label: 'Notifications',
+            onTap: () => context.go('${AppRoutes.home}/notifications'),
+          ),
+        ],
+      ),
+      ProfileHubSection(
+        title: 'Our help',
+        items: [
+          ProfileHubMenuItem(
+            iconPath: AppIcons.help,
+            label: 'Help & support',
+            onTap: () => context.push(AppRoutes.helpSupport),
+          ),
+          ProfileHubMenuItem(
+            iconPath: AppIcons.shield,
+            label: 'Privacy policy',
+            onTap: () => context.push(AppRoutes.privacyPolicy),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  void _openFullProfileView(UserProfile profile) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppPageHeader(
+                  title: 'My Profile',
+                  action: IconButton(
+                    icon: AppSvgIcon(
+                      assetPath: AppIcons.edit,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProfileEditPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: _buildProfileDetailContent(profile, isOwn: true),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileDetailContent(UserProfile profile, {required bool isOwn}) {
+    final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
+    final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
+    final educationsRef = ref.watch(educationLevelsProvider).valueOrNull ?? const [];
+    final languagesRef = ref.watch(languagesProvider).valueOrNull ?? const [];
+    final preferredGendersRef = ref.watch(preferredGendersProvider).valueOrNull ?? const [];
+    final relationGoalsRef = ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
+    final musicRef = ref.watch(musicGenresProvider).valueOrNull ?? const [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_getImageUrls(profile).isNotEmpty)
+          RepaintBoundary(
+            child: ProfilePhotoCarousel(
+              imageUrls: _getImageUrls(profile),
+              overlayHeader: ProfileOverlayHeader(
+                name: _getFullName(profile),
+                age: _calculateAge(profile),
+                isVerified: _badgeVerified(profile),
+                tier: _resolveTier(profile),
+                location: _getLocation(profile),
+              ),
+            ),
+          )
+        else
+          ProfilePhotoEmptyState(
+            onAddPhoto: isOwn ? _openImagePicker : null,
+          ),
+        if (isOwn)
+          ProfileCompletenessIndicator(
+            completion: _estimateCompletion(profile),
+          ),
+        if (isOwn)
+          ProfileStatsCard(
+            matchesCount: _matchesCount,
+            likesCount: _pendingLikesCount,
+            viewsCount: profile.viewsCount ?? 0,
+          ),
+        ProfileBio(
+          bio: profile.profileBio,
+          isEditable: isOwn,
+          onEdit: isOwn
+              ? () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileEditPage(),
+                    ),
+                  );
+                }
+              : null,
+        ),
+        ProfileInfoSections(
+          interests: _mapIdsToTitles(profile.interests, interestsRef),
+          jobs: _mapIdsToTitles(profile.jobs, jobsRef),
+          educations: _mapIdsToTitles(profile.educations, educationsRef),
+          languages: _mapIdsToTitles(profile.languages, languagesRef),
+          musicGenres: _mapIdsToTitles(profile.musicGenres, musicRef),
+          relationGoals: _mapIdsToTitles(profile.relationGoals, relationGoalsRef),
+          gender: profile.gender,
+          preferredGenders: _mapIdsToTitles(profile.preferredGenders, preferredGendersRef),
+          height: profile.height,
+          weight: profile.weight,
+          smoke: profile.smoke,
+          drink: profile.drink,
+          gym: profile.gym,
+          location: _getLocation(profile),
+        ),
+        if (isOwn)
+          SafetyVerificationSection(
+            isVerified: profile.isVerified ?? false,
+            isPhoneVerified: profile.isPhoneVerified ?? false,
+            isEmailVerified: profile.isEmailVerified ?? true,
+            onVerifyTap: () {
+              context.go('/profile/verification');
+            },
+          ),
+        SizedBox(height: AppSpacing.spacingXXL),
+      ],
+    );
+  }
+
+  ProfileCompletion _estimateCompletion(UserProfile profile) {
+    final missing = <String>[];
+    if (profile.profileBio == null || profile.profileBio!.trim().isEmpty) {
+      missing.add('bio');
+    }
+    if (profile.images == null || profile.images!.isEmpty) {
+      missing.add('photos');
+    }
+    if (profile.interests == null || profile.interests!.length < 3) {
+      missing.add('interests');
+    }
+    if (profile.jobs == null || profile.jobs!.isEmpty) {
+      missing.add('job');
+    }
+    if (profile.city == null || profile.city!.isEmpty) {
+      missing.add('location');
+    }
+    return ProfileCompletion(
+      isComplete: missing.isEmpty,
+      profileCompleted: missing.isEmpty,
+      needsProfileCompletion: missing.isNotEmpty,
+      missingFields: missing,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -543,214 +828,116 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final isOwn = _isOwnProfile;
     final cacheState = isOwn ? ref.watch(profilePageCacheProvider) : null;
+
     final bool loading = isOwn
         ? (cacheState!.isLoading && !cacheState.hasValue)
         : _isLoading;
     final bool hasError = isOwn
         ? (cacheState!.hasError && !cacheState.hasValue)
         : _hasError;
+
+    if (isOwn && cacheState != null && kDebugMode) {
+      profileLog(
+        'ProfilePage build: loading=$loading hasError=$hasError '
+        'hasValue=${cacheState.hasValue} profileId=${cacheState.valueOrNull?.profile.id}',
+      );
+    }
     final UserProfile? profile = isOwn
         ? cacheState?.valueOrNull?.profile
         : _profile;
     final VoidCallback? onRetry = isOwn
-        ? () => ref.read(profilePageCacheProvider.notifier).refresh()
-        : () { _loadProfile(); };
+        ? () {
+            profileLog('ProfilePage: user tapped Retry');
+            ref.read(profilePageCacheProvider.notifier).refresh();
+          }
+        : () {
+            profileLog('ProfilePage: user tapped Retry (other user)');
+            _loadProfile();
+          };
+    final String? ownProfileErrorMessage = isOwn && cacheState != null
+        ? _formatProfileCacheError(cacheState)
+        : null;
+
+    final avatarUrl = profile?.images?.isNotEmpty == true
+        ? profile!.images!.first.imageUrl
+        : null;
+
+    Widget bodyContent;
+    if (loading) {
+      bodyContent = const SkeletonProfile();
+    } else if (hasError) {
+      bodyContent = ErrorDisplayWidget(
+        errorMessage: ownProfileErrorMessage ??
+            _errorMessage ??
+            'Failed to load profile. Pull to retry.',
+        onRetry: onRetry ?? () {},
+      );
+    } else if (profile == null) {
+      bodyContent = const Center(child: Text('No profile data'));
+    } else if (isOwn) {
+      bodyContent = ProfileHubView(
+        fullName: _getFullName(profile),
+        avatarUrl: avatarUrl,
+        age: _calculateAge(profile),
+        activityLabel: _activityLabel(profile),
+        creditsLabel: _creditsLabel(profile),
+        isVerified: _badgeVerified(profile),
+        onViewProfile: () => _openFullProfileView(profile),
+        sections: _profileHubSections(profile),
+      );
+    } else {
+      bodyContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPageHeader(
+            title: 'Profile',
+            action: IconButton(
+              icon: AppSvgIcon(
+                assetPath: AppIcons.arrowLeft,
+                size: 24,
+                color: theme.colorScheme.onSurface,
+              ),
+              onPressed: () => context.go('${AppRoutes.home}/profile'),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: _buildProfileDetailContent(profile, isOwn: false),
+            ),
+          ),
+        ],
+      );
+    }
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: isOwn ? 'My Profile' : 'Profile',
-        showBackButton: !isOwn,
-        showPrideAccent: isOwn,
-        actions: isOwn
-            ? [
-                IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.edit,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProfileEditPage(),
-                      ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.settings,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    // Navigate to settings screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ]
-            : null,
+      body: SafeArea(
+        child: loading || hasError || profile == null
+            ? bodyContent
+            : RefreshIndicator(
+                onRefresh: () async {
+                  if (isOwn) {
+                    await ref.read(appCacheManagerProvider).revalidateAll();
+                    await ref.read(profilePageCacheProvider.notifier).refresh();
+                    await _loadStatistics();
+                    await _loadBadgeInfo();
+                  } else {
+                    await _loadProfile();
+                  }
+                },
+                child: bodyContent,
+              ),
       ),
-      body: loading
-          ? SkeletonProfile()
-          : hasError
-              ? ErrorDisplayWidget(
-                  errorMessage: _errorMessage ?? 'Failed to load profile',
-                  onRetry: onRetry ?? () {},
-                )
-              : profile == null
-                  ? const Center(child: Text('No profile data'))
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        if (isOwn) {
-                          await ref.read(profilePageCacheProvider.notifier).refresh();
-                          await _loadStatistics();
-                          await _loadBadgeInfo();
-                        } else {
-                          await _loadProfile();
-                        }
-                      },
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ProfileHeader(
-                            name: _getFullName(profile),
-                            age: _calculateAge(profile),
-                            location: _getLocation(profile),
-                            avatarUrl: _getImageUrls(profile).isNotEmpty ? _getImageUrls(profile).first : null,
-                            isVerified: _badgeVerified(profile),
-                            isPremium: _badgePremium(profile),
-                            isOnline: profile?.isOnline ?? false,
-                            showPrideAccent: isOwn,
-                            onAvatarTap: isOwn
-                                ? () {
-                                    // Open image picker - implementation needed
-                                    _openImagePicker();
-                                  }
-                                : null,
-                            onEdit: isOwn
-                                ? () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const ProfileEditPage(),
-                                      ),
-                                    );
-                                    if (isOwn) {
-                                      ref.read(profilePageCacheProvider.notifier).refresh();
-                                      _loadStatistics();
-                                    } else {
-                                      _loadProfile();
-                                    }
-                                  }
-                                : null,
-                          ),
-                          // Statistics (only for own profile)
-                          if (isOwn)
-                            ProfileStatsCard(
-                              matchesCount: _matchesCount,
-                              likesCount: _pendingLikesCount,
-                              viewsCount: profile?.viewsCount ?? 0,
-                            ),
-                          ProfileBio(
-                            bio: profile!.profileBio,
-                            isEditable: isOwn,
-                            onEdit: isOwn
-                                ? () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const ProfileEditPage(),
-                                      ),
-                                    );
-                                  }
-                                : null,
-                          ),
-                          if (_getImageUrls(profile).isNotEmpty)
-                            PhotoGallery(
-                              imageUrls: _getImageUrls(profile),
-                              isEditable: isOwn,
-                              onImageTap: (index, url) {
-                                // Open image viewer - implementation needed
-                                _openImageViewer(index);
-                              },
-                              onAddPhoto: isOwn
-                                  ? () => _openImagePicker()
-                                  : null,
-                            ),
-                          ProfileInfoSections(
-                            interests: profile!.interests != null
-                                ? profile!.interests!.map((id) => id.toString()).toList()
-                                : [],
-                            jobs: profile!.jobs != null
-                                ? profile!.jobs!.map((id) => id.toString()).toList()
-                                : [],
-                            educations: profile!.educations != null
-                                ? profile!.educations!.map((id) => id.toString()).toList()
-                                : [],
-                            languages: profile!.languages != null
-                                ? profile!.languages!.map((id) => id.toString()).toList()
-                                : [],
-                            musicGenres: profile!.musicGenres != null
-                                ? profile!.musicGenres!.map((id) => id.toString()).toList()
-                                : [],
-                            relationGoals: profile!.relationGoals != null
-                                ? profile!.relationGoals!.map((id) => id.toString()).toList()
-                                : [],
-                            gender: profile!.gender,
-                            preferredGenders: profile!.preferredGenders != null
-                                ? profile!.preferredGenders!.map((id) => id.toString()).toList()
-                                : [],
-                            height: profile!.height,
-                            weight: profile!.weight,
-                            smoke: profile!.smoke,
-                            drink: profile!.drink,
-                            gym: profile!.gym,
-                          ),
-                          if (isOwn)
-                            SafetyVerificationSection(
-                              isVerified: profile?.isVerified ?? false,
-                              isPhoneVerified: profile?.isPhoneVerified ?? false,
-                              isEmailVerified: profile?.isEmailVerified ?? true,
-                              onVerifyTap: () {
-                                // Navigate to verification
-                                context.go('/profile/verification');
-                              },
-                            ),
-                          if (!isOwn)
-                            ProfileActionButtons(
-                              onLike: () {
-                                _handleLike();
-                              },
-                              onSuperlike: () {
-                                _handleSuperlike();
-                              },
-                              onMessage: () {
-                                if (widget.userId != null) {
-                                  context.go('/chat?userId=${widget.userId}');
-                                }
-                              },
-                              onMore: () {
-                                _showMoreOptions(context);
-                              },
-                              isLiked: false,
-                              isSuperliked: false,
-                              isMatched: false,
-                            ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                      ),
-                    ),
+      bottomNavigationBar: !isOwn && profile != null && !loading && !hasError
+          ? ProfileActionButtons(
+              onLike: _handleLike,
+              onDislike: () {},
+              onSuperlike: _handleSuperlike,
+              onMessage: widget.userId != null
+                  ? () => context.go('/chat?userId=${widget.userId}')
+                  : null,
+            )
+          : null,
     );
   }
 
@@ -884,7 +1071,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             itemCount: imageUrls.length,
             builder: (context, index) {
               return PhotoViewGalleryPageOptions(
-                imageProvider: NetworkImage(imageUrls[index]),
+                imageProvider: lgbtfinderCachedImageProvider(imageUrls[index]),
                 initialScale: PhotoViewComputedScale.contained,
                 minScale: PhotoViewComputedScale.contained * 0.8,
                 maxScale: PhotoViewComputedScale.covered * 2,
@@ -906,8 +1093,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 width: 30.0,
                 height: 30.0,
                 child: CircularProgressIndicator(
-                  value: event == null
-                      ? 0
+                  value: event == null ||
+                          event.expectedTotalBytes == null ||
+                          event.expectedTotalBytes! <= 0
+                      ? null
                       : event.cumulativeBytesLoaded / event.expectedTotalBytes!,
                   valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                 ),

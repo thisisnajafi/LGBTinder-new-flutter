@@ -5,12 +5,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/common/section_header.dart';
 import '../../data/models/matching_preferences.dart';
 import '../../providers/settings_provider.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Matching/Discovery preferences screen — age range, distance, discovery visibility
 class MatchingPreferencesScreen extends ConsumerStatefulWidget {
@@ -56,7 +58,7 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
         final max = ageData['max_age'];
         if (min != null) loadedAgeMin = min is int ? min : int.tryParse(min.toString());
         if (max != null) loadedAgeMax = max is int ? max : int.tryParse(max.toString());
-      } catch (_) {}
+      } catch (e) { AppLogger.warning('Silently caught exception', tag: 'matching_preferences_screen', error: e); }
       // Load full preferences (distance, visibility; fallback for age if preferences/age had no data)
       final prefs = await service.getPreferences();
       if (kDebugMode) {
@@ -165,18 +167,18 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Discovery preferences',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Discovery preferences',
-        showBackButton: true,
-      ),
       body: _loading && _error == null
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppPageHeader.horizontalPadding,
+              ),
               children: [
                 if (_error != null) ...[
                   Container(

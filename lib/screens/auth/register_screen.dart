@@ -6,7 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/data/models/register_request.dart';
@@ -137,14 +138,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Create Account',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Create Account',
-        showBackButton: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
           padding: EdgeInsets.all(AppSpacing.spacingLG),
           child: Form(
             key: _formKey,
@@ -502,8 +500,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ],
             ),
           ),
-        ),
-      ),
     );
   }
 }

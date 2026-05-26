@@ -3,8 +3,6 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Apply last so it can process google-services.json and generate Firebase res/values
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -55,3 +53,5 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+apply(plugin = "com.google.gms.google-services")

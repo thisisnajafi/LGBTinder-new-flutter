@@ -1,4 +1,5 @@
 import '../../data/repositories/safety_repository.dart';
+import '../../data/models/report.dart';
 
 /// Use case for getting reports history
 class GetReportsHistoryUseCase {

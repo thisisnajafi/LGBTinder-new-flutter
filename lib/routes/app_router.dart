@@ -13,25 +13,21 @@ import '../screens/auth/register_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../pages/profile_wizard_page.dart';
 import '../screens/onboarding/onboarding_preferences_screen.dart';
-import '../pages/discovery_page.dart';
+import '../features/calls/pages/outgoing_call_page.dart';
 import '../pages/chat_list_page.dart';
 import '../pages/chat_page.dart';
-import '../pages/profile_page.dart';
 import '../pages/profile_edit_page.dart';
 import '../screens/discovery/profile_detail_screen.dart';
-import '../screens/settings_screen.dart';
-import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../screens/blocked_users_screen.dart';
 import '../features/matching/presentation/screens/matches_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
 import '../features/payments/presentation/screens/subscription_plans_screen.dart' as payments;
 import '../screens/billing_history_screen.dart';
-import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';
-import '../shared/services/onboarding_service.dart';
 import '../core/utils/app_logger.dart';
 import 'route_redirector.dart';
+import 'home_tab_routes.dart';
 import '../screens/feature_locked_screen.dart';
 import '../screens/tier_comparison_screen.dart';
 import '../screens/subscription_status_screen.dart';
@@ -55,6 +51,7 @@ class AppRoutes {
   static const String discovery = '/discovery';
   static const String chatList = '/chat-list';
   static const String chat = '/chat';
+  static const String outgoingCall = '/call/outgoing';
   static const String profile = '/profile';
   static const String profileEdit = '/profile/edit';
   static const String profileDetail = '/profile-detail';
@@ -100,6 +97,17 @@ Page<void> slideFadePage(GoRouterState state, Widget child) {
   );
 }
 
+/// Instant page — use on splash so startup never waits on route transitions (ANR-safe).
+Page<void> noTransitionPage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+    transitionsBuilder: (_, __, ___, child) => child,
+  );
+}
+
 // Note: Route guards are implemented as redirect functions in individual routes
 // This allows access to Riverpod providers through the ref parameter
 
@@ -133,6 +141,7 @@ const Set<String> _authOnlyTopLevelRoutes = {
   AppRoutes.billingHistory,
   AppRoutes.subscriptionPlans,
   AppRoutes.chat,
+  AppRoutes.outgoingCall,
   AppRoutes.featureLocked,
   AppRoutes.tierComparison,
   AppRoutes.subscriptionStatus,
@@ -205,7 +214,7 @@ _GuardDecision evaluateGuardDecision({
 
   if (authStage == AuthStage.unauthenticated && isProtectedRoute) {
     return const _GuardDecision(
-      redirectTo: AppRoutes.welcome,
+      redirectTo: AppRoutes.login,
       storePending: true,
     );
   }
@@ -232,8 +241,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     redirectLimit: 5,
+    observers: [_AppRouterObserver()],
     redirect: (context, state) async {
       final loc = state.matchedLocation;
+      // Splash owns auth/bootstrap; skip secure-storage reads here to avoid main-thread churn.
+      if (loc == AppRoutes.splash && !_hasLeftStartupFlow) {
+        return null;
+      }
       final legacyResolved = _redirector.resolveLegacyRoute(state.uri);
       if (legacyResolved != null && legacyResolved != state.uri.toString()) {
         routeLog('redirect: legacy ${state.uri} → $legacyResolved');
@@ -254,7 +268,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (decision.storePending) {
         _redirector.setPendingIfEmpty(state.uri.toString());
-        routeLog('redirect: protected $loc without auth → ${AppRoutes.welcome}');
+        routeLog('redirect: protected $loc without auth → ${AppRoutes.login}');
       }
 
       if (decision.consumePending && pending != null) {
@@ -266,6 +280,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (decision.redirectTo != null) {
         if (decision.redirectTo == AppRoutes.profileWizard) {
           routeLog('redirect: profile-completion user from $loc → ${AppRoutes.profileWizard}');
+        } else if (decision.redirectTo == AppRoutes.login && loc != AppRoutes.login) {
+          routeLog('redirect: unauthenticated protected route $loc → ${AppRoutes.login}');
         } else if (decision.redirectTo == AppRoutes.welcome && loc == AppRoutes.splash) {
           routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
         } else if (decision.redirectTo == AppRoutes.home && _authEntryRoutes.contains(loc)) {
@@ -281,7 +297,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         name: 'splash',
-        pageBuilder: (context, state) => slideFadePage(state, const SplashPage()),
+        pageBuilder: (context, state) => noTransitionPage(state, const SplashPage()),
       ),
 
       // Welcome Screen (no guard - public)
@@ -355,47 +371,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'home',
         pageBuilder: (context, state) => slideFadePage(state, const HomePage()),
         routes: [
-          // Discovery Tab (inherits auth from parent)
+          // Main tabs live inside [HomePage]; legacy paths redirect to ?tab=.
           GoRoute(
             path: 'discovery',
             name: 'discovery',
-            pageBuilder: (context, state) => slideFadePage(state, const DiscoveryPage()),
+            redirect: (_, __) => HomeTabRoutes.locationForTab(0),
           ),
-
-          // Chat List Tab (inherits auth from parent)
           GoRoute(
             path: 'chat-list',
             name: 'chat-list',
-            pageBuilder: (context, state) => slideFadePage(state, const ChatListPage()),
+            redirect: (_, __) => HomeTabRoutes.locationForTab(1),
           ),
-
-          // Notifications Tab (inherits auth from parent)
           GoRoute(
             path: 'notifications',
             name: 'notifications',
-            pageBuilder: (context, state) => slideFadePage(state, const NotificationsScreen()),
+            redirect: (_, __) => HomeTabRoutes.locationForTab(2),
           ),
-
-          // Profile Tab (inherits auth from parent)
           GoRoute(
             path: 'profile',
             name: 'profile',
-            pageBuilder: (context, state) {
+            redirect: (context, state) {
               final userId = state.uri.queryParameters['userId'];
-              return slideFadePage(
-                state,
-                ProfilePage(
-                  userId: userId != null ? int.tryParse(userId) : null,
-                ),
-              );
+              return Uri(
+                path: AppRoutes.home,
+                queryParameters: {
+                  'tab': '3',
+                  if (userId != null && userId.isNotEmpty) 'userId': userId,
+                },
+              ).toString();
             },
           ),
-          
-          // Settings (inherits auth from parent)
           GoRoute(
             path: 'settings',
             name: 'settings',
-            pageBuilder: (context, state) => slideFadePage(state, const SettingsScreen()),
+            redirect: (_, __) => HomeTabRoutes.locationForTab(4),
           ),
           
           // Blocked Users (inherits auth from parent)
@@ -521,6 +530,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             slideFadePage(state, const SubscriptionManagementScreen()),
       ),
 
+      // Outgoing / active call (requires auth)
+      GoRoute(
+        path: AppRoutes.outgoingCall,
+        name: 'outgoing-call',
+        pageBuilder: (context, state) {
+          final qp = state.uri.queryParameters;
+          final callId = int.tryParse(qp['callId'] ?? '') ?? 0;
+          final recipientId = int.tryParse(qp['recipientId'] ?? '') ?? 0;
+          final type = qp['type'] == 'video'
+              ? OutgoingCallType.video
+              : OutgoingCallType.voice;
+          return slideFadePage(
+            state,
+            OutgoingCallPage(
+              callId: callId,
+              recipientId: recipientId,
+              recipientName: qp['recipientName'] ?? 'User',
+              recipientAvatarUrl: qp['avatarUrl'],
+              type: type,
+              isCallee: qp['callee'] == '1',
+            ),
+          );
+        },
+      ),
+
       // Chat Page (requires auth)
       GoRoute(
         path: AppRoutes.chat,
@@ -571,3 +605,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+class _AppRouterObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    AppLogger.navigation(
+      previousRoute?.settings.name ?? 'none',
+      route.settings.name ?? 'unknown',
+    );
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    AppLogger.navigation(
+      route.settings.name ?? 'unknown',
+      previousRoute?.settings.name ?? 'none',
+    );
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    AppLogger.navigation(
+      oldRoute?.settings.name ?? 'unknown',
+      newRoute?.settings.name ?? 'unknown',
+    );
+  }
+}

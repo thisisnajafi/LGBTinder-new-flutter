@@ -1,4 +1,4 @@
-﻿/// Generic API Response model
+/// Generic API Response model
 class ApiResponse<T> {
   final bool status;
   final String message;
@@ -17,16 +17,17 @@ class ApiResponse<T> {
     Map<String, dynamic> json,
     T Function(dynamic)? fromJsonT,
   ) {
-    // Handle status field - can be bool or string ("success")
+    // Handle status field - can be bool, string ("success"), or `success` key
     bool status = false;
+    if (json['success'] is bool) {
+      status = json['success'] as bool;
+    }
     final statusValue = json['status'];
     if (statusValue is bool) {
       status = statusValue;
     } else if (statusValue is String) {
-      // Treat "success" string as true
       status = statusValue.toLowerCase() == 'success' || statusValue.toLowerCase() == 'true';
     } else if (statusValue != null) {
-      // Try to convert other types
       status = statusValue == true || statusValue == 1 || statusValue == '1';
     }
     

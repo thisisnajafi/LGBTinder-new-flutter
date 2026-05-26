@@ -12,8 +12,8 @@ class TestCredentials {
   static const String validLoginCode = '123456'; // email OTP when backend uses fixed code
 
   /// An account with an ACTIVE premium subscription (silder or golden tier)
-  static const String premiumEmail = 'FILL_ME_IN';
-  static const String premiumPassword = 'FILL_ME_IN';
+  static const String premiumEmail = 'test2@example.com';
+  static const String premiumPassword = 'Prof48017421@#';
 
   /// A free-tier account (basid) for gating tests
   static const String freeEmail = 'test3@example.com';
@@ -24,19 +24,19 @@ class TestCredentials {
   static const String apiBaseUrl = 'https://api.lgbtfinder.com/api';
 
   /// A pre-issued Sanctum token for a valid session (for mock bypass)
-  static const String validSanctumToken = '2|oPDUfDYsKQTpE40OTkQPJIOtrGwNPSeXUVhuhbYcfac10942';
+  static const String validSanctumToken = '6|oingzgbR5l2ak6Y1S6dRB4KkcgZn87ZnCnmv6YrBb1f78f10';
 
   /// A pre-issued Sanctum token for a premium session
-  static const String premiumSanctumToken = '4|capxUGpS0IjH2DxjbZTNvItSlBEjYWKADjf6BKEE1c633dce';
+  static const String premiumSanctumToken = '5|GHh2vIh7IHMk2tS7bUYOpUn163fDtrl2TQHMEvTsb924a5b1';
 
   // ── Google Play Billing (sandbox) ────────────────────────
   static const String testProductId = 'FILL_ME_IN';
 
   // ── Target user IDs (for block/report/chat tests) ─────────
-  static const String targetUserId = 'FILL_ME_IN';
-  static const String targetUserName = 'FILL_ME_IN';
+  static const String targetUserId = '741';
+  static const String targetUserName = 'Test User';
 
-  static bool get isPlaceholder(String value) =>
+  static bool isPlaceholder(String value) =>
       value.isEmpty || value == 'FILL_ME_IN';
 
   static bool get hasApiBaseUrl => !isPlaceholder(apiBaseUrl);

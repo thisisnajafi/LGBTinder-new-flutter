@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/block.dart';
+import '../../data/models/block.dart';
 import '../../providers/safety_provider.dart';
+import '../../../../core/cache/cache_invalidator.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 
 /// Block user dialog widget
 /// Shows confirmation dialog for blocking users with reason selection
@@ -49,7 +50,7 @@ class _BlockUserDialogState extends ConsumerState<BlockUserDialog> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final safetyState = ref.watch(safetyProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -123,22 +124,10 @@ class _BlockUserDialogState extends ConsumerState<BlockUserDialog> {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
+                  AvatarWidget(
+                    imageUrl: widget.userAvatar,
                     radius: 24,
-                    backgroundColor: AppColors.primaryLight.withOpacity(0.2),
-                    backgroundImage: widget.userAvatar != null
-                        ? NetworkImage(widget.userAvatar!)
-                        : null,
-                    child: widget.userAvatar == null
-                        ? Text(
-                            widget.userName.substring(0, 1).toUpperCase(),
-                            style: TextStyle(
-                              color: AppColors.primaryLight,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          )
-                        : null,
+                    fallbackInitial: widget.userName,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -309,6 +298,10 @@ class _BlockUserDialogState extends ConsumerState<BlockUserDialog> {
     final blockedUser = await safetyNotifier.blockUser(request);
 
     if (blockedUser != null && mounted) {
+      await ref
+          .read(cacheInvalidatorProvider)
+          .purgeProfile(widget.userId.toString());
+      if (!mounted) return;
       Navigator.of(context).pop();
       widget.onBlockSuccess?.call();
 

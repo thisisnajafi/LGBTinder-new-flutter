@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/avatar_widget.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
@@ -140,16 +141,10 @@ class _MentionInputFieldState extends ConsumerState<MentionInputField> {
               mainAxisSize: MainAxisSize.min,
               children: _filteredUsers.map((user) {
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: user['avatar_url'] != null
-                        ? NetworkImage(user['avatar_url'])
-                        : null,
-                    child: user['avatar_url'] == null
-                        ? Text(
-                            (user['name'] ?? 'U')[0].toUpperCase(),
-                            style: TextStyle(color: textColor),
-                          )
-                        : null,
+                  leading: AvatarWidget(
+                    imageUrl: user['avatar_url'] as String?,
+                    radius: 20,
+                    fallbackInitial: user['name'] as String?,
                   ),
                   title: Text(
                     user['name'] ?? 'User',

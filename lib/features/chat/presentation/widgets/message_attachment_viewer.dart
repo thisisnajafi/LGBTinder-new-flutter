@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import '../../../../core/cache/cache_providers.dart';
+import '../../../../core/cache/image_cache_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -111,7 +113,7 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
 
   Widget _buildImageViewer() {
     return PhotoView(
-      imageProvider: NetworkImage(widget.attachment.url),
+      imageProvider: lgbtfinderCachedImageProvider(widget.attachment.url),
       loadingBuilder: (context, event) => const Center(
         child: CircularProgressIndicator(color: Colors.white),
       ),
@@ -446,6 +448,8 @@ class AttachmentPreview extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: CachedNetworkImage(
                   imageUrl: attachment.url,
+                  cacheManager: ref.watch(imageCacheServiceProvider),
+                  fadeInDuration: const Duration(milliseconds: 200),
                   fit: BoxFit.cover,
                   placeholder: (context, url) => const Center(
                     child: CircularProgressIndicator(),

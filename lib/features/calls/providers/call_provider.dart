@@ -6,7 +6,9 @@ import '../domain/use_cases/initiate_call_use_case.dart';
 import '../domain/use_cases/get_call_history_use_case.dart';
 import '../domain/use_cases/get_call_use_case.dart';
 import '../domain/use_cases/accept_call_use_case.dart';
+import '../domain/use_cases/decline_call_use_case.dart';
 import '../domain/use_cases/end_call_use_case.dart';
+import 'call_providers.dart';
 
 /// Call provider - manages call functionality and state
 final callProvider = StateNotifierProvider<CallNotifier, CallState>((ref) {
@@ -14,6 +16,7 @@ final callProvider = StateNotifierProvider<CallNotifier, CallState>((ref) {
   final getCallHistoryUseCase = ref.watch(getCallHistoryUseCaseProvider);
   final getCallUseCase = ref.watch(getCallUseCaseProvider);
   final acceptCallUseCase = ref.watch(acceptCallUseCaseProvider);
+  final declineCallUseCase = ref.watch(declineCallUseCaseProvider);
   final endCallUseCase = ref.watch(endCallUseCaseProvider);
 
   return CallNotifier(
@@ -21,6 +24,7 @@ final callProvider = StateNotifierProvider<CallNotifier, CallState>((ref) {
     getCallHistoryUseCase: getCallHistoryUseCase,
     getCallUseCase: getCallUseCase,
     acceptCallUseCase: acceptCallUseCase,
+    declineCallUseCase: declineCallUseCase,
     endCallUseCase: endCallUseCase,
   );
 });
@@ -92,6 +96,7 @@ class CallNotifier extends StateNotifier<CallState> {
   final GetCallHistoryUseCase _getCallHistoryUseCase;
   final GetCallUseCase _getCallUseCase;
   final AcceptCallUseCase _acceptCallUseCase;
+  final DeclineCallUseCase _declineCallUseCase;
   final EndCallUseCase _endCallUseCase;
 
   CallNotifier({
@@ -99,11 +104,13 @@ class CallNotifier extends StateNotifier<CallState> {
     required GetCallHistoryUseCase getCallHistoryUseCase,
     required GetCallUseCase getCallUseCase,
     required AcceptCallUseCase acceptCallUseCase,
+    required DeclineCallUseCase declineCallUseCase,
     required EndCallUseCase endCallUseCase,
   }) : _initiateCallUseCase = initiateCallUseCase,
        _getCallHistoryUseCase = getCallHistoryUseCase,
        _getCallUseCase = getCallUseCase,
        _acceptCallUseCase = acceptCallUseCase,
+       _declineCallUseCase = declineCallUseCase,
        _endCallUseCase = endCallUseCase,
        super(CallState());
 
@@ -151,7 +158,7 @@ class CallNotifier extends StateNotifier<CallState> {
   /// Decline an incoming call
   Future<bool> declineCall(CallActionRequest request) async {
     try {
-      await _acceptCallUseCase.execute(request); // This will decline the call
+      await _declineCallUseCase.execute(request);
       state = state.copyWith(incomingCallId: null);
       return true;
     } catch (e) {
@@ -300,24 +307,3 @@ class CallNotifier extends StateNotifier<CallState> {
     state = CallState();
   }
 }
-
-// Use case providers
-final initiateCallUseCaseProvider = Provider<InitiateCallUseCase>((ref) {
-  throw UnimplementedError('InitiateCallUseCase must be overridden in the provider scope');
-});
-
-final getCallHistoryUseCaseProvider = Provider<GetCallHistoryUseCase>((ref) {
-  throw UnimplementedError('GetCallHistoryUseCase must be overridden in the provider scope');
-});
-
-final getCallUseCaseProvider = Provider<GetCallUseCase>((ref) {
-  throw UnimplementedError('GetCallUseCase must be overridden in the provider scope');
-});
-
-final acceptCallUseCaseProvider = Provider<AcceptCallUseCase>((ref) {
-  throw UnimplementedError('AcceptCallUseCase must be overridden in the provider scope');
-});
-
-final endCallUseCaseProvider = Provider<EndCallUseCase>((ref) {
-  throw UnimplementedError('EndCallUseCase must be overridden in the provider scope');
-});

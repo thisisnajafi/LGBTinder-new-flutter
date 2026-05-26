@@ -10,7 +10,8 @@ import '../routes/app_router.dart';
 import '../shared/models/user_tier.dart';
 import '../shared/analytics/app_event_tracker.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 
 class FeatureLockedScreen extends StatelessWidget {
   final String featureTitle;
@@ -69,12 +70,10 @@ class FeatureLockedScreen extends StatelessWidget {
             },
           );
         });
-        return Scaffold(
+        return AppPageScaffold(
+      title: 'Upgrade required',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Upgrade required',
-        showBackButton: true,
-      ),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.spacingLG),

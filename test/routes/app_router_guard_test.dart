@@ -26,7 +26,7 @@ void main() {
         isProtectedRoute: true,
         hasPendingProtectedRoute: false,
       );
-      expect(decision.redirectTo, AppRoutes.welcome);
+      expect(decision.redirectTo, AppRoutes.login);
       expect(decision.storePending, isTrue);
     });
 

@@ -5,7 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../providers/user_actions_providers.dart';
 import '../../data/models/report.dart';
@@ -132,12 +133,10 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Report User',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Report User',
-        showBackButton: true,
-      ),
       body: SafeArea(
         child: Form(
           key: _formKey,

@@ -1,3 +1,4 @@
+import 'package:lgbtindernew/core/services/app_logger.dart';
 /// Response Helper - Standardized API response parsing
 /// 
 /// Task 2.1.3 (Phase 3): Create standardized response helper for consistent
@@ -55,7 +56,7 @@ class ResponseHelper {
       return null;
     } catch (e) {
       // Log error for debugging
-      print('ResponseHelper.extractData error: $e');
+      AppLogger.debug('ResponseHelper.extractData error: $e');
       return null;
     }
   }
@@ -159,14 +160,14 @@ class ResponseHelper {
               return null;
             } catch (e) {
               // Skip invalid entries instead of crashing
-              print('ResponseHelper.extractList: skipping invalid item: $e');
+              AppLogger.debug('ResponseHelper.extractList: skipping invalid item: $e');
               return null;
             }
           })
           .whereType<T>()
           .toList();
     } catch (e) {
-      print('ResponseHelper.extractList error: $e');
+      AppLogger.debug('ResponseHelper.extractList error: $e');
       return [];
     }
   }

@@ -6,7 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../providers/payment_providers.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
@@ -30,12 +31,10 @@ class PremiumSubscriptionScreen extends ConsumerWidget {
     final subscriptionStatusAsync = ref.watch(subscriptionStatusProvider);
     final paymentSystem = ref.watch(activePaymentSystemProvider);
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Premium',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Premium',
-        showBackButton: true,
-      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         child: Column(

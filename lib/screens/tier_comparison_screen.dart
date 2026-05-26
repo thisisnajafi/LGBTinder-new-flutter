@@ -9,7 +9,8 @@ import '../core/theme/typography.dart';
 import '../routes/app_router.dart';
 import '../shared/analytics/app_event_tracker.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 
 class TierComparisonScreen extends StatelessWidget {
   const TierComparisonScreen({super.key});
@@ -29,12 +30,10 @@ class TierComparisonScreen extends StatelessWidget {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(appEventTrackerProvider).track('tier_compare_view', meta: {'screen': 'tier_comparison'});
         });
-        return Scaffold(
+        return AppPageScaffold(
+      title: 'Compare tiers',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Compare tiers',
-        showBackButton: true,
-      ),
       body: SafeArea(
         child: ListView(
           padding: EdgeInsets.all(AppSpacing.spacingLG),

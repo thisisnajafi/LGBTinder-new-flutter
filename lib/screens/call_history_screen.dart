@@ -5,7 +5,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/avatar/avatar_with_status.dart';
@@ -84,12 +85,10 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Call History',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Call History',
-        showBackButton: true,
-      ),
       body: _isLoading
           ? ListView.builder(
               itemCount: 5,

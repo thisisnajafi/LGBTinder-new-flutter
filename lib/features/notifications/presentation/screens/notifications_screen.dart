@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../../../shared/models/api_error.dart';
@@ -311,88 +311,149 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
   }
 
+  Widget? _buildHeaderAction(BuildContext context, int unreadCount) {
+    if (_notifications.isEmpty) return null;
+
+    final theme = Theme.of(context);
+
+    return PopupMenuButton<String>(
+      icon: AppSvgIcon(
+        assetPath: AppIcons.more,
+        size: 24,
+        color: theme.colorScheme.onSurface,
+      ),
+      onSelected: (value) {
+        switch (value) {
+          case 'read':
+            if (unreadCount > 0) _markAllAsRead();
+            break;
+          case 'clear':
+            _clearAllNotifications();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        if (unreadCount > 0)
+          const PopupMenuItem(
+            value: 'read',
+            child: Text('Mark all read'),
+          ),
+        const PopupMenuItem(
+          value: 'clear',
+          child: Text('Clear all'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading && _notifications.isEmpty) {
+      return const SkeletonLoading();
+    }
+
+    if (_hasError && _notifications.isEmpty) {
+      return ErrorDisplayWidget(
+        errorMessage: _errorMessage ?? 'Failed to load notifications',
+        onRetry: () => _loadNotifications(refresh: true),
+      );
+    }
+
+    if (_notifications.isEmpty) {
+      return EmptyState(
+        title: 'No notifications',
+        message:
+            'You\'re all caught up. Discover new people to spark activity.',
+        iconPath: AppIcons.notification,
+        actionLabel: 'Go to discovery',
+        onAction: () => context.go('${AppRoutes.home}/discovery'),
+        secondaryActionLabel: 'Contact support',
+        onSecondaryAction: () => context.push(AppRoutes.helpSupport),
+      );
+    }
+
+    final theme = Theme.of(context);
+    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.5);
+
+    return RefreshIndicator(
+      onRefresh: () => _loadNotifications(refresh: true),
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppPageHeader.horizontalPadding,
+          0,
+          AppPageHeader.horizontalPadding,
+          AppSpacing.spacingLG,
+        ),
+        itemCount: _notifications.length + 1 + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+              child: Text(
+                'Recent',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: mutedColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          }
+
+          final notificationIndex = index - 1;
+          if (notificationIndex >= _notifications.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingLG),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
+
+          final notification = _notifications[notificationIndex];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.spacingXS),
+            child: NotificationTile(
+              notification: notification,
+              onTap: () => _handleNotificationTap(notification),
+              onMarkAsRead: () => _markAsRead(notification.id),
+              onDelete: () => _deleteNotification(notification.id),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final unreadCount = _notifications.where((n) => !n.isRead).length;
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Notifications',
-        showBackButton: true,
-        actions: [
-          if (_notifications.isNotEmpty)
-            TextButton(
-              onPressed: _clearAllNotifications,
-              child: Text(
-                'Clear all',
-                style: AppTypography.button.copyWith(
-                  color: AppColors.accentPurple,
-                ),
-              ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppPageHeader(
+              title: 'Notifications',
+              action: _buildHeaderAction(context, unreadCount),
             ),
-          if (unreadCount > 0)
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: Text(
-                'Mark all read',
-                style: AppTypography.button.copyWith(
-                  color: AppColors.accentPurple,
-                ),
-              ),
+            const SizedBox(height: AppSpacing.spacingLG),
+            Expanded(
+              child: _buildBody(context),
             ),
-        ],
+          ],
+        ),
       ),
-      body: _isLoading && _notifications.isEmpty
-          ? SkeletonLoading()
-          : _hasError && _notifications.isEmpty
-              ? ErrorDisplayWidget(
-                  errorMessage: _errorMessage ?? 'Failed to load notifications',
-                  onRetry: () => _loadNotifications(refresh: true),
-                )
-              : _notifications.isEmpty
-                  ? EmptyState(
-                      title: 'No notifications',
-                      message: 'You\'re all caught up. Discover new people to spark activity.',
-                      icon: Icons.notifications_none,
-                      actionLabel: 'Go to discovery',
-                      onAction: () => context.go('${AppRoutes.home}/discovery'),
-                      secondaryActionLabel: 'Contact support',
-                      onSecondaryAction: () => context.push(AppRoutes.helpSupport),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => _loadNotifications(refresh: true),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        itemCount: _notifications.length + (_isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index >= _notifications.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              ),
-                            );
-                          }
-                          final notification = _notifications[index] as app_models.Notification;
-                          return NotificationTile(
-                            notification: notification,
-                            onTap: () => _handleNotificationTap(notification),
-                            onMarkAsRead: () => _markAsRead(notification.id),
-                            onDelete: () => _deleteNotification(notification.id),
-                          );
-                        },
-                      ),
-                    ),
     );
   }
 }

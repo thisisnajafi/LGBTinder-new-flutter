@@ -61,11 +61,24 @@ class Call {
   });
 
   factory Call.fromJson(Map<String, dynamic> json) {
-    // FIXED: Use safe parsing with defaults instead of throwing exceptions
-    // This prevents list parsing from crashing on a single malformed item
+    final rawId = json['id'] ?? json['call_id'];
+    final metadata = <String, dynamic>{};
+    if (json['metadata'] != null && json['metadata'] is Map) {
+      metadata.addAll(Map<String, dynamic>.from(json['metadata'] as Map));
+    }
+    if (json['channel_name'] != null) {
+      metadata['channel_name'] = json['channel_name'];
+    }
+    if (json['agora_token'] != null) {
+      metadata['token'] = json['agora_token'];
+    }
+    if (json['agora_channel'] != null) {
+      metadata['channel_name'] ??= json['agora_channel'];
+    }
+
     return Call(
-      id: _TypeParser.parseInt(json['id']),
-      callId: json['call_id']?.toString() ?? '',
+      id: _TypeParser.parseInt(rawId),
+      callId: rawId?.toString() ?? '',
       callerId: _TypeParser.parseInt(json['caller_id']),
       receiverId: _TypeParser.parseInt(json['receiver_id']),
       caller: json['caller'] != null && json['caller'] is Map
@@ -76,15 +89,21 @@ class Call {
           : null,
       callType: json['call_type']?.toString() ?? 'audio',
       status: json['status']?.toString() ?? 'unknown',
-      startedAt: _TypeParser.parseDateTime(json['started_at']) ?? DateTime.now(),
+      startedAt: _TypeParser.parseDateTime(json['started_at']) ??
+          _TypeParser.parseDateTime(json['created_at']) ??
+          DateTime.now(),
       endedAt: _TypeParser.parseDateTime(json['ended_at']),
       duration: json['duration'] != null
           ? Duration(seconds: _TypeParser.parseInt(json['duration']))
-          : null,
+          : (json['duration_seconds'] != null
+              ? Duration(seconds: _TypeParser.parseInt(json['duration_seconds']))
+              : null),
       endReason: json['end_reason']?.toString(),
-      metadata: json['metadata'] != null && json['metadata'] is Map
-          ? Map<String, dynamic>.from(json['metadata'] as Map)
-          : {},
+      metadata: metadata.isNotEmpty
+          ? metadata
+          : (json['metadata'] != null && json['metadata'] is Map
+              ? Map<String, dynamic>.from(json['metadata'] as Map)
+              : {}),
     );
   }
   
@@ -135,7 +154,13 @@ class Call {
   bool get isMissed => status == 'missed';
 
   /// Check if call was declined
-  bool get isDeclined => status == 'declined';
+  bool get isDeclined => status == 'declined' || status == 'rejected';
+
+  /// Whether this is a video call.
+  bool get isVideoCall => callType == 'video';
+
+  /// Timestamp for sorting in chat timeline.
+  DateTime get timelineTimestamp => endedAt ?? startedAt;
 
   /// Create a copy with updated fields
   Call copyWith({

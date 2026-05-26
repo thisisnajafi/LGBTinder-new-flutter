@@ -5,19 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../features/onboarding/widgets/welcome_glass_card.dart';
+import '../../features/onboarding/widgets/welcome_profile_mosaic.dart';
 import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/buttons/animated_button.dart';
 import '../../widgets/navbar/lgbtfinder_logo.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/utils/app_logger.dart';
+import '../../routes/app_router.dart';
 
 /// Welcome screen - First screen for authentication flow
 class WelcomeScreen extends ConsumerStatefulWidget {
-  const WelcomeScreen({Key? key}) : super(key: key);
+  const WelcomeScreen({super.key});
 
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -28,19 +28,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   late AnimationController _logoController;
   late AnimationController _textController;
   late AnimationController _buttonController;
-  /// Single controller for all floating shapes to avoid 3 separate tickers (prevents animation freeze).
   late AnimationController _floatingController;
   late Animation<double> _logoAnimation;
   late Animation<double> _textAnimation;
   late Animation<double> _buttonAnimation;
   late Animation<double> _floatingAnimation;
-  /// Defer floating shapes until after first frame to keep first paint light (avoids ANR).
+
   bool _showFloatingShapes = false;
-  /// Minimal first frame: no ShaderMask/AnimatedBuilders so first paint is fast (avoids ANR).
   bool _minimalFirstFrame = true;
-  /// Ensure we only schedule/apply full UI once (prevents build loop).
   bool _fullUIScheduled = false;
-  /// Precache logo once so full UI frame doesn't block on decode.
   bool _precacheScheduled = false;
   int _buildCount = 0;
 
@@ -50,7 +46,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     screenLog('WelcomeScreen', 'initState');
     startupLog('WelcomeScreen: reached WELCOME');
 
-    // Create controllers only; do not start animations here to keep first frame light (avoids ANR).
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -64,7 +59,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       vsync: this,
     );
     _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
     );
 
     _buttonController = AnimationController(
@@ -72,10 +67,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       vsync: this,
     );
     _buttonAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _buttonController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _buttonController, curve: Curves.easeOutCubic),
     );
 
-    // One shared controller for all floating shapes (1 ticker instead of 3 — avoids animation freeze).
     _floatingController = AnimationController(
       duration: const Duration(seconds: 7),
       vsync: this,
@@ -84,19 +78,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
     );
 
-    // In debug: stay on minimal frame only (no full UI, no animations). Avoids freeze from heavy build + tickers.
-    if (kDebugMode) {
-      return;
-    }
-    // Release/profile: defer full UI across frames.
-    // Frame 1: minimal. Frame 2: full without shapes + start logo. Floating shapes after ~2s.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _fullUIScheduled) return;
       _fullUIScheduled = true;
-      setState(() {
-        _minimalFirstFrame = false;
-        _showFloatingShapes = false;
-      });
+      setState(() => _minimalFirstFrame = false);
+
+      if (!AppAnimations.animationsEnabled(context)) {
+        _logoController.value = 1;
+        _textController.value = 1;
+        _buttonController.value = 1;
+        return;
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _logoController.forward().then((_) {
@@ -106,11 +99,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             _buttonController.forward();
           });
         });
-        Future.delayed(const Duration(milliseconds: 2000), () {
-          if (!mounted) return;
-          _floatingController.repeat(reverse: true);
-          setState(() => _showFloatingShapes = true);
-        });
+        if (!kDebugMode) {
+          Future.delayed(const Duration(milliseconds: 2000), () {
+            if (!mounted) return;
+            _floatingController.repeat(reverse: true);
+            setState(() => _showFloatingShapes = true);
+          });
+        }
       });
     });
   }
@@ -124,360 +119,239 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     super.dispose();
   }
 
+  Widget _buildBrandingBlock(BuildContext context, {required bool animated}) {
+    final textTheme = Theme.of(context).textTheme;
+    final titleStyle = textTheme.displayLarge?.copyWith(
+      fontWeight: FontWeight.w900,
+      letterSpacing: 1.5,
+      color: AppColors.textPrimaryDark,
+    );
+    final taglineStyle = textTheme.displaySmall?.copyWith(
+      color: AppColors.textPrimaryDark,
+      fontWeight: FontWeight.w600,
+    );
+    final bodyStyle = textTheme.bodyLarge?.copyWith(
+      color: AppColors.textPrimaryDark.withValues(alpha: 0.9),
+      height: 1.6,
+    );
+
+    final content = Column(
+      children: [
+        WelcomeGlassCard(
+          child: Text(
+            'Find your perfect match',
+            style: taglineStyle,
+            textAlign: TextAlign.center,
+          ),
+        ),
+        SizedBox(height: AppSpacing.spacingMD),
+        Text(
+          'Connect with like-minded people in a safe, inclusive community designed for everyone.',
+          style: bodyStyle,
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: AppSpacing.spacingLG),
+        Text(
+          'LGBTFinder',
+          style: titleStyle,
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+
+    if (!animated || _minimalFirstFrame) {
+      return content;
+    }
+
+    return AnimatedBuilder(
+      animation: _textAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _textAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - _textAnimation.value)),
+            child: child,
+          ),
+        );
+      },
+      child: content,
+    );
+  }
+
+  Widget _buildLogo(BuildContext context, {required bool animated}) {
+    final logo = Semantics(
+      label: 'LGBTFinder logo',
+      child: Container(
+        padding: EdgeInsets.all(AppSpacing.spacingMD),
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimaryDark.withValues(alpha: 0.35),
+              blurRadius: 32,
+            ),
+            BoxShadow(
+              color: AppColors.backgroundDark.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const LGBTFinderLogo(size: 72),
+      ),
+    );
+
+    if (!animated || _minimalFirstFrame) {
+      return logo;
+    }
+
+    return AnimatedBuilder(
+      animation: _logoAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _logoAnimation.value,
+          child: Opacity(
+            opacity: _logoAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: logo,
+    );
+  }
+
+  Widget _buildActions(BuildContext context, {required bool animated}) {
+    final actions = Column(
+      children: [
+        Semantics(
+          label: 'Create account',
+          button: true,
+          child: GradientButton(
+            text: 'Create Account',
+            onPressed: () => context.go(AppRoutes.register),
+            usePrideGradient: true,
+          ),
+        ),
+        SizedBox(height: AppSpacing.spacingLG),
+        Semantics(
+          label: 'Sign in',
+          button: true,
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: TextButton(
+              onPressed: () => context.go(AppRoutes.login),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textPrimaryDark,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                ),
+              ),
+              child: Text(
+                'Sign In',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColors.textPrimaryDark,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: AppSpacing.spacingLG),
+      ],
+    );
+
+    if (!animated || _minimalFirstFrame) {
+      return actions;
+    }
+
+    return AnimatedBuilder(
+      animation: _buttonAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _buttonAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - _buttonAnimation.value)),
+            child: child,
+          ),
+        );
+      },
+      child: actions,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
       _buildCount++;
       screenLog('WelcomeScreen', 'build #$_buildCount');
     }
-    final size = MediaQuery.of(context).size;
 
-    // Minimal first frame: no ShaderMask, no AnimatedBuilders, no shadows — fast paint to avoid ANR.
-    if (_minimalFirstFrame) {
-      if (!_precacheScheduled && context.mounted) {
-        _precacheScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!context.mounted) return;
-          precacheImage(const AssetImage(LGBTFinderLogo.assetPath), context);
-        });
-      }
-      return Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(gradient: AppColors.prideGradient),
-          child: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.spacingXXL,
-                vertical: AppSpacing.spacingXL,
-              ),
-              child: Column(
-                children: [
-                  SizedBox(height: size.height * 0.1),
-                  // App logo with soft glow (no circle)
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.35),
-                          blurRadius: 40,
-                          spreadRadius: 0,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: LGBTFinderLogo(size: 120),
-                  ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                  Text(
-                    'LGBTFinder',
-                    style: AppTypography.h1Large.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-                  Text(
-                    'Find your perfect match',
-                    style: AppTypography.h2.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: AppSpacing.spacingXL),
-                  Text(
-                    'Connect with like-minded people in a safe, inclusive community designed for everyone.',
-                    style: AppTypography.bodyLarge.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                      height: 1.6,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/register'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.accentPurple,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                        ),
-                      ),
-                      child: Text(
-                        'Create Account',
-                        style: AppTypography.button.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: TextButton(
-                      onPressed: () => context.go('/login'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                        ),
-                      ),
-                      child: Text(
-                        'Sign In',
-                        style: AppTypography.button.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
+    if (!_precacheScheduled && context.mounted) {
+      _precacheScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        precacheImage(const AssetImage(LGBTFinderLogo.assetPath), context);
+      });
     }
 
-    // Full UI with animations (after first frame). In debug use lighter visuals to avoid freeze.
-    final isDebug = kDebugMode;
+    final size = MediaQuery.of(context).size;
+    final mosaicHeight = size.height * 0.32;
+    final animated = !_minimalFirstFrame;
+
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(gradient: AppColors.prideGradient),
+          const DecoratedBox(
+            decoration: BoxDecoration(gradient: AppColors.brandGradient),
           ),
-          if (_showFloatingShapes && !isDebug)
+          if (_showFloatingShapes && !kDebugMode)
             RepaintBoundary(
               child: Stack(
                 children: [
                   Positioned(
-                    top: size.height * 0.1,
-                    left: size.width * 0.1,
+                    top: size.height * 0.12,
+                    left: size.width * 0.08,
                     child: _FloatingShape(
-                      size: 80,
-                      color: Colors.white.withOpacity(0.1),
+                      size: 64,
+                      color: AppColors.textPrimaryDark.withValues(alpha: 0.1),
                       animation: _floatingAnimation,
-                      phaseOffset: 0,
                     ),
                   ),
                   Positioned(
-                    top: size.height * 0.3,
-                    right: size.width * 0.15,
+                    top: size.height * 0.42,
+                    right: size.width * 0.1,
                     child: _FloatingShape(
-                      size: 60,
-                      color: Colors.white.withOpacity(0.08),
+                      size: 48,
+                      color: AppColors.textPrimaryDark.withValues(alpha: 0.08),
                       animation: _floatingAnimation,
                       phaseOffset: 2 * math.pi / 3,
                     ),
                   ),
-                  Positioned(
-                    bottom: size.height * 0.25,
-                    left: size.width * 0.2,
-                    child: _FloatingShape(
-                      size: 40,
-                      color: Colors.white.withOpacity(0.12),
-                      animation: _floatingAnimation,
-                      phaseOffset: 4 * math.pi / 3,
-                    ),
-                  ),
                 ],
               ),
             ),
-          RepaintBoundary(
-            child: SafeArea(
+          SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.spacingXXL,
-                vertical: AppSpacing.spacingXL,
+                horizontal: AppSpacing.spacingXL,
+                vertical: AppSpacing.spacingLG,
               ),
               child: Column(
                 children: [
-                  SizedBox(height: size.height * 0.1),
-                  // Logo with soft glow (no circle)
-                  AnimatedBuilder(
-                    animation: _logoAnimation,
-                    child: Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingLG),
-                      decoration: BoxDecoration(
-                        boxShadow: isDebug
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.12),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.white.withOpacity(0.4),
-                                  blurRadius: 48,
-                                  spreadRadius: 0,
-                                ),
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.18),
-                                  blurRadius: 28,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                      ),
-                      child: LGBTFinderLogo(size: 120),
+                  WelcomeProfileMosaic(maxHeight: mosaicHeight.clamp(160, 260)),
+                  SizedBox(height: AppSpacing.spacingLG),
+                  _buildLogo(context, animated: animated),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: _buildBrandingBlock(context, animated: animated),
                     ),
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _logoAnimation.value,
-                        child: Opacity(
-                          opacity: _logoAnimation.value,
-                          child: child,
-                        ),
-                      );
-                    },
                   ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                  AnimatedBuilder(
-                    animation: _textAnimation,
-                    builder: (context, child) {
-                      return Opacity(
-                        opacity: _textAnimation.value,
-                        child: Transform.translate(
-                          offset: Offset(0, 20 * (1 - _textAnimation.value)),
-                          child: Column(
-                            children: [
-                              // In debug skip ShaderMask (expensive) to avoid freeze; use plain Text.
-                              isDebug
-                                  ? Text(
-                                      'LGBTFinder',
-                                      style: AppTypography.h1Large.copyWith(
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 1.5,
-                                        color: Colors.white,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    )
-                                  : ShaderMask(
-                                      shaderCallback: (bounds) => LinearGradient(
-                                        colors: [
-                                          Colors.white,
-                                          Colors.white.withOpacity(0.9),
-                                          Colors.white.withOpacity(0.8),
-                                        ],
-                                      ).createShader(bounds),
-                                      child: Text(
-                                        'LGBTFinder',
-                                        style: AppTypography.h1Large.copyWith(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.5,
-                                          color: Colors.white,
-                                          shadows: [
-                                            Shadow(
-                                              color: Colors.black.withOpacity(0.3),
-                                              offset: const Offset(0, 2),
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                              SizedBox(height: AppSpacing.spacingLG),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.spacingLG,
-                                  vertical: AppSpacing.spacingMD,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  'Find your perfect match',
-                                  style: AppTypography.h2.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              SizedBox(height: AppSpacing.spacingXL),
-                              Text(
-                                'Connect with like-minded people in a safe, inclusive community designed for everyone.',
-                                style: AppTypography.bodyLarge.copyWith(
-                                  color: Colors.white.withOpacity(0.9),
-                                  height: 1.6,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const Spacer(),
-                  AnimatedBuilder(
-                    animation: _buttonAnimation,
-                    builder: (context, child) {
-                      return Opacity(
-                        opacity: _buttonAnimation.value,
-                        child: Transform.translate(
-                          offset: Offset(0, 30 * (1 - _buttonAnimation.value)),
-                          child: Column(
-                            children: [
-                              GradientButton(
-                                text: 'Create Account',
-                                onPressed: () => context.go('/register'),
-                                usePrideGradient: true,
-                              ),
-                              SizedBox(height: AppSpacing.spacingLG),
-                              Container(
-                                width: double.infinity,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: TextButton(
-                                  onPressed: () => context.go('/login'),
-                                  style: TextButton.styleFrom(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Sign In',
-                                    style: AppTypography.button.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: AppSpacing.spacingXXL),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  _buildActions(context, animated: animated),
                 ],
               ),
             ),
-          ),
           ),
         ],
       ),
@@ -485,7 +359,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 }
 
-/// Floating animated shape — uses shared [animation] from parent (single ticker for all shapes).
 class _FloatingShape extends StatelessWidget {
   final double size;
   final Color color;
@@ -516,13 +389,6 @@ class _FloatingShape extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.2),
-                  blurRadius: 8,
-                  spreadRadius: 0,
-                ),
-              ],
             ),
           ),
         );

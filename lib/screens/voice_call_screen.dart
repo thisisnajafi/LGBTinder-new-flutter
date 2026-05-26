@@ -15,6 +15,7 @@ import '../shared/services/error_handler_service.dart';
 import '../shared/services/agora_service.dart';
 import '../shared/services/call_quality_monitor.dart';
 import '../widgets/common/incoming_call_overlay.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Voice call screen - Voice call interface
 class VoiceCallScreen extends ConsumerStatefulWidget {
@@ -182,7 +183,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
         await callProviderInstance.endCall(endRequest);
       } catch (e) {
         // Log error but don't prevent navigation
-        print('Error ending call via API: $e');
+        AppLogger.debug('Error ending call via API: $e');
       }
     }
 
@@ -193,7 +194,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     try {
       await _agoraService.leaveChannel();
     } catch (e) {
-      print('Error leaving Agora channel: $e');
+      AppLogger.debug('Error leaving Agora channel: $e');
       _qualityMonitor.recordError('Failed to leave Agora channel: $e');
     }
 

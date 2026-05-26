@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../providers/call_provider.dart';
+import '../../providers/call_provider.dart';
 
 /// Call controls widget
 /// Control buttons for active calls (mute, speaker, camera, etc.)

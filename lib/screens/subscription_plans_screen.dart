@@ -6,7 +6,8 @@ import '../core/theme/app_theme.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
@@ -154,12 +155,10 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Subscription Plans',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Subscription Plans',
-        showBackButton: true,
-      ),
       body: Column(
         children: [
           // Billing cycle toggle

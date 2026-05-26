@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../models/match.dart';
@@ -246,24 +247,11 @@ class _MatchCelebrationState extends ConsumerState<MatchCelebration>
                               width: 2,
                             ),
                           ),
-                          child: widget.match.primaryImageUrl != null
-                              ? ClipOval(
-                                  child: Image.network(
-                                    widget.match.primaryImageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Icon(
-                                          Icons.person,
-                                          color: Colors.grey[600],
-                                          size: 30,
-                                        ),
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.person,
-                                  color: Colors.grey[600],
-                                  size: 30,
-                                ),
+                          child: AvatarWidget(
+                            imageUrl: widget.match.primaryImageUrl,
+                            radius: 28,
+                            fallbackInitial: widget.match.firstName,
+                          ),
                         ),
                       ],
                     ),

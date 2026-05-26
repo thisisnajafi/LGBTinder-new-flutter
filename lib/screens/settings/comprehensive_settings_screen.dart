@@ -5,13 +5,15 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/avatar/avatar_with_status.dart';
 import '../../widgets/badges/premium_badge.dart';
 import '../../widgets/badges/verification_badge.dart';
 import '../notification_settings_screen.dart';
+import '../../features/settings/presentation/screens/sound_preferences_screen.dart';
 import '../privacy_settings_screen.dart';
 import '../account_management_screen.dart';
 import '../subscription_management_screen.dart';
@@ -46,12 +48,10 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Settings',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Settings',
-        showBackButton: true,
-      ),
       body: ListView(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
         children: [
@@ -244,6 +244,23 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
                 context,
                 MaterialPageRoute(
                   builder: (context) => const NotificationSettingsScreen(),
+                ),
+              );
+            },
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+            surfaceColor: surfaceColor,
+            borderColor: borderColor,
+          ),
+          _buildSettingsTile(
+            icon: Icons.volume_up_outlined,
+            title: 'Sounds',
+            subtitle: 'Message, call, and notification sounds',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SoundPreferencesScreen(),
                 ),
               );
             },

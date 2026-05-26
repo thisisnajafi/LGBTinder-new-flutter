@@ -1,17 +1,15 @@
-// Screen: ProfileDetailScreen
+// Screen: ProfileDetailScreen — other user's profile
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
-import '../../widgets/profile/profile_header.dart';
+import '../../core/widgets/app_page_scaffold.dart';
 import '../../widgets/profile/profile_bio.dart';
-import '../../widgets/profile/photo_gallery.dart';
 import '../../widgets/profile/profile_info_sections.dart';
 import '../../widgets/profile/profile_action_buttons.dart';
-import '../../core/widgets/loading_indicator.dart';
 import '../../widgets/error_handling/error_display_widget.dart';
+import '../../features/profile/widgets/profile_photo_carousel.dart';
+import '../../features/profile/widgets/tier_badge.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../../features/profile/data/models/user_profile.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
@@ -20,18 +18,16 @@ import '../../features/matching/providers/matching_provider.dart';
 import '../../features/matching/data/models/match.dart' as match_models;
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
+import '../../shared/providers/user_tier_provider.dart';
 import '../../widgets/match/match_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../../routes/app_router.dart';
+import '../../core/cache/cache_manager.dart' show notifyNewMatch;
 
-/// Profile detail screen - View detailed user profile
 class ProfileDetailScreen extends ConsumerStatefulWidget {
   final int userId;
 
-  const ProfileDetailScreen({
-    Key? key,
-    required this.userId,
-  }) : super(key: key);
+  const ProfileDetailScreen({super.key, required this.userId});
 
   @override
   ConsumerState<ProfileDetailScreen> createState() => _ProfileDetailScreenState();
@@ -60,10 +56,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     try {
       final profileService = ref.read(profileServiceProvider);
       final profile = await profileService.getUserProfile(widget.userId);
-
-      // Check match status
-      final matchingNotifier = ref.read(matchingProvider.notifier);
-      final isMatched = await matchingNotifier.checkMatchStatus(widget.userId);
+      final isMatched = await ref.read(matchingProvider.notifier).checkMatchStatus(widget.userId);
 
       if (mounted) {
         setState(() {
@@ -91,7 +84,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     }
   }
 
-  /// Show a user-friendly message for profile load errors; hide raw SQL/server messages.
   String _userFriendlyProfileError(ApiError? e, {String? fallback}) {
     if (e != null) {
       if (e.code == 500 ||
@@ -109,90 +101,47 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   Future<void> _handleLike() async {
     if (_profile == null) return;
-
     try {
       final likesService = ref.read(likesServiceProvider);
       final response = await likesService.likeUser(_profile!.id);
-
-      if (mounted) {
-        if (response.isMatch) {
-          _showMatchDialog(response.match as match_models.Match?);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Liked!'),
-              backgroundColor: AppColors.onlineGreen,
-            ),
-          );
-        }
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e,
-          customMessage: 'Failed to like user',
-        );
+      if (mounted && response.isMatch) {
+        await notifyNewMatch(ref);
+        _showMatchDialog(response.match as match_models.Match?);
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandlerService.handleError(
-          context,
-          e,
-          customMessage: 'Failed to like user',
-        );
+        ErrorHandlerService.handleError(context, e, customMessage: 'Failed to like user');
       }
     }
   }
 
   Future<void> _handleSuperlike() async {
     if (_profile == null) return;
-
     try {
       final likesService = ref.read(likesServiceProvider);
       final response = await likesService.superlikeUser(_profile!.id);
-
-      if (mounted) {
-        if (response.isMatch) {
-          _showMatchDialog(response.match as match_models.Match?);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Superliked!'),
-              backgroundColor: AppColors.accentYellow,
-            ),
-          );
-        }
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e,
-          customMessage: 'Failed to superlike user',
-        );
+      if (mounted && response.isMatch) {
+        await notifyNewMatch(ref);
+        _showMatchDialog(response.match as match_models.Match?);
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandlerService.handleError(
-          context,
-          e,
-          customMessage: 'Failed to superlike user',
-        );
+        ErrorHandlerService.handleError(context, e, customMessage: 'Failed to superlike user');
       }
     }
   }
 
   void _handleMessage() {
     if (_profile == null) return;
-    final target = Uri(
-      path: AppRoutes.chat,
-      queryParameters: {
-        'userId': _profile!.id.toString(),
-        'userName': '${_profile!.firstName} ${_profile!.lastName}'.trim(),
-      },
-    ).toString();
-    context.push(target);
+    context.push(
+      Uri(
+        path: AppRoutes.chat,
+        queryParameters: {
+          'userId': _profile!.id.toString(),
+          'userName': '${_profile!.firstName} ${_profile!.lastName}'.trim(),
+        },
+      ).toString(),
+    );
   }
 
   List<String>? _mapIdsToTitles(List<int>? ids, List<dynamic> refs) {
@@ -201,33 +150,25 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     for (final item in refs) {
       final id = item.id as int?;
       final title = item.title as String?;
-      if (id != null && title != null && title.isNotEmpty) {
-        byId[id] = title;
-      }
+      if (id != null && title != null && title.isNotEmpty) byId[id] = title;
     }
-    final values = ids
-        .map((id) => byId[id] ?? id.toString())
-        .toSet()
-        .toList(growable: false);
+    final values = ids.map((id) => byId[id] ?? id.toString()).toSet().toList(growable: false);
     return values.isEmpty ? null : values;
   }
 
   void _showMatchDialog(match_models.Match? match) {
     if (match == null) return;
-    
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
+      barrierColor: AppColors.backgroundDark.withValues(alpha: 0.87),
       builder: (context) => MatchScreen(
         match: match,
         onSendMessage: () {
           Navigator.pop(context);
           _handleMessage();
         },
-        onKeepSwiping: () {
-          Navigator.pop(context);
-        },
+        onKeepSwiping: () => Navigator.pop(context),
       ),
     );
   }
@@ -243,29 +184,16 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         age--;
       }
       return age;
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
   String _getLocation() {
     final parts = <String>[];
-    if (_profile?.city != null && _profile!.city!.isNotEmpty) {
-      parts.add(_profile!.city!);
-    }
-    if (_profile?.country != null && _profile!.country!.isNotEmpty) {
-      parts.add(_profile!.country!);
-    }
+    if (_profile?.city != null && _profile!.city!.isNotEmpty) parts.add(_profile!.city!);
+    if (_profile?.country != null && _profile!.country!.isNotEmpty) parts.add(_profile!.country!);
     return parts.isEmpty ? 'Location not set' : parts.join(', ');
-  }
-
-  String? _getPrimaryImageUrl() {
-    if (_profile?.images == null || _profile!.images!.isEmpty) return null;
-    final primaryImage = _profile!.images!.firstWhere(
-      (img) => img.isPrimary,
-      orElse: () => _profile!.images!.first,
-    );
-    return primaryImage.imageUrl;
   }
 
   List<String> _getImageUrls() {
@@ -275,8 +203,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
     final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
@@ -284,15 +211,23 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final languagesRef = ref.watch(languagesProvider).valueOrNull ?? const [];
     final preferredGendersRef = ref.watch(preferredGendersProvider).valueOrNull ?? const [];
     final relationGoalsRef = ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
+    final tier = _profile?.isPremium == true ? null : ref.watch(userTierProvider);
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Profile',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Profile',
-        showBackButton: true,
-      ),
+      bottomNavigationBar: _profile != null && !_isLoading && !_hasError
+          ? ProfileActionButtons(
+              onLike: _handleLike,
+              onDislike: () => Navigator.pop(context),
+              onSuperlike: _handleSuperlike,
+              onMessage: _handleMessage,
+              isMatched: _isMatched,
+            )
+          : null,
       body: _isLoading
-          ? LoadingIndicator(message: 'Loading profile...')
+          ? const Center(child: CircularProgressIndicator())
           : _hasError
               ? ErrorDisplayWidget(
                   errorMessage: _errorMessage ?? 'Failed to load profile',
@@ -304,57 +239,40 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Profile header
-                          ProfileHeader(
-                            name: '${_profile!.firstName} ${_profile!.lastName}',
-                            age: _calculateAge(),
-                            location: _getLocation(),
-                            avatarUrl: _getPrimaryImageUrl(),
-                            isVerified: _profile!.isVerified ?? false,
-                            isPremium: _profile!.isPremium ?? false,
-                            isOnline: _profile!.isOnline ?? false,
-                          ),
-                          // Bio
-                          if (_profile!.profileBio != null && _profile!.profileBio!.isNotEmpty)
-                            ProfileBio(
-                              bio: _profile!.profileBio!,
-                            ),
-                          // Photo gallery
                           if (_getImageUrls().isNotEmpty)
-                            PhotoGallery(
+                            ProfilePhotoCarousel(
                               imageUrls: _getImageUrls(),
-                              onImageTap: (index, url) {
-                                // Open image viewer - implementation needed
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Image viewer will be implemented for image $index'),
-                                  ),
-                                );
-                              },
-                            ),
-                          // Profile info sections
+                              overlayHeader: ProfileOverlayHeader(
+                                name: '${_profile!.firstName} ${_profile!.lastName}'.trim(),
+                                age: _calculateAge(),
+                                isVerified: _profile!.isVerified ?? false,
+                                tier: tier,
+                                isPremiumFallback: _profile!.isPremium ?? false,
+                                location: _getLocation(),
+                              ),
+                            )
+                          else
+                            const ProfilePhotoEmptyState(),
+                          if (_profile!.profileBio != null && _profile!.profileBio!.isNotEmpty)
+                            ProfileBio(bio: _profile!.profileBio),
                           ProfileInfoSections(
                             interests: _mapIdsToTitles(_profile!.interests, interestsRef),
                             jobs: _mapIdsToTitles(_profile!.jobs, jobsRef),
                             educations: _mapIdsToTitles(_profile!.educations, educationsRef),
                             languages: _mapIdsToTitles(_profile!.languages, languagesRef),
                             gender: _profile!.gender,
-                            preferredGenders: _mapIdsToTitles(_profile!.preferredGenders, preferredGendersRef),
-                            relationGoals: _mapIdsToTitles(_profile!.relationGoals, relationGoalsRef),
+                            preferredGenders:
+                                _mapIdsToTitles(_profile!.preferredGenders, preferredGendersRef),
+                            relationGoals:
+                                _mapIdsToTitles(_profile!.relationGoals, relationGoalsRef),
                             height: _profile!.height,
                             weight: _profile!.weight,
                             smoke: _profile!.smoke,
                             drink: _profile!.drink,
                             gym: _profile!.gym,
+                            location: _getLocation(),
                           ),
                           SizedBox(height: AppSpacing.spacingXXL),
-                          // Action buttons
-                          ProfileActionButtons(
-                            onLike: _handleLike,
-                            onSuperlike: _handleSuperlike,
-                            onMessage: _handleMessage,
-                            isMatched: _isMatched,
-                          ),
                         ],
                       ),
                     ),

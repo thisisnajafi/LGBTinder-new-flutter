@@ -6,10 +6,12 @@ import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../shared/services/error_handler_service.dart';
 import '../shared/models/api_error.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Parsed ticket item from GET tickets list or GET tickets/:id.
 class SupportTicketItem {
@@ -139,7 +141,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   labelText: 'Subject',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
                   filled: true,
-                  fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 ),
               ),
               SizedBox(height: AppSpacing.spacingMD),
@@ -149,7 +151,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   labelText: 'Message',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
                   filled: true,
-                  fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 ),
                 maxLines: 4,
               ),
@@ -167,7 +169,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   Navigator.of(ctx).pop();
                   await _createTicket(subject, message);
                 },
-                label: 'Create ticket',
+                text: 'Create ticket',
               ),
             ],
           ),
@@ -184,7 +186,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       if (data['data'] != null && context.mounted) {
         detail = SupportTicketItem.fromJson(Map<String, dynamic>.from(data['data'] as Map));
       }
-    } catch (_) {}
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'support_tickets_screen', error: e); }
     if (!context.mounted) return;
     showModalBottomSheet<void>(
       context: context,
@@ -212,21 +214,17 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Support tickets',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Support tickets',
-        showBackButton: true,
-        actions: [
-          TextButton.icon(
-            onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
-            icon: Icon(Icons.add, size: 20, color: AppColors.accentPurple),
-            label: Text(
-              'New ticket',
-              style: AppTypography.button.copyWith(color: AppColors.accentPurple),
-            ),
-          ),
-        ],
+      action: TextButton.icon(
+        onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
+        icon: Icon(Icons.add, size: 20, color: AppColors.accentPurple),
+        label: Text(
+          'New ticket',
+          style: AppTypography.button.copyWith(color: AppColors.accentPurple),
+        ),
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: AppColors.accentPurple))
@@ -267,7 +265,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                           SizedBox(height: AppSpacing.spacingLG),
                           GradientButton(
                             onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
-                            label: 'New ticket',
+                            text: 'New ticket',
                           ),
                         ],
                       ),

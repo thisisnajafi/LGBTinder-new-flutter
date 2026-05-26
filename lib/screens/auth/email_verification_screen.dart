@@ -7,7 +7,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/buttons/scale_tap_feedback.dart';
 import '../../core/utils/app_icons.dart';
 import '../../widgets/buttons/gradient_button.dart';
@@ -257,25 +258,12 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Verify Email',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Verify Email',
-        showBackButton: true,
-        leading: ScaleTapFeedback(
-          onTap: () => context.go(widget.isNewUser ? AppRoutes.register : AppRoutes.login),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: AppSvgIcon(
-              assetPath: AppIcons.arrowLeft,
-              size: 24,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
+      onBack: () => context.go(widget.isNewUser ? AppRoutes.register : AppRoutes.login),
+      body: SingleChildScrollView(
           padding: EdgeInsets.all(AppSpacing.spacingLG),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -403,7 +391,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             ],
           ),
         ),
-      ),
     );
   }
 

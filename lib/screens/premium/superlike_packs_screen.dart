@@ -6,7 +6,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/error_handling/error_display_widget.dart';
@@ -131,12 +132,10 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
 
     final availablePacksAsync = ref.watch(availableSuperlikePacksProvider);
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Superlike Packs',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Superlike Packs',
-        showBackButton: true,
-      ),
       body: Column(
         children: [
           // Current superlikes

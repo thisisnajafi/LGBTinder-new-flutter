@@ -4,156 +4,147 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import 'skeleton_loader.dart';
 
-/// Skeleton loader for profile page
+/// Skeleton loader for profile page (carousel + info sections layout).
 class SkeletonProfile extends StatelessWidget {
-  const SkeletonProfile({Key? key}) : super(key: key);
+  const SkeletonProfile({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Profile header skeleton
-          Container(
+          // Photo carousel hero
+          SkeletonLoader(
+            width: double.infinity,
+            height: 360,
+            borderRadius: BorderRadius.zero,
+          ),
+          // Overlay name strip
+          Padding(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar skeleton
                 SkeletonLoader(
-                  width: 80,
-                  height: 80,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                  width: 180,
+                  height: 24,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 ),
-                SizedBox(width: AppSpacing.spacingMD),
-                // Name and info skeleton
-                Expanded(
+                SizedBox(height: AppSpacing.spacingSM),
+                SkeletonLoader(
+                  width: 120,
+                  height: 16,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                ),
+              ],
+            ),
+          ),
+          // Stats row
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(
+                3,
+                (_) => Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SkeletonLoader(
-                        width: 150,
-                        height: 20,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                        width: 40,
+                        height: 40,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
                       ),
                       SizedBox(height: AppSpacing.spacingSM),
                       SkeletonLoader(
-                        width: 100,
+                        width: 30,
                         height: 16,
                         borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          // Stats skeleton
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(3, (index) => Expanded(
-                child: Column(
-                  children: [
-                    SkeletonLoader(
-                      width: 40,
-                      height: 40,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    ),
-                    SizedBox(height: AppSpacing.spacingSM),
-                    SkeletonLoader(
-                      width: 30,
-                      height: 16,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    ),
-                    SizedBox(height: AppSpacing.spacingXS),
-                    SkeletonLoader(
-                      width: 50,
-                      height: 12,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    ),
-                  ],
-                ),
-              )),
-            ),
-          ),
-          // Bio skeleton
-          Container(
-            margin: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkeletonLoader(
-                  width: double.infinity,
-                  height: 16,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                ),
-                SizedBox(height: AppSpacing.spacingSM),
-                SkeletonLoader(
-                  width: double.infinity,
-                  height: 16,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                ),
-                SizedBox(height: AppSpacing.spacingSM),
-                SkeletonLoader(
-                  width: 200,
-                  height: 16,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                ),
-              ],
-            ),
-          ),
-          // Photo gallery skeleton
-          Container(
-            height: 200,
-            margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: 3,
-              itemBuilder: (context, index) => Container(
-                width: 150,
-                margin: EdgeInsets.only(right: AppSpacing.spacingMD),
-                child: SkeletonLoader(
-                  width: double.infinity,
-                  height: double.infinity,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                ),
               ),
             ),
           ),
-          // Info sections skeleton
-          ...List.generate(3, (index) => Container(
-            margin: EdgeInsets.all(AppSpacing.spacingLG),
+          SizedBox(height: AppSpacing.spacingLG),
+          // Bio card
+          Container(
+            margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+            padding: EdgeInsets.all(AppSpacing.spacingLG),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SkeletonLoader(
-                  width: 100,
+                  width: 60,
                   height: 18,
                   borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
-                Wrap(
-                  spacing: AppSpacing.spacingSM,
-                  runSpacing: AppSpacing.spacingSM,
-                  children: List.generate(4, (i) => SkeletonLoader(
-                    width: 80,
-                    height: 32,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  )),
+                SkeletonLoader(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                SkeletonLoader(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 ),
               ],
             ),
-          )),
+          ),
+          SizedBox(height: AppSpacing.spacingLG),
+          // Info section chips
+          ...List.generate(
+            3,
+            (_) => Container(
+              margin: EdgeInsets.fromLTRB(
+                AppSpacing.spacingLG,
+                0,
+                AppSpacing.spacingLG,
+                AppSpacing.spacingLG,
+              ),
+              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonLoader(
+                    width: 100,
+                    height: 18,
+                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  Wrap(
+                    spacing: AppSpacing.spacingSM,
+                    runSpacing: AppSpacing.spacingSM,
+                    children: List.generate(
+                      4,
+                      (_) => SkeletonLoader(
+                        width: 80,
+                        height: 32,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
     );
   }
 }
-

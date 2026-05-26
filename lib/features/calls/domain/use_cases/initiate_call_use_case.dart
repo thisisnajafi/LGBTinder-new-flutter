@@ -13,17 +13,22 @@ class InitiateCallUseCase {
   Future<Call> execute(InitiateCallRequest request) async {
     try {
       // Validate call type
-      if (!['audio', 'video'].contains(request.callType)) {
-        throw Exception('Invalid call type. Must be "audio" or "video"');
+      if (!['audio', 'video', 'voice'].contains(request.callType)) {
+        throw Exception('Invalid call type. Must be "audio", "video", or "voice"');
       }
 
+      final normalized = InitiateCallRequest(
+        receiverId: request.receiverId,
+        callType: request.callType == 'voice' ? 'audio' : request.callType,
+      );
+
       // Check call eligibility first
-      final eligibility = await _callRepository.checkCallEligibility(request.receiverId);
+      final eligibility = await _callRepository.checkCallEligibility(normalized.receiverId);
       if (!eligibility.canCall) {
         throw Exception(eligibility.reason ?? 'Unable to initiate call');
       }
 
-      return await _callRepository.initiateCall(request);
+      return await _callRepository.initiateCall(normalized);
     } catch (e) {
       // Re-throw all exceptions to let UI handle them
       rethrow;

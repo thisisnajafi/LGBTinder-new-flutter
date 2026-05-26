@@ -3,15 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lgbtindernew/pages/chat_page.dart';
+import 'package:lgbtindernew/widgets/chat/message_input.dart';
 import '../../helpers/test_helpers.dart';
 
 void main() {
   group('ChatPage', () {
-    testWidgets('should display chat page with message input', (WidgetTester tester) async {
-      // Arrange
+    testWidgets('renders header, message input, and chat shell', (WidgetTester tester) async {
       final container = createTestContainer();
 
-      // Act
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -25,13 +24,12 @@ void main() {
       );
       await waitForAsync(tester);
 
-      // Assert
       expect(find.byType(ChatPage), findsOneWidget);
-      // Message input should be present (implementation dependent)
+      expect(find.text('Test User'), findsOneWidget);
+      expect(find.byType(MessageInput), findsOneWidget);
     });
 
-    testWidgets('should display empty state when no messages', (WidgetTester tester) async {
-      // Arrange
+    testWidgets('shows empty messages state after load', (WidgetTester tester) async {
       final container = createTestContainer();
 
       await tester.pumpWidget(
@@ -46,31 +44,9 @@ void main() {
         ),
       );
       await waitForAsync(tester);
+      await tester.pump(const Duration(milliseconds: 500));
 
-      // Assert
-      // Empty state should be shown (implementation dependent)
-      // This test may need adjustment based on actual implementation
-    });
-
-    testWidgets('should display loading state initially', (WidgetTester tester) async {
-      // Arrange
-      final container = createTestContainer();
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            home: ChatPage(
-              userId: 123,
-              userName: 'Test User',
-            ),
-          ),
-        ),
-      );
-      await waitForAsync(tester);
-
-      // Assert
-      // Loading indicator should be shown initially (implementation dependent)
+      expect(find.text('No messages yet'), findsOneWidget);
     });
   });
 }

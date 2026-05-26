@@ -1,12 +1,14 @@
 // Screen: PremiumFeaturesScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/premium/premium_feature_card.dart';
@@ -78,14 +80,14 @@ class PremiumFeaturesScreen extends ConsumerWidget {
       },
     ];
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Premium Features',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Premium Features',
-        showBackButton: true,
-      ),
       body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppPageHeader.horizontalPadding,
+        ),
         children: [
           // Premium header
           Container(

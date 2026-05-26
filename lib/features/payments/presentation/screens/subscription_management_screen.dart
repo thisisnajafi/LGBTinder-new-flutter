@@ -7,7 +7,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
@@ -193,20 +194,16 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Subscription',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Subscription',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.refresh,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-            onPressed: _loadSubscriptionStatus,
-          ),
-        ],
+      action: IconButton(
+        icon: Icon(
+          Icons.refresh,
+          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        ),
+        onPressed: _loadSubscriptionStatus,
       ),
       body: _isLoading
           ? SkeletonLoading()

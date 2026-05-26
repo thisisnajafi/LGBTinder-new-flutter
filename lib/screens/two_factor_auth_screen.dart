@@ -2,11 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../core/cache/cache_providers.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
@@ -234,12 +237,10 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Two-Factor Authentication',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Two-Factor Authentication',
-        showBackButton: true,
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -350,11 +351,13 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                           borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                           border: Border.all(color: borderColor),
                         ),
-                        child: Image.network(
-                          _qrCodeUrl!,
+                        child: CachedNetworkImage(
+                          imageUrl: _qrCodeUrl!,
+                          cacheManager: ref.watch(imageCacheServiceProvider),
+                          fadeInDuration: const Duration(milliseconds: 200),
                           width: 200,
                           height: 200,
-                          errorBuilder: (context, error, stackTrace) {
+                          errorWidget: (context, url, error) {
                             return Container(
                               width: 200,
                               height: 200,

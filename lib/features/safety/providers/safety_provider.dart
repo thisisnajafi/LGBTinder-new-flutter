@@ -140,7 +140,9 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
 
     try {
       final blockedUsers = await _getBlockedUsersUseCase.execute();
-      final blockedMap = {for (var user in blockedUsers) user.blockedUserId: true};
+      final blockedMap = Map<int, bool>.fromEntries(
+        blockedUsers.map((user) => MapEntry(user.blockedUserId, true)),
+      );
       state = state.copyWith(
         blockedUsers: blockedUsers,
         isUserBlocked: blockedMap,
@@ -158,7 +160,9 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
   Future<void> loadFavorites() async {
     try {
       final favorites = await _getFavoritesUseCase.execute();
-      final favoritesMap = {for (var user in favorites) user.favoriteUserId: true};
+      final favoritesMap = Map<int, bool>.fromEntries(
+        favorites.map((user) => MapEntry(user.favoriteUserId, true)),
+      );
       state = state.copyWith(
         favoriteUsers: favorites,
         isUserFavorited: favoritesMap,

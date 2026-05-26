@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/profile_image_widget.dart';
 import '../../data/models/user_image.dart';
 
 /// Profile image carousel widget
@@ -89,33 +89,12 @@ class ProfileImageCarousel extends ConsumerWidget {
                 width: 1,
               ),
             ),
-            child: ClipRRect(
+            child: ProfileImageWidget(
+              imageUrl: image.imageUrl,
+              width: 150,
+              height: 200,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(11),
-              child: CachedNetworkImage(
-                imageUrl: image.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: theme.colorScheme.surface,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: theme.colorScheme.surface,
-                  child: Center(
-                    child: Icon(
-                      Icons.broken_image,
-                      color: theme.colorScheme.error,
-                      size: 32,
-                    ),
-                  ),
-                ),
-              ),
             ),
           ),
 

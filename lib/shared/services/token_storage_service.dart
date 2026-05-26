@@ -1,10 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Service for securely storing authentication tokens
+import '../models/stored_user_session.dart';
+import '../../features/auth/data/models/login_response.dart';
+
+/// Service for securely storing authentication tokens and user session data.
 class TokenStorageService {
   static const String _authTokenKey = 'auth_token';
   static const String _profileCompletionTokenKey = 'profile_completion_token';
   static const String _refreshTokenKey = 'refresh_token';
+  static const String _userSessionKey = 'user_session';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -45,12 +51,47 @@ class TokenStorageService {
     return await _storage.read(key: _refreshTokenKey);
   }
 
-  /// Clear all tokens
+  /// Save logged-in user profile and auth metadata (secure storage).
+  Future<void> saveUserSession({
+    required UserData user,
+    bool profileCompleted = false,
+    String? userState,
+  }) async {
+    final session = StoredUserSession(
+      user: user,
+      profileCompleted: profileCompleted,
+      userState: userState,
+    );
+    await _storage.write(
+      key: _userSessionKey,
+      value: jsonEncode(session.toJson()),
+    );
+  }
+
+  /// Load persisted user session, if any.
+  Future<StoredUserSession?> getUserSession() async {
+    final raw = await _storage.read(key: _userSessionKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      return StoredUserSession.fromJson(map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Clear persisted user session only.
+  Future<void> clearUserSession() async {
+    await _storage.delete(key: _userSessionKey);
+  }
+
+  /// Clear all tokens and user session.
   Future<void> clearAllTokens() async {
     await Future.wait([
       _storage.delete(key: _authTokenKey),
       _storage.delete(key: _profileCompletionTokenKey),
       _storage.delete(key: _refreshTokenKey),
+      _storage.delete(key: _userSessionKey),
     ]);
   }
 

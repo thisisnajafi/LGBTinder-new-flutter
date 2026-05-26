@@ -13,6 +13,7 @@ class Chat {
   final bool isOnline;
   final DateTime? lastSeen;
   final bool isTyping;
+  final bool isMuted;
 
   Chat({
     required this.id,
@@ -26,6 +27,7 @@ class Chat {
     this.isOnline = false,
     this.lastSeen,
     this.isTyping = false,
+    this.isMuted = false,
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
@@ -68,6 +70,7 @@ class Chat {
           ? DateTime.tryParse(json['last_seen'].toString())
           : null,
       isTyping: json['is_typing'] == true || json['is_typing'] == 1,
+      isMuted: json['is_muted'] == true || json['is_muted'] == 1,
     );
   }
 
@@ -84,6 +87,7 @@ class Chat {
       'is_online': isOnline,
       if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
       'is_typing': isTyping,
+      'is_muted': isMuted,
     };
   }
 }

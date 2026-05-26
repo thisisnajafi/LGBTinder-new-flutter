@@ -4,11 +4,16 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
+import '../../features/settings/providers/sound_preferences_provider.dart';
+import '../../features/settings/data/models/sound_preferences.dart';
+import '../../features/chat/providers/conversation_mute_cache_provider.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Service for handling push notifications
 class PushNotificationService {
@@ -52,7 +57,7 @@ class PushNotificationService {
   /// Send FCM token to backend
   Future<void> _sendTokenToBackend(String token) async {
     if (_apiService == null) {
-      print('API service not set, cannot send token to backend');
+      AppLogger.debug('API service not set, cannot send token to backend');
       return;
     }
 
@@ -68,12 +73,12 @@ class PushNotificationService {
       );
 
       if (response.isSuccess) {
-        print('FCM token sent to backend successfully');
+        AppLogger.debug('FCM token sent to backend successfully');
       } else {
-        print('Failed to send FCM token to backend: ${response.message}');
+        AppLogger.debug('Failed to send FCM token to backend: ${response.message}');
       }
     } catch (e) {
-      print('Error sending FCM token to backend: $e');
+      AppLogger.debug('Error sending FCM token to backend: $e');
     }
   }
 
@@ -83,6 +88,7 @@ class PushNotificationService {
     if (_isInitialized) return;
 
     try {
+      await SoundService.instance.initialize();
       await _requestPermission();
       await Future.delayed(Duration.zero); // yield to UI
 
@@ -95,7 +101,7 @@ class PushNotificationService {
       _setupMessageHandlers();
       _isInitialized = true;
     } catch (e) {
-      print('Error initializing push notifications: $e');
+      AppLogger.debug('Error initializing push notifications: $e');
     }
   }
 
@@ -109,11 +115,11 @@ class PushNotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted notification permission');
+      AppLogger.debug('User granted notification permission');
     } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-      print('User granted provisional notification permission');
+      AppLogger.debug('User granted provisional notification permission');
     } else {
-      print('User declined or has not accepted notification permission');
+      AppLogger.debug('User declined or has not accepted notification permission');
     }
   }
 
@@ -141,10 +147,10 @@ class PushNotificationService {
   Future<String?> _getFCMToken() async {
     try {
       _fcmToken = await _firebaseMessaging.getToken();
-      print('FCM Token: $_fcmToken');
+      AppLogger.debug('FCM Token: $_fcmToken');
       return _fcmToken;
     } catch (e) {
-      print('Error getting FCM token: $e');
+      AppLogger.debug('Error getting FCM token: $e');
       return null;
     }
   }
@@ -156,27 +162,32 @@ class PushNotificationService {
   void _setupMessageHandlers() {
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Received foreground message: ${message.messageId}');
+      AppLogger.debug('Received foreground message: ${message.messageId}');
+      if (_isIncomingCallPayload(message.data)) {
+        _handleIncomingCall(message.data);
+        return;
+      }
+      unawaited(_playPayloadSound(message.data));
       _showLocalNotification(message);
     });
 
     // Handle background messages (when app is in background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Notification opened app: ${message.messageId}');
+      AppLogger.debug('Notification opened app: ${message.messageId}');
       _handleNotificationTap(message);
     });
 
     // Handle notification tap when app is terminated
     _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        print('App opened from terminated state: ${message.messageId}');
+        AppLogger.debug('App opened from terminated state: ${message.messageId}');
         _handleNotificationTap(message);
       }
     });
 
     // Handle token refresh
     _firebaseMessaging.onTokenRefresh.listen((String newToken) async {
-      print('FCM Token refreshed: $newToken');
+      AppLogger.debug('FCM Token refreshed: $newToken');
       _fcmToken = newToken;
       await _sendTokenToBackend(newToken);
     });
@@ -189,7 +200,16 @@ class PushNotificationService {
     if (notification == null) return;
 
     final data = message.data;
+    if (_isIncomingCallPayload(data)) {
+      _handleIncomingCall(data);
+      return;
+    }
+
     final type = data['type']?.toString() ?? 'general';
+
+    if (type == 'message' && _isMutedMessageSender(data)) {
+      return;
+    }
     
     // Group notifications by type (messages from same user, etc.)
     String? groupKey;
@@ -205,6 +225,10 @@ class PushNotificationService {
       groupChannelId = 'lgbtfinder_$type';
     }
 
+    final payloadSound = _resolvePayloadSound(data);
+    final androidRaw = payloadSound ?? SoundService.instance.getNotificationAndroidRaw();
+    final iosSound = androidRaw != null ? '$androidRaw.wav' : null;
+
     final androidDetails = AndroidNotificationDetails(
       groupChannelId ?? 'lgbtfinder_channel',
       'LGBTFinder Notifications',
@@ -212,16 +236,21 @@ class PushNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      groupKey: groupKey, // Group messages from same user
-      setAsGroupSummary: false, // Don't show summary for individual messages
-      styleInformation: const BigTextStyleInformation(''), // Expandable notification
+      groupKey: groupKey,
+      setAsGroupSummary: false,
+      styleInformation: const BigTextStyleInformation(''),
+      sound: androidRaw != null
+          ? RawResourceAndroidNotificationSound(androidRaw)
+          : null,
+      enableVibration: SoundService.instance.vibrationEnabled,
     );
 
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
-      threadIdentifier: groupKey, // iOS notification grouping
+      threadIdentifier: groupKey,
+      sound: iosSound,
     );
 
     final details = NotificationDetails(
@@ -288,7 +317,9 @@ class PushNotificationService {
           }
           break;
         case 'call':
-          // Handle incoming call notification
+        case 'incoming_call':
+        case 'incoming_call_audio':
+        case 'incoming_call_video':
           _handleIncomingCall(data);
           break;
         case 'notification':
@@ -302,19 +333,26 @@ class PushNotificationService {
 
   /// Handle incoming call notification
   void _handleIncomingCall(Map<String, dynamic> data) {
-    print('Incoming call notification received: $data');
-
-    // Note: This method is called from notification handlers where we may not have context.
-    // The actual handling should be done in the main app where context is available.
-    // For now, we'll store the data and handle it when the app is in foreground.
+    AppLogger.debug('Incoming call notification received: $data');
     IncomingCallHandler.storePendingCallData(data);
+  }
+
+  bool _isIncomingCallPayload(Map<String, dynamic> data) {
+    final type = data['type']?.toString() ?? '';
+    return type == 'call' ||
+        type == 'incoming_call' ||
+        type == 'incoming_call_audio' ||
+        type == 'incoming_call_video' ||
+        type.startsWith('incoming_call') ||
+        data.containsKey('call_id') ||
+        data.containsKey('callId');
   }
 
   /// Handle local notification tap
   void _onNotificationTapped(NotificationResponse response) {
     if (response.payload != null) {
       // Parse payload and navigate
-      print('Notification tapped: ${response.payload}');
+      AppLogger.debug('Notification tapped: ${response.payload}');
     }
   }
 
@@ -322,9 +360,9 @@ class PushNotificationService {
   Future<void> subscribeToTopic(String topic) async {
     try {
       await _firebaseMessaging.subscribeToTopic(topic);
-      print('Subscribed to topic: $topic');
+      AppLogger.debug('Subscribed to topic: $topic');
     } catch (e) {
-      print('Error subscribing to topic: $e');
+      AppLogger.debug('Error subscribing to topic: $e');
     }
   }
 
@@ -332,9 +370,9 @@ class PushNotificationService {
   Future<void> unsubscribeFromTopic(String topic) async {
     try {
       await _firebaseMessaging.unsubscribeFromTopic(topic);
-      print('Unsubscribed from topic: $topic');
+      AppLogger.debug('Unsubscribed from topic: $topic');
     } catch (e) {
-      print('Error unsubscribing from topic: $e');
+      AppLogger.debug('Error unsubscribing from topic: $e');
     }
   }
 
@@ -343,10 +381,43 @@ class PushNotificationService {
     try {
       await _firebaseMessaging.deleteToken();
       _fcmToken = null;
-      print('FCM token deleted');
+      AppLogger.debug('FCM token deleted');
     } catch (e) {
-      print('Error deleting FCM token: $e');
+      AppLogger.debug('Error deleting FCM token: $e');
     }
+  }
+
+  String? _resolvePayloadSound(Map<String, dynamic> data) {
+    final raw = data['sound'] ??
+        data['notification_sound'] ??
+        data['ios_sound'] ??
+        data['android_sound'];
+    if (raw == null) return null;
+    final value = raw.toString().trim();
+    if (value.isEmpty) return null;
+    return value.replaceAll('.wav', '').replaceAll('.mp3', '');
+  }
+
+  Future<void> _playPayloadSound(Map<String, dynamic> data) async {
+    final payloadSound = _resolvePayloadSound(data);
+    if (payloadSound != null) {
+      await SoundService.instance.previewSound(
+        payloadSound,
+        SoundCategory.notification,
+      );
+      return;
+    }
+    await SoundService.instance.playNotificationSound();
+  }
+
+  bool _isMutedMessageSender(Map<String, dynamic> data) {
+    final senderId = int.tryParse(
+      data['sender_id']?.toString() ??
+          data['user_id']?.toString() ??
+          '',
+    );
+    if (senderId == null || senderId <= 0) return false;
+    return ConversationMuteBridge.isPeerMuted?.call(senderId) ?? false;
   }
 }
 

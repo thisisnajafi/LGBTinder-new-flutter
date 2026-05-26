@@ -9,17 +9,26 @@ import 'package:lgbtindernew/features/payments/data/services/plan_limits_service
 import 'package:lgbtindernew/routes/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:mocktail/mocktail.dart';
+
 import 'mock_services.dart';
 
+/// Result of [pumpE2eApp] — container + router for navigation in tests.
+typedef E2eAppHandle = ({ProviderContainer container, GoRouter router});
+
 /// Pumps the app shell with [GoRouter] and optional provider overrides.
-Future<ProviderContainer> pumpE2eApp(
+Future<E2eAppHandle> pumpE2eApp(
   WidgetTester tester, {
   List<Override> overrides = const [],
   InMemoryTokenStorage? tokenStorage,
 }) async {
-  SharedPreferences.setMockInitialValues({});
+  SharedPreferences.setMockInitialValues({
+    'intro_onboarding_seen': true,
+  });
   final storage = tokenStorage ?? InMemoryTokenStorage();
-  storage.seedUnauthenticated();
+  if (tokenStorage == null) {
+    storage.seedUnauthenticated();
+  }
 
   final container = ProviderContainer(
     overrides: [
@@ -41,18 +50,77 @@ Future<ProviderContainer> pumpE2eApp(
     ),
   );
 
-  return container;
+  return (container: container, router: router);
 }
 
-/// Navigate and settle frames.
-Future<void> e2eGo(WidgetTester tester, String location) async {
-  final context = tester.element(find.byType(MaterialApp));
-  GoRouter.of(context).go(location);
+/// Pumps full app with an authenticated session and waits past splash redirect.
+Future<E2eAppHandle> pumpAuthenticatedE2eApp(
+  WidgetTester tester, {
+  List<Override> overrides = const [],
+  InMemoryTokenStorage? tokenStorage,
+}) async {
+  e2eSetPhoneViewport(tester);
+  final storage = tokenStorage ?? InMemoryTokenStorage()..seedAuthenticated();
+
+  final app = await pumpE2eApp(
+    tester,
+    tokenStorage: storage,
+    overrides: overrides,
+  );
+
+  // Splash delay + skip network check-token (not available in widget tests).
+  markStartupFlowLeft();
+  app.router.go(AppRoutes.home);
+  await tester.pump(const Duration(milliseconds: 700));
+  await tester.pump(const Duration(milliseconds: 500));
+
+  return app;
+}
+
+/// Bounded pumps — avoids pumpAndSettle timeout on animated screens.
+Future<void> e2ePumpFrames(
+  WidgetTester tester, {
+  int frames = 3,
+  Duration step = const Duration(milliseconds: 200),
+}) async {
+  for (var i = 0; i < frames; i++) {
+    await tester.pump(step);
+  }
+}
+
+/// Navigate via the app [GoRouter] instance (not BuildContext — MaterialApp.router differs).
+Future<void> e2eGo(
+  WidgetTester tester,
+  GoRouter router,
+  String location,
+) async {
+  router.go(location);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
 }
 
-Future<void> e2ePump settle(WidgetTester tester, {Duration? duration}) async {
+/// Use a tall phone viewport so welcome/login layouts do not overflow in tests.
+void e2eSetPhoneViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 1.0;
+}
+
+void e2eResetViewport(WidgetTester tester) {
+  tester.view.resetPhysicalSize();
+  tester.view.resetDevicePixelRatio();
+}
+
+/// Tap the primary gradient submit button on auth screens (avoids duplicate "Sign In" title text).
+Future<void> tapAuthSubmitButton(WidgetTester tester) async {
+  final button = find.byWidgetPredicate(
+    (widget) => widget.runtimeType.toString().contains('GradientButton'),
+  );
+  expect(button, findsWidgets);
+  await tester.tap(button.last);
+  await tester.pump();
+}
+
+Future<void> e2ePumpSettle(WidgetTester tester, {Duration? duration}) async {
   await tester.pump();
   if (duration != null) {
     await tester.pump(duration);

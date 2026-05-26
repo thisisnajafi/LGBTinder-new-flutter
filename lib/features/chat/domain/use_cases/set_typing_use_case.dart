@@ -13,7 +13,14 @@ class SetTypingUseCase {
     try {
       return await _chatRepository.setTyping(userId, isTyping);
     } catch (e) {
-      // Re-throw all exceptions to let UI handle them
+      rethrow;
+    }
+  }
+
+  Future<void> executeForConversation(int conversationId, bool isTyping) async {
+    try {
+      return await _chatRepository.setConversationTyping(conversationId, isTyping);
+    } catch (e) {
       rethrow;
     }
   }

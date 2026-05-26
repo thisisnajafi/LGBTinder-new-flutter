@@ -1,21 +1,19 @@
-// Widget: ChatListItem
-// Individual chat list item
+// Widget: ChatListItem — REF-04 conversation row
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../avatar/avatar_with_status.dart';
-import '../badges/unread_badge.dart';
-import 'typing_indicator.dart';
-import 'last_seen_widget.dart';
-import '../../features/payments/data/services/plan_limits_service.dart';
 
-/// Chat list item widget
-/// Displays a single chat conversation in the chat list
-/// Data structure based on API: /api/chat/users
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/profile_image_widget.dart';
+import '../../shared/models/user_tier.dart';
+import '../../shared/providers/user_tier_provider.dart';
+import 'typing_indicator.dart';
+
+/// Single conversation row in the messenger list.
 class ChatListItem extends ConsumerWidget {
   final int userId;
   final String name;
@@ -25,10 +23,11 @@ class ChatListItem extends ConsumerWidget {
   final int unreadCount;
   final bool isOnline;
   final bool isTyping;
+  final bool isMuted;
   final VoidCallback? onTap;
 
   const ChatListItem({
-    Key? key,
+    super.key,
     required this.userId,
     required this.name,
     this.avatarUrl,
@@ -37,93 +36,119 @@ class ChatListItem extends ConsumerWidget {
     this.unreadCount = 0,
     this.isOnline = false,
     this.isTyping = false,
+    this.isMuted = false,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final planLimits = ref.watch(planLimitsProvider);
-    final bool hasPlan = planLimits.whenOrNull(
-          data: (limits) => limits.planInfo.isPremium,
-        ) ?? false;
+    final tier = ref.watch(userTierProvider);
+    final isLocked = tier == UserTier.basid;
+    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
-    Widget messagePreview = isTyping
-        ? TypingIndicator()
-        : Text(
-            lastMessage ?? 'No messages yet',
-            style: AppTypography.body.copyWith(
-              color: secondaryTextColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 72,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppPageHeader.horizontalPadding,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          );
-    if (!hasPlan) {
-      messagePreview = ClipRect(
-        child: ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-          child: messagePreview,
-        ),
-      );
-    }
-
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSpacing.spacingLG,
-          vertical: AppSpacing.spacingMD,
-        ),
-        child: Row(
-          children: [
-            AvatarWithStatus(
-              imageUrl: avatarUrl,
-              name: name,
-              isOnline: isOnline,
-              size: 56.0,
-            ),
-            SizedBox(width: AppSpacing.spacingLG),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: AppTypography.h3.copyWith(color: textColor),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+            child: Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipOval(
+                      child: ProfileImageWidget(
+                        imageUrl: avatarUrl,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
                       ),
-                      if (lastMessageTime != null)
-                        Text(
-                          _formatTime(lastMessageTime!),
-                          style: AppTypography.caption.copyWith(
-                            color: secondaryTextColor,
+                    ),
+                    if (isOnline)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.onlineGreen,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.scaffoldBackgroundColor,
+                              width: 1.5,
+                            ),
                           ),
                         ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Row(
+                      ),
+                  ],
+                ),
+                const SizedBox(width: AppSpacing.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(child: messagePreview),
-                      if (unreadCount > 0) ...[
-                        SizedBox(width: AppSpacing.spacingSM),
-                        UnreadBadge(count: unreadCount),
-                      ],
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.spacingXS),
+                      _MessagePreview(
+                        isTyping: isTyping,
+                        lastMessage: lastMessage,
+                        isLocked: isLocked,
+                        mutedColor: mutedColor,
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: AppSpacing.spacingSM),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (lastMessageTime != null)
+                      Text(
+                        _formatTime(lastMessageTime!),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: mutedColor,
+                        ),
+                      ),
+                    if (unreadCount > 0) ...[
+                      const SizedBox(height: AppSpacing.spacingXS),
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 18),
+                        height: 18,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -134,7 +159,6 @@ class ChatListItem extends ConsumerWidget {
     final difference = now.difference(time);
 
     if (difference.inDays == 0) {
-      // Today - show time
       final hour = time.hour;
       final minute = time.minute.toString().padLeft(2, '0');
       final period = hour >= 12 ? 'PM' : 'AM';
@@ -144,8 +168,69 @@ class ChatListItem extends ConsumerWidget {
       return 'Yesterday';
     } else if (difference.inDays < 7) {
       return '${difference.inDays}d ago';
-    } else {
-      return '${time.day}/${time.month}';
     }
+    return '${time.day}/${time.month}';
+  }
+}
+
+class _MessagePreview extends StatelessWidget {
+  final bool isTyping;
+  final String? lastMessage;
+  final bool isLocked;
+  final Color mutedColor;
+
+  const _MessagePreview({
+    required this.isTyping,
+    required this.lastMessage,
+    required this.isLocked,
+    required this.mutedColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (isTyping) {
+      return const TypingIndicator();
+    }
+
+    final previewText = lastMessage ?? 'No messages yet';
+    final textStyle = theme.textTheme.bodySmall?.copyWith(color: mutedColor);
+
+    if (!isLocked) {
+      return Text(
+        previewText,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.centerLeft,
+      children: [
+        ClipRect(
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+            child: Text(
+              previewText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textStyle,
+            ),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: AppSvgIcon(
+            assetPath: AppIcons.lock,
+            size: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+        ),
+      ],
+    );
   }
 }

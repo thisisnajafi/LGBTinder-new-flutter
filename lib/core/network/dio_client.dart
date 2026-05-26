@@ -6,6 +6,7 @@ import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../auth/unauthorized_handler.dart';
 import '../utils/app_logger.dart';
+import 'app_dio_logger.dart';
 
 /// Max chars of response/request body to log; longer content is truncated.
 const int _kLogBodyMaxChars = 400;
@@ -68,6 +69,7 @@ class DioClient {
     );
 
     _setupInterceptors();
+    _dio.interceptors.add(AppDioLogger());
   }
 
   void _setupInterceptors() {

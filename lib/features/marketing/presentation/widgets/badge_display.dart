@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/badge_model.dart';
 import '../../providers/marketing_providers.dart';
@@ -115,6 +116,8 @@ class BadgeDisplay extends ConsumerWidget {
         child: badge.iconUrl != null && isEarned
             ? CachedNetworkImage(
                 imageUrl: badge.iconUrl!,
+                cacheManager: ref.watch(imageCacheServiceProvider),
+                fadeInDuration: const Duration(milliseconds: 200),
                 fit: BoxFit.cover,
                 placeholder: (context, url) => _buildPlaceholderIcon(theme, isEarned),
                 errorWidget: (context, url, error) =>

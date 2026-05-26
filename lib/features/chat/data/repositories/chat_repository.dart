@@ -1,4 +1,4 @@
-import '../../domain/services/chat_service.dart';
+import '../services/chat_service.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../models/message_attachment.dart';
@@ -19,7 +19,24 @@ class ChatRepository {
     int? page,
     int? limit,
   }) async {
-    return await _chatService.getChatHistory(userId, page: page, limit: limit);
+    final result = await _chatService.getChatHistory(
+      receiverId: userId,
+      page: page,
+      limit: limit,
+    );
+    return result.messages;
+  }
+
+  /// Chat history including `conversation_id` for Pusher subscription.
+  Future<ChatHistoryResult> getChatHistoryWithMeta(int userId, {
+    int? page,
+    int? limit,
+  }) async {
+    return _chatService.getChatHistory(
+      receiverId: userId,
+      page: page,
+      limit: limit,
+    );
   }
 
   /// Send a message
@@ -47,7 +64,11 @@ class ChatRepository {
 
   /// Set typing status
   Future<void> setTyping(int userId, bool isTyping) async {
-    return await _chatService.setTyping(userId, isTyping);
+    return _chatService.setTypingStatus(userId, isTyping);
+  }
+
+  Future<void> setConversationTyping(int conversationId, bool isTyping) async {
+    return _chatService.setConversationTyping(conversationId, isTyping);
   }
 
   /// Get unread message count

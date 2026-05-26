@@ -1,5 +1,6 @@
 // CODE QUALITY (Task 8.2.1): Fixed provider structure with proper dependency injection
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/app_logger.dart';
 import '../data/models/discovery_profile.dart';
 import '../data/models/discovery_filters.dart';
 import '../data/repositories/discovery_repository.dart';
@@ -73,6 +74,7 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
   final GetNearbySuggestionsUseCase _getNearbySuggestionsUseCase;
   final ApplyFiltersUseCase _applyFiltersUseCase;
   final MatchingNotifier _matchingNotifier;
+  bool _interactionInProgress = false;
 
   DiscoveryNotifier({
     required GetDiscoveryProfilesUseCase getDiscoveryProfilesUseCase,
@@ -173,39 +175,55 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
 
   /// Like current profile
   Future<void> likeCurrentProfile() async {
+    if (_interactionInProgress) return;
+    _interactionInProgress = true;
     final currentProfile = _getCurrentProfile();
     if (currentProfile != null) {
       try {
         await _matchingNotifier.likeProfile(currentProfile.id);
         _moveToNextProfile();
-      } catch (e) {
-        // Handle error - could show snackbar or keep profile
-        print('Error liking profile: $e');
+      } catch (e, stack) {
+        AppLogger.error(
+          'Error liking profile',
+          tag: 'DiscoveryProvider',
+          error: e,
+          stackTrace: stack,
+        );
       }
     }
+    _interactionInProgress = false;
   }
 
   /// Dislike current profile
   Future<void> dislikeCurrentProfile() async {
+    if (_interactionInProgress) return;
+    _interactionInProgress = true;
     final currentProfile = _getCurrentProfile();
     if (currentProfile != null) {
-      // Dislike is just moving to next profile (no backend action needed)
       _moveToNextProfile();
     }
+    _interactionInProgress = false;
   }
 
   /// Superlike current profile
   Future<void> superlikeCurrentProfile() async {
+    if (_interactionInProgress) return;
+    _interactionInProgress = true;
     final currentProfile = _getCurrentProfile();
     if (currentProfile != null) {
       try {
         await _matchingNotifier.superlikeProfile(currentProfile.id);
         _moveToNextProfile();
-      } catch (e) {
-        // Handle error - could show snackbar or keep profile
-        print('Error superliking profile: $e');
+      } catch (e, stack) {
+        AppLogger.error(
+          'Error superliking profile',
+          tag: 'DiscoveryProvider',
+          error: e,
+          stackTrace: stack,
+        );
       }
     }
+    _interactionInProgress = false;
   }
 
   /// Skip to next profile

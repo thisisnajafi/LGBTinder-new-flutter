@@ -200,6 +200,17 @@ PlanLimits planLimitsForTier(String tier) {
   });
 }
 
+/// Stubs [PlanLimitsService] for widgets that read [planLimitsProvider].
+void stubPlanLimitsService(
+  MockPlanLimitsService planLimits, {
+  String tier = 'basid',
+}) {
+  when(() => planLimits.isCacheValid()).thenReturn(false);
+  when(() => planLimits.getCachedLimits()).thenReturn(null);
+  when(() => planLimits.getPlanLimits(forceRefresh: any(named: 'forceRefresh')))
+      .thenAnswer((_) async => planLimitsForTier(tier));
+}
+
 void registerAuthFallbacks() {
   registerFallbackValue(
     LoginRequest(email: 'a@b.com', password: 'x', deviceName: 'test'),
@@ -208,6 +219,7 @@ void registerAuthFallbacks() {
     RegisterRequest(
       email: 'a@b.com',
       password: 'x',
+      passwordConfirmation: 'x',
       firstName: 'A',
       lastName: 'B',
     ),

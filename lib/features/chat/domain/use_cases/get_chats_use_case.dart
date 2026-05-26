@@ -1,4 +1,5 @@
 import '../../data/repositories/chat_repository.dart';
+import '../../data/models/chat.dart';
 
 /// Use case for getting user's chat list
 class GetChatsUseCase {

@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 
 /// Task 2.2.2 (Phase 3): User-friendly HTTP error messages
 const Map<int, String> httpErrorMessages = {
@@ -25,7 +25,8 @@ const Map<String, String> backendErrorMessages = {
   'DAILY_LIMIT_REACHED': 'You\'ve reached your daily limit. Try again tomorrow!',
   'SWIPE_LIMIT_REACHED': 'No more swipes today. Upgrade for unlimited swipes!',
   'SUPERLIKE_LIMIT_REACHED': 'You\'ve used all your Super Likes for today.',
-  'MESSAGE_LIMIT_REACHED': 'You\'ve reached your message limit.',
+  'CHAT_DAILY_SEND_LIMIT_REACHED': 'Daily message limit reached for this chat. Upgrade to send more.',
+  'CHAT_IMAGE_UPLOAD_LIMIT_REACHED': 'Too many image uploads. Please try again later.',
   
   // Profile errors
   'PROFILE_PICTURE_REQUIRED': 'Please add a profile picture first.',
@@ -287,7 +288,13 @@ class ApiError {
       errorCode == 'DAILY_LIMIT_REACHED' ||
       errorCode == 'SWIPE_LIMIT_REACHED' ||
       errorCode == 'SUPERLIKE_LIMIT_REACHED' ||
-      errorCode == 'MESSAGE_LIMIT_REACHED';
+      errorCode == 'MESSAGE_LIMIT_REACHED' ||
+      errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED';
+
+  bool get upgradeRequired =>
+      responseData?['upgrade_required'] == true ||
+      errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED' ||
+      errorCode == 'STICKER_PACK_LOCKED';
   
   /// Check if error is a validation error
   bool get isValidationError => 

@@ -1,6 +1,8 @@
 // Widget: NotificationTile
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
@@ -8,7 +10,7 @@ import '../../data/models/notification.dart' as app_models;
 import 'package:intl/intl.dart';
 
 /// Notification tile widget for displaying individual notifications
-class NotificationTile extends StatelessWidget {
+class NotificationTile extends ConsumerWidget {
   final app_models.Notification notification;
   final VoidCallback? onTap;
   final VoidCallback? onMarkAsRead;
@@ -75,7 +77,7 @@ class NotificationTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
@@ -194,17 +196,9 @@ class NotificationTile extends StatelessWidget {
                       width: 2,
                     ),
                   ),
-                  child: ClipOval(
-                    child: Image.network(
-                      notification.userImageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          Icons.person,
-                          color: secondaryTextColor,
-                        );
-                      },
-                    ),
+                  child: AvatarWidget(
+                    imageUrl: notification.userImageUrl,
+                    radius: 18,
                   ),
                 ),
             ],

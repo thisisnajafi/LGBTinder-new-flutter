@@ -1,4 +1,4 @@
-import '../../domain/services/user_actions_service.dart';
+import '../../data/services/user_actions_service.dart';
 import '../models/block.dart';
 import '../models/report.dart';
 import '../models/favorite.dart';

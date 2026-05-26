@@ -2,7 +2,12 @@
 // Render from cache immediately; background fetch merges by id; swipe updates cache then syncs to server.
 
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/app_logger.dart';
+import '../../../core/cache/cache_invalidator.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../shared/models/api_error.dart';
 import '../../../shared/services/cache_service.dart';
@@ -37,6 +42,11 @@ class DiscoverCacheState {
 /// Buffer threshold: fetch more when stack drops below this.
 const int kDiscoverStackBufferThreshold = 5;
 
+/// Encodes discover feed JSON off the UI thread (used by [compute]).
+String encodeDiscoverFeedForCache(List<Map<String, dynamic>> raw) {
+  return jsonEncode(<String, dynamic>{'list': raw});
+}
+
 final discoverCacheProvider =
     StateNotifierProvider<DiscoverCacheNotifier, DiscoverCacheState>((ref) {
   return DiscoverCacheNotifier(
@@ -44,6 +54,7 @@ final discoverCacheProvider =
     ref.read(likesServiceProvider),
     ref.read(planLimitsServiceProvider),
     ref.read(cacheServiceProvider),
+    ref.read(cacheInvalidatorProvider),
   );
 });
 
@@ -53,6 +64,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     this._likesService,
     this._planLimitsService,
     this._cacheService,
+    this._cacheInvalidator,
   ) : super(const DiscoverCacheState()) {
     _init();
   }
@@ -61,6 +73,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
   final LikesService _likesService;
   final PlanLimitsService _planLimitsService;
   final CacheService _cacheService;
+  final CacheInvalidator _cacheInvalidator;
 
   static const int _pageSize = 20;
   bool _isRefreshing = false;
@@ -88,7 +101,14 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           if (e is Map<String, dynamic>) {
             try {
               list.add(CachedDiscoverItem.fromJson(e));
-            } catch (_) {}
+            } catch (e, stack) {
+              AppLogger.warning(
+                'Failed to parse cached discover item',
+                tag: 'DiscoverCache',
+                error: e,
+              );
+              AppLogger.debug('Parse stack: $stack', tag: 'DiscoverCache');
+            }
           }
         }
         if (list.isNotEmpty) {
@@ -99,7 +119,14 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           );
         }
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to load discover cache',
+        tag: 'DiscoverCache',
+        error: e,
+        stackTrace: stack,
+      );
+    }
   }
 
   /// Merge [profiles] into state by id: existing ids keep state, new ids get none. Then persist.
@@ -127,9 +154,10 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
 
   Future<void> _persist(List<CachedDiscoverItem> list) async {
     final raw = list.map((e) => e.toJson()).toList();
-    await _cacheService.cacheData(
+    final encoded = await compute(encodeDiscoverFeedForCache, raw);
+    await _cacheService.cacheEncodedJson(
       CacheKeys.discoverFeed,
-      <String, dynamic>{'list': raw},
+      encoded,
       duration: CacheDuration.matches,
     );
   }
@@ -150,7 +178,13 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         filters: filters,
       );
       _mergeAndPersist(profiles, nextPage: 2);
-    } catch (_) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Discover feed refresh failed',
+        tag: 'DiscoverCache',
+        error: e,
+        stackTrace: stack,
+      );
       state = DiscoverCacheState(
         items: state.items,
         initialLoadComplete: true,
@@ -187,8 +221,14 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         filters: filters,
       );
       _mergeAndPersist(profiles, nextPage: page + 1);
-    } catch (_) {}
-    finally {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Discover fetch-more failed',
+        tag: 'DiscoverCache',
+        error: e,
+        stackTrace: stack,
+      );
+    } finally {
       _isFetchingMore = false;
     }
   }
@@ -267,8 +307,9 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           _planLimitsService.incrementUsage('swipes');
           _planLimitsService.incrementUsage('likes');
           _markSynced(userId);
-          if (response.isMatch && onMatch != null) {
-            onMatch(response.match);
+          if (response.isMatch) {
+            unawaited(_cacheInvalidator.purgeMatchList());
+            if (onMatch != null) onMatch(response.match);
           }
           break;
         }
@@ -287,13 +328,20 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           _planLimitsService.incrementUsage('swipes');
           _planLimitsService.incrementUsage('superlikes');
           _markSynced(userId);
-          if (response.isMatch && onMatch != null) {
-            onMatch(response.match);
+          if (response.isMatch) {
+            unawaited(_cacheInvalidator.purgeMatchList());
+            if (onMatch != null) onMatch(response.match);
           }
           break;
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Swipe sync failed ($action)',
+        tag: 'DiscoverCache',
+        error: e,
+        stackTrace: stack,
+      );
       final err = e;
       final isLimit = _isLimitError(err);
       if (isLimit && onLimitError != null) {

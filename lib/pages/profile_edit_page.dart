@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
 import '../widgets/profile/avatar_upload.dart';
 import '../widgets/profile/edit/profile_image_editor.dart';
 import '../widgets/profile/edit/profile_field_editor.dart';
@@ -348,24 +348,20 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     
     if (_isLoading) {
-      return Scaffold(
+      return AppPageScaffold(
+        title: 'Edit Profile',
+        showBackButton: true,
         backgroundColor: backgroundColor,
-        appBar: AppBarCustom(
-          title: 'Edit Profile',
-          showBackButton: true,
-        ),
         body: const Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Edit Profile',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Edit Profile',
-        showBackButton: true,
-      ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(

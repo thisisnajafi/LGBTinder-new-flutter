@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/cache/cache_providers.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -188,6 +189,8 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
                         borderRadius: BorderRadius.circular(16),
                         child: CachedNetworkImage(
                           imageUrl: widget.banner.imageUrl!,
+                          cacheManager: ref.watch(imageCacheServiceProvider),
+                          fadeInDuration: const Duration(milliseconds: 200),
                           fit: BoxFit.cover,
                           errorWidget: (context, url, error) =>
                               const SizedBox.shrink(),
@@ -298,6 +301,8 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
                       borderRadius: BorderRadius.circular(12),
                       child: CachedNetworkImage(
                         imageUrl: widget.banner.imageUrl!,
+                        cacheManager: ref.watch(imageCacheServiceProvider),
+                        fadeInDuration: const Duration(milliseconds: 200),
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => const Icon(
                           Icons.local_offer,
@@ -474,6 +479,8 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
                         borderRadius: BorderRadius.circular(12),
                         child: CachedNetworkImage(
                           imageUrl: widget.banner.imageUrl!,
+                          cacheManager: ref.watch(imageCacheServiceProvider),
+                          fadeInDuration: const Duration(milliseconds: 200),
                           height: 100,
                           fit: BoxFit.contain,
                           errorWidget: (context, url, error) => const Icon(

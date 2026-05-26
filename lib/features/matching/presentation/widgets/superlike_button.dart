@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/cache/cache_manager.dart';
+import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/animation_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/matching_provider.dart';
+import '../../widgets/match_celebration_launcher.dart';
 
 /// Superlike button widget
 /// Handles superliking profiles with premium styling and effects
@@ -36,6 +39,7 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   late Animation<double> _scaleAnimation;
   late Animation<double> _glowAnimation;
   late Animation<double> _rotationAnimation;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -116,7 +120,7 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
                 ],
               ),
               child: ElevatedButton(
-                onPressed: (matchingState.isSuperliking || !widget.isPremium)
+                onPressed: (matchingState.isSuperliking || !widget.isPremium || _isSending)
                     ? null
                     : _handleSuperlike,
                 style: ElevatedButton.styleFrom(
@@ -173,13 +177,14 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   }
 
   Future<void> _handleSuperlike() async {
+    if (_isSending) return;
     if (!widget.isPremium) {
-      // Show premium upgrade dialog
       _showPremiumRequiredDialog();
       return;
     }
 
-    // Run tap animation without blocking (don't await) so UI stays responsive
+    setState(() => _isSending = true);
+
     _animationController.forward().then((_) {
       if (mounted) _animationController.reverse();
     });
@@ -190,16 +195,24 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
       final response = await matchingNotifier.superlikeProfile(widget.profileId);
 
       if (!mounted) return;
-      if (response != null && response.isMatch) {
-        _showSuperMatchCelebration();
+      if (response != null && response.isMatch && response.match != null) {
+        await notifyNewMatch(ref);
+        MatchCelebrationLauncher.show(context, ref, match: response.match!);
         widget.onSuperlikeSuccess?.call();
       } else {
         widget.onSuperlikeSuccess?.call();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Superlike send failed',
+        tag: 'SuperlikeButton',
+        error: e,
+        stackTrace: stack,
+      );
       if (mounted) widget.onSuperlikeError?.call();
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
-    // Ensure button returns to normal if reverse hasn't run yet
     if (mounted && _animationController.status == AnimationStatus.completed) {
       _animationController.reverse();
     }
@@ -232,76 +245,5 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
         ],
       ),
     );
-  }
-
-  void _showSuperMatchCelebration() {
-    // Show enhanced match celebration for superlikes with confetti
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        content: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.surfaceDark
-                : AppColors.surfaceLight,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.primaryLight,
-              width: 2,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '⭐ SUPER MATCH! ⭐',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryLight,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'You both superliked each other!\nThis is extra special! 🎉✨',
-                style: TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text('Awesome!'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    // Also show a snackbar for additional feedback
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Super Match! Both users superliked each other! ⭐🎉'),
-            backgroundColor: AppColors.primaryLight,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-    });
   }
 }

@@ -6,7 +6,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/loading/skeleton_loader.dart';
@@ -104,12 +105,10 @@ class _ProfileAnalyticsScreenState extends ConsumerState<ProfileAnalyticsScreen>
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Profile Analytics',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Profile Analytics',
-        showBackButton: true,
-      ),
       body: _isLoading
           ? ListView(
               padding: EdgeInsets.all(AppSpacing.spacingLG),

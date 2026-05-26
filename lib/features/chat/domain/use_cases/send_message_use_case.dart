@@ -3,7 +3,8 @@ import '../../data/models/message.dart';
 import '../../data/models/message_attachment.dart';
 
 /// Use Case: SendMessageUseCase
-/// Handles sending messages with optional attachments
+/// Handles sending messages with optional attachments.
+/// Optimistic UI (sending → sent | failed) is handled in [ChatNotifier.sendMessage].
 class SendMessageUseCase {
   final ChatRepository _chatRepository;
 

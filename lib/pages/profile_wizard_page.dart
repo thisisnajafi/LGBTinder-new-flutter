@@ -1,16 +1,20 @@
 // Screen: ProfileWizardPage
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/cache/cache_providers.dart';
+import '../core/constants/animation_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/app_theme.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/profile/avatar_upload.dart';
 import '../widgets/profile/edit/profile_field_editor.dart';
 import '../features/profile/data/models/user_image.dart';
@@ -30,7 +34,9 @@ import '../features/profile/data/models/user_profile.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import 'package:go_router/go_router.dart';
-import '../pages/onboarding_page.dart';
+import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
+import '../features/onboarding/widgets/onboarding_celebration_screen.dart';
+import '../core/utils/app_haptics.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/reference_data/data/models/reference_item.dart';
 
@@ -424,9 +430,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
     
     if (_currentStep < 6) {
+      AppHaptics.light();
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: AppAnimations.transitionPage,
+        curve: Curves.easeOutCubic,
       );
     } else {
       _completeWizard();
@@ -435,9 +442,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   void _previousStep() {
     if (_currentStep > 0) {
+      AppHaptics.selection();
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: AppAnimations.transitionPage,
+        curve: Curves.easeOutCubic,
       );
     }
   }
@@ -686,17 +694,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       final response = await authService.completeRegistration(request);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile completed successfully!'),
-            backgroundColor: AppColors.onlineGreen,
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (context) => OnboardingCelebrationScreen(
+              displayName: _name.isNotEmpty ? _name : 'You',
+              avatarUrl: _avatarUrl,
+              topInterests: _selectedInterests.take(3).toList(),
+            ),
           ),
         );
-
-        // Navigate to home after profile setup
-        if (mounted) {
-          context.go('/home');
-        }
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -731,34 +737,24 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Setup Profile',
+      showBackButton: _currentStep > 0,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Setup Profile',
-        showBackButton: _currentStep > 0,
-      ),
       body: Column(
         children: [
           // Progress indicator
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
-              children: List.generate(7, (index) {
-                return Expanded(
-                  child: Container(
-                    height: 4,
-                    margin: EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: index <= _currentStep
-                          ? AppColors.accentPurple
-                          : (isDark
-                              ? AppColors.borderMediumDark
-                              : AppColors.borderMediumLight),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                );
-              }),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.spacingLG,
+              AppSpacing.spacingMD,
+              AppSpacing.spacingLG,
+              0,
+            ),
+            child: OnboardingProgressIndicator(
+              currentStep: _currentStep,
+              totalSteps: 7,
+              style: OnboardingProgressStyle.segmentedBar,
             ),
           ),
           // Page view
@@ -1107,6 +1103,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                                 borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                                 child: CachedNetworkImage(
                                   imageUrl: gender.imageUrl!,
+                                  cacheManager: ref.watch(imageCacheServiceProvider),
+                                  fadeInDuration: const Duration(milliseconds: 200),
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) => Container(
                                     color: surfaceColor,
@@ -1686,6 +1684,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                                   borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                                   child: CachedNetworkImage(
                                     imageUrl: selectedGender.imageUrl!,
+                                    cacheManager: ref.watch(imageCacheServiceProvider),
+                                    fadeInDuration: const Duration(milliseconds: 200),
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(
                                       color: isDark
@@ -2154,6 +2154,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                                             borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                                             child: CachedNetworkImage(
                                               imageUrl: language.imageUrl!,
+                                              cacheManager: ref.watch(imageCacheServiceProvider),
+                                              fadeInDuration: const Duration(milliseconds: 200),
                                               fit: BoxFit.cover,
                                               placeholder: (context, url) => Container(
                                                 color: surfaceColor,
@@ -2486,6 +2488,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                                             borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                                             child: CachedNetworkImage(
                                               imageUrl: gender.imageUrl!,
+                                              cacheManager: ref.watch(imageCacheServiceProvider),
+                                              fadeInDuration: const Duration(milliseconds: 200),
                                               fit: BoxFit.cover,
                                               placeholder: (context, url) => Container(
                                                 color: surfaceColor,
@@ -4130,5 +4134,58 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         ],
       ),
     );
+  }
+
+  @visibleForTesting
+  int get testCurrentStep => _currentStep;
+
+  @visibleForTesting
+  void testJumpToStep(int step) {
+    setState(() {
+      _currentStep = step;
+    });
+    _pageController.jumpToPage(step);
+  }
+
+  @visibleForTesting
+  void testSeedPrimaryPhoto(File file) {
+    setState(() {
+      _primaryImageFile = file;
+      _avatarUrl = file.path;
+    });
+  }
+
+  @visibleForTesting
+  void testSeedStep1Phone({
+    String countryCode = '+1',
+    String phone = '5551234567',
+  }) {
+    _countryCode = countryCode;
+    _countryCodeController.text = countryCode;
+    _phoneNumber = phone;
+    _phoneNumberController.text = phone;
+  }
+
+  @visibleForTesting
+  void testSeedCompleteState(File photo) {
+    testSeedPrimaryPhoto(photo);
+    _name = 'Alex User';
+    _nameController.text = 'Alex User';
+    _countryId = 1;
+    _cityId = 10;
+    _genderId = 2;
+    _birthDate = DateTime(1995, 6, 15);
+    testSeedStep1Phone();
+    _bio = 'Bio text for tests';
+    _educations = [4];
+    _jobs = [3];
+    _languages = [5];
+    _preferredGenders = [2];
+    _relationGoals = [9];
+    _interestsIds = [6];
+    _musicGenres = [8];
+    _minAgePreference = 18;
+    _maxAgePreference = 30;
+    testJumpToStep(6);
   }
 }

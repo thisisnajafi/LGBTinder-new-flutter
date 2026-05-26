@@ -8,6 +8,7 @@ import 'package:lgbtindernew/screens/safety_settings_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../config/test_credentials.dart';
+import '../helpers/app_bootstrap.dart';
 import '../helpers/auth_helpers.dart';
 import 'package:lgbtindernew/features/safety/data/services/user_actions_service.dart';
 import 'package:lgbtindernew/features/safety/providers/user_actions_providers.dart';
@@ -19,11 +20,22 @@ void main() {
   group('Safety screens', () {
     // TEST-084
     testWidgets('TEST-084: safety settings screen renders', (tester) async {
+      e2eSetPhoneViewport(tester);
+      addTearDown(() => e2eResetViewport(tester));
+
       await tester.pumpWidget(
         const MaterialApp(home: SafetySettingsScreen()),
       );
-      await tester.pumpAndSettle();
+      await e2ePumpFrames(tester, frames: 3);
 
+      expect(find.text('Safety Settings'), findsOneWidget);
+      expect(find.byType(SafetySettingsScreen), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Emergency Contacts'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Blocked Users'), findsOneWidget);
       expect(find.text('Emergency Contacts'), findsOneWidget);
     });

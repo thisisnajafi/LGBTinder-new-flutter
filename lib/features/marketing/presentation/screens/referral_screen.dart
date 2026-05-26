@@ -8,7 +8,8 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/providers/api_providers.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 
 /// Enhanced referral screen with tier progress, milestones, and leaderboard.
 /// Loads code, stats, history, and tiers from ReferralApiService (GET referrals/code, stats, history, tiers).
@@ -124,12 +125,10 @@ class _ReferralScreenState extends ConsumerState<ReferralScreen>
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Invite Friends',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Invite Friends',
-        showBackButton: true,
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.accentPurple))
           : Column(

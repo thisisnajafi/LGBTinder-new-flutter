@@ -6,7 +6,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/error_handling/empty_state.dart';
@@ -122,20 +123,16 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
     final categoriesState = ref.watch(forumCategoriesProvider);
     final categories = ref.watch(forumCategoriesListProvider);
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Community Forum',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Community Forum',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.add,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-            onPressed: _showCreatePostDialog,
-          ),
-        ],
+      action: IconButton(
+        icon: Icon(
+          Icons.add,
+          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        ),
+        onPressed: _showCreatePostDialog,
       ),
       body: Column(
         children: [

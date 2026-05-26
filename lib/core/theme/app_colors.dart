@@ -76,6 +76,11 @@ class AppColors {
   static const Color secondaryLight = Color(0xFF8B5CF6); // accentViolet
   static const Color feedbackSuccess = Color(0xFF2ECC71); // onlineGreen
   static const Color feedbackError = Color(0xFFE11D48);   // rose-600 for errors
+  static const Color feedbackWarning = warningYellow;
+
+  /// Legacy card background names (prefer surfaceLight / surfaceDark).
+  static const Color cardBackgroundLight = surfaceLight;
+  static const Color cardBackgroundDark = surfaceDark;
 
   // ─── Optional tint backgrounds (landing hero: rose-50, violet-50) ──────────
   /// Soft rose background for highlights (landing rose-50)

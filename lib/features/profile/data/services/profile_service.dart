@@ -1,5 +1,7 @@
 import 'dart:io';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/utils/app_logger.dart';
+import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/user_profile.dart';
 import '../models/update_profile_request.dart';
@@ -12,18 +14,38 @@ class ProfileService {
 
   /// Get my profile
   Future<UserProfile> getMyProfile() async {
+    profileLog('getMyProfile: ${ApiEndpoints.profile}');
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.profile,
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
+      profileLog(
+        'getMyProfile: status=${response.status} success=${response.isSuccess} '
+        'message=${response.message} dataNull=${response.data == null}',
+      );
+
       if (response.isSuccess && response.data != null) {
-        return UserProfile.fromJson(response.data!);
+        try {
+          final profile = UserProfile.fromJson(response.data!);
+          profileLog('getMyProfile: parsed id=${profile.id}');
+          return profile;
+        } catch (e, st) {
+          profileLog('getMyProfile: UserProfile.fromJson failed');
+          profileLog('getMyProfile: raw keys=${response.data!.keys.toList()}');
+          profileLogError('getMyProfile parse', e, st);
+          rethrow;
+        }
       } else {
+        profileLog('getMyProfile: API returned failure — ${response.message}');
         throw Exception(response.message);
       }
-    } catch (e) {
+    } on ApiError catch (e) {
+      profileLogError('getMyProfile', e);
+      rethrow;
+    } catch (e, st) {
+      profileLogError('getMyProfile', e, st);
       rethrow;
     }
   }

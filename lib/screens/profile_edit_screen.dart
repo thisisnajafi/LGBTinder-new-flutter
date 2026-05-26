@@ -6,7 +6,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/profile/avatar_upload.dart';
@@ -443,24 +444,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: backgroundColor,
-        appBar: AppBarCustom(
-          title: 'Edit Profile',
-          showBackButton: true,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+      return AppPageScaffold(
+      title: 'Edit Profile',
+      showBackButton: true,
+      backgroundColor: backgroundColor,
+      body: const Center(child: CircularProgressIndicator()),
       );
+
     }
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Edit Profile',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Edit Profile',
-        showBackButton: true,
-        actions: [
-          if (_isSaving)
-            Padding(
+      action: _isSaving
+          ? Padding(
               padding: EdgeInsets.all(AppSpacing.spacingMD),
               child: SizedBox(
                 width: 20,
@@ -471,8 +469,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 ),
               ),
             )
-          else
-            TextButton(
+          : TextButton(
               onPressed: _saveProfile,
               child: Text(
                 'Save',
@@ -481,8 +478,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                 ),
               ),
             ),
-        ],
-      ),
       body: Form(
         key: _formKey,
         child: ListView(

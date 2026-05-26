@@ -1,8 +1,10 @@
 // Widget: CardStackManager
-// Card stack manager
+// Card stack manager with horizontal swipe gestures
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
 import '../../core/constants/animation_constants.dart';
 import 'swipeable_card.dart';
 import '../error_handling/empty_state.dart';
@@ -45,6 +47,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   int? _exitingIndex;
   int? _pendingSwipeUserId;
   String? _pendingSwipeAction;
+  Offset _dragOffset = Offset.zero;
   late AnimationController _exitController;
   late Animation<Offset> _exitSlide;
   late Animation<double> _exitFade;
@@ -65,6 +68,15 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   }
 
   @override
+  void didUpdateWidget(CardStackManager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.cards.length != oldWidget.cards.length && _exitingIndex == null) {
+      _currentIndex = 0;
+      _dragOffset = Offset.zero;
+    }
+  }
+
+  @override
   void dispose() {
     _exitController.removeStatusListener(_onExitStatus);
     _exitController.dispose();
@@ -79,18 +91,43 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     _pendingSwipeUserId = null;
     _pendingSwipeAction = null;
     if (mounted) {
-      setState(() => _exitingIndex = null);
+      setState(() {
+        _exitingIndex = null;
+        _dragOffset = Offset.zero;
+      });
       if (userId != null && action != null) {
         widget.onSwipe?.call(userId, action);
       }
-      // Parent removes the top card and updates list; we keep _currentIndex at 0 so next card shows correctly
     }
+  }
+
+  double get _swipeThreshold =>
+      MediaQuery.sizeOf(context).width * 0.22;
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (_exitingIndex != null) return;
+    setState(() {
+      _dragOffset += details.delta;
+    });
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    if (_exitingIndex != null) return;
+    if (_dragOffset.dx > _swipeThreshold) {
+      _handleAction('like');
+      return;
+    }
+    if (_dragOffset.dx < -_swipeThreshold) {
+      _handleAction('dislike');
+      return;
+    }
+    setState(() => _dragOffset = Offset.zero);
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.isLoading) {
-      return LoadingIndicator(message: 'Loading profiles...');
+      return const LoadingIndicator(message: 'Loading profiles...');
     }
 
     if (widget.cards.isEmpty) {
@@ -120,7 +157,6 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     return Stack(
       children: [
-        // Background cards (next 2)
         if (_currentIndex + 1 < widget.cards.length)
           Positioned.fill(
             child: Padding(
@@ -141,7 +177,6 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
               child: _buildCard(widget.cards[_currentIndex + 2], 2),
             ),
           ),
-        // Current card (with exit animation when swiping) — Positioned.fill so card has bounded size and image can cover without stretching
         Positioned.fill(
           child: _buildCurrentCard(currentCard),
         ),
@@ -149,15 +184,82 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     );
   }
 
+  Widget _buildSwipeOverlay() {
+    if (_dragOffset.dx.abs() < 12) return const SizedBox.shrink();
+
+    final isLike = _dragOffset.dx > 0;
+    final opacity = (_dragOffset.dx.abs() / _swipeThreshold).clamp(0.0, 1.0);
+
+    return Positioned(
+      top: 48,
+      left: isLike ? 32 : null,
+      right: isLike ? null : 32,
+      child: Opacity(
+        opacity: opacity,
+        child: Transform.rotate(
+          angle: isLike ? -0.35 : 0.35,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingMD,
+              vertical: AppSpacing.spacingSM,
+            ),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isLike ? AppColors.onlineGreen : AppColors.notificationRed,
+                width: 3,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              isLike ? 'LIKE' : 'NOPE',
+              style: AppTypography.h2.copyWith(
+                color: isLike ? AppColors.onlineGreen : AppColors.notificationRed,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCurrentCard(Map<String, dynamic> currentCard) {
     final content = _buildCard(currentCard, 0);
-    if (_exitingIndex == null) return content;
-    return SlideTransition(
-      position: _exitSlide,
-      child: FadeTransition(
-        opacity: _exitFade,
-        child: content,
-      ),
+    final width = MediaQuery.sizeOf(context).width;
+    final rotation = (_dragOffset.dx / width * 0.12).clamp(-0.15, 0.15);
+
+    Widget card = content;
+    if (_exitingIndex != null) {
+      card = SlideTransition(
+        position: _exitSlide,
+        child: FadeTransition(
+          opacity: _exitFade,
+          child: content,
+        ),
+      );
+    } else {
+      card = Transform.translate(
+        offset: _dragOffset,
+        child: Transform.rotate(
+          angle: rotation,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              content,
+              _buildSwipeOverlay(),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_exitingIndex != null) return card;
+
+    return GestureDetector(
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: card,
     );
   }
 
@@ -180,6 +282,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
           isVerified: cardData['is_verified'] ?? false,
           isPremium: cardData['is_premium'] ?? false,
           distance: cardData['distance']?.toDouble(),
+          compatibilityScore: (cardData['compatibility_score'] as num?)?.toInt(),
           onLike: index == 0 ? () => _handleAction('like') : null,
           onDislike: index == 0 ? () => _handleAction('dislike') : null,
           onSuperlike: index == 0 ? () => _handleAction('superlike') : null,
@@ -192,18 +295,24 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   void _handleAction(String action) {
     if (_currentIndex >= widget.cards.length || _exitingIndex != null) return;
 
+    if (action == 'superlike') {
+      final userId = widget.cards[_currentIndex]['id'] as int? ?? 0;
+      widget.onSwipe?.call(userId, 'superlike');
+      return;
+    }
+
     final currentCard = widget.cards[_currentIndex];
     final userId = currentCard['id'] as int? ?? 0;
 
-    // Like = card exits right; dislike = card exits left (Tinder convention)
     final direction = action == 'like'
         ? const Offset(1.2, 0)
-        : action == 'dislike'
-            ? const Offset(-1.2, 0)
-            : const Offset(0, 1.2);
+        : const Offset(-1.2, 0);
 
     if (!AppAnimations.animationsEnabled(context)) {
-      setState(() => _currentIndex++);
+      setState(() {
+        _currentIndex++;
+        _dragOffset = Offset.zero;
+      });
       widget.onSwipe?.call(userId, action);
       return;
     }
@@ -216,7 +325,10 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         curve: AppAnimations.curveDefault,
       ),
     );
-    setState(() => _exitingIndex = _currentIndex);
+    setState(() {
+      _exitingIndex = _currentIndex;
+      _dragOffset = Offset.zero;
+    });
     _exitController
       ..reset()
       ..addStatusListener(_onExitStatus)

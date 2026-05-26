@@ -1,17 +1,16 @@
-﻿// Widget: ProfileInfoSections
-// Profile information sections
+﻿// Widget: ProfileInfoSections — grouped info pills
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_icons.dart';
+import '../../features/profile/widgets/profile_info_pill.dart';
+import '../../features/profile/widgets/interest_chip_list.dart';
 
-/// Profile information sections widget
-/// Displays user's interests, jobs, education, languages, etc.
-/// Data structure based on API: user.interests, user.jobs, user.educations, etc.
 class ProfileInfoSections extends ConsumerWidget {
   final List<String>? interests;
+  final Set<String>? sharedInterests;
   final List<String>? jobs;
   final List<String>? educations;
   final List<String>? languages;
@@ -24,10 +23,13 @@ class ProfileInfoSections extends ConsumerWidget {
   final bool? smoke;
   final bool? drink;
   final bool? gym;
+  final String? location;
+  final String? distance;
 
   const ProfileInfoSections({
-    Key? key,
+    super.key,
     this.interests,
+    this.sharedInterests,
     this.jobs,
     this.educations,
     this.languages,
@@ -40,231 +42,180 @@ class ProfileInfoSections extends ConsumerWidget {
     this.smoke,
     this.drink,
     this.gym,
-  }) : super(key: key);
+    this.location,
+    this.distance,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textTheme = Theme.of(context).textTheme;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (interests != null && interests!.isNotEmpty)
-          _buildSection(
-            context: context,
-            title: 'Interests',
-            items: interests!,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+          InterestChipList(
+            interests: interests!,
+            sharedInterests: sharedInterests,
+          ),
+        if (location != null || distance != null)
+          _Section(
+            title: 'Basics',
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: [
+                if (distance != null)
+                  ProfileInfoPill(iconPath: AppIcons.location, label: distance!),
+                if (location != null)
+                  ProfileInfoPill(iconPath: AppIcons.getIconPath('global'), label: location!),
+                if (gender != null)
+                  ProfileInfoPill(iconPath: AppIcons.userOutline, label: gender!),
+              ],
+            ),
           ),
         if (jobs != null && jobs!.isNotEmpty)
-          _buildSection(
-            context: context,
-            title: 'Job',
-            items: jobs!,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+          _Section(
+            title: 'Work',
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: jobs!
+                  .map((j) => ProfileInfoPill(iconPath: AppIcons.getIconPath('briefcase'), label: j))
+                  .toList(),
+            ),
           ),
         if (educations != null && educations!.isNotEmpty)
-          _buildSection(
-            context: context,
+          _Section(
             title: 'Education',
-            items: educations!,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: educations!
+                  .map((e) => ProfileInfoPill(iconPath: AppIcons.getIconPath('book'), label: e))
+                  .toList(),
+            ),
           ),
         if (languages != null && languages!.isNotEmpty)
-          _buildSection(
-            context: context,
+          _Section(
             title: 'Languages',
-            items: languages!,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: languages!
+                  .map((l) => ProfileInfoPill(iconPath: AppIcons.getIconPath('global'), label: l))
+                  .toList(),
+            ),
           ),
         if (musicGenres != null && musicGenres!.isNotEmpty)
-          _buildSection(
-            context: context,
+          _Section(
             title: 'Music',
-            items: musicGenres!,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: musicGenres!
+                  .map((m) => ProfileInfoPill(iconPath: AppIcons.getIconPath('music'), label: m))
+                  .toList(),
+            ),
           ),
         if (relationGoals != null && relationGoals!.isNotEmpty)
-          _buildSection(
-            context: context,
+          _Section(
             title: 'Looking for',
-            items: relationGoals!,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: relationGoals!
+                  .map((g) => ProfileInfoPill(iconPath: AppIcons.heartOutline, label: g))
+                  .toList(),
+            ),
           ),
-        if (gender != null || preferredGenders != null)
-          _buildSection(
-            context: context,
-            title: 'Gender',
-            items: [
-              if (gender != null) gender!,
-              if (preferredGenders != null && preferredGenders!.isNotEmpty)
-                'Interested in: ${preferredGenders!.join(', ')}',
-            ],
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+        if (preferredGenders != null && preferredGenders!.isNotEmpty)
+          _Section(
+            title: 'Interested in',
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: preferredGenders!
+                  .map((g) => ProfileInfoPill(iconPath: AppIcons.getIconPath('people'), label: g))
+                  .toList(),
+            ),
           ),
         if (height != null || weight != null || smoke != null || drink != null || gym != null)
-          _buildDetailsSection(
-            context: context,
-            height: height,
-            weight: weight,
-            smoke: smoke,
-            drink: drink,
-            gym: gym,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+          _Section(
+            title: 'Lifestyle',
+            child: Wrap(
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: [
+                if (height != null)
+                  ProfileInfoPill(
+                    iconPath: AppIcons.getIconPath('weight'),
+                    label: '${height}cm',
+                  ),
+                if (weight != null)
+                  ProfileInfoPill(
+                    iconPath: AppIcons.getIconPath('weight'),
+                    label: '${weight}kg',
+                  ),
+                if (smoke != null)
+                  ProfileInfoPill(
+                    iconPath: AppIcons.getIconPath('cloud'),
+                    label: 'Smoking: ${smoke! ? 'Yes' : 'No'}',
+                  ),
+                if (drink != null)
+                  ProfileInfoPill(
+                    iconPath: AppIcons.getIconPath('cup'),
+                    label: 'Drinking: ${drink! ? 'Yes' : 'No'}',
+                  ),
+                if (gym != null)
+                  ProfileInfoPill(
+                    iconPath: AppIcons.getIconPath('activity'),
+                    label: 'Gym: ${gym! ? 'Yes' : 'No'}',
+                  ),
+              ],
+            ),
           ),
+        SizedBox(height: AppSpacing.spacingMD),
       ],
     );
   }
+}
 
-  Widget _buildSection({
-    required BuildContext context,
-    required String title,
-    required List<String> items,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+class _Section extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _Section({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      margin: EdgeInsets.only(
-        left: AppSpacing.spacingLG,
-        right: AppSpacing.spacingLG,
-        bottom: AppSpacing.spacingLG,
+      margin: EdgeInsets.fromLTRB(
+        AppSpacing.spacingLG,
+        0,
+        AppSpacing.spacingLG,
+        AppSpacing.spacingLG,
       ),
       padding: EdgeInsets.all(AppSpacing.spacingLG),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
+        border: Border.all(
+          color: isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: AppTypography.h3.copyWith(color: textColor),
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          Wrap(
-            spacing: AppSpacing.spacingSM,
-            runSpacing: AppSpacing.spacingSM,
-            children: items.map((item) {
-              return Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingMD,
-                  vertical: AppSpacing.spacingSM,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.accentPurple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  border: Border.all(
-                    color: AppColors.accentPurple.withOpacity(0.3),
-                  ),
-                ),
-                child: Text(
-                  item,
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.accentPurple,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailsSection({
-    required BuildContext context,
-    int? height,
-    int? weight,
-    bool? smoke,
-    bool? drink,
-    bool? gym,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    final details = <String>[];
-    if (height != null) details.add('${height}cm');
-    if (weight != null) details.add('${weight}kg');
-    if (smoke != null) details.add('Smoking: ${smoke! ? "Yes" : "No"}');
-    if (drink != null) details.add('Drinking: ${drink! ? "Yes" : "No"}');
-    if (gym != null) details.add('Gym: ${gym! ? "Yes" : "No"}');
-
-    if (details.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: EdgeInsets.only(
-        left: AppSpacing.spacingLG,
-        right: AppSpacing.spacingLG,
-        bottom: AppSpacing.spacingLG,
-      ),
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Details',
-            style: AppTypography.h3.copyWith(color: textColor),
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Wrap(
-            spacing: AppSpacing.spacingSM,
-            runSpacing: AppSpacing.spacingSM,
-            children: details.map((detail) {
-              return Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingMD,
-                  vertical: AppSpacing.spacingSM,
-                ),
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Text(
-                  detail,
-                  style: AppTypography.body.copyWith(color: secondaryTextColor),
-                ),
-              );
-            }).toList(),
-          ),
+          child,
         ],
       ),
     );

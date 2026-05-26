@@ -114,12 +114,12 @@ class UserActionsService {
     }
   }
 
-  /// Mute a user
-  Future<void> muteUser(int mutedUserId) async {
+  /// Mute a user (general mute API).
+  Future<void> muteUser(int userId, {String muteType = 'messages'}) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.mutesMute,
-        data: {'muted_user_id': mutedUserId},
+        data: {'user_id': userId, 'mute_type': muteType},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

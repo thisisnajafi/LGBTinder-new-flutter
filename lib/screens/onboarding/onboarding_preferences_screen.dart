@@ -1,18 +1,23 @@
 ﻿// Screen: OnboardingPreferencesScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/utils/app_haptics.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/buttons/gradient_button.dart';
+import '../../features/onboarding/widgets/onboarding_progress_indicator.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../../features/profile/data/models/update_profile_request.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../shared/models/api_error.dart';
-import '../../pages/home_page.dart';
+import '../../routes/app_router.dart';
 
 /// Onboarding preferences screen - Preference selection during onboarding
 class OnboardingPreferencesScreen extends ConsumerStatefulWidget {
@@ -129,12 +134,8 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
             backgroundColor: AppColors.onlineGreen,
           ),
         );
-        // Navigate to HomePage after saving preferences
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const HomePage(),
-          ),
-        );
+        // Navigate home after saving preferences
+        context.go(AppRoutes.home);
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -176,12 +177,10 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Set Your Preferences',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Set Your Preferences',
-        showBackButton: true,
-      ),
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
@@ -191,6 +190,12 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
           : ListView(
               padding: EdgeInsets.all(AppSpacing.spacingLG),
               children: [
+                const OnboardingProgressIndicator(
+                  currentStep: 0,
+                  totalSteps: 1,
+                  stepLabel: 'Set your preferences',
+                ),
+                SizedBox(height: AppSpacing.spacingLG),
                 Text(
                   'Help us find the perfect matches for you',
                   style: AppTypography.body.copyWith(
@@ -217,6 +222,7 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
                       label: gender.title,
                       isSelected: isSelected,
                       onTap: () {
+                        AppHaptics.selection();
                         setState(() {
                           if (isSelected) {
                             _selectedPreferredGenderIds.remove(gender.id);
@@ -317,6 +323,7 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
                       label: goal.title,
                       isSelected: isSelected,
                       onTap: () {
+                        AppHaptics.selection();
                         setState(() {
                           if (isSelected) {
                             _selectedRelationGoalIds.remove(goal.id);
@@ -357,6 +364,7 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
                       label: interest.title,
                       isSelected: isSelected,
                       onTap: () {
+                        AppHaptics.selection();
                         setState(() {
                           if (isSelected) {
                             _selectedInterestIds.remove(interest.id);
@@ -377,7 +385,7 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
                   onPressed: _isSaving ? null : _savePreferences,
                   isLoading: _isSaving,
                   isFullWidth: true,
-                  icon: Icons.save,
+                  iconPath: AppIcons.getIconPath('tick-circle'),
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
         ],

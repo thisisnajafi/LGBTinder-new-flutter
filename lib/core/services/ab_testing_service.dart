@@ -2,6 +2,7 @@ import '../constants/api_endpoints.dart';
 import '../../shared/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_providers.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// A/B Testing Service
 /// Handles A/B test variations and event tracking
@@ -35,7 +36,7 @@ class ABTestingService {
       }
     } catch (e) {
       // Log error but don't throw
-      print('Error fetching A/B test variation: $e');
+      AppLogger.debug('Error fetching A/B test variation: $e');
     }
 
     return null;
@@ -61,7 +62,7 @@ class ABTestingService {
       );
     } catch (e) {
       // Log error but don't throw
-      print('Error tracking A/B test event: $e');
+      AppLogger.debug('Error tracking A/B test event: $e');
     }
   }
 
@@ -77,7 +78,7 @@ class ABTestingService {
         return response.data!['variation'] as Map<String, dynamic>?;
       }
     } catch (e) {
-      print('Error fetching pricing page variation: $e');
+      AppLogger.debug('Error fetching pricing page variation: $e');
     }
     return null;
   }
@@ -94,7 +95,7 @@ class ABTestingService {
         return response.data!['variation'] as Map<String, dynamic>?;
       }
     } catch (e) {
-      print('Error fetching banner variation: $e');
+      AppLogger.debug('Error fetching banner variation: $e');
     }
     return null;
   }

@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/profile_image_widget.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/navbar/app_bar_custom.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/widgets/app_page_header.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
@@ -132,22 +134,19 @@ class _ProfileVerificationScreenState extends ConsumerState<ProfileVerificationS
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: backgroundColor,
-        appBar: AppBarCustom(
-          title: 'Verification',
-          showBackButton: true,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+      return AppPageScaffold(
+      title: 'Verification',
+      showBackButton: true,
+      backgroundColor: backgroundColor,
+      body: const Center(child: CircularProgressIndicator()),
       );
+
     }
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Verification',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Verification',
-        showBackButton: true,
-      ),
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         children: [
@@ -558,18 +557,11 @@ class _ProfileVerificationScreenState extends ConsumerState<ProfileVerificationS
                 height: 150,
                 width: double.infinity,
                 color: surfaceColor,
-                child: Image.network(
-                  imageUrl,
+                child: ProfileImageWidget(
+                  imageUrl: imageUrl,
+                  width: double.infinity,
+                  height: 150,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: surfaceColor,
-                      child: Icon(
-                        Icons.image,
-                        color: secondaryTextColor,
-                      ),
-                    );
-                  },
                 ),
               ),
             ),

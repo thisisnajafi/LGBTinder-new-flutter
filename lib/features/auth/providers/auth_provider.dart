@@ -6,6 +6,7 @@ import '../data/services/auth_service.dart';
 import '../../user/data/models/user_info.dart';
 import '../../../shared/services/token_storage_service.dart';
 import '../../../shared/services/onboarding_service.dart';
+import '../../../core/cache/cache_invalidator.dart';
 import '../../../core/providers/api_providers.dart';
 import 'auth_service_provider.dart';
 
@@ -55,11 +56,13 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
   final AuthService _authService;
   final TokenStorageService _tokenStorage;
   final OnboardingService _onboardingService;
+  final Future<void> Function() _onLogoutCachePurge;
 
   AuthProviderNotifier(
     this._authService,
     this._tokenStorage,
     this._onboardingService,
+    this._onLogoutCachePurge,
   ) : super(AuthProviderState()) {
     // Defer so provider creation never blocks; avoids async work during first read
     Future.microtask(() => checkAuthStatus());
@@ -76,17 +79,19 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       if (!isAuthenticated) {
         state = state.copyWith(
           isAuthenticated: false,
+          user: null,
           hasCompletedOnboarding: hasCompletedOnboarding,
           isLoading: false,
         );
         return;
       }
 
-      // If authenticated, try to get user info to check profile completion
-      // Note: This requires a separate call to user service
-      // For now, we'll just set authenticated status
+      final session = await _tokenStorage.getUserSession();
       state = state.copyWith(
         isAuthenticated: true,
+        user: session?.user,
+        isProfileComplete: session?.profileCompleted ?? false,
+        isEmailVerified: session?.userState != 'email_verification_required',
         hasCompletedOnboarding: hasCompletedOnboarding,
         isLoading: false,
       );
@@ -131,6 +136,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     try {
       await _authService.logout();
       await _tokenStorage.clearAllTokens();
+      await _onLogoutCachePurge();
 
       state = AuthProviderState(
         isAuthenticated: false,
@@ -147,6 +153,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
           errorMessage: e.toString(),
         );
       }
+      await _onLogoutCachePurge();
       // Ensure we end in logged-out state even on error so 401 flow is consistent
       state = state.copyWith(
         isAuthenticated: false,
@@ -189,5 +196,10 @@ final authProvider = StateNotifierProvider<AuthProviderNotifier, AuthProviderSta
   final tokenStorage = ref.watch(tokenStorageServiceProvider);
   final onboardingService = OnboardingService();
   
-  return AuthProviderNotifier(authService, tokenStorage, onboardingService);
+  return AuthProviderNotifier(
+    authService,
+    tokenStorage,
+    onboardingService,
+    () => ref.read(cacheInvalidatorProvider).purgeAll(),
+  );
 });

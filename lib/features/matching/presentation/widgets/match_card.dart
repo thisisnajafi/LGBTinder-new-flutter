@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/match.dart';
+import '../../data/models/match.dart';
 
 /// Match card widget
 /// Displays match information with user details and last message
@@ -150,38 +149,10 @@ class MatchCard extends ConsumerWidget {
           width: 2,
         ),
       ),
-      child: ClipOval(
-        child: match.primaryImageUrl != null && match.primaryImageUrl!.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: match.primaryImageUrl!,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.grey,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              )
-            : Container(
-                color: Colors.grey[300],
-                child: const Center(
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.grey,
-                    size: 24,
-                  ),
-                ),
-              ),
+      child: AvatarWidget(
+        imageUrl: match.primaryImageUrl,
+        radius: 26,
+        fallbackInitial: match.firstName,
       ),
     );
   }

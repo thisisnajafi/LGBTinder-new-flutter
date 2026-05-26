@@ -68,6 +68,8 @@ class ApiEndpoints {
   static const String userOnesignalPlayer = '/user/onesignal-player';
   static const String userNotificationPreferences = '/user/notification-preferences';
   static const String userNotificationHistory = '/user/notification-history';
+  static const String userSoundPreferences = '/user/sound-preferences';
+  static const String userAvailableSounds = '/user/available-sounds';
 
   // OneSignal (push notification player & preferences)
   static const String onesignalUpdatePlayerId = '/onesignal/update-player-id';
@@ -154,6 +156,8 @@ class ApiEndpoints {
   static const String chatAccessUsers = '/chat/access-users';
   static const String chatMessage = '/chat/message';
   static const String chatTyping = '/chat/typing';
+  static String chatConversationTyping(int conversationId) =>
+      '/chat/$conversationId/typing';
   static const String chatRead = '/chat/read';
   static const String chatUnreadCount = '/chat/unread-count';
   // NOTE (Task 2.3.2): Backend handles media uploads directly in sendMessage via 'media' field.
@@ -168,6 +172,17 @@ class ApiEndpoints {
   static const String chatUnpinMessage = '/chat/unpin-message';
   static const String chatPinnedMessages = '/chat/pinned-messages';
   static const String chatSearch = '/chat/search';
+  static String chatConversationMute(int userId) =>
+      '/chat/conversations/$userId/mute';
+  static const String chatStickerPacks = '/chat/sticker-packs';
+  static String chatStickerPackStickers(int packId) =>
+      '/chat/sticker-packs/$packId/stickers';
+  static String chatUploadImage(int conversationId) =>
+      '/chat/$conversationId/upload-image';
+  static String chatUploadVoice(int conversationId) =>
+      '/chat/$conversationId/upload-voice';
+  static String chatMessageView(int messageId) =>
+      '/chat/messages/$messageId/view';
 
   // ==================== Notifications ====================
   static const String notifications = '/notifications';
@@ -281,6 +296,11 @@ class ApiEndpoints {
   static const String callsAccept = '/calls/accept';  // Send call_id in body
   static const String callsDecline = '/calls/reject'; // Backend uses 'reject' not 'decline'
   static const String callsEnd = '/calls/end';        // Send call_id in body
+  static String callsAcceptById(String callId) => '/calls/$callId/accept';
+  static String callsRejectById(String callId) => '/calls/$callId/reject';
+  static String callsEndById(String callId) => '/calls/$callId/end';
+  static String callsBusy(String callId) => '/calls/$callId/busy';
+  static String callsAgoraToken(int callId) => '/calls/$callId/agora-token';
   static const String callsHistory = '/calls/history';
   static const String callsActive = '/calls/active';
   static String callsById(String callId) => '/calls/$callId';

@@ -11,7 +11,8 @@ import '../routes/app_router.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loading.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 
 class SubscriptionStatusScreen extends ConsumerWidget {
   const SubscriptionStatusScreen({super.key});
@@ -28,12 +29,10 @@ class SubscriptionStatusScreen extends ConsumerWidget {
 
     final statusAsync = ref.watch(subscriptionStatusProvider);
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Subscription',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Subscription',
-        showBackButton: true,
-      ),
       body: statusAsync.when(
         loading: () => SkeletonLoading(),
         error: (_, __) => EmptyState(

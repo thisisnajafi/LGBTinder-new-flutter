@@ -6,26 +6,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/app_icons.dart';
 import '../widgets/chat/chat_header.dart';
-import '../widgets/chat/message_bubble.dart';
+import '../widgets/chat/chat_user_info_panel.dart';
 import '../widgets/chat/message_input.dart';
 import '../widgets/chat/message_reply_widget.dart';
 import '../widgets/chat/pinned_messages_banner.dart';
-import '../widgets/chat/typing_indicator.dart';
-import '../core/widgets/loading_indicator.dart';
+import '../widgets/chat/chat_message_list_tile.dart';
+import '../widgets/chat/chat_peer_typing_indicator.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_chat.dart';
+import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/data/models/message.dart';
-import '../features/chat/data/services/websocket_service.dart';
+import '../features/chat/data/models/message_delivery_status.dart';
+import '../features/chat/data/models/sticker_pack.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import '../features/chat/presentation/widgets/share_profile_sheet.dart';
+import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
+import '../features/chat/presentation/widgets/sticker_picker_sheet.dart';
+import '../features/chat/presentation/widgets/self_destruct_viewer.dart';
+import '../features/chat/presentation/widgets/voice_recorder_overlay.dart';
+import '../features/chat/providers/chat_pusher_providers.dart';
+import '../shared/services/pusher_websocket_service.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/user/providers/user_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../shared/utils/plan_guard.dart';
-import '../screens/video_call_screen.dart';
-import '../screens/voice_call_screen.dart';
+import '../features/calls/data/models/call.dart';
+import '../features/calls/pages/outgoing_call_page.dart';
+import '../features/calls/presentation/widgets/call_history_bubble.dart';
+import '../features/calls/providers/call_providers.dart';
+import '../features/calls/utils/call_log_labels.dart';
+import '../features/chat/providers/chat_list_preview_provider.dart';
+import '../features/chat/providers/pinned_count_provider.dart';
+import '../features/chat/data/services/chat_service.dart';
+import '../features/chat/utils/chat_timeline_merger.dart';
+import '../features/calls/utils/call_navigation.dart';
 import '../routes/app_router.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Chat page - Individual chat conversation screen
 class ChatPage extends ConsumerStatefulWidget {
@@ -45,9 +66,14 @@ class ChatPage extends ConsumerStatefulWidget {
 }
 
 class _ChatPageState extends ConsumerState<ChatPage> {
+  static const int _historyPageSize = 30;
+
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMoreMessages = true;
+  ChatHistoryCursor? _nextCursor;
   bool _hasError = false;
   String? _errorMessage;
   int? _currentUserId;
@@ -56,23 +82,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String? _repliedToName;
   String? _repliedToMessageType;
   
-  // WebSocket state
-  WebSocketService? _webSocketService;
+  // Pusher real-time state
+  int? _conversationId;
   StreamSubscription<Message>? _messageSubscription;
-  StreamSubscription<Map<String, dynamic>>? _typingSubscription;
-  StreamSubscription<Map<String, dynamic>>? _onlineStatusSubscription;
-  bool _isOtherUserTyping = false;
+  StreamSubscription<ReadReceiptEvent>? _readReceiptSubscription;
+  StreamSubscription<MessageExpiredEvent>? _messageExpiredSubscription;
+  StreamSubscription<CallSignalingEvent>? _callEventSubscription;
   bool _isOnline = false;
   DateTime? _lastSeenAt;
-  Timer? _typingTimer;
+  bool _showUserInfoPanel = false;
+  bool _conversationMuted = false;
+  Timer? _outboundTypingStopTimer;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadCurrentUserId();
     if (widget.userId > 0) {
       _loadMessages();
-      _initializeWebSocket();
+      _initializePusherListeners();
+      _loadConversationMuteStatus();
     } else {
       setState(() {
         _isLoading = false;
@@ -85,10 +115,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   @override
   void dispose() {
     _messageSubscription?.cancel();
-    _typingSubscription?.cancel();
-    _onlineStatusSubscription?.cancel();
-    _typingTimer?.cancel();
-    _webSocketService?.leaveChat(widget.userId);
+    _readReceiptSubscription?.cancel();
+    _messageExpiredSubscription?.cancel();
+    _callEventSubscription?.cancel();
+    _outboundTypingStopTimer?.cancel();
+    unawaited(ref.read(chatPusherLifecycleProvider.notifier).closeConversation());
     _scrollController.dispose();
     _messageController.dispose();
     super.dispose();
@@ -120,79 +151,179 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  Future<void> _initializeWebSocket() async {
+  Future<void> _loadConversationMuteStatus() async {
     try {
-      _webSocketService = ref.read(webSocketServiceProvider);
-      
-      // Connect if not already connected
-      if (!_webSocketService!.isConnected) {
-        await _webSocketService!.connect();
+      final muted =
+          await ref.read(chatServiceProvider).isConversationMuted(widget.userId);
+      if (!mounted) return;
+      ref
+          .read(conversationMuteCacheProvider.notifier)
+          .setMuted(widget.userId, muted);
+      setState(() => _conversationMuted = muted);
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+  }
+
+  void _initializePusherListeners() {
+    final pusher = ref.read(pusherWebSocketServiceProvider);
+
+    _messageSubscription = pusher.messageStream.listen((message) {
+      if (!mounted) return;
+      if (message.senderId != widget.userId &&
+          message.receiverId != widget.userId) {
+        return;
       }
-      
-      // Join chat room
-      _webSocketService!.joinChat(widget.userId);
-      
-      // Listen for new messages
-      _messageSubscription = _webSocketService!.messageStream.listen((message) {
-        if (mounted && (message.senderId == widget.userId || message.receiverId == widget.userId)) {
-          setState(() {
-            // Check if message already exists (avoid duplicates)
-            final exists = _messages.any((msg) => msg['id'] == message.id);
-            if (!exists) {
-              _messages.add(_messageToMap(message));
-            }
-          });
-          _scrollToBottom();
+      setState(() {
+        if (message.id > 0 && _messages.any((msg) => msg['id'] == message.id)) {
+          return;
         }
+        _messages = _messages
+            .where((msg) =>
+                msg['client_id'] == null ||
+                msg['delivery_status'] != MessageDeliveryStatus.sending ||
+                msg['text'] != message.message)
+            .toList();
+        _messages.add(_messageToMap(message));
       });
-      
-      // Listen for typing indicators
-      _typingSubscription = _webSocketService!.typingStream.listen((data) {
-        if (mounted) {
-          final userId = data['user_id'] ?? data['receiver_id'];
-          final isTyping = data['is_typing'] == true;
-          if (userId == widget.userId) {
-            setState(() {
-              _isOtherUserTyping = isTyping;
-            });
+      _scrollToBottom();
+    });
+
+    _readReceiptSubscription = pusher.readReceiptStream.listen((event) {
+      if (!mounted) return;
+      if (_conversationId != null &&
+          event.conversationId != null &&
+          event.conversationId != _conversationId) {
+        return;
+      }
+      if (event.readerId != widget.userId) return;
+
+      setState(() {
+        _messages = _messages.map((msg) {
+          if (msg['is_sent'] != true) return msg;
+          final id = msg['id'];
+          if (event.messageIds.isEmpty) {
+            return {...msg, 'is_read': true};
           }
-        }
+          if (id is int && event.messageIds.contains(id)) {
+            return {...msg, 'is_read': true};
+          }
+          return msg;
+        }).toList();
       });
-      
-      // Listen for online status changes
-      _onlineStatusSubscription = _webSocketService!.onlineStatusStream.listen((data) {
-        if (mounted && data['user_id'] == widget.userId) {
-          setState(() {
-            _isOnline = data['is_online'] == true;
-            if (!_isOnline) {
-              _lastSeenAt = DateTime.now();
-            }
-          });
-        }
+    });
+
+    _messageExpiredSubscription = pusher.messageExpiredStream.listen((event) {
+      if (!mounted) return;
+      if (_conversationId != null &&
+          event.conversationId != null &&
+          event.conversationId != _conversationId) {
+        return;
+      }
+      setState(() {
+        _messages = _messages.map((msg) {
+          final id = msg['id'];
+          if (id is int && id == event.messageId) {
+            return {
+              ...msg,
+              'is_expired': true,
+              'remaining_seconds': 0,
+              'attachment_url': null,
+            };
+          }
+          return msg;
+        }).toList();
       });
-    } catch (e) {
-      // WebSocket connection is optional - fail silently
-      print('WebSocket initialization failed: $e');
+    });
+
+    _callEventSubscription = pusher.callEventStream.listen((event) {
+      if (!mounted) return;
+      if (event.name != 'call.ended' &&
+          event.name != 'call.rejected' &&
+          event.name != 'call.busy') {
+        return;
+      }
+      unawaited(_handleCallTimelineEvent(event));
+    });
+  }
+
+  Future<void> _handleCallTimelineEvent(CallSignalingEvent event) async {
+    final callId = event.payload['call_id']?.toString();
+    if (callId == null || callId.isEmpty) return;
+
+    try {
+      final call = await ref.read(callServiceProvider).getCall(callId);
+      final involvesPeer = call.callerId == widget.userId ||
+          call.receiverId == widget.userId;
+      if (!involvesPeer || !CallLogLabels.isTerminalStatus(call.status)) {
+        return;
+      }
+      _appendCallEntry(call);
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+  }
+
+  void _appendCallEntry(Call call) {
+    if (_messages.any(
+      (item) => item['kind'] == 'call' && item['call_id'] == call.id,
+    )) {
+      return;
     }
+
+    setState(() {
+      final messageItems = _messages
+          .where((item) => item['kind'] != 'call')
+          .toList();
+      final callItems = _messages
+          .where((item) => item['kind'] == 'call')
+          .toList()
+        ..add(_callToMap(call));
+      _messages = ChatTimelineMerger.merge(
+        messages: messageItems,
+        calls: callItems,
+      );
+    });
+    _scrollToBottom();
+  }
+
+  Future<void> _subscribePusherConversation(int conversationId) async {
+    _conversationId = conversationId;
+    await ref.read(chatPusherLifecycleProvider.notifier).openConversation(
+          conversationId: conversationId,
+          otherUserId: widget.userId,
+        );
   }
 
   void _onTypingChanged(String text) {
-    if (_webSocketService == null || !_webSocketService!.isConnected) return;
-    
-    // Cancel previous timer
-    _typingTimer?.cancel();
-    
-    if (text.trim().isNotEmpty) {
-      // Send typing started
-      _webSocketService!.sendTypingStatus(widget.userId, true);
-      
-      // Set timer to stop typing after 3 seconds of inactivity
-      _typingTimer = Timer(const Duration(seconds: 3), () {
-        _webSocketService?.sendTypingStatus(widget.userId, false);
+    _outboundTypingStopTimer?.cancel();
+    final chatService = ref.read(chatServiceProvider);
+    final hasText = text.trim().isNotEmpty;
+
+    Future<void> sendTyping(bool isTyping) async {
+      final conversationId = _conversationId;
+      if (conversationId != null && conversationId > 0) {
+        await chatService.setConversationTyping(conversationId, isTyping);
+      } else {
+        await chatService.setTypingStatus(widget.userId, isTyping);
+      }
+    }
+
+    if (hasText) {
+      unawaited(sendTyping(true));
+      _outboundTypingStopTimer = Timer(const Duration(seconds: 3), () {
+        unawaited(sendTyping(false));
       });
     } else {
-      // Send typing stopped immediately
-      _webSocketService!.sendTypingStatus(widget.userId, false);
+      unawaited(sendTyping(false));
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        _isLoadingMore ||
+        !_hasMoreMessages) {
+      return;
+    }
+    if (_scrollController.position.pixels <= 120) {
+      unawaited(_loadMoreMessages());
     }
   }
 
@@ -208,30 +339,79 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
 
+    var showedCache = false;
+    try {
+      final cached = await ref
+          .read(chatLocalRepositoryProvider)
+          .getMessagesForOtherUser(widget.userId, limit: _historyPageSize);
+      if (cached.isNotEmpty && mounted) {
+        showedCache = true;
+        setState(() {
+          _messages = cached.map(_messageToMap).toList();
+          _isLoading = false;
+          _hasError = false;
+          _errorMessage = null;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+
     setState(() {
-      _isLoading = true;
+      _isLoading = !showedCache;
       _hasError = false;
       _errorMessage = null;
+      _hasMoreMessages = true;
+      _nextCursor = null;
     });
 
     try {
       final chatService = ref.read(chatServiceProvider);
-      final messages = await chatService.getChatHistory(
+      final history = await chatService.getChatHistory(
         receiverId: widget.userId,
         page: 1,
-        limit: 50,
+        limit: _historyPageSize,
       );
 
+      List<Call> calls = [];
+      try {
+        calls = await ref.read(getCallHistoryUseCaseProvider).execute(
+              peerUserId: widget.userId,
+              limit: 50,
+            );
+      } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+
       if (mounted) {
+        final messageMaps =
+            history.messages.map((message) => _messageToMap(message)).toList();
+        final callMaps = calls
+            .where((call) => CallLogLabels.isTerminalStatus(call.status))
+            .map(_callToMap)
+            .toList();
+
+        final merged = ChatTimelineMerger.merge(
+          messages: messageMaps,
+          calls: callMaps,
+        );
         setState(() {
-          // Convert Message objects to Map format for MessageBubble
-          _messages = messages.map((message) => _messageToMap(message)).toList();
+          _messages = merged;
           _isLoading = false;
+          _hasMoreMessages = history.hasMore;
+          _nextCursor = history.nextCursor;
         });
+        unawaited(
+          ref.read(chatLocalRepositoryProvider).upsertMessages(
+                history.messages,
+                widget.userId,
+              ),
+        );
         _scrollToBottom();
-        
-        // Mark messages as read
-        _markAsRead();
+
+        final conversationId = history.conversationId;
+        if (conversationId != null && conversationId > 0) {
+          await _subscribePusherConversation(conversationId);
+        }
+
+        await _markAsRead();
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -252,41 +432,195 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _loadMoreMessages() async {
+    if (_isLoading || _isLoadingMore || !_hasMoreMessages) return;
+
+    final cursor = _nextCursor;
+    setState(() => _isLoadingMore = true);
+
+    final previousMaxExtent = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
+    final previousPixels =
+        _scrollController.hasClients ? _scrollController.position.pixels : 0.0;
+
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      final history = await chatService.getChatHistory(
+        receiverId: widget.userId,
+        limit: _historyPageSize,
+        beforeId: cursor?.beforeId,
+        beforeCreatedAt: cursor?.beforeCreatedAt,
+      );
+
+      if (!mounted) return;
+
+      final existingMessageIds = _messages
+          .where((item) => item['kind'] != 'call')
+          .map((item) => item['id'])
+          .whereType<int>()
+          .toSet();
+
+      final newMessageMaps = history.messages
+          .where((message) => !existingMessageIds.contains(message.id))
+          .map((message) => _messageToMap(message))
+          .toList();
+
+      if (newMessageMaps.isEmpty) {
+        setState(() {
+          _isLoadingMore = false;
+          _hasMoreMessages = history.hasMore;
+          _nextCursor = history.nextCursor;
+        });
+        return;
+      }
+
+      final existingMessages = _messages
+          .where((item) => item['kind'] != 'call')
+          .toList();
+      final callItems =
+          _messages.where((item) => item['kind'] == 'call').toList();
+
+      setState(() {
+        _messages = ChatTimelineMerger.merge(
+          messages: [...newMessageMaps, ...existingMessages],
+          calls: callItems,
+        );
+        _isLoadingMore = false;
+        _hasMoreMessages = history.hasMore;
+        _nextCursor = history.nextCursor;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scrollController.hasClients) return;
+        final newMaxExtent = _scrollController.position.maxScrollExtent;
+        final delta = newMaxExtent - previousMaxExtent;
+        if (delta > 0) {
+          _scrollController.jumpTo(previousPixels + delta);
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
+  }
+
+  Map<String, dynamic> _callToMap(Call call) {
+    return {
+      'kind': 'call',
+      'call_id': call.id,
+      'caller_id': call.callerId,
+      'receiver_id': call.receiverId,
+      'call_type': call.callType,
+      'status': call.status,
+      'duration_seconds': call.duration?.inSeconds ?? 0,
+      'timestamp': call.timelineTimestamp,
+      'call': call,
+    };
+  }
+
+  Future<void> _redialCall(Call call) async {
+    if (call.isVideoCall && !await _ensureVideoCallAccess()) return;
+    await startOutgoingCall(
+      context: context,
+      ref: ref,
+      recipientId: widget.userId,
+      recipientName: widget.userName ?? 'User',
+      recipientAvatarUrl: widget.avatarUrl,
+      type: call.isVideoCall ? OutgoingCallType.video : OutgoingCallType.voice,
+    );
+  }
+
   Map<String, dynamic> _messageToMap(Message message) {
     final isSent = _currentUserId != null
         ? message.senderId == _currentUserId
         : message.senderId != widget.userId;
     return {
       'id': message.id,
+      'client_id': message.clientId,
       'text': message.message,
       'is_sent': isSent,
       'sender_id': message.senderId,
       'timestamp': message.createdAt,
       'is_read': message.isRead,
       'type': message.messageType,
-      'attachment_url': message.attachmentUrl,
+      'attachment_url': message.attachmentUrl ?? message.mediaThumbnailUrl,
       'is_locked': message.isLocked,
+      'is_blurred': message.isBlurred,
+      'profile_card': message.profileCard,
+      'hero_tag': message.id > 0 ? 'chat_image_${message.id}' : message.clientId,
+      'delivery_status': message.deliveryStatus,
+      'remaining_seconds': message.remainingSeconds,
+      'is_expired': message.isExpired,
+      'viewed_at': message.viewedAt,
+      'secure_media_url': message.secureMediaUrl,
+      'media_duration': message.mediaDuration,
     };
+  }
+
+  MessageDeliveryStatus _deliveryStatusFromMap(Map<String, dynamic> msg) {
+    final raw = msg['delivery_status'];
+    if (raw is MessageDeliveryStatus) return raw;
+    if (raw is String) {
+      switch (raw) {
+        case 'sending':
+          return MessageDeliveryStatus.sending;
+        case 'failed':
+          return MessageDeliveryStatus.failed;
+        default:
+          return MessageDeliveryStatus.sent;
+      }
+    }
+    if (msg['is_sending'] == true) return MessageDeliveryStatus.sending;
+    return MessageDeliveryStatus.sent;
+  }
+
+  Map<String, dynamic> _optimisticMap({
+    required String clientId,
+    required String text,
+    String type = 'text',
+    String? attachmentUrl,
+  }) {
+    return {
+      'id': 0,
+      'client_id': clientId,
+      'text': text,
+      'is_sent': true,
+      'sender_id': _currentUserId,
+      'timestamp': DateTime.now(),
+      'is_read': false,
+      'type': type,
+      'attachment_url': attachmentUrl,
+      'delivery_status': MessageDeliveryStatus.sending,
+    };
+  }
+
+  void _markMessageFailed(String clientId) {
+    setState(() {
+      _messages = _messages.map((msg) {
+        if (msg['client_id'] == clientId) {
+          return {...msg, 'delivery_status': MessageDeliveryStatus.failed};
+        }
+        return msg;
+      }).toList();
+    });
+  }
+
+  void _replaceOptimisticMessage(String clientId, Message serverMessage) {
+    setState(() {
+      _messages = _messages
+          .where((msg) => msg['client_id'] != clientId)
+          .toList()
+        ..add(_messageToMap(serverMessage));
+    });
   }
 
   Future<void> _markAsRead() async {
     try {
       final chatService = ref.read(chatServiceProvider);
       await chatService.markAsRead(widget.userId);
+      ref.read(chatListPreviewProvider.notifier).clearUnreadForPeer(widget.userId);
     } catch (e) {
       // Silently fail - marking as read is not critical
-    }
-  }
-
-  Future<int> _getPinnedMessagesCount() async {
-    if (widget.userId <= 0) return 0;
-    try {
-      final chatService = ref.read(chatServiceProvider);
-      final count = await chatService.getPinnedMessagesCount(widget.userId);
-      return count;
-    } catch (e) {
-      // Return 0 on error - pinned count is not critical
-      return 0;
     }
   }
 
@@ -359,71 +693,85 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     });
   }
 
-  Future<void> _handleSend(String text) async {
+  Future<void> _handleSend(String text, {String? existingClientId}) async {
     if (text.trim().isEmpty) return;
 
-    // Optimistically add message to UI
-    final tempMessageId = DateTime.now().millisecondsSinceEpoch;
-    setState(() {
-      _messages.add({
-        'id': tempMessageId,
-        'text': text,
-        'is_sent': true,
-        'timestamp': DateTime.now(),
-        'is_read': false,
-        'type': 'text',
-        'replied_to': _repliedToMessage,
-        'is_sending': true,
+    final clientId =
+        existingClientId ?? 'local_${DateTime.now().millisecondsSinceEpoch}';
+
+    if (existingClientId == null) {
+      setState(() {
+        _messages.add(_optimisticMap(clientId: clientId, text: text));
+        _repliedToMessage = null;
+        _repliedToName = null;
+        _repliedToMessageType = null;
       });
-      _repliedToMessage = null;
-      _repliedToName = null;
-      _repliedToMessageType = null;
-    });
-    _messageController.clear();
+      _messageController.clear();
+    } else {
+      setState(() {
+        _messages = _messages.map((msg) {
+          if (msg['client_id'] == clientId) {
+            return {
+              ...msg,
+              'delivery_status': MessageDeliveryStatus.sending,
+            };
+          }
+          return msg;
+        }).toList();
+      });
+    }
     _scrollToBottom();
 
     try {
-      final chatService = ref.read(chatServiceProvider);
-      final sentMessage = await chatService.sendMessage(
-        widget.userId,
-        text,
-        messageType: 'text',
-      );
+      final sentMessage = await ref.read(chatServiceProvider).sendMessage(
+            widget.userId,
+            text,
+            messageType: 'text',
+          );
 
       if (mounted) {
-        setState(() {
-          // Remove temp message and add real one
-          _messages.removeWhere((msg) => msg['id'] == tempMessageId);
-          _messages.add(_messageToMap(sentMessage));
-        });
+        _replaceOptimisticMessage(clientId, sentMessage);
         _scrollToBottom();
       }
-           } on ApiError catch (e) {
-             if (mounted) {
-               // Remove failed message
-               setState(() {
-                 _messages.removeWhere((msg) => msg['id'] == tempMessageId);
-               });
-               ErrorHandlerService.showErrorSnackBar(
-                 context,
-                 e,
-                 onRetry: () => _handleSend(text),
-               );
-             }
-           } catch (e) {
-             if (mounted) {
-               // Remove failed message
-               setState(() {
-                 _messages.removeWhere((msg) => msg['id'] == tempMessageId);
-               });
-               ErrorHandlerService.handleError(
-                 context,
-                 e,
-                 customMessage: 'Failed to send message',
-                 onRetry: () => _handleSend(text),
-               );
-             }
+    } on ApiError catch (e) {
+      if (mounted) {
+        _markMessageFailed(clientId);
+        if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
+          await ChatUpgradeBottomSheet.show(context);
+        } else {
+          ErrorHandlerService.showErrorSnackBar(
+            context,
+            e,
+            onRetry: () => _handleSend(text, existingClientId: clientId),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _markMessageFailed(clientId);
+        ErrorHandlerService.handleError(
+          context,
+          e,
+          customMessage: 'Failed to send message',
+          onRetry: () => _handleSend(text, existingClientId: clientId),
+        );
+      }
     }
+  }
+
+  void _retryFailedMessage(Map<String, dynamic> message) {
+    final clientId = message['client_id']?.toString();
+    final text = message['text']?.toString() ?? '';
+    if (clientId == null || text.isEmpty) return;
+    unawaited(_handleSend(text, existingClientId: clientId));
+  }
+
+  void _handleVoiceTap() {
+    VoiceRecorderOverlay.show(
+      context,
+      receiverId: widget.userId,
+      conversationId: _conversationId,
+    );
   }
 
   void _handleMediaTap() {
@@ -435,7 +783,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
+                leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
                 title: const Text('Send photo'),
                 onTap: () {
                   Navigator.pop(context);
@@ -443,11 +791,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.videocam_outlined),
-                title: const Text('Send video'),
+                leading: AppSvgIcon(assetPath: AppIcons.timer, size: 22),
+                title: const Text('Self-destruct photo'),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickAndSendMedia(ImageSource.gallery, 'video');
+                  _startSelfDestructPhotoFlow();
                 },
               ),
             ],
@@ -457,8 +805,77 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  Future<void> _pickAndSendMedia(ImageSource source, String type) async {
-    int? tempId;
+  void _handleMediaLongPress() {
+    _startSelfDestructPhotoFlow();
+  }
+
+  void _startSelfDestructPhotoFlow() {
+    SelfDestructDurationSheet.show(
+      context,
+      onSelected: (seconds) {
+        _pickAndSendMedia(
+          ImageSource.gallery,
+          'disappearing_image',
+          expiresInSeconds: seconds,
+        );
+      },
+    );
+  }
+
+  Future<void> _openSelfDestructViewer(Map<String, dynamic> message) async {
+    final messageId = message['id'];
+    if (messageId is! int || messageId <= 0) return;
+
+    final expired = await SelfDestructViewer.open(
+      context,
+      messageId: messageId,
+      initialRemainingSeconds: message['remaining_seconds'] as int?,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _messages = _messages.map((msg) {
+        if (msg['id'] == messageId) {
+          return {
+            ...msg,
+            'viewed_at': DateTime.now(),
+            'is_expired': expired == true,
+            'remaining_seconds': expired == true ? 0 : msg['remaining_seconds'],
+            if (expired == true) 'attachment_url': null,
+          };
+        }
+        return msg;
+      }).toList();
+    });
+  }
+
+  static const int _maxChatImageBytes = 5 * 1024 * 1024;
+
+  Future<File?> _compressImageIfNeeded(String sourcePath) async {
+    final source = File(sourcePath);
+    final length = await source.length();
+    if (length <= _maxChatImageBytes) {
+      return source;
+    }
+
+    final targetPath = '${(await getTemporaryDirectory()).path}/chat_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final result = await FlutterImageCompress.compressAndGetFile(
+      sourcePath,
+      targetPath,
+      quality: 75,
+      minWidth: 1280,
+      minHeight: 1280,
+    );
+    return result != null ? File(result.path) : source;
+  }
+
+  Future<void> _pickAndSendMedia(
+    ImageSource source,
+    String type, {
+    int? expiresInSeconds,
+  }) async {
+    String? clientId;
     try {
       final picker = ImagePicker();
       final file = type == 'video'
@@ -466,79 +883,234 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           : await picker.pickImage(source: source);
       if (file == null || !mounted) return;
 
-      tempId = DateTime.now().millisecondsSinceEpoch;
-      final now = DateTime.now();
+      File mediaFile = File(file.path);
+      if (type == 'image' || type == 'disappearing_image') {
+        final length = await mediaFile.length();
+        if (length > _maxChatImageBytes * 2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Image is too large. Maximum size is 5MB.')),
+            );
+          }
+          return;
+        }
+        final compressed = await _compressImageIfNeeded(file.path);
+        if (compressed != null) mediaFile = compressed;
+      }
+
+      clientId = 'local_${DateTime.now().millisecondsSinceEpoch}';
+      final label = type == 'disappearing_image'
+          ? 'Sending self-destruct photo...'
+          : (type == 'video' ? 'Sending video...' : 'Sending image...');
       setState(() {
-        _messages.add({
-          'id': tempId,
-          'text': type == 'video' ? 'Sending video...' : 'Sending image...',
-          'is_sent': true,
-          'sender_id': _currentUserId,
-          'timestamp': now,
-          'is_read': false,
-          'type': type,
-          'attachment_url': file.path,
-          'is_sending': true,
-        });
+        _messages.add(_optimisticMap(
+          clientId: clientId!,
+          text: label,
+          type: type,
+          attachmentUrl: mediaFile.path,
+        ));
       });
       _scrollToBottom();
 
-      final sent = await ref.read(chatServiceProvider).sendMessage(
-            widget.userId,
-            '',
-            messageType: type,
-            mediaFile: File(file.path),
-          );
+      Message sent;
+      if ((type == 'image' || type == 'disappearing_image') &&
+          _conversationId != null &&
+          _conversationId! > 0) {
+        try {
+          final upload = await ref.read(chatServiceProvider).uploadChatImage(
+                _conversationId!,
+                mediaFile,
+              );
+          sent = await ref.read(chatServiceProvider).sendMessage(
+                widget.userId,
+                '',
+                messageType: type,
+                mediaPath: upload['media_path']?.toString(),
+                mediaThumbnailPath: upload['media_thumbnail_path']?.toString(),
+                mediaWidth: upload['width'] as int?,
+                mediaHeight: upload['height'] as int?,
+                expiresInSeconds: expiresInSeconds,
+              );
+        } catch (_) {
+          sent = await ref.read(chatServiceProvider).sendMessage(
+                widget.userId,
+                '',
+                messageType: type,
+                mediaFile: mediaFile,
+                expiresInSeconds: expiresInSeconds,
+              );
+        }
+      } else {
+        sent = await ref.read(chatServiceProvider).sendMessage(
+              widget.userId,
+              '',
+              messageType: type,
+              mediaFile: mediaFile,
+              expiresInSeconds: expiresInSeconds,
+            );
+      }
+
       if (!mounted) return;
-      setState(() {
-        _messages.removeWhere((m) => m['id'] == tempId);
-        _messages.add(_messageToMap(sent));
-      });
+      _replaceOptimisticMessage(clientId, sent);
       _scrollToBottom();
     } on ApiError catch (e) {
       if (!mounted) return;
-      if (tempId != null) {
-        setState(() {
-          _messages.removeWhere((m) => m['id'] == tempId);
-        });
+      if (clientId != null) _markMessageFailed(clientId);
+      if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
+        await ChatUpgradeBottomSheet.show(context);
+        return;
       }
       ErrorHandlerService.showErrorSnackBar(
         context,
         e,
         customMessage: 'Failed to send media',
+        onRetry: clientId != null
+            ? () => _pickAndSendMedia(source, type)
+            : null,
       );
     } catch (e) {
       if (!mounted) return;
-      if (tempId != null) {
-        setState(() {
-          _messages.removeWhere((m) => m['id'] == tempId);
-        });
-      }
+      if (clientId != null) _markMessageFailed(clientId);
       ErrorHandlerService.handleError(
         context,
         e,
         customMessage: 'Failed to send media',
+        onRetry: clientId != null
+            ? () => _pickAndSendMedia(source, type)
+            : null,
       );
     }
   }
 
-  void _handleEmojiTap() {
-    // Open emoji picker - implementation needed
-    // This would typically show an emoji picker widget
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Emoji picker functionality will be implemented'),
-      ),
+  void _handleShareProfileTap() {
+    ShareProfileSheet.show(
+      context,
+      onProfileSelected: (profileUserId, displayName) {
+        unawaited(_handleProfileLinkSend(profileUserId, displayName));
+      },
     );
+  }
+
+  Future<void> _handleProfileLinkSend(int profileUserId, String displayName,
+      {String? existingClientId}) async {
+    final clientId =
+        existingClientId ?? 'local_profile_${DateTime.now().millisecondsSinceEpoch}';
+
+    if (existingClientId == null) {
+      setState(() {
+        _messages.add(_optimisticMap(
+          clientId: clientId,
+          text: displayName,
+          type: 'profile_link',
+        ));
+      });
+    }
+    _scrollToBottom();
+
+    try {
+      final sent = await ref.read(chatServiceProvider).sendProfileLink(
+            widget.userId,
+            profileUserId,
+          );
+      if (mounted) {
+        _replaceOptimisticMessage(clientId, sent);
+      }
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      _markMessageFailed(clientId);
+      if (e.upgradeRequired) {
+        await ChatUpgradeBottomSheet.show(context);
+      } else {
+        ErrorHandlerService.showErrorSnackBar(context, e);
+      }
+    } catch (e) {
+      if (mounted) {
+        _markMessageFailed(clientId);
+        ErrorHandlerService.handleError(context, e, customMessage: 'Failed to share profile');
+      }
+    }
+  }
+
+  void _handleEmojiTap() {
+    StickerPickerSheet.show(
+      context,
+      onStickerSelected: (StickerItem sticker) {
+        unawaited(_handleStickerSend(sticker));
+      },
+    );
+  }
+
+  Future<void> _handleStickerSend(StickerItem sticker, {String? existingClientId}) async {
+    final clientId =
+        existingClientId ?? 'local_sticker_${DateTime.now().millisecondsSinceEpoch}';
+
+    if (existingClientId == null) {
+      setState(() {
+        _messages.add(_optimisticMap(
+          clientId: clientId,
+          text: sticker.id.toString(),
+          type: 'sticker',
+          attachmentUrl: sticker.imageUrl,
+        ));
+      });
+    } else {
+      setState(() {
+        _messages = _messages.map((msg) {
+          if (msg['client_id'] == clientId) {
+            return {
+              ...msg,
+              'delivery_status': MessageDeliveryStatus.sending,
+            };
+          }
+          return msg;
+        }).toList();
+      });
+    }
+    _scrollToBottom();
+
+    try {
+      final sentMessage = await ref.read(chatServiceProvider).sendSticker(
+            widget.userId,
+            sticker.id,
+          );
+
+      if (mounted) {
+        _replaceOptimisticMessage(clientId, sentMessage);
+        _scrollToBottom();
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        _markMessageFailed(clientId);
+        if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
+          await ChatUpgradeBottomSheet.show(context);
+        } else {
+          ErrorHandlerService.showErrorSnackBar(
+            context,
+            e,
+            onRetry: () => _handleStickerSend(sticker, existingClientId: clientId),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _markMessageFailed(clientId);
+        ErrorHandlerService.handleError(
+          context,
+          e,
+          customMessage: 'Failed to send sticker',
+          onRetry: () => _handleStickerSend(sticker, existingClientId: clientId),
+        );
+      }
+    }
   }
 
   static const String _chatBgLight = 'assets/images/chat/chat-light.png';
   static const String _chatBgDark = 'assets/images/chat/chat-dark.png';
 
-  Future<void> _handleVideoCallTap() async {
+  Future<bool> _ensureVideoCallAccess() async {
     final guard = PlanGuard(ref.read(planLimitsServiceProvider));
     final access = await guard.canMakeVideoCall();
-    if (!mounted) return;
+    if (!mounted) return false;
     if (!access.isAllowed) {
       final target = Uri(
         path: AppRoutes.featureLocked,
@@ -550,18 +1122,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         },
       ).toString();
       context.push(target);
-      return;
+      return false;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => VideoCallScreen(
-          userId: widget.userId,
-          userName: widget.userName ?? 'User',
-          userAvatarUrl: widget.avatarUrl,
-          isIncoming: false,
-        ),
-      ),
+    return true;
+  }
+
+  Future<void> _handleVideoCallTap() async {
+    if (!await _ensureVideoCallAccess()) return;
+    await startOutgoingCall(
+      context: context,
+      ref: ref,
+      recipientId: widget.userId,
+      recipientName: widget.userName ?? 'User',
+      recipientAvatarUrl: widget.avatarUrl,
+      type: OutgoingCallType.video,
     );
   }
 
@@ -583,26 +1157,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           isOnline: _isOnline,
           lastSeenAt: _lastSeenAt,
           onBack: () => Navigator.of(context).pop(),
+          onHeaderTap: () {
+            setState(() => _showUserInfoPanel = !_showUserInfoPanel);
+          },
           onInfo: () {
-            // Navigate to profile
-            final target = Uri(
-              path: AppRoutes.profileDetail,
-              queryParameters: {'userId': widget.userId.toString()},
-            ).toString();
-            context.push(target);
+            setState(() => _showUserInfoPanel = !_showUserInfoPanel);
           },
           onCall: () {
-            // Navigate to voice call screen
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => VoiceCallScreen(
-                  userId: widget.userId,
-                  userName: widget.userName ?? 'User',
-                  userAvatarUrl: widget.avatarUrl,
-                  isIncoming: false,
-                ),
-              ),
+            startOutgoingCall(
+              context: context,
+              ref: ref,
+              recipientId: widget.userId,
+              recipientName: widget.userName ?? 'User',
+              recipientAvatarUrl: widget.avatarUrl,
+              type: OutgoingCallType.voice,
             );
           },
           onVideoCall: () {
@@ -610,7 +1178,51 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           },
         ),
       ),
-      body: Stack(
+      body: Column(
+        children: [
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: _showUserInfoPanel
+                ? ChatUserInfoPanel(
+                    userId: widget.userId,
+                    name: widget.userName ?? 'User',
+                    avatarUrl: widget.avatarUrl,
+                    onClose: () => setState(() => _showUserInfoPanel = false),
+                    onMuteChanged: (muted) {
+                      ref
+                          .read(conversationMuteCacheProvider.notifier)
+                          .setMuted(widget.userId, muted);
+                      setState(() => _conversationMuted = muted);
+                    },
+                  )
+                : const SizedBox.shrink(),
+          ),
+          if (_conversationMuted)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: AppColors.feedbackWarning.withValues(alpha: 0.15),
+              child: Row(
+                children: [
+                  AppSvgIcon(
+                    assetPath: AppIcons.bellSlash,
+                    size: 16,
+                    color: AppColors.feedbackWarning,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Notifications muted for this chat',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: Stack(
         fit: StackFit.expand,
         children: [
           // Themed chat background (assets/images/chat/chat-light.png | chat-dark.png)
@@ -626,21 +1238,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
           Column(
             children: [
-          // Pinned messages banner
-          FutureBuilder<int>(
-            future: _getPinnedMessagesCount(),
-            builder: (context, snapshot) {
-              final pinnedCount = snapshot.data ?? 0;
-              if (pinnedCount == 0) {
-                return const SizedBox.shrink();
-              }
-              return PinnedMessagesBanner(
-                pinnedCount: pinnedCount,
-                onTap: () {
-                  _showPinnedMessages();
-                },
-              );
-            },
+          _PinnedMessagesBannerSection(
+            userId: widget.userId,
+            onTap: _showPinnedMessages,
           ),
           // Messages list
           Expanded(
@@ -673,6 +1273,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           )
                         : Column(
                             children: [
+                              if (_isLoadingMore)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
                               Expanded(
                                 child: RefreshIndicator(
                                   onRefresh: _loadMessages,
@@ -681,27 +1290,45 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                     padding: const EdgeInsets.symmetric(vertical: 8),
                                     itemCount: _messages.length,
                                     itemBuilder: (context, index) {
-                                      final message = _messages[index];
-                                      return MessageBubble(
-                                        message: message['text'] ?? '',
-                                        isSent: message['is_sent'] ?? false,
-                                        timestamp: message['timestamp'],
-                                        isRead: message['is_read'] ?? false,
-                                        messageType: message['type'] ?? 'text',
-                                        remainingSeconds: message['remaining_seconds'],
-                                        mediaUrl: message['attachment_url']?.toString(),
-                                        isLocked: message['is_locked'] == true,
+                                      final item = _messages[index];
+                                      if (item['kind'] == 'call' &&
+                                          item['call'] is Call) {
+                                        return CallHistoryBubble(
+                                          call: item['call'] as Call,
+                                          currentUserId: _currentUserId ?? 0,
+                                          timestamp: item['timestamp'] is DateTime
+                                              ? item['timestamp'] as DateTime
+                                              : null,
+                                          onTap: () => _redialCall(
+                                            item['call'] as Call,
+                                          ),
+                                        );
+                                      }
+
+                                      final message = item;
+                                      final deliveryStatus =
+                                          _deliveryStatusFromMap(message);
+                                      return ChatMessageListTile(
+                                        message: message,
+                                        deliveryStatus: deliveryStatus,
+                                        onRetry: deliveryStatus ==
+                                                MessageDeliveryStatus.failed
+                                            ? () => _retryFailedMessage(message)
+                                            : null,
+                                        onSelfDestructTap:
+                                            message['is_sent'] != true &&
+                                                    message['is_expired'] != true
+                                                ? () => _openSelfDestructViewer(message)
+                                                : null,
                                       );
                                     },
                                   ),
                                 ),
                               ),
-                              // Typing indicator
-                              if (_isOtherUserTyping)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: TypingIndicator(),
-                                ),
+                              ChatPeerTypingIndicator(
+                                peerUserId: widget.userId,
+                                displayName: widget.userName,
+                              ),
                             ],
                           ),
           ),
@@ -723,14 +1350,46 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           MessageInput(
             onSend: _handleSend,
             onMediaTap: _handleMediaTap,
+            onMediaLongPress: _handleMediaLongPress,
+            onVoiceTap: _handleVoiceTap,
             onEmojiTap: _handleEmojiTap,
+            onShareTap: _handleShareProfileTap,
             hintText: 'Type a message...',
             onTextChanged: _onTypingChanged,
           ),
             ],
           ),
         ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _PinnedMessagesBannerSection extends ConsumerWidget {
+  final int userId;
+  final VoidCallback onTap;
+
+  const _PinnedMessagesBannerSection({
+    required this.userId,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncCount = ref.watch(pinnedCountProvider(userId));
+    return asyncCount.when(
+      data: (pinnedCount) {
+        if (pinnedCount == 0) return const SizedBox.shrink();
+        return PinnedMessagesBanner(
+          pinnedCount: pinnedCount,
+          onTap: onTap,
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

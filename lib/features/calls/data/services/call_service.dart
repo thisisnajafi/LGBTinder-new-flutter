@@ -30,12 +30,10 @@ class CallService {
   }
 
   /// Accept an incoming call
-  /// FIXED: Updated to use constant endpoint with call_id in body (matches backend api.php)
   Future<Call> acceptCall(CallActionRequest request) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.callsAccept,
-        data: request.toJson(), // call_id is included in toJson()
+        ApiEndpoints.callsAcceptById(request.callId),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -50,12 +48,10 @@ class CallService {
   }
 
   /// Decline an incoming call
-  /// FIXED: Updated to use constant endpoint with call_id in body (matches backend api.php)
   Future<void> declineCall(CallActionRequest request) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.callsDecline,
-        data: request.toJson(), // call_id is included in toJson()
+        ApiEndpoints.callsRejectById(request.callId),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -91,13 +87,15 @@ class CallService {
   Future<List<Call>> getCallHistory({
     int? page,
     int? limit,
+    int? peerUserId,
     String? status,
     String? callType,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
       if (page != null) queryParams['page'] = page;
-      if (limit != null) queryParams['limit'] = limit;
+      if (limit != null) queryParams['per_page'] = limit;
+      if (peerUserId != null) queryParams['user_id'] = peerUserId;
       if (status != null) queryParams['status'] = status;
       if (callType != null) queryParams['call_type'] = callType;
 
@@ -107,13 +105,13 @@ class CallService {
       );
 
       List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
+      if (response.data is List) {
+        dataList = response.data as List;
+      } else if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
+        if (data['data'] is List) {
           dataList = data['data'] as List;
         }
-      } else if (response.data is List) {
-        dataList = response.data as List;
       }
 
       if (dataList != null) {

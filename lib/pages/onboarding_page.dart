@@ -1,82 +1,112 @@
 // Screen: OnboardingPage
-// Intro carousel shown once per install (splash -> this -> welcome). View only.
-// Layout inspired by minimal onboarding: illustration, dots, title, description. No logo.
+// Intro carousel: splash -> this -> welcome (first launch only).
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
-import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
-import '../shared/services/onboarding_service.dart';
-import '../routes/app_router.dart';
 
-/// Onboarding page - First-time user introduction
+import '../core/constants/animation_constants.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/border_radius_constants.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/utils/app_haptics.dart';
+import '../core/utils/app_icons.dart';
+import '../features/onboarding/widgets/onboarding_intro_hero.dart';
+import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
+import '../features/onboarding/widgets/onboarding_skip_sheet.dart';
+import '../routes/app_router.dart';
+import '../shared/services/onboarding_service.dart';
+import '../widgets/buttons/gradient_button.dart';
+
+/// Onboarding page - First-time user introduction (4 slides).
 class OnboardingPage extends ConsumerStatefulWidget {
-  const OnboardingPage({Key? key}) : super(key: key);
+  const OnboardingPage({super.key});
 
   @override
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-/// Asset paths for onboarding slide illustrations (one per step). Optional; fallback is icon.
-const List<String> _onboardingImageAssets = [
-  'assets/images/onboarding/slide_1.png',
-  'assets/images/onboarding/slide_2.png',
-  'assets/images/onboarding/slide_3.png',
-  'assets/images/onboarding/slide_4.png',
-];
+class _OnboardingSlide {
+  final String title;
+  final String description;
+  final String iconPath;
+  final bool showTypingDots;
+
+  const _OnboardingSlide({
+    required this.title,
+    required this.description,
+    required this.iconPath,
+    this.showTypingDots = false,
+  });
+}
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final PageController _pageController = PageController();
+  late ConfettiController _confettiController;
   int _currentPage = 0;
+  int _direction = 1;
 
-  final List<OnboardingStep> _steps = [
-    OnboardingStep(
+  static const _slides = [
+    _OnboardingSlide(
       title: 'Welcome to LGBTFinder',
       description: 'A safe and inclusive space to find meaningful connections.',
-      icon: Icons.favorite,
-      color: AppColors.accentPurple,
+      iconPath: 'assets/icons/bold/heart.svg',
     ),
-    OnboardingStep(
+    _OnboardingSlide(
       title: 'Discover Matches',
       description: 'Swipe through profiles and find people who share your interests.',
-      icon: Icons.explore,
-      color: AppColors.accentPink,
+      iconPath: 'assets/icons/outline/discover.svg',
     ),
-    OnboardingStep(
+    _OnboardingSlide(
       title: 'Connect & Chat',
       description: 'Start conversations with your matches and build meaningful relationships.',
-      icon: Icons.chat_bubble,
-      color: AppColors.accentPurple,
+      iconPath: 'assets/icons/outline/message.svg',
+      showTypingDots: true,
     ),
-    OnboardingStep(
+    _OnboardingSlide(
       title: 'Be Yourself',
       description: 'Express your authentic self in a supportive community.',
-      icon: Icons.celebration,
-      color: AppColors.accentPink,
+      iconPath: 'assets/icons/outline/flag.svg',
     ),
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(milliseconds: 600));
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
-  void _nextPage() {
-    if (_currentPage < _steps.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+  Future<void> _nextPage() async {
+    AppHaptics.light();
+    if (_currentPage < _slides.length - 1) {
+      setState(() => _direction = 1);
+      await _pageController.nextPage(
+        duration: AppAnimations.transitionPage,
+        curve: Curves.easeOutCubic,
       );
     } else {
-      _completeOnboarding();
+      AppHaptics.heavy();
+      if (AppAnimations.animationsEnabled(context)) {
+        _confettiController.play();
+      }
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (mounted) await _completeOnboarding();
     }
   }
 
-  void _skipOnboarding() {
-    _completeOnboarding();
+  Future<void> _skipOnboarding() async {
+    final skip = await showOnboardingSkipSheet(context);
+    if (skip == true && mounted) {
+      await _completeOnboarding();
+    }
   }
 
   Future<void> _completeOnboarding() async {
@@ -89,196 +119,153 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final isLast = _currentPage == _slides.length - 1;
+
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.prideGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Skip only, top-right (no logo)
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingLG,
-                    vertical: AppSpacing.spacingMD,
-                  ),
-                  child: TextButton(
-                    onPressed: _skipOnboarding,
-                    child: Text(
-                      'Skip',
-                      style: AppTypography.button.copyWith(
-                        color: Colors.white.withOpacity(0.95),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Illustration + text at bottom of image
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) => setState(() => _currentPage = index),
-                  itemCount: _steps.length,
-                  itemBuilder: (context, index) {
-                    return _buildOnboardingStep(
-                      _steps[index],
-                      index,
-                    );
-                  },
-                ),
-              ),
-              // Page indicators (dots)
-              Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_steps.length, (index) {
-                    final isActive = _currentPage == index;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOut,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: isActive ? 24 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-              // Next / Get Started button
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingMD,
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingXL,
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _nextPage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppColors.accentPurple,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                      ),
-                    ),
-                    child: Text(
-                      _currentPage == _steps.length - 1 ? 'Get Started' : 'Next',
-                      style: AppTypography.button.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.accentPurple,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      body: Stack(
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(gradient: AppColors.prideGradient),
+            child: SizedBox.expand(),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOnboardingStep(OnboardingStep step, int index) {
-    final imagePath = index < _onboardingImageAssets.length
-        ? _onboardingImageAssets[index]
-        : null;
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
-        child: Column(
-          children: [
-            SizedBox(height: AppSpacing.spacingMD),
-            // Centered illustration (image or placeholder)
-            AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Center(
-                child: imagePath != null
-                    ? _buildIllustrationImage(imagePath, step)
-                    : _buildIllustrationPlaceholder(step),
-              ),
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: AppColors.lgbtGradient,
             ),
-            // Text at bottom of image
-            SizedBox(height: AppSpacing.spacingLG),
-            Text(
-              step.title,
-              style: AppTypography.h1.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.25),
-                    offset: const Offset(0, 1),
-                    blurRadius: 4,
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Semantics(
+                    label: 'Skip onboarding',
+                    button: true,
+                    child: TextButton(
+                      onPressed: _skipOnboarding,
+                      child: Text(
+                        'Skip',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: AppColors.textPrimaryDark.withValues(alpha: 0.95),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Text(
-              step.description,
-              style: AppTypography.bodyLarge.copyWith(
-                color: Colors.white.withOpacity(0.95),
-                height: 1.5,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.2),
-                    offset: const Offset(0, 1),
-                    blurRadius: 2,
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
+                  child: OnboardingProgressIndicator(
+                    currentStep: _currentPage,
+                    totalSteps: _slides.length,
+                    style: OnboardingProgressStyle.dots,
+                    lightOnDark: true,
                   ),
-                ],
-              ),
-              textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSpacing.spacingMD),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _direction = index > _currentPage ? 1 : -1;
+                        _currentPage = index;
+                      });
+                      AppHaptics.selection();
+                    },
+                    itemCount: _slides.length,
+                    itemBuilder: (context, index) {
+                      return AnimatedSwitcher(
+                        duration: AppAnimations.transitionPage,
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) {
+                          final offset = Tween<Offset>(
+                            begin: Offset(_direction * 0.08, 0),
+                            end: Offset.zero,
+                          ).animate(animation);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(position: offset, child: child),
+                          );
+                        },
+                        child: _SlideContent(
+                          key: ValueKey(index),
+                          slide: _slides[index],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingMD,
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingXL,
+                  ),
+                  child: Semantics(
+                    label: isLast ? 'Get started' : 'Next slide',
+                    button: true,
+                    child: GradientButton(
+                      text: isLast ? 'Get Started' : 'Next',
+                      onPressed: _nextPage,
+                      usePrideGradient: false,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: AppSpacing.spacingLG),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIllustrationImage(String assetPath, OnboardingStep step) {
-    return Image.asset(
-      assetPath,
-      fit: BoxFit.contain,
-      alignment: Alignment.center,
-      errorBuilder: (_, __, ___) => _buildIllustrationPlaceholder(step),
-    );
-  }
-
-  Widget _buildIllustrationPlaceholder(OnboardingStep step) {
-    return Center(
-      child: Icon(
-        step.icon,
-        size: 120,
-        color: step.color.withOpacity(0.85),
+          ),
+        ],
       ),
     );
   }
 }
 
-class OnboardingStep {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Color color;
+class _SlideContent extends StatelessWidget {
+  final _OnboardingSlide slide;
 
-  OnboardingStep({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.color,
-  });
+  const _SlideContent({super.key, required this.slide});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
+      child: Column(
+        children: [
+          OnboardingIntroHero(iconPath: slide.iconPath),
+          if (slide.showTypingDots) ...[
+            SizedBox(height: AppSpacing.spacingMD),
+            const OnboardingTypingDots(),
+          ],
+          SizedBox(height: AppSpacing.spacingLG),
+          Text(
+            slide.title,
+            style: textTheme.displayMedium?.copyWith(
+              color: AppColors.textPrimaryDark,
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: AppSpacing.spacingMD),
+          Text(
+            slide.description,
+            style: textTheme.bodyLarge?.copyWith(
+              color: AppColors.textPrimaryDark.withValues(alpha: 0.92),
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 }

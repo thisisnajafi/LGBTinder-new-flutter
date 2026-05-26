@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/providers/api_providers.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/user_analytics.dart';
 

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/cache/cache_invalidator.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../shared/services/token_storage_service.dart';
 import '../../../core/network/dio_client.dart';
@@ -31,6 +32,8 @@ final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((re
     deleteImageUseCase: deleteImageUseCase,
     verifyProfileUseCase: verifyProfileUseCase,
     completeProfileUseCase: completeProfileUseCase,
+    onProfileUpdated: (userId) =>
+        ref.read(cacheInvalidatorProvider).purgeProfile(userId),
   );
 });
 
@@ -87,6 +90,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   final DeleteImageUseCase _deleteImageUseCase;
   final VerifyProfileUseCase _verifyProfileUseCase;
   final CompleteProfileUseCase _completeProfileUseCase;
+  final Future<void> Function(String userId) _onProfileUpdated;
 
   ProfileNotifier({
     required GetProfileUseCase getProfileUseCase,
@@ -95,12 +99,14 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     required DeleteImageUseCase deleteImageUseCase,
     required VerifyProfileUseCase verifyProfileUseCase,
     required CompleteProfileUseCase completeProfileUseCase,
+    required Future<void> Function(String userId) onProfileUpdated,
   }) : _getProfileUseCase = getProfileUseCase,
        _updateProfileUseCase = updateProfileUseCase,
        _uploadImageUseCase = uploadImageUseCase,
        _deleteImageUseCase = deleteImageUseCase,
        _verifyProfileUseCase = verifyProfileUseCase,
        _completeProfileUseCase = completeProfileUseCase,
+       _onProfileUpdated = onProfileUpdated,
        super(ProfileState());
 
   /// Load user profile
@@ -131,6 +137,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         profile: updatedProfile,
         isUpdating: false,
       );
+      await _onProfileUpdated(updatedProfile.id.toString());
     } catch (e) {
       state = state.copyWith(
         isUpdating: false,
@@ -150,6 +157,10 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         images: updatedImages,
         isUploadingImage: false,
       );
+      final profileId = state.profile?.id;
+      if (profileId != null) {
+        await _onProfileUpdated(profileId.toString());
+      }
     } catch (e) {
       state = state.copyWith(
         isUploadingImage: false,

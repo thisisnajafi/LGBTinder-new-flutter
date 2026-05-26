@@ -5,7 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../providers/marketing_providers.dart';
 import '../../data/models/badge_model.dart';
 import '../../data/services/gamification_service.dart';
@@ -45,12 +46,10 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Badges & Achievements',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Badges & Achievements',
-        showBackButton: true,
-      ),
       body: Column(
         children: [
           // Tab bar

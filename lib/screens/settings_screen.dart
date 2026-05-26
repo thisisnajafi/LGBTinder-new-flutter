@@ -6,7 +6,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_header.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
@@ -43,71 +43,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
     final summaryAsync = ref.watch(settingsSummaryProvider);
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Settings',
-        showBackButton: true,
-        showPrideAccent: true,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(settingsSummaryProvider);
-          await ref.read(settingsSummaryProvider.future);
-        },
-        child: ListView(
-          children: [
-            // Profile section (name/email from summary when available)
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Row(
-                children: [
-                  AvatarWithStatus(
-                    imageUrl: 'https://via.placeholder.com/100',
-                    name: summaryAsync.valueOrNull?.profile.displayName ?? 'User',
-                    isOnline: true,
-                    size: 64.0,
-                  ),
-                  SizedBox(width: AppSpacing.spacingLG),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          summaryAsync.valueOrNull?.profile.displayName ?? 'Profile',
-                          style: AppTypography.h2.copyWith(color: textColor),
-                        ),
-                        SizedBox(height: AppSpacing.spacingXS),
-                        Text(
-                          summaryAsync.valueOrNull?.account.email ?? '—',
-                          style: AppTypography.body.copyWith(color: secondaryTextColor),
-                        ),
-                      ],
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(settingsSummaryProvider);
+            await ref.read(settingsSummaryProvider.future);
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              const AppPageHeader(title: 'Settings'),
+              SizedBox(height: AppSpacing.spacingLG),
+              // Profile section (name/email from summary when available)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppPageHeader.horizontalPadding,
+                ),
+                child: Row(
+                  children: [
+                    AvatarWithStatus(
+                      imageUrl: 'https://via.placeholder.com/100',
+                      name: summaryAsync.valueOrNull?.profile.displayName ?? 'User',
+                      isOnline: true,
+                      size: 64.0,
                     ),
-                  ),
-                  IconButton(
-                    icon: AppSvgIcon(
-                      assetPath: AppIcons.chevronRight,
-                      color: secondaryTextColor,
-                      size: 24,
+                    SizedBox(width: AppSpacing.spacingLG),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            summaryAsync.valueOrNull?.profile.displayName ?? 'Profile',
+                            style: AppTypography.h2.copyWith(color: textColor),
+                          ),
+                          SizedBox(height: AppSpacing.spacingXS),
+                          Text(
+                            summaryAsync.valueOrNull?.account.email ?? '—',
+                            style: AppTypography.body.copyWith(color: secondaryTextColor),
+                          ),
+                        ],
+                      ),
                     ),
-                    onPressed: () {
-                      context.go('${AppRoutes.home}/profile');
-                    },
-                  ),
-                ],
+                    IconButton(
+                      icon: AppSvgIcon(
+                        assetPath: AppIcons.chevronRight,
+                        color: secondaryTextColor,
+                        size: 24,
+                      ),
+                      onPressed: () {
+                        context.go('${AppRoutes.home}/profile');
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-            DividerCustom(),
+              SizedBox(height: AppSpacing.spacingXL),
+              DividerCustom(),
 
             // Account section
             SectionHeader(
               title: 'Account',
-              iconPath: AppIcons.userOutline,
+              iconPath: AppIcons.getIconOutline('user'),
             ),
             _buildSettingsItem(
               context: context,
@@ -232,7 +232,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Safety section
           SectionHeader(
             title: 'Safety',
-            iconPath: AppIcons.shield,
+            iconPath: AppIcons.getIconOutline('shield'),
           ),
           _buildSettingsItem(
             context: context,
@@ -255,7 +255,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Premium section
           SectionHeader(
             title: 'Premium',
-            iconPath: AppIcons.star,
+            iconPath: AppIcons.getIconOutline('magic-star'),
           ),
           _buildSettingsItem(
             context: context,
@@ -375,7 +375,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Accessibility section
           SectionHeader(
             title: 'Accessibility',
-            iconPath: AppIcons.settings,
+            iconPath: AppIcons.getIconOutline('setting-2'),
           ),
           _buildSettingsItem(
             context: context,
@@ -398,7 +398,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // About section
           SectionHeader(
             title: 'About',
-            iconPath: AppIcons.info,
+            iconPath: AppIcons.getIconOutline('info-circle'),
           ),
           _buildSettingsItem(
             context: context,
@@ -428,8 +428,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             secondaryTextColor: secondaryTextColor,
           ),
           SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
+            ],
+          ),
+        ),
       ),
     );
   }

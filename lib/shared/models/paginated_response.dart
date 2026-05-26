@@ -1,3 +1,4 @@
+import 'package:lgbtindernew/core/services/app_logger.dart';
 /// Paginated Response Model
 /// 
 /// Task 3.1.2 (Phase 4): Create unified pagination response model
@@ -158,7 +159,7 @@ class PaginatedResponse<T> {
       }
     } catch (e) {
       // Log error but don't crash - return empty response
-      print('PaginatedResponse.fromJson error: $e');
+      AppLogger.debug('PaginatedResponse.fromJson error: $e');
     }
 
     return PaginatedResponse<T>(

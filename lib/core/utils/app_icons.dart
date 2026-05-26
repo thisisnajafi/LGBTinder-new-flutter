@@ -39,6 +39,21 @@ class AppIcons {
     return getIconPath(iconName, style: _bulk);
   }
 
+  /// Bottom nav: outline when inactive, bold when active.
+  static const List<({String outline, String bold, String label})> mainNavItems = [
+    (outline: 'discover', bold: 'discover', label: 'Discover'),
+    (outline: 'message', bold: 'message', label: 'Chat'),
+    (outline: 'notification', bold: 'notification', label: 'Notifications'),
+    (outline: 'user', bold: 'user', label: 'Profile'),
+    (outline: 'setting', bold: 'setting', label: 'Settings'),
+  ];
+
+  static String mainNavIconOutline(int index) =>
+      getIconOutline(mainNavItems[index.clamp(0, mainNavItems.length - 1)].outline);
+
+  static String mainNavIconActive(int index) =>
+      getIconBold(mainNavItems[index.clamp(0, mainNavItems.length - 1)].bold);
+
   // Navigation Icons
   static const String home = '$_basePath/home.svg';
   static const String home2 = '$_basePath/home-2.svg';

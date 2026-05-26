@@ -6,7 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../widgets/navbar/app_bar_custom.dart';
+import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../../payments/providers/payment_providers.dart';
@@ -112,12 +113,10 @@ class _EnhancedPlansScreenState extends ConsumerState<EnhancedPlansScreen> {
     // Get banners for plans screen
     final bannersAsync = ref.watch(bannersByPositionProvider('plans'));
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Choose Your Plan',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Choose Your Plan',
-        showBackButton: true,
-      ),
       body: _isLoading
           ? const SkeletonLoading()
           : RefreshIndicator(

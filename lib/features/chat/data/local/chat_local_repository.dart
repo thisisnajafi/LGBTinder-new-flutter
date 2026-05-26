@@ -8,6 +8,7 @@ import '../models/message.dart';
 import '../models/message_delivery_status.dart';
 import '../services/chat_outbound_queue_service.dart';
 import 'app_database.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Local-first read/write for chat list, messages, and outbound queue.
 class ChatLocalRepository {
@@ -292,7 +293,7 @@ class ChatLocalRepository {
         } else if (decoded is Map) {
           metadata = Map<String, dynamic>.from(decoded);
         }
-      } catch (_) {}
+      } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_local_repository', error: e); }
     }
 
     return Message(

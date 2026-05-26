@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../avatar/avatar_with_status.dart';
 import 'last_seen_widget.dart';
@@ -18,6 +19,7 @@ class ChatHeader extends ConsumerWidget {
   final bool isOnline;
   final DateTime? lastSeenAt;
   final VoidCallback? onBack;
+  final VoidCallback? onHeaderTap;
   final VoidCallback? onInfo;
   final VoidCallback? onCall;
   final VoidCallback? onVideoCall;
@@ -30,6 +32,7 @@ class ChatHeader extends ConsumerWidget {
     this.isOnline = false,
     this.lastSeenAt,
     this.onBack,
+    this.onHeaderTap,
     this.onInfo,
     this.onCall,
     this.onVideoCall,
@@ -77,30 +80,40 @@ class ChatHeader extends ConsumerWidget {
                   minHeight: 44,
                 ),
               ),
-            AvatarWithStatus(
-              imageUrl: avatarUrl,
-              name: name,
-              isOnline: isOnline,
-              size: 40.0,
+            GestureDetector(
+              onTap: onHeaderTap ?? onInfo,
+              child: AvatarWithStatus(
+                imageUrl: avatarUrl,
+                name: name,
+                isOnline: isOnline,
+                size: 40.0,
+              ),
             ),
             SizedBox(width: AppSpacing.spacingMD),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    style: AppTypography.h3.copyWith(color: textColor),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              child: InkWell(
+                onTap: onHeaderTap ?? onInfo,
+                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXS),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        style: AppTypography.h3.copyWith(color: textColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: AppSpacing.spacingXS),
+                      LastSeenWidget(
+                        isOnline: isOnline,
+                        lastSeenAt: lastSeenAt,
+                      ),
+                    ],
                   ),
-                  SizedBox(height: AppSpacing.spacingXS),
-                  LastSeenWidget(
-                    isOnline: isOnline,
-                    lastSeenAt: lastSeenAt,
-                  ),
-                ],
+                ),
               ),
             ),
             if (onCall != null)

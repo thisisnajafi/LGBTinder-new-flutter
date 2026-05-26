@@ -2,6 +2,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/settings_summary.dart';
 import '../models/user_settings.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Service for settings overview (GET /user/settings or summary endpoint).
 /// Builds SettingsSummary from user settings when no dedicated summary endpoint exists.
@@ -20,7 +21,7 @@ class SettingsSummaryService {
       if (response.isSuccess && response.data != null) {
         return _parseSettingsToSummary(response.data!);
       }
-    } catch (_) {}
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'settings_summary_service', error: e); }
     return const SettingsSummary();
   }
 

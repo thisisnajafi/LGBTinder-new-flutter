@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
+import '../core/widgets/avatar_widget.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_loading.dart';
 import '../features/safety/providers/user_actions_providers.dart';
@@ -151,20 +153,16 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Blocked Users',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Blocked Users',
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.refresh,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-            onPressed: _loadBlockedUsers,
-          ),
-        ],
+      action: IconButton(
+        icon: Icon(
+          Icons.refresh,
+          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        ),
+        onPressed: _loadBlockedUsers,
       ),
       body: _isLoading
           ? SkeletonLoading()
@@ -220,18 +218,10 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                             child: Row(
                               children: [
                                 // Avatar
-                                CircleAvatar(
+                                AvatarWidget(
+                                  imageUrl: blockedUser.primaryImageUrl,
                                   radius: 28,
-                                  backgroundColor: borderColor,
-                                  backgroundImage: blockedUser.primaryImageUrl != null
-                                      ? NetworkImage(blockedUser.primaryImageUrl!)
-                                      : null,
-                                  child: blockedUser.primaryImageUrl == null
-                                      ? Icon(
-                                          Icons.person,
-                                          color: secondaryTextColor,
-                                        )
-                                      : null,
+                                  fallbackInitial: fullName,
                                 ),
                                 SizedBox(width: AppSpacing.spacingMD),
                                 // User info

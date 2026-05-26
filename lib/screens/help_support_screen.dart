@@ -9,12 +9,14 @@ import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/landing_service.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/bottom_sheet_custom.dart';
 import '../routes/app_router.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Fetches landing/settings for About section (app store links, tagline, description).
 final _landingSettingsProvider = FutureProvider.autoDispose<LandingSettings?>((ref) {
@@ -74,14 +76,14 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Help & Support',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Help & Support',
-        showBackButton: true,
-      ),
       body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppPageHeader.horizontalPadding,
+        ),
         children: [
           // About (from GET landing/settings)
           SectionHeader(
@@ -578,7 +580,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                 SizedBox(height: AppSpacing.spacingXS),
                 Text(
                   s.value ?? '—',
-                  style: AppTypography.titleMedium.copyWith(color: textColor, fontWeight: FontWeight.bold),
+                  style: AppTypography.h4.copyWith(color: textColor, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   s.label ?? '',
@@ -605,7 +607,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
       children: [
         Text(
           'What people say',
-          style: AppTypography.titleMedium.copyWith(color: textColor, fontWeight: FontWeight.w600),
+          style: AppTypography.h4.copyWith(color: textColor, fontWeight: FontWeight.w600),
         ),
         SizedBox(height: AppSpacing.spacingSM),
         ...list.take(3).map((t) => Padding(
@@ -696,7 +698,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                 if (blog.category != null && blog.category!.isNotEmpty)
                   Text(
                     blog.category!,
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.accentPurple),
+                    style: AppTypography.caption.copyWith(color: AppColors.accentPurple),
                   ),
                 if (blog.title != null && blog.title!.isNotEmpty) ...[
                   if (blog.category != null && blog.category!.isNotEmpty) SizedBox(height: AppSpacing.spacingXS),
@@ -737,7 +739,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
       final landingService = ref.read(landingServiceProvider);
       final fetched = await landingService.getBlogBySlug(blog.slug);
       if (fetched != null && context.mounted) detail = fetched;
-    } catch (_) {}
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'help_support_screen', error: e); }
     if (!context.mounted) return;
     showModalBottomSheet<void>(
       context: context,
@@ -820,7 +822,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   labelText: 'Name',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
                   filled: true,
-                  fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 ),
                 textCapitalization: TextCapitalization.words,
               ),
@@ -831,7 +833,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   labelText: 'Email',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
                   filled: true,
-                  fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 ),
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
@@ -843,7 +845,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   labelText: 'Subject (optional)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
                   filled: true,
-                  fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 ),
               ),
               SizedBox(height: AppSpacing.spacingMD),
@@ -853,7 +855,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   labelText: 'Message',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
                   filled: true,
-                  fillColor: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 ),
                 maxLines: 4,
               ),
@@ -896,7 +898,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                     );
                   }
                 },
-                label: 'Send message',
+                text: 'Send message',
               ),
             ],
           ),

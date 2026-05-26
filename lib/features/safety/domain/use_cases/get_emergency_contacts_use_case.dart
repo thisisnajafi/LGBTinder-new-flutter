@@ -1,4 +1,5 @@
 import '../../data/repositories/safety_repository.dart';
+import '../../data/models/emergency_contact.dart';
 
 /// Use case for getting emergency contacts
 class GetEmergencyContactsUseCase {

@@ -5,6 +5,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/widgets/profile_image_widget.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import '../widgets/buttons/icon_button_circle.dart';
 import '../features/calls/providers/call_provider.dart';
@@ -15,6 +16,7 @@ import '../shared/services/error_handler_service.dart';
 import '../shared/services/agora_service.dart';
 import '../shared/services/call_quality_monitor.dart';
 import '../widgets/common/incoming_call_overlay.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Video call screen - Video call interface
 class VideoCallScreen extends ConsumerStatefulWidget {
@@ -264,7 +266,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
         await callProviderInstance.endCall(endRequest);
       } catch (e) {
         // Log error but don't prevent navigation
-        print('Error ending call via API: $e');
+        AppLogger.debug('Error ending call via API: $e');
       }
     }
 
@@ -275,7 +277,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     try {
       await _agoraService.leaveChannel();
     } catch (e) {
-      print('Error leaving Agora channel: $e');
+      AppLogger.debug('Error leaving Agora channel: $e');
       _qualityMonitor.recordError('Failed to leave Agora channel: $e');
     }
 
@@ -632,19 +634,11 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
             height: double.infinity,
             color: Colors.black,
             child: widget.userAvatarUrl != null
-                ? Image.network(
-                    widget.userAvatarUrl!,
+                ? ProfileImageWidget(
+                    imageUrl: widget.userAvatarUrl,
+                    width: double.infinity,
+                    height: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: AvatarWithStatus(
-                          imageUrl: widget.userAvatarUrl,
-                          name: widget.userName,
-                          isOnline: false,
-                          size: 200.0,
-                        ),
-                      );
-                    },
                   )
                 : Center(
                     child: AvatarWithStatus(

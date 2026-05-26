@@ -3,7 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/cache/cache_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_icons.dart';
 
 /// Image size presets for consistent memory usage
 enum ImageSize {
@@ -90,8 +92,11 @@ class OptimizedImage extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
+    final cacheManager = ref.watch(imageCacheServiceProvider);
+
     Widget image = CachedNetworkImage(
       imageUrl: imageUrl,
+      cacheManager: cacheManager,
       width: width,
       height: height,
       fit: fit,
@@ -99,7 +104,7 @@ class OptimizedImage extends ConsumerWidget {
       memCacheWidth: memCacheWidth,
       memCacheHeight: memCacheHeight,
       // Optimized fade durations
-      fadeInDuration: const Duration(milliseconds: 150),
+      fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: const Duration(milliseconds: 100),
       // Placeholder builder
       placeholder: (context, url) => placeholder ?? _buildPlaceholder(context, isDark),
@@ -155,12 +160,12 @@ class OptimizedImage extends ConsumerWidget {
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: borderRadius,
       ),
-      child: Icon(
-        Icons.broken_image_outlined,
-        color: isDark 
-            ? AppColors.textSecondaryDark.withOpacity(0.5) 
-            : AppColors.textSecondaryLight.withOpacity(0.5),
+      child: AppSvgIcon(
+        assetPath: AppIcons.user,
         size: _getIconSize(),
+        color: isDark
+            ? AppColors.textSecondaryDark.withOpacity(0.5)
+            : AppColors.textSecondaryLight.withOpacity(0.5),
       ),
     );
   }
@@ -239,8 +244,13 @@ class OptimizedAvatar extends StatelessWidget {
       );
     }
 
-    return CachedNetworkImage(
+    return Consumer(
+      builder: (context, ref, _) {
+        final cacheManager = ref.watch(imageCacheServiceProvider);
+        return CachedNetworkImage(
       imageUrl: imageUrl!,
+      cacheManager: cacheManager,
+      fadeInDuration: const Duration(milliseconds: 200),
       imageBuilder: (context, imageProvider) => CircleAvatar(
         radius: radius,
         backgroundImage: imageProvider,
@@ -263,8 +273,8 @@ class OptimizedAvatar extends StatelessWidget {
       errorWidget: (context, url, error) => CircleAvatar(
         radius: radius,
         backgroundColor: bgColor,
-        child: Icon(
-          Icons.person,
+        child: AppSvgIcon(
+          assetPath: AppIcons.user,
           size: radius,
           color: AppColors.textSecondaryLight.withOpacity(0.5),
         ),
@@ -272,6 +282,8 @@ class OptimizedAvatar extends StatelessWidget {
       // PERFORMANCE: Small memory footprint for avatars
       memCacheWidth: (radius * 2).toInt(),
       memCacheHeight: (radius * 2).toInt(),
+    );
+      },
     );
   }
 }

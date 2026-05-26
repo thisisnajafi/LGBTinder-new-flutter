@@ -53,14 +53,17 @@ class DeepLinkingService {
   DeepLinkingService._internal();
 
   GoRouter? _router;
+  bool _initialized = false;
   final Map<String, DeepLinkHandler> _handlers = {};
   final MarketingAttributionService _marketingAttributionService = MarketingAttributionService();
 
-  /// Initialize with router
-  void initialize(GoRouter router) async {
+  /// Initialize once with router (safe to call from [MyApp] build).
+  void initialize(GoRouter router) {
     _router = router;
-    await _marketingAttributionService.initialize();
+    if (_initialized) return;
+    _initialized = true;
     _registerDefaultHandlers();
+    Future.microtask(() => _marketingAttributionService.initialize());
   }
 
   /// Register default deep link handlers

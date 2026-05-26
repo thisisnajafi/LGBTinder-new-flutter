@@ -174,6 +174,28 @@ class CacheService {
     }
   }
 
+  /// Cache pre-encoded JSON string (avoids blocking jsonEncode on the UI thread).
+  Future<void> cacheEncodedJson(
+    String key,
+    String encodedJson, {
+    Duration duration = CacheDuration.defaultDuration,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cacheKey = '$_cachePrefix$key';
+      final timestampKey = '$_cacheTimestampPrefix$key';
+      final durationKey = '$_cacheDurationPrefix$key';
+
+      await prefs.setString(cacheKey, encodedJson);
+      await prefs.setString(timestampKey, DateTime.now().toIso8601String());
+      await prefs.setInt(durationKey, duration.inMilliseconds);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Cache write error for key $key: $e');
+      }
+    }
+  }
+
   /// Cache list data with configurable duration
   Future<void> cacheListData<T>(
     String key,

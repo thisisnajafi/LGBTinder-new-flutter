@@ -13,6 +13,7 @@ class GetCallHistoryUseCase {
   Future<List<Call>> execute({
     int? page,
     int? limit,
+    int? peerUserId,
     String? status,
     String? callType,
   }) async {
@@ -41,6 +42,7 @@ class GetCallHistoryUseCase {
       final calls = await _callRepository.getCallHistory(
         page: effectivePage,
         limit: effectiveLimit,
+        peerUserId: peerUserId,
         status: status,
         callType: callType,
       );

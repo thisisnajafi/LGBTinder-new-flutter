@@ -5,12 +5,14 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/navbar/app_bar_custom.dart';
+import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../features/settings/providers/settings_provider.dart';
 import '../features/settings/data/models/matching_preferences.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Privacy settings screen - Manage privacy and visibility settings
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
@@ -66,7 +68,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
           _showInDiscovery = prefs.discoveryVisibility != 'hidden';
         });
       }
-    } catch (_) {}
+    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'privacy_settings_screen', error: e); }
   }
 
   Future<void> _saveDiscoveryVisibility(String value) async {
@@ -106,14 +108,14 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
+    return AppPageScaffold(
+      title: 'Privacy',
+      showBackButton: true,
       backgroundColor: backgroundColor,
-      appBar: AppBarCustom(
-        title: 'Privacy',
-        showBackButton: true,
-      ),
       body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppPageHeader.horizontalPadding,
+        ),
         children: [
           // Profile visibility
           SectionHeader(

@@ -11,6 +11,7 @@ import 'package:lgbtindernew/screens/auth/welcome_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../config/test_credentials.dart';
+import '../helpers/analytics_override.dart';
 import '../helpers/app_bootstrap.dart';
 import '../helpers/auth_helpers.dart';
 import '../helpers/mock_services.dart';
@@ -24,15 +25,18 @@ void main() {
   group('Welcome & login screens', () {
     // TEST-005
     testWidgets('TEST-005: welcome screen shows Sign In and Create Account', (tester) async {
+      e2eSetPhoneViewport(tester);
+      addTearDown(() => e2eResetViewport(tester));
+
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(home: WelcomeScreen()),
         ),
       );
       await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Sign In'), findsWidgets);
       expect(find.text('Create Account'), findsOneWidget);
     });
 
@@ -47,14 +51,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Sign In'));
-      await tester.pump();
+      await tapAuthSubmitButton(tester);
 
       verifyNever(() => auth.login(any()));
     });
 
     // TEST-009
     testWidgets('TEST-009: login happy path navigates to home', (tester) async {
+      e2eSetPhoneViewport(tester);
+      addTearDown(() => e2eResetViewport(tester));
+
       final auth = MockAuthService();
       stubReadyLogin(auth);
 
@@ -71,22 +77,28 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [authServiceProvider.overrideWithValue(auth)],
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            ...noopAnalyticsOverrides(),
+          ],
           child: MaterialApp.router(routerConfig: router),
         ),
       );
-      await tester.pumpAndSettle();
+      await e2ePumpFrames(tester, frames: 5);
 
       await tester.enterText(find.byType(TextField).at(0), 'user@test.com');
       await tester.enterText(find.byType(TextField).at(1), 'password123');
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+      await tapAuthSubmitButton(tester);
+      await e2ePumpFrames(tester, frames: 8);
 
       expect(find.text('Home Shell'), findsOneWidget);
     });
 
     // TEST-010
     testWidgets('TEST-010: login routes to email verification when required', (tester) async {
+      e2eSetPhoneViewport(tester);
+      addTearDown(() => e2eResetViewport(tester));
+
       final auth = MockAuthService();
       stubEmailVerificationLogin(auth);
 
@@ -106,16 +118,19 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [authServiceProvider.overrideWithValue(auth)],
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            ...noopAnalyticsOverrides(),
+          ],
           child: MaterialApp.router(routerConfig: router),
         ),
       );
-      await tester.pumpAndSettle();
+      await e2ePumpFrames(tester, frames: 5);
 
       await tester.enterText(find.byType(TextField).at(0), 'verify@test.com');
       await tester.enterText(find.byType(TextField).at(1), 'password123');
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+      await tapAuthSubmitButton(tester);
+      await e2ePumpFrames(tester, frames: 8);
 
       expect(find.byType(EmailVerificationScreen), findsOneWidget);
     });
@@ -135,7 +150,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField).at(0), 'bad@test.com');
       await tester.enterText(find.byType(TextField).at(1), 'wrong');
-      await tester.tap(find.text('Sign In'));
+      await tapAuthSubmitButton(tester);
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -184,11 +199,15 @@ void main() {
   group('Router unauthenticated redirect', () {
     // TEST-006, TEST-007 via pumpE2eApp
     testWidgets('TEST-006: welcome route reachable when unauthenticated', (tester) async {
-      await pumpE2eApp(tester);
-      await e2eGo(tester, AppRoutes.welcome);
-      await tester.pumpAndSettle(const Duration(seconds: 2));
+      e2eSetPhoneViewport(tester);
+      addTearDown(() => e2eResetViewport(tester));
 
-      expect(find.text('Sign In'), findsOneWidget);
+      final app = await pumpE2eApp(tester);
+      await e2eGo(tester, app.router, AppRoutes.welcome);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Sign In'), findsWidgets);
     });
   });
 

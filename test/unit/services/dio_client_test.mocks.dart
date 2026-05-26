@@ -5,6 +5,9 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i3;
 
+import 'package:lgbtindernew/features/auth/data/models/login_response.dart'
+    as _i4;
+import 'package:lgbtindernew/shared/models/stored_user_session.dart' as _i5;
 import 'package:lgbtindernew/shared/services/token_storage_service.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
 
@@ -82,6 +85,40 @@ class MockTokenStorageService extends _i1.Mock
             returnValue: _i3.Future<String?>.value(),
           )
           as _i3.Future<String?>);
+
+  @override
+  _i3.Future<void> saveUserSession({
+    required _i4.UserData? user,
+    bool? profileCompleted = false,
+    String? userState,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#saveUserSession, [], {
+              #user: user,
+              #profileCompleted: profileCompleted,
+              #userState: userState,
+            }),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<_i5.StoredUserSession?> getUserSession() =>
+      (super.noSuchMethod(
+            Invocation.method(#getUserSession, []),
+            returnValue: _i3.Future<_i5.StoredUserSession?>.value(),
+          )
+          as _i3.Future<_i5.StoredUserSession?>);
+
+  @override
+  _i3.Future<void> clearUserSession() =>
+      (super.noSuchMethod(
+            Invocation.method(#clearUserSession, []),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
 
   @override
   _i3.Future<void> clearAllTokens() =>

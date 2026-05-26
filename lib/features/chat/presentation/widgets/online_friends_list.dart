@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../models/chat.dart';
@@ -107,44 +107,10 @@ class OnlineFriendsList extends ConsumerWidget {
                       width: 2,
                     ),
                   ),
-                  child: ClipOval(
-                    child: friend.primaryImageUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: friend.primaryImageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey[300],
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: Text(
-                                  friend.firstName.substring(0, 1).toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey[300],
-                            child: Center(
-                              child: Text(
-                                friend.firstName.substring(0, 1).toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                          ),
+                  child: AvatarWidget(
+                    imageUrl: friend.primaryImageUrl,
+                    radius: 26,
+                    fallbackInitial: friend.firstName,
                   ),
                 ),
 
@@ -275,22 +241,10 @@ class FriendStatusCard extends ConsumerWidget {
               // Avatar
               Stack(
                 children: [
-                  CircleAvatar(
+                  AvatarWidget(
+                    imageUrl: friend.primaryImageUrl,
                     radius: 24,
-                    backgroundColor: AppColors.primaryLight.withOpacity(0.2),
-                    backgroundImage: friend.primaryImageUrl != null
-                        ? NetworkImage(friend.primaryImageUrl!)
-                        : null,
-                    child: friend.primaryImageUrl == null
-                        ? Text(
-                            friend.firstName.substring(0, 1).toUpperCase(),
-                            style: TextStyle(
-                              color: AppColors.primaryLight,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          )
-                        : null,
+                    fallbackInitial: friend.firstName,
                   ),
 
                   // Online indicator

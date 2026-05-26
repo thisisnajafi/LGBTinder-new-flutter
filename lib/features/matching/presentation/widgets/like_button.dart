@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/cache/cache_manager.dart';
+import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/animation_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/matching_provider.dart';
+import '../../widgets/match_celebration_launcher.dart';
 
 /// Like button widget
 /// Handles liking profiles with visual feedback
@@ -33,6 +36,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _iconScaleAnimation;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -96,7 +100,7 @@ class _LikeButtonState extends ConsumerState<LikeButton>
               ],
             ),
             child: ElevatedButton(
-              onPressed: matchingState.isLiking ? null : _handleLike,
+              onPressed: (matchingState.isLiking || _isSending) ? null : _handleLike,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
@@ -148,106 +152,38 @@ class _LikeButtonState extends ConsumerState<LikeButton>
   }
 
   Future<void> _handleLike() async {
-    // Start animation
-    await _animationController.forward();
+    if (_isSending) return;
+    setState(() => _isSending = true);
+
+    _animationController.forward();
 
     final matchingNotifier = ref.read(matchingProvider.notifier);
 
     try {
       final response = await matchingNotifier.likeProfile(widget.profileId);
 
-      if (response != null && response.isMatch) {
-        // Show match celebration animation
-        _showMatchCelebration();
+      if (!mounted) return;
+      if (response != null && response.isMatch && response.match != null) {
+        await notifyNewMatch(ref);
+        MatchCelebrationLauncher.show(context, ref, match: response.match!);
         widget.onLikeSuccess?.call();
       } else {
         widget.onLikeSuccess?.call();
       }
-    } catch (e) {
-      widget.onLikeError?.call();
-    }
-
-    // Reset animation
-    await _animationController.reverse();
-  }
-
-  void _showMatchCelebration() {
-    // Show match celebration overlay/screen
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        content: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? AppColors.surfaceDark
-                : AppColors.surfaceLight,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.feedbackSuccess,
-              width: 2,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                '🎉 IT\'S A MATCH! 🎉',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.feedbackSuccess,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'You and this person liked each other!\nStart a conversation now! 💬',
-                style: TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Keep Swiping'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      // Navigate to chat screen would go here
-                      // context.go('/chat/${matchedUserId}');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.feedbackSuccess,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Send Message'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    // Also show a snackbar for additional feedback
-    Future.delayed(const Duration(milliseconds: 500), () {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Like send failed',
+        tag: 'LikeButton',
+        error: e,
+        stackTrace: stack,
+      );
+      if (mounted) widget.onLikeError?.call();
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('It\'s a match! Both users liked each other! 🎉'),
-            backgroundColor: AppColors.feedbackSuccess,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        await _animationController.reverse();
+        setState(() => _isSending = false);
       }
-    });
+    }
   }
+
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/app_logger.dart';
 import '../data/models/like.dart';
 import '../data/models/match.dart';
 import '../data/models/superlike.dart';
@@ -125,7 +126,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
         isLoading: false,
         unreadMatchCount: unreadCount,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Load matches failed',
+        tag: 'MatchingProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -138,7 +145,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
     try {
       final pendingLikes = await _getPendingLikesUseCase.execute();
       state = state.copyWith(pendingLikes: pendingLikes);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Load pending likes failed',
+        tag: 'MatchingProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(error: e.toString());
     }
   }
@@ -148,7 +161,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
     try {
       final superlikeHistory = await _getSuperlikeHistoryUseCase.execute();
       state = state.copyWith(superlikeHistory: superlikeHistory);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Load superlike history failed',
+        tag: 'MatchingProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(error: e.toString());
     }
   }
@@ -157,7 +176,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
   Future<bool> checkMatchStatus(int targetUserId) async {
     try {
       return await _checkMatchStatusUseCase.execute(targetUserId);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.warning(
+        'Check match status failed',
+        tag: 'MatchingProvider',
+        error: e,
+      );
+      AppLogger.debug('Stack: $stack', tag: 'MatchingProvider');
       return false;
     }
   }
@@ -183,7 +208,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
       }
 
       return response;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Like profile failed',
+        tag: 'MatchingProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(
         isLiking: false,
         error: e.toString(),
@@ -213,7 +244,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
       }
 
       return response;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Superlike profile failed',
+        tag: 'MatchingProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(
         isSuperliking: false,
         error: e.toString(),
@@ -227,7 +264,13 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
     try {
       final score = await _getCompatibilityScoreUseCase.execute(targetUserId);
       state = state.copyWith(compatibilityScore: score);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Load compatibility score failed',
+        tag: 'MatchingProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(error: e.toString());
     }
   }

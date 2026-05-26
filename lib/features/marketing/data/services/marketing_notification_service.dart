@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/cache/cache_invalidator.dart';
 import '../models/campaign_model.dart';
+import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Marketing notification handler
 /// Handles incoming marketing push notifications and routes to appropriate screens
@@ -171,6 +174,11 @@ class MarketingNotificationService {
 
     switch (template) {
       case 'new_match':
+        try {
+          await ProviderScope.containerOf(context)
+              .read(cacheInvalidatorProvider)
+              .purgeMatchList();
+        } catch (e) { AppLogger.warning('Silently caught exception', tag: 'marketing_notification_service', error: e); }
         final matchId = payload['match_id']?.toString();
         if (matchId != null) {
           context.push('/chat/$matchId');

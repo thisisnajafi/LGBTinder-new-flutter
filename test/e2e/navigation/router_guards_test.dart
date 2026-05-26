@@ -16,12 +16,12 @@ void main() {
         isProtectedRoute: true,
         hasPendingProtectedRoute: false,
       );
-      expect(decision.redirectTo, AppRoutes.welcome);
+      expect(decision.redirectTo, AppRoutes.login);
       expect(decision.storePending, isTrue);
     });
 
     // TEST-123
-    test('TEST-123: unauthenticated /chat redirects to welcome with pending', () {
+    test('TEST-123: unauthenticated /chat redirects to login with pending', () {
       final decision = evaluateGuardDecision(
         location: AppRoutes.chat,
         hasLeftStartupFlow: false,
@@ -31,12 +31,12 @@ void main() {
         isProtectedRoute: true,
         hasPendingProtectedRoute: false,
       );
-      expect(decision.redirectTo, AppRoutes.welcome);
+      expect(decision.redirectTo, AppRoutes.login);
       expect(decision.storePending, isTrue);
     });
 
     // TEST-124
-    test('TEST-124: unauthenticated /subscription-plans redirects to welcome', () {
+    test('TEST-124: unauthenticated /subscription-plans redirects to login', () {
       final decision = evaluateGuardDecision(
         location: AppRoutes.subscriptionPlans,
         hasLeftStartupFlow: false,
@@ -46,11 +46,11 @@ void main() {
         isProtectedRoute: true,
         hasPendingProtectedRoute: false,
       );
-      expect(decision.redirectTo, AppRoutes.welcome);
+      expect(decision.redirectTo, AppRoutes.login);
     });
 
     // TEST-125
-    test('TEST-125: unauthenticated /feature-locked redirects to welcome', () {
+    test('TEST-125: unauthenticated /feature-locked redirects to login', () {
       final decision = evaluateGuardDecision(
         location: AppRoutes.featureLocked,
         hasLeftStartupFlow: false,
@@ -60,7 +60,7 @@ void main() {
         isProtectedRoute: true,
         hasPendingProtectedRoute: false,
       );
-      expect(decision.redirectTo, AppRoutes.welcome);
+      expect(decision.redirectTo, AppRoutes.login);
     });
 
     // TEST-126

@@ -2,28 +2,28 @@
 
 **Date:** 2026-05-17  
 **Command:** `flutter test test/e2e/`  
-**Environment:** Windows — Flutter mirror `mirror-flutter.runflare.com` returned **402 Payment Required** during `pub get`.
+**Environment:** Windows — China mirror (`pub.flutter-io.cn` / `storage.flutter-io.cn`)
 
 ## Summary
 
 | Total | Passed | Failed | Skipped |
 |-------|--------|--------|---------|
-| —     | —      | —      | —       |
+| 79    | 79     | 0      | 0       |
 
-*Tests were authored but could not be executed in this environment.*
+**Duration:** ~25s
 
-## Blocker
+**Latest feature batch:** Auth & session (TEST-001–004, 007, 011, 013–014, 017–022, 021) — `test/e2e/auth/auth_session_test.dart`
 
+**To re-run:**
+
+```powershell
+cd lgbtindernew
+$env:PUB_HOSTED_URL="https://pub.flutter-io.cn"
+$env:FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
+flutter test test/e2e/
 ```
-402 Payment Required trying to find package flutter_riverpod at https://mirror-flutter.runflare.com.
-Failed to update packages.
-```
 
-**To run locally:**
-
-1. Fix Flutter pub mirror (use official `https://pub.dev` or a working mirror).
-2. `cd lgbtindernew && flutter pub get`
-3. `flutter test test/e2e/`
+See `docs/E2E_FAILED_TESTS_FIX_LIST.md` for notes on the six tests that were fixed in this pass.
 
 ## Suite layout (implemented)
 
@@ -32,6 +32,7 @@ Failed to update packages.
 | `test/e2e/helpers/` | `app_bootstrap.dart`, `auth_helpers.dart`, `mock_services.dart` |
 | `test/e2e/config/test_credentials.dart` | Email auth only (no Firebase phone) |
 | `test/e2e/auth/auth_flow_test.dart` | TEST-005 – TEST-016, TEST-140 guard |
+| `test/e2e/auth/auth_session_test.dart` | TEST-001–004, 007, 011, 013–014, 017–022, 021 |
 | `test/e2e/onboarding/profile_wizard_test.dart` | TEST-024, TEST-031, TEST-033, TEST-032 |
 | `test/e2e/discover/discovery_swipe_test.dart` | TEST-035, TEST-045 |
 | `test/e2e/matching/matching_flow_test.dart` | TEST-048, TEST-049 |
@@ -41,6 +42,7 @@ Failed to update packages.
 | `test/e2e/settings/settings_flow_test.dart` | TEST-094 |
 | `test/e2e/payments/billing_flow_test.dart` | TEST-107, TEST-111, TEST-113, TEST-121 |
 | `test/e2e/navigation/router_guards_test.dart` | TEST-122 – TEST-136 |
+| `test/e2e/notifications/notifications_flow_test.dart` | TEST-076 – TEST-083 |
 
 Additional TEST IDs from the plan are covered by existing unit tests under `test/routes/` and `test/shared/page_tier_rules_test.dart`, or are reserved for live API runs when `premiumEmail` / `freeEmail` are filled in.
 
