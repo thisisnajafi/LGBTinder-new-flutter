@@ -84,7 +84,12 @@ class ChatLocalRepository {
         await enqueueOutbox(QueuedChatMessage.fromJson(item));
       }
       await prefs.remove(chatOutboundLegacyStorageKey);
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning(
+        'Legacy chat outbox migration failed',
+        tag: 'ChatLocalRepository',
+        error: e,
+      );
       // Keep legacy data if migration fails; do not block startup.
     }
   }

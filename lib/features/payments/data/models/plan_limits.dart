@@ -35,6 +35,7 @@ class PlanLimits {
   final Usage usage;
   final Features features;
   final Timestamps timestamps;
+  final SuperlikeInfo? superlikeInfo;
 
   PlanLimits({
     required this.planInfo,
@@ -42,10 +43,12 @@ class PlanLimits {
     required this.usage,
     required this.features,
     required this.timestamps,
+    this.superlikeInfo,
   });
 
   factory PlanLimits.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>;
+    final superlikeRaw = data['superlike_info'];
     
     return PlanLimits(
       planInfo: PlanInfo.fromJson(data['plan_info'] as Map<String, dynamic>),
@@ -53,6 +56,9 @@ class PlanLimits {
       usage: Usage.fromJson(data['usage'] as Map<String, dynamic>),
       features: Features.fromJson(data['features'] as Map<String, dynamic>),
       timestamps: Timestamps.fromJson(data['timestamps'] as Map<String, dynamic>),
+      superlikeInfo: superlikeRaw is Map<String, dynamic>
+          ? SuperlikeInfo.fromJson(superlikeRaw)
+          : null,
     );
   }
 
@@ -63,7 +69,30 @@ class PlanLimits {
       'usage': usage.toJson(),
       'features': features.toJson(),
       'timestamps': timestamps.toJson(),
+      if (superlikeInfo != null) 'superlike_info': superlikeInfo!.toJson(),
     };
+  }
+
+  /// Authoritative superlike balance from backend, with usage fallback.
+  SuperlikeInfo get effectiveSuperlikeInfo =>
+      superlikeInfo ?? SuperlikeInfo.fromUsage(usage.superlikes);
+
+  PlanLimits copyWith({
+    PlanInfo? planInfo,
+    Limits? limits,
+    Usage? usage,
+    Features? features,
+    Timestamps? timestamps,
+    SuperlikeInfo? superlikeInfo,
+  }) {
+    return PlanLimits(
+      planInfo: planInfo ?? this.planInfo,
+      limits: limits ?? this.limits,
+      usage: usage ?? this.usage,
+      features: features ?? this.features,
+      timestamps: timestamps ?? this.timestamps,
+      superlikeInfo: superlikeInfo ?? this.superlikeInfo,
+    );
   }
 
   /// Check if user has reached a specific limit
@@ -77,8 +106,7 @@ class PlanLimits {
         if (usage.likes.usedToday == 0) return false;
         return usage.likes.remaining <= 0 && !usage.likes.isUnlimited;
       case 'superlikes':
-        if (usage.superlikes.usedToday == 0) return false;
-        return usage.superlikes.remaining <= 0 && !usage.superlikes.isUnlimited;
+        return !effectiveSuperlikeInfo.canSuperlike;
       case 'messages':
         return !usage.messages.isUnlimited && 
                usage.messages.activeConversations >= usage.messages.conversationLimit;
@@ -397,6 +425,81 @@ class Features {
       'ad_free': adFree,
       'priority_likes': priorityLikes,
       'ai_matching': aiMatching,
+    };
+  }
+}
+
+/// Authoritative superlike balance (daily allowance + purchased packs).
+class SuperlikeInfo {
+  final bool canSuperlike;
+  final int totalRemaining;
+  final int dailyRemaining;
+  final int extraPacksRemaining;
+  final int dailyLimit;
+  final int dailyUsed;
+
+  const SuperlikeInfo({
+    required this.canSuperlike,
+    required this.totalRemaining,
+    required this.dailyRemaining,
+    required this.extraPacksRemaining,
+    required this.dailyLimit,
+    required this.dailyUsed,
+  });
+
+  factory SuperlikeInfo.fromJson(Map<String, dynamic> json) {
+    final totalRemaining = _SafeParser.parseInt(json['total_remaining']);
+    return SuperlikeInfo(
+      canSuperlike: _SafeParser.parseBool(
+        json['can_superlike'],
+        defaultValue: totalRemaining > 0,
+      ),
+      totalRemaining: totalRemaining,
+      dailyRemaining: _SafeParser.parseInt(json['daily_remaining']),
+      extraPacksRemaining: _SafeParser.parseInt(json['extra_packs_remaining']),
+      dailyLimit: _SafeParser.parseInt(json['daily_limit']),
+      dailyUsed: _SafeParser.parseInt(json['daily_used']),
+    );
+  }
+
+  factory SuperlikeInfo.fromUsage(UsageDetail usage) {
+    return SuperlikeInfo(
+      canSuperlike: usage.isUnlimited || usage.remaining > 0,
+      totalRemaining: usage.remaining,
+      dailyRemaining: usage.remaining,
+      extraPacksRemaining: 0,
+      dailyLimit: usage.limit,
+      dailyUsed: usage.usedToday,
+    );
+  }
+
+  SuperlikeInfo afterUse() {
+    if (totalRemaining <= 0) return this;
+    final useDaily = dailyRemaining > 0;
+    return SuperlikeInfo(
+      canSuperlike: totalRemaining - 1 > 0,
+      totalRemaining: totalRemaining - 1,
+      dailyRemaining: useDaily ? dailyRemaining - 1 : dailyRemaining,
+      extraPacksRemaining:
+          useDaily ? extraPacksRemaining : extraPacksRemaining - 1,
+      dailyLimit: dailyLimit,
+      dailyUsed: useDaily ? dailyUsed + 1 : dailyUsed,
+    );
+  }
+
+  String get remainingLabel {
+    if (totalRemaining == 1) return '1 Super Like remaining';
+    return '$totalRemaining Super Likes remaining';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'can_superlike': canSuperlike,
+      'total_remaining': totalRemaining,
+      'daily_remaining': dailyRemaining,
+      'extra_packs_remaining': extraPacksRemaining,
+      'daily_limit': dailyLimit,
+      'daily_used': dailyUsed,
     };
   }
 }

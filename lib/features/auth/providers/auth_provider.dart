@@ -1,5 +1,6 @@
 // Provider: AuthProvider
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/app_logger.dart';
 import '../data/models/login_response.dart';
 import '../data/models/user_state_response.dart';
 import '../data/services/auth_service.dart';
@@ -95,7 +96,13 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
         hasCompletedOnboarding: hasCompletedOnboarding,
         isLoading: false,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Auth check failed',
+        tag: 'AuthProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),
@@ -116,7 +123,13 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
         user: loginResponse.user,
         isLoading: false,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Login state update failed',
+        tag: 'AuthProvider',
+        error: e,
+        stackTrace: stack,
+      );
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),
@@ -146,7 +159,13 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
         user: null,
         isLoading: false,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.error(
+        'Logout failed',
+        tag: 'AuthProvider',
+        error: e,
+        stackTrace: stack,
+      );
       if (!silent) {
         state = state.copyWith(
           isLoading: false,

@@ -9,7 +9,7 @@ enum LogLevel { verbose, debug, info, warning, error, fatal }
 class AppLogger {
   AppLogger._();
 
-  static bool _enabled = kDebugMode;
+  static const bool _enabled = kDebugMode;
   static const String _reset = '\x1B[0m';
   static const String _grey = '\x1B[90m';
   static const String _cyan = '\x1B[36m';

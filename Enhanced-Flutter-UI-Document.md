@@ -336,18 +336,23 @@ enum PageTransition {
 ### 3.4 Bottom Navigation Bar
 
 **Structure:**
-- Floating container with rounded top corners (radius: 20px)
-- Dark background with slight elevation (dark mode: `surfaceDark`, light mode: `surfaceLight`)
-- 5 circular icon buttons, evenly spaced
-- Active item: Purple background circle with white icon
-- Inactive items: Gray/white icons (dark mode: white, light mode: gray)
+- Floating inset capsule bar: horizontal margin 16px, bottom margin 8px, outer `borderRadius: 100`
+- Bar height: 64px + safe area (use `AppBottomNavBar.bottomReserve`)
+- Background: `Theme.colorScheme.surface` with subtle outline border — no top screen-edge border
+- 5 icon-only tabs, evenly spaced (no text labels)
+- Active item: horizontal capsule pill — `primary` at 12% opacity
+- Active icon: full `primary` color, 24px SVG (bold variant)
+- Profile tab (index 3) when active: circular user avatar + online status dot (from profile cache)
+- Inactive icons: `onSurface` at 40% opacity (outline variant)
+- Tab changes: bottom nav tap only — horizontal swipe between tabs disabled
+- Transition: `AnimatedContainer`, 220ms, `Curves.easeOutCubic`
 
 **Implementation:**
 ```dart
-// Bottom nav dimensions
-static const double bottomNavHeight = 70.0;
+static const double bottomNavHeight = 64.0;
 static const double bottomNavIconSize = 24.0;
-static const double bottomNavActiveSize = 48.0; // Active icon container
+static const EdgeInsets activePillPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 6);
+static const double activePillRadius = 100.0;
 ```
 
 ---
@@ -986,25 +991,25 @@ class GradientPillButton extends StatelessWidget {
 
 **Usage**: Get Started, Hai Hello, Subscription buttons
 
-### 5.5 BottomGlassNav
+### 5.5 AppBottomNavBar
 
-**Purpose**: Floating bottom navigation bar
+**Purpose**: Full-width flat bottom navigation bar with capsule active highlight
 
 ```dart
-class BottomGlassNav extends StatelessWidget {
+class AppBottomNavBar extends ConsumerWidget {
   final int currentIndex;
-  final Function(int) onTap;
+  final ValueChanged<int> onTap;
   
   // Features
-  - 5 navigation items
-  - Active item: purple background circle
-  - Glass effect: semi-transparent background
-  - Rounded top corners
-  - Icon animations on tap
+  - 5 icon-only navigation items
+  - Active item: primary capsule (12% opacity), primary icon
+  - Inactive: onSurface 40% opacity
+  - Flat surface + 0.5px top border
+  - AnimatedContainer 220ms easeOutCubic
 }
 ```
 
-**Usage**: All main screens (except onboarding/auth)
+**Usage**: Home shell (`HomePage`) — tab switching via tap only
 
 ### 5.6 ProfileStatsCard
 

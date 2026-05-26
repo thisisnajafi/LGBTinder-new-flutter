@@ -62,7 +62,7 @@ class _ActionButtonsRowState extends ConsumerState<ActionButtonsRow> {
             if (widget.showRewind)
               _buildActionButton(
                 context: context,
-                icon: AppIcons.undo,
+                icon: AppIcons.refreshLeft,
                 color: Colors.yellow,
                 size: 48,
                 onPressed: disabled
@@ -112,7 +112,7 @@ class _ActionButtonsRowState extends ConsumerState<ActionButtonsRow> {
             if (widget.showBoost)
               _buildActionButton(
                 context: context,
-                icon: AppIcons.lightning,
+                icon: AppIcons.flash,
                 color: Colors.purple,
                 size: 48,
                 onPressed: disabled ? null : widget.onBoost,

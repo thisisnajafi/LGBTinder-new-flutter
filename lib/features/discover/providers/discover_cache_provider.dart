@@ -344,8 +344,13 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
       );
       final err = e;
       final isLimit = _isLimitError(err);
-      if (isLimit && onLimitError != null) {
-        onLimitError(err);
+      if (isLimit) {
+        if (action == 'superlike') {
+          _planLimitsService.clearCache();
+        }
+        if (onLimitError != null) {
+          onLimitError(err);
+        }
       }
       _markSyncFailed(userId);
     }
@@ -354,10 +359,14 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
   bool _isLimitError(dynamic e) {
     if (e is ApiError) {
       final code = e.responseData?['error_code'] as String?;
+      final data = e.responseData?['data'] as Map<String, dynamic>?;
+      final purchaseRequired = data?['purchase_required'] == true ||
+          e.responseData?['purchase_required'] == true;
       return code == 'DAILY_VIEW_LIMIT_REACHED' ||
           code == 'DAILY_LIMIT_REACHED' ||
           code == 'DAILY_LIKE_LIMIT_REACHED' ||
-          e.code == 429;
+          e.code == 429 ||
+          (e.code == 403 && purchaseRequired);
     }
     return false;
   }

@@ -380,12 +380,14 @@ Section labels: `labelMedium`, `onSurface` at 60% opacity.
 | 11 | Update `UI-DESIGN-SYSTEM.md` § BottomGlassNav → pill spec | docs | P2 |
 | 12 | Update `Enhanced-Flutter-UI-Document.md` §3.4 | docs | P2 |
 
-### Phase 3 — Optional (floating bar variant)
+### Phase 3 — Floating bar + profile avatar (implemented)
 
-| # | Task | Notes |
-|---|------|-------|
-| 13 | Floating inset bar with `borderRadius: 100` on outer container | Horizontal margin 16, margin bottom 8 |
-| 14 | Profile tab active state = `CircleAvatar` + online dot | Requires user photo + presence API |
+| # | Task | Status |
+|---|------|--------|
+| 13 | Floating inset bar (`borderRadius: 100`, margin H16 / bottom 8) | Done — `AppBottomNavBar` |
+| 14 | Profile tab active = `CircleAvatar` + online dot | Done — index 3, uses `profilePageCacheProvider` |
+
+**Reserve height:** `AppBottomNavBar.bottomReserve(safeAreaBottom)` = 64 + 8 + safe area.
 
 ---
 

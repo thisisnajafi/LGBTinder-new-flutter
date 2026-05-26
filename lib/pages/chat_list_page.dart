@@ -1,7 +1,6 @@
 // Screen: ChatListPage
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
@@ -32,7 +31,7 @@ enum _ChatFilter { all, unread, online }
 
 /// Chat list page - Displays list of conversations
 class ChatListPage extends ConsumerStatefulWidget {
-  const ChatListPage({Key? key}) : super(key: key);
+  const ChatListPage({super.key});
 
   @override
   ConsumerState<ChatListPage> createState() => _ChatListPageState();
@@ -274,14 +273,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     );
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final tier = ref.watch(userTierProvider);
     final showPremiumBanner =
         tier == UserTier.basid && !_premiumBannerDismissed;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,14 +1,13 @@
 // Widget: SwipeableCard
-// Swipeable card component for discovery (REF-02 layout)
+// Swipeable card component for discovery (REF-02 / Klick full-bleed layout)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/profile_image_widget.dart';
 
-/// Profile card for discovery — photo-first card with bottom info panel.
+/// Profile card for discovery — full-bleed photo with bottom gradient overlay.
 class SwipeableCard extends ConsumerStatefulWidget {
   final int userId;
   final String name;
@@ -75,127 +74,107 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-
     final images =
         widget.imageUrls ?? (widget.avatarUrl != null ? [widget.avatarUrl!] : []);
     final currentImage = images.isNotEmpty ? images[_currentImageIndex] : null;
     final nameLine = widget.age != null
-        ? '${widget.name} ${widget.age}'
+        ? '${widget.name}, ${widget.age}'
         : widget.name;
     final distanceLabel = _distanceLabel();
 
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.spacingMD,
-          vertical: AppSpacing.spacingSM,
-        ),
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Expanded(
-                flex: 3,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (currentImage != null)
-                      ProfileImageWidget(
-                        imageUrl: currentImage,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    else
-                      Container(
-                        color: surfaceColor,
-                        child: Center(
-                          child: AppSvgIcon(
-                            assetPath: AppIcons.userOutline,
-                            size: 64,
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                      ),
-                    if (distanceLabel.isNotEmpty)
-                      Positioned(
-                        top: AppSpacing.spacingMD,
-                        right: AppSpacing.spacingMD,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingMD,
-                            vertical: AppSpacing.spacingSM,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.backgroundDark.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppSvgIcon(
-                                assetPath: AppIcons.location,
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: AppSpacing.spacingXS),
-                              Text(
-                                distanceLabel,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (images.length > 1)
-                      Positioned.fill(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () => _cycleImage(-1, images.length),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () => _cycleImage(1, images.length),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+              if (currentImage != null)
+                ProfileImageWidget(
+                  imageUrl: currentImage,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                )
+              else
+                ColoredBox(
+                  color: theme.colorScheme.surface,
+                  child: Center(
+                    child: AppSvgIcon(
+                      assetPath: AppIcons.userOutline,
+                      size: 64,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 200,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.78),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingMD,
-                  AppSpacing.spacingLG,
-                  14,
+              if (distanceLabel.isNotEmpty)
+                Positioned(
+                  top: AppSpacing.spacingMD,
+                  right: AppSpacing.spacingMD,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingMD,
+                      vertical: AppSpacing.spacingSM,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppSvgIcon(
+                          assetPath: AppIcons.location,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: AppSpacing.spacingXS),
+                        Text(
+                          distanceLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                color: surfaceColor,
+              Positioned(
+                left: AppSpacing.spacingLG,
+                right: AppSpacing.spacingLG,
+                bottom: AppSpacing.spacingLG,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
                         Flexible(
                           child: Text(
                             nameLine,
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
                             maxLines: 1,
@@ -226,14 +205,33 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
                         widget.bio!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
+              if (images.length > 1)
+                Positioned.fill(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () => _cycleImage(-1, images.length),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () => _cycleImage(1, images.length),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),

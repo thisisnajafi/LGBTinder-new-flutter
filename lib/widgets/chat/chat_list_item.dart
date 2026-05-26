@@ -52,7 +52,7 @@ class ChatListItem extends ConsumerWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 72,
+          height: 76,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppPageHeader.horizontalPadding,
@@ -65,8 +65,8 @@ class ChatListItem extends ConsumerWidget {
                     ClipOval(
                       child: ProfileImageWidget(
                         imageUrl: avatarUrl,
-                        width: 48,
-                        height: 48,
+                        width: 52,
+                        height: 52,
                         fit: BoxFit.cover,
                       ),
                     ),

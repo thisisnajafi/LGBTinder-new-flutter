@@ -386,21 +386,27 @@ class GradientPillButton extends StatelessWidget {
 }
 ```
 
-### BottomGlassNav
+### BottomGlassNav / AppBottomNavBar
 
-**Purpose**: Floating bottom navigation
+**Purpose**: Floating inset bottom navigation with capsule active state
 
 ```dart
-class BottomGlassNav extends StatelessWidget {
+class AppBottomNavBar extends ConsumerWidget {
   final int currentIndex;
-  final Function(int) onTap;
-  
-  // Features
-  - 5 navigation items
-  - Active item: purple background circle
-  - Glass effect: semi-transparent background
-  - Rounded top corners (20px)
-  - Icon animations on tap
+  final ValueChanged<int> onTap;
+  final int? notificationCount;
+
+  // Layout
+  - Floating capsule bar: horizontal margin 16px, bottom margin 8px
+  - Outer borderRadius: 100 (full capsule)
+  - Bar height: 64px + safe area
+  - 5 icon-only navigation items
+  - Active item: primary-tinted inner pill (12% opacity), primary icon
+  - Profile tab (index 3) when active: user avatar + online dot
+  - Inactive items: onSurface at 40% opacity
+  - Surface background with subtle outline border
+  - AnimatedContainer 220ms easeOutCubic
+  - Tap-only tab switching (no horizontal swipe)
 }
 ```
 

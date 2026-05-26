@@ -164,24 +164,67 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Future<void> _showSuperlikeBottomSheet(int userId) async {
     if (_isSwipeInProgress) return;
 
-    final message = await showSuperlikeMessageSheet(context);
-    if (!mounted || message == null || message.isEmpty) return;
+    try {
+      final planLimitsService = ref.read(planLimitsServiceProvider);
+      final limits =
+          await planLimitsService.getPlanLimits(forceRefresh: true);
+      if (!mounted) return;
 
-    await _handleSwipe(
-      userId,
-      'superlike',
-      fromRow: true,
-      superlikeMessage: message,
-    );
+      final result = await showSuperlikeMessageSheet(
+        context,
+        superlikeInfo: limits.effectiveSuperlikeInfo,
+      );
+      if (!mounted || result == null) return;
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Super Like sent!'),
-        backgroundColor: AppColors.onlineGreen,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      if (result.openPurchase) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SuperlikePacksScreen(),
+          ),
+        );
+        planLimitsService.clearCache();
+        ref.invalidate(planLimitsProvider);
+        return;
+      }
+
+      final message = result.message;
+      if (message == null || message.isEmpty) return;
+
+      final queued = await _handleSwipe(
+        userId,
+        'superlike',
+        fromRow: true,
+        superlikeMessage: message,
+      );
+
+      if (queued && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Super Like sent!'),
+              backgroundColor: AppColors.onlineGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        });
+      }
+    } catch (e, stack) {
+      AppLogger.error(
+        'Super like sheet failed',
+        tag: 'DiscoveryPage',
+        error: e,
+        stackTrace: stack,
+      );
+      if (mounted) {
+        ErrorHandlerService.handleError(
+          context,
+          e,
+          customMessage: 'Could not open Super Like. Please try again.',
+        );
+      }
+    }
   }
 
   void _onCardStackSwipe(int userId, String action) {
@@ -250,13 +293,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     };
   }
 
-  Future<void> _handleSwipe(
+  Future<bool> _handleSwipe(
     int userId,
     String action, {
     bool fromRow = false,
     String? superlikeMessage,
   }) async {
-    if (_isSwipeInProgress) return;
+    if (_isSwipeInProgress) return false;
     _isSwipeInProgress = true;
 
     try {
@@ -271,20 +314,22 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             limits.usage.swipes.usedToday,
             limits.usage.swipes.limit,
           );
-          return;
+          return false;
         }
       }
 
       if (action == 'superlike') {
         final hasReached = await _hasReachedSuperlikeLimit(planLimitsService);
         if (hasReached && mounted) {
-          final limits = await planLimitsService.getPlanLimits();
-          UpgradeDialog.showSuperlikeLimitDialog(
+          await Navigator.push(
             context,
-            limits.usage.superlikes.usedToday,
-            limits.usage.superlikes.limit,
+            MaterialPageRoute(
+              builder: (context) => const SuperlikePacksScreen(),
+            ),
           );
-          return;
+          planLimitsService.clearCache();
+          ref.invalidate(planLimitsProvider);
+          return false;
         }
       }
 
@@ -296,6 +341,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           superlikeMessage: superlikeMessage,
         );
       });
+      return true;
     } catch (e, stack) {
       AppLogger.error(
         'Swipe action failed ($action)',
@@ -310,6 +356,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           customMessage: 'Action failed. Please try again.',
         );
       }
+      return false;
     } finally {
       if (mounted) {
         setState(() => _isSwipeInProgress = false);
@@ -354,6 +401,33 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     if (e is ApiError) {
       final errorCode = e.responseData?['error_code'] as String?;
       final data = e.responseData?['data'] as Map<String, dynamic>?;
+      final purchaseRequired = data?['purchase_required'] == true ||
+          e.responseData?['purchase_required'] == true;
+
+      if (action == 'superlike' &&
+          (purchaseRequired || e.code == 403)) {
+        ref.read(planLimitsServiceProvider).clearCache();
+        ref.invalidate(planLimitsProvider);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SuperlikePacksScreen(),
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.message.isNotEmpty
+                  ? e.message
+                  : 'No Super Likes remaining. Purchase more to continue.',
+            ),
+            backgroundColor: AppColors.feedbackWarning,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
       if (errorCode == 'DAILY_LIKE_LIMIT_REACHED') {
         final used = (data?['used_today'] as num?)?.toInt() ?? 0;
         final limit = (data?['daily_limit'] as num?)?.toInt() ?? 8;
@@ -599,14 +673,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final cacheState = ref.watch(discoverCacheProvider);
     final stack = cacheState.stack;
     final cards = stack.map(_profileToCardMap).toList();
     final showSkeleton = !cacheState.initialLoadComplete && stack.isEmpty;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -14,7 +14,7 @@ import '../routes/home_tab_routes.dart';
 
 /// Home page — main shell with tap-only tabs and bottom navigation.
 class HomePage extends ConsumerStatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   ConsumerState<HomePage> createState() => _HomePageState();
@@ -128,12 +128,12 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final navBarReserve = AppBottomNavBar.barHeight + bottomInset;
+    final navBarReserve = AppBottomNavBar.bottomReserve(bottomInset);
 
     final pages = _buildPages(currentIndex, profileUserId);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         fit: StackFit.expand,
         children: [

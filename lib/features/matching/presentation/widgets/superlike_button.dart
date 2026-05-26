@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/cache/cache_manager.dart';
 import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -78,9 +79,8 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final matchingState = ref.watch(matchingProvider);
-    final matchingNotifier = ref.read(matchingProvider.notifier);
 
     return AnimatedBuilder(
       animation: _animationController,

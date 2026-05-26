@@ -151,13 +151,9 @@ class PlanLimitsService {
   void incrementUsage(String limitType) {
     if (_cachedLimits == null) return;
 
-    // This is a local optimistic update
-    // The actual usage will be updated on next fetch
     switch (limitType) {
       case 'swipes':
-        _cachedLimits = PlanLimits(
-          planInfo: _cachedLimits!.planInfo,
-          limits: _cachedLimits!.limits,
+        _cachedLimits = _cachedLimits!.copyWith(
           usage: Usage(
             swipes: UsageDetail(
               usedToday: _cachedLimits!.usage.swipes.usedToday + 1,
@@ -169,14 +165,10 @@ class PlanLimitsService {
             superlikes: _cachedLimits!.usage.superlikes,
             messages: _cachedLimits!.usage.messages,
           ),
-          features: _cachedLimits!.features,
-          timestamps: _cachedLimits!.timestamps,
         );
         break;
       case 'likes':
-        _cachedLimits = PlanLimits(
-          planInfo: _cachedLimits!.planInfo,
-          limits: _cachedLimits!.limits,
+        _cachedLimits = _cachedLimits!.copyWith(
           usage: Usage(
             swipes: _cachedLimits!.usage.swipes,
             likes: UsageDetail(
@@ -188,14 +180,11 @@ class PlanLimitsService {
             superlikes: _cachedLimits!.usage.superlikes,
             messages: _cachedLimits!.usage.messages,
           ),
-          features: _cachedLimits!.features,
-          timestamps: _cachedLimits!.timestamps,
         );
         break;
       case 'superlikes':
-        _cachedLimits = PlanLimits(
-          planInfo: _cachedLimits!.planInfo,
-          limits: _cachedLimits!.limits,
+        final info = _cachedLimits!.effectiveSuperlikeInfo;
+        _cachedLimits = _cachedLimits!.copyWith(
           usage: Usage(
             swipes: _cachedLimits!.usage.swipes,
             likes: _cachedLimits!.usage.likes,
@@ -207,8 +196,7 @@ class PlanLimitsService {
             ),
             messages: _cachedLimits!.usage.messages,
           ),
-          features: _cachedLimits!.features,
-          timestamps: _cachedLimits!.timestamps,
+          superlikeInfo: info.afterUse(),
         );
         break;
     }

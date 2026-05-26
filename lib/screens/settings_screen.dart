@@ -6,10 +6,9 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/widgets/app_grouped_list_card.dart';
 import '../core/widgets/app_page_header.dart';
 import '../core/utils/app_icons.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import 'settings/account_management_screen.dart';
 import '../features/settings/presentation/screens/matching_preferences_screen.dart';
@@ -22,14 +21,13 @@ import 'premium_features_screen.dart';
 import 'payment_settings_screen.dart';
 import '../features/marketing/presentation/screens/referral_screen.dart';
 import '../features/payments/providers/payment_providers.dart';
-import '../features/payments/data/models/subscription_plan.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
 import '../screens/onboarding/onboarding_preferences_screen.dart';
 import '../routes/app_router.dart';
 
 /// Settings screen - Main settings overview (Task 5: summary from GET /api/settings)
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -39,14 +37,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final summaryAsync = ref.watch(settingsSummaryProvider);
+    final subscriptionStatus = ref.watch(subscriptionStatusProvider);
+    final isSubscribed = subscriptionStatus.maybeWhen(
+      data: (status) => status?.isActive == true,
+      orElse: () => false,
+    );
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -57,8 +56,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               const AppPageHeader(title: 'Settings'),
-              SizedBox(height: AppSpacing.spacingLG),
-              // Profile section (name/email from summary when available)
+              const SizedBox(height: AppSpacing.spacingLG),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppPageHeader.horizontalPadding,
@@ -71,19 +69,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       isOnline: true,
                       size: 64.0,
                     ),
-                    SizedBox(width: AppSpacing.spacingLG),
+                    const SizedBox(width: AppSpacing.spacingLG),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             summaryAsync.valueOrNull?.profile.displayName ?? 'Profile',
-                            style: AppTypography.h2.copyWith(color: textColor),
+                            style: theme.textTheme.titleLarge,
                           ),
-                          SizedBox(height: AppSpacing.spacingXS),
+                          const SizedBox(height: AppSpacing.spacingXS),
                           Text(
                             summaryAsync.valueOrNull?.account.email ?? '—',
-                            style: AppTypography.body.copyWith(color: secondaryTextColor),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                            ),
                           ),
                         ],
                       ),
@@ -91,343 +91,232 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     IconButton(
                       icon: AppSvgIcon(
                         assetPath: AppIcons.chevronRight,
-                        color: secondaryTextColor,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
                         size: 24,
                       ),
                       onPressed: () {
-                        context.go('${AppRoutes.home}/profile');
+                        context.go('${AppRoutes.home}?tab=3');
                       },
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: AppSpacing.spacingXL),
-              DividerCustom(),
-
-            // Account section
-            SectionHeader(
-              title: 'Account',
-              iconPath: AppIcons.getIconOutline('user'),
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.userEdit,
-              title: 'Account Management',
-              subtitle: summaryAsync.valueOrNull?.account.email != null
-                  ? '${summaryAsync.valueOrNull!.account.email} · Edit profile, password'
-                  : 'Edit profile, change password',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AccountManagementScreen(),
+              AppGroupedListSection(
+                title: 'Account',
+                children: [
+                  _tile(
+                    iconPath: AppIcons.userEdit,
+                    label: 'Account Management',
+                    subtitle: summaryAsync.valueOrNull?.account.email != null
+                        ? '${summaryAsync.valueOrNull!.account.email} · Edit profile, password'
+                        : 'Edit profile, change password',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AccountManagementScreen(),
+                      ),
+                    ),
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.discover,
-              title: 'Discovery preferences',
-              subtitle: summaryAsync.valueOrNull != null
-                  ? summaryAsync.valueOrNull!.discoverySubtitle
-                  : 'Age range, distance, who can see you',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MatchingPreferencesScreen(),
+                  _tile(
+                    iconPath: AppIcons.discover,
+                    label: 'Discovery preferences',
+                    subtitle: summaryAsync.valueOrNull?.discoverySubtitle ??
+                        'Age range, distance, who can see you',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MatchingPreferencesScreen(),
+                      ),
+                    ),
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.share,
-              title: 'Invite Friends',
-              subtitle: 'Share your referral code, earn rewards',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ReferralScreen(),
+                  _tile(
+                    iconPath: AppIcons.share,
+                    label: 'Invite Friends',
+                    subtitle: 'Share your referral code, earn rewards',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ReferralScreen(),
+                      ),
+                    ),
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.lockOutline,
-              title: 'Privacy',
-              subtitle: 'Control your privacy settings',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PrivacySettingsScreen(),
+                  _tile(
+                    iconPath: AppIcons.lockOutline,
+                    label: 'Privacy',
+                    subtitle: 'Control your privacy settings',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PrivacySettingsScreen(),
+                      ),
+                    ),
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.card,
-              title: 'Payment Settings',
-              subtitle: 'Configure payment systems and features',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PaymentSettingsScreen(),
+                  _tile(
+                    iconPath: AppIcons.card,
+                    label: 'Payment Settings',
+                    subtitle: 'Configure payment systems and features',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PaymentSettingsScreen(),
+                      ),
+                    ),
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.discover,
-              title: 'Complete Setup',
-              subtitle: 'Finish setting up your preferences',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const OnboardingPreferencesScreen(),
+                  _tile(
+                    iconPath: AppIcons.discover,
+                    label: 'Complete Setup',
+                    subtitle: 'Finish setting up your preferences',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OnboardingPreferencesScreen(),
+                      ),
+                    ),
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.notification,
-              title: 'Notifications',
-              subtitle: summaryAsync.valueOrNull != null
-                  ? '${summaryAsync.valueOrNull!.notifications.subtitle} · Manage preferences'
-                  : 'Manage notification preferences',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NotificationSettingsScreen(),
+                  _tile(
+                    iconPath: AppIcons.notification,
+                    label: 'Notifications',
+                    subtitle: summaryAsync.valueOrNull != null
+                        ? '${summaryAsync.valueOrNull!.notifications.subtitle} · Manage preferences'
+                        : 'Manage notification preferences',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationSettingsScreen(),
+                      ),
+                    ),
+                    showDivider: false,
                   ),
-                );
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-          DividerCustom(),
-
-          // Safety section
-          SectionHeader(
-            title: 'Safety',
-            iconPath: AppIcons.getIconOutline('shield'),
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.shieldTick,
-            title: 'Safety Center',
-            subtitle: 'Report, block, and safety tools',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SafetySettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          DividerCustom(),
-
-          // Premium section
-          SectionHeader(
-            title: 'Premium',
-            iconPath: AppIcons.getIconOutline('magic-star'),
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.star,
-            title: 'Compare tiers',
-            subtitle: 'Basid vs Silder vs Golden — see what you get',
-            onTap: () => context.push(AppRoutes.tierComparison),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.crown,
-            title: 'Premium Features',
-            subtitle: ref.watch(subscriptionStatusProvider).when(
-                  data: (status) => status?.isActive == true
-                      ? 'Active - ${status?.planName ?? "Premium"}'
-                      : 'Unlock premium features',
-                  loading: () => 'Loading...',
-                  error: (_, __) => 'Unlock premium features',
-                ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PremiumFeaturesScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            trailing: ref.watch(subscriptionStatusProvider).when(
-                  data: (status) => status?.isActive == true
-                      ? Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingSM,
-                            vertical: AppSpacing.spacingXS,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.onlineGreen.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                            border: Border.all(color: AppColors.onlineGreen),
-                          ),
-                          child: Text(
-                            'ACTIVE',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.onlineGreen,
-                              fontWeight: FontWeight.bold,
+                ],
+              ),
+              AppGroupedListSection(
+                title: 'Safety',
+                children: [
+                  _tile(
+                    iconPath: AppIcons.shieldTick,
+                    label: 'Safety Center',
+                    subtitle: 'Report, block, and safety tools',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SafetySettingsScreen(),
+                      ),
+                    ),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              AppGroupedListSection(
+                title: 'Premium',
+                children: [
+                  _tile(
+                    iconPath: AppIcons.star,
+                    label: 'Compare tiers',
+                    subtitle: 'Basid vs Silder vs Golden — see what you get',
+                    onTap: () => context.push(AppRoutes.tierComparison),
+                  ),
+                  _tile(
+                    iconPath: AppIcons.crown,
+                    label: 'Premium Features',
+                    subtitle: subscriptionStatus.when(
+                      data: (status) => status?.isActive == true
+                          ? 'Active - ${status?.planName ?? "Premium"}'
+                          : 'Unlock premium features',
+                      loading: () => 'Loading...',
+                      error: (_, __) => 'Unlock premium features',
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PremiumFeaturesScreen(),
+                      ),
+                    ),
+                    trailing: subscriptionStatus.when(
+                      data: (status) => status?.isActive == true
+                          ? _premiumBadge(
+                              label: 'ACTIVE',
+                              background: AppColors.onlineGreen.withValues(alpha: 0.2),
+                              borderColor: AppColors.onlineGreen,
+                              textColor: AppColors.onlineGreen,
+                            )
+                          : _premiumBadge(
+                              label: 'UPGRADE',
+                              gradient: const LinearGradient(
+                                colors: [AppColors.accentPurple, AppColors.accentPink],
+                              ),
+                              textColor: Colors.white,
                             ),
-                          ),
-                        )
-                      : Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingSM,
-                            vertical: AppSpacing.spacingXS,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [AppColors.accentPurple, AppColors.accentPink],
-                            ),
-                            borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                          ),
-                          child: Text(
-                            'UPGRADE',
-                            style: AppTypography.caption.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.card,
-            title: 'Subscription status',
-            subtitle: 'View your current plan and expiry',
-            onTap: () => context.push(AppRoutes.subscriptionStatus),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          // Subscription Management (only show if subscribed)
-          if (ref.watch(subscriptionStatusProvider).maybeWhen(
-                data: (status) => status?.isActive == true,
-                orElse: () => false,
-              ))
-            _buildSettingsItem(
-              context: context,
-              iconPath: AppIcons.card,
-              title: 'Subscription',
-              subtitle: 'Manage your subscription',
-              onTap: () => context.push(AppRoutes.subscriptionManagement),
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-          // Google Play Billing Test (development only)
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.settings,
-            title: 'Google Play Billing Test',
-            subtitle: 'Test Google Play Billing integration',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GooglePlayBillingTestScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          DividerCustom(),
-
-          // Accessibility section
-          SectionHeader(
-            title: 'Accessibility',
-            iconPath: AppIcons.getIconOutline('setting-2'),
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.settings,
-            title: 'Accessibility Settings',
-            subtitle: 'Customize accessibility options',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AccessibilitySettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          DividerCustom(),
-
-          // About section
-          SectionHeader(
-            title: 'About',
-            iconPath: AppIcons.getIconOutline('info-circle'),
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.help,
-            title: 'Help & Support',
-            subtitle: 'Get help and contact support',
-            onTap: () {
-              context.push(AppRoutes.helpSupport);
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.document,
-            title: 'Terms of Service',
-            onTap: () => context.push(AppRoutes.termsOfService),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSettingsItem(
-            context: context,
-            iconPath: AppIcons.shield,
-            title: 'Privacy Policy',
-            onTap: () => context.push(AppRoutes.privacyPolicy),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  _tile(
+                    iconPath: AppIcons.card,
+                    label: 'Subscription status',
+                    subtitle: 'View your current plan and expiry',
+                    onTap: () => context.push(AppRoutes.subscriptionStatus),
+                  ),
+                  if (isSubscribed)
+                    _tile(
+                      iconPath: AppIcons.card,
+                      label: 'Subscription',
+                      subtitle: 'Manage your subscription',
+                      onTap: () => context.push(AppRoutes.subscriptionManagement),
+                    ),
+                  _tile(
+                    iconPath: AppIcons.settings,
+                    label: 'Google Play Billing Test',
+                    subtitle: 'Test Google Play Billing integration',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const GooglePlayBillingTestScreen(),
+                      ),
+                    ),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              AppGroupedListSection(
+                title: 'Accessibility',
+                children: [
+                  _tile(
+                    iconPath: AppIcons.settings,
+                    label: 'Accessibility Settings',
+                    subtitle: 'Customize accessibility options',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AccessibilitySettingsScreen(),
+                      ),
+                    ),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              AppGroupedListSection(
+                title: 'About',
+                children: [
+                  _tile(
+                    iconPath: AppIcons.help,
+                    label: 'Help & Support',
+                    subtitle: 'Get help and contact support',
+                    onTap: () => context.push(AppRoutes.helpSupport),
+                  ),
+                  _tile(
+                    iconPath: AppIcons.document,
+                    label: 'Terms of Service',
+                    onTap: () => context.push(AppRoutes.termsOfService),
+                  ),
+                  _tile(
+                    iconPath: AppIcons.shield,
+                    label: 'Privacy Policy',
+                    onTap: () => context.push(AppRoutes.privacyPolicy),
+                    showDivider: false,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.spacingXXL),
             ],
           ),
         ),
@@ -435,43 +324,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsItem({
-    required BuildContext context,
-    IconData? icon,
-    String? iconPath,
-    required String title,
+  AppGroupedListTile _tile({
+    required String iconPath,
+    required String label,
     String? subtitle,
     required VoidCallback onTap,
-    required Color textColor,
-    required Color secondaryTextColor,
     Widget? trailing,
+    bool showDivider = true,
   }) {
-    assert(icon != null || iconPath != null, 'Either icon or iconPath must be provided');
-    return ListTile(
-      leading: iconPath != null
-          ? AppSvgIcon(
-              assetPath: iconPath,
-              color: textColor,
-              size: 24,
-            )
-          : Icon(icon, color: textColor),
-      title: Text(
-        title,
-        style: AppTypography.body.copyWith(color: textColor),
-      ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(color: secondaryTextColor),
-            )
-          : null,
-      trailing: trailing ??
-          AppSvgIcon(
-            assetPath: AppIcons.chevronRight,
-            color: secondaryTextColor,
-            size: 20,
-          ),
+    return AppGroupedListTile(
+      iconPath: iconPath,
+      label: label,
+      subtitle: subtitle,
       onTap: onTap,
+      trailing: trailing,
+      showDivider: showDivider,
+    );
+  }
+
+  Widget _premiumBadge({
+    required String label,
+    Color? background,
+    Color? borderColor,
+    Color? textColor,
+    Gradient? gradient,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.spacingSM,
+        vertical: AppSpacing.spacingXS,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+        border: borderColor != null ? Border.all(color: borderColor) : null,
+      ),
+      child: Text(
+        label,
+        style: AppTypography.caption.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

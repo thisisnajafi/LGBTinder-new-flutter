@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
+import '../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../widgets/badges/notification_badge.dart';
 import '../../widgets/buttons/scale_tap_feedback.dart';
+import 'profile_image_widget.dart';
 
-/// Flat bottom navigation bar with icon-only items and active pill highlight.
+/// Floating bottom navigation bar with icon-only items and active pill highlight.
 class AppBottomNavBar extends ConsumerWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -20,56 +23,147 @@ class AppBottomNavBar extends ConsumerWidget {
   });
 
   static const int itemCount = 5;
+  static const int profileTabIndex = 3;
   static const double barHeight = 64.0;
+  static const double floatingHorizontalMargin = 16.0;
+  static const double floatingBottomMargin = 8.0;
+
+  /// Bottom padding reserved for tab content (bar + float inset + safe area).
+  static double bottomReserve(double safeAreaBottom) =>
+      barHeight + floatingBottomMargin + safeAreaBottom;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final inactiveIconColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.40);
+    final profileData = ref.watch(profilePageCacheProvider).valueOrNull?.profile;
+    final profileAvatarUrl = profileData?.images?.isNotEmpty == true
+        ? profileData!.images!.first.imageUrl
+        : null;
+    final profileIsOnline = profileData?.isOnline ?? true;
 
     return SafeArea(
       top: false,
-      child: Container(
-        height: barHeight,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: theme.colorScheme.outlineVariant,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          floatingHorizontalMargin,
+          0,
+          floatingHorizontalMargin,
+          floatingBottomMargin,
+        ),
+        child: Container(
+          height: barHeight,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
               width: 0.5,
             ),
           ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(itemCount, (index) {
-            final isActive = currentIndex == index;
-            final outlinePath = AppIcons.mainNavIconOutline(index);
-            final activePath = AppIcons.mainNavIconActive(index);
-            final label = AppIcons.mainNavItems[index].label;
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(itemCount, (index) {
+              final isActive = currentIndex == index;
+              final outlinePath = AppIcons.mainNavIconOutline(index);
+              final activePath = AppIcons.mainNavIconActive(index);
+              final label = AppIcons.mainNavItems[index].label;
+              final useProfileAvatar = index == profileTabIndex &&
+                  isActive &&
+                  profileAvatarUrl != null;
 
-            return Expanded(
-              child: _NavItem(
-                label: label,
-                outlinePath: outlinePath,
-                activePath: activePath,
-                isActive: isActive,
-                inactiveIconColor: inactiveIconColor,
-                badge: index == 1 &&
-                        notificationCount != null &&
-                        notificationCount! > 0
-                    ? NotificationBadge(
-                        count: notificationCount!,
-                        size: 16,
-                      )
-                    : null,
-                onTap: () => onTap(index),
-              ),
-            );
-          }),
+              return Expanded(
+                child: _NavItem(
+                  label: label,
+                  outlinePath: outlinePath,
+                  activePath: activePath,
+                  isActive: isActive,
+                  inactiveIconColor: inactiveIconColor,
+                  iconOverride: useProfileAvatar
+                      ? _ProfileNavAvatar(
+                          imageUrl: profileAvatarUrl,
+                          isOnline: profileIsOnline,
+                        )
+                      : null,
+                  badge: index == 1 &&
+                          notificationCount != null &&
+                          notificationCount! > 0
+                      ? NotificationBadge(
+                          count: notificationCount!,
+                          size: 16,
+                        )
+                      : null,
+                  onTap: () => onTap(index),
+                ),
+              );
+            }),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileNavAvatar extends StatelessWidget {
+  final String imageUrl;
+  final bool isOnline;
+
+  const _ProfileNavAvatar({
+    required this.imageUrl,
+    required this.isOnline,
+  });
+
+  static const double _size = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      width: _size,
+      height: _size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: _size,
+            height: _size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.colorScheme.primary,
+                width: 1.5,
+              ),
+            ),
+            child: ClipOval(
+              child: ProfileImageWidget(
+                imageUrl: imageUrl,
+                width: _size,
+                height: _size,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          if (isOnline)
+            Positioned(
+              top: -1,
+              right: -1,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: AppColors.onlineGreen,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.surface,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -81,6 +175,7 @@ class _NavItem extends StatelessWidget {
   final String activePath;
   final bool isActive;
   final Color inactiveIconColor;
+  final Widget? iconOverride;
   final Widget? badge;
   final VoidCallback onTap;
 
@@ -90,6 +185,7 @@ class _NavItem extends StatelessWidget {
     required this.activePath,
     required this.isActive,
     required this.inactiveIconColor,
+    this.iconOverride,
     this.badge,
     required this.onTap,
   });
@@ -111,7 +207,10 @@ class _NavItem extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: iconOverride != null ? 12 : 16,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
                 color: isActive
                     ? activeColor.withValues(alpha: 0.12)
@@ -122,15 +221,16 @@ class _NavItem extends StatelessWidget {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  AppSvgIcon(
-                    assetPath: isActive ? activePath : outlinePath,
-                    size: 24,
-                    color: isActive ? activeColor : inactiveIconColor,
-                  ),
+                  iconOverride ??
+                      AppSvgIcon(
+                        assetPath: isActive ? activePath : outlinePath,
+                        size: 24,
+                        color: isActive ? activeColor : inactiveIconColor,
+                      ),
                   if (badge != null)
                     Positioned(
                       top: -2,
-                      right: -6,
+                      right: iconOverride != null ? -4 : -6,
                       child: badge!,
                     ),
                 ],

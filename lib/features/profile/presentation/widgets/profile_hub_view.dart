@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 
@@ -33,7 +33,6 @@ class ProfileHubView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.5);
 
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -89,36 +88,25 @@ class ProfileHubView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.spacingXL),
-              for (final section in sections) ...[
-                Padding(
+              for (final section in sections)
+                AppGroupedListSection(
+                  title: section.title,
                   padding: const EdgeInsets.fromLTRB(
                     AppPageHeader.horizontalPadding,
                     AppSpacing.spacingXL,
                     AppPageHeader.horizontalPadding,
-                    AppSpacing.spacingSM,
+                    0,
                   ),
-                  child: Text(
-                    section.title,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: mutedColor,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+                  children: [
+                    for (var i = 0; i < section.items.length; i++)
+                      AppGroupedListTile(
+                        iconPath: section.items[i].iconPath,
+                        label: section.items[i].label,
+                        onTap: section.items[i].onTap,
+                        showDivider: i < section.items.length - 1,
+                      ),
+                  ],
                 ),
-                for (var i = 0; i < section.items.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppPageHeader.horizontalPadding,
-                    ),
-                    child: _ProfileMenuItem(
-                      iconPath: section.items[i].iconPath,
-                      label: section.items[i].label,
-                      onTap: section.items[i].onTap,
-                      showDivider: i < section.items.length - 1,
-                    ),
-                  ),
-              ],
               const SizedBox(height: AppSpacing.spacingXXL),
             ],
           ),
@@ -284,10 +272,7 @@ class _ProfileStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark
-        ? AppColors.surfaceElevatedDark
-        : AppColors.surfaceElevatedLight;
+    final cardColor = theme.colorScheme.surface;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -296,7 +281,7 @@ class _ProfileStatCard extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
       ),
       child: Row(
         children: [
@@ -329,79 +314,6 @@ class _ProfileStatCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ProfileMenuItem extends StatelessWidget {
-  final String iconPath;
-  final String label;
-  final VoidCallback onTap;
-  final bool showDivider;
-
-  const _ProfileMenuItem({
-    required this.iconPath,
-    required this.label,
-    required this.onTap,
-    required this.showDivider,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final dividerColor =
-        isDark ? AppColors.dividerDark : AppColors.dividerLight;
-
-    return Column(
-      children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(AppRadius.radiusXS),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(AppRadius.radiusXS),
-                      ),
-                      child: Center(
-                        child: AppSvgIcon(
-                          assetPath: iconPath,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                    AppSvgIcon(
-                      assetPath: AppIcons.chevronRight,
-                      size: 16,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (showDivider)
-          Divider(height: 0.5, thickness: 0.5, color: dividerColor),
-      ],
     );
   }
 }
