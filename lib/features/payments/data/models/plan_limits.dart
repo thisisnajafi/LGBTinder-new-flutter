@@ -47,7 +47,13 @@ class PlanLimits {
   });
 
   factory PlanLimits.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>;
+    final data = (json['data'] as Map<String, dynamic>?) ??
+        (json.containsKey('plan_info') || json.containsKey('limits')
+            ? json
+            : null);
+    if (data == null) {
+      throw FormatException('Invalid plan limits payload');
+    }
     final superlikeRaw = data['superlike_info'];
     
     return PlanLimits(
@@ -60,6 +66,16 @@ class PlanLimits {
           ? SuperlikeInfo.fromJson(superlikeRaw)
           : null,
     );
+  }
+
+  /// Accepts either `{ data: {...} }` API envelopes or the inner limits map.
+  static PlanLimits? tryParse(dynamic raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    try {
+      return PlanLimits.fromJson(raw);
+    } catch (_) {
+      return null;
+    }
   }
 
   Map<String, dynamic> toJson() {

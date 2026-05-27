@@ -39,15 +39,20 @@ class PlanLimitsService {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.planLimits,
         fromJson: (json) => json as Map<String, dynamic>,
+        useCache: false,
       );
 
-      if (response.isSuccess && response.data != null) {
-        _cachedLimits = PlanLimits.fromJson(response.data!);
+      final parsed = PlanLimits.tryParse(response.data);
+      if (parsed != null) {
+        _cachedLimits = parsed;
         _lastFetchTime = DateTime.now();
         return _cachedLimits!;
-      } else {
-        throw Exception(response.message ?? 'Failed to fetch plan limits');
       }
+
+      final message = response.message.trim();
+      throw Exception(
+        message.isNotEmpty ? message : 'Failed to fetch plan limits',
+      );
     } catch (e) {
       // If we have cached data, return it even if it's stale
       if (_cachedLimits != null) {

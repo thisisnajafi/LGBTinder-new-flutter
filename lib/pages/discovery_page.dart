@@ -22,6 +22,7 @@ import '../features/matching/data/models/match.dart' as match_models;
 import '../features/matching/widgets/match_celebration_launcher.dart';
 import '../features/payments/providers/payment_providers.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
+import '../features/payments/data/models/plan_limits.dart';
 import '../widgets/premium/upgrade_dialog.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
@@ -164,15 +165,38 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Future<void> _showSuperlikeBottomSheet(int userId) async {
     if (_isSwipeInProgress) return;
 
+    final planLimitsService = ref.read(planLimitsServiceProvider);
+    SuperlikeInfo superlikeInfo;
+
     try {
-      final planLimitsService = ref.read(planLimitsServiceProvider);
       final limits =
           await planLimitsService.getPlanLimits(forceRefresh: true);
-      if (!mounted) return;
+      superlikeInfo = limits.effectiveSuperlikeInfo;
+    } catch (e, stack) {
+      AppLogger.warning(
+        'Plan limits fetch failed before superlike sheet — using cache/fallback',
+        tag: 'DiscoveryPage',
+        error: e,
+      );
+      AppLogger.debug('Plan limits stack: $stack', tag: 'DiscoveryPage');
+      final cached = planLimitsService.getCachedLimits();
+      superlikeInfo = cached?.effectiveSuperlikeInfo ??
+          const SuperlikeInfo(
+            canSuperlike: true,
+            totalRemaining: 1,
+            dailyRemaining: 1,
+            extraPacksRemaining: 0,
+            dailyLimit: 1,
+            dailyUsed: 0,
+          );
+    }
 
+    if (!mounted) return;
+
+    try {
       final result = await showSuperlikeMessageSheet(
         context,
-        superlikeInfo: limits.effectiveSuperlikeInfo,
+        superlikeInfo: superlikeInfo,
       );
       if (!mounted || result == null) return;
 
