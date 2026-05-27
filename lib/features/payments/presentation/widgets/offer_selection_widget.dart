@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../data/models/sub_plan_bundle_pricing.dart';
 import '../../data/models/subscription_plan.dart';
 
 /// Widget for selecting subscription offers (Monthly, Quarterly, Annual)
@@ -34,6 +35,9 @@ class OfferSelectionWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final sortedOffers = List<SubPlan>.from(offers)
+      ..sort((a, b) => (a.durationDays ?? 0).compareTo(b.durationDays ?? 0));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -48,16 +52,15 @@ class OfferSelectionWidget extends StatelessWidget {
         Wrap(
           spacing: AppSpacing.spacingMD,
           runSpacing: AppSpacing.spacingMD,
-          children: offers.map((offer) {
+          children: sortedOffers.map((offer) {
             final isSelected = selectedOffer?.id == offer.id;
             final isRecommended = recommendedOffer?.id == offer.id;
-            final hasDiscount = _hasDiscount(offer);
-            final savings = _calculateSavings(offer, offers);
+            final pricing = SubPlanBundlePricing.forOption(offer, sortedOffers);
 
             return GestureDetector(
               onTap: () => onOfferSelected(offer),
               child: Container(
-                width: _getOfferWidth(offers.length),
+                width: _getOfferWidth(sortedOffers.length),
                 padding: EdgeInsets.all(AppSpacing.spacingMD),
                 decoration: BoxDecoration(
                   color: isSelected
@@ -109,69 +112,71 @@ class OfferSelectionWidget extends StatelessWidget {
                       ),
 
                     // Duration
-                    Text(
-                      _getDurationLabel(offer.duration),
-                      style: AppTypography.h3.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            offer.durationLabel,
+                            style: AppTypography.h3.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (pricing.hasBundleDiscount &&
+                            pricing.discountPercent != null)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.spacingSM,
+                              vertical: AppSpacing.spacingXS,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.feedbackSuccess,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.radiusSM),
+                            ),
+                            child: Text(
+                              '${pricing.discountPercent}% OFF',
+                              style: AppTypography.caption.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
 
                     SizedBox(height: AppSpacing.spacingSM),
 
                     // Price
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _formatPrice(offer.price, offer.currency),
-                          style: AppTypography.h2.copyWith(
-                            color: isSelected
-                                ? AppColors.accentPurple
-                                : textColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (hasDiscount) ...[
-                          SizedBox(width: AppSpacing.spacingSM),
-                          Text(
-                            _formatPrice(_getOriginalPrice(offer, offers), offer.currency),
-                            style: AppTypography.body.copyWith(
-                              color: secondaryTextColor,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      _formatPrice(pricing.sellingPrice, offer.currency),
+                      style: AppTypography.h2.copyWith(
+                        color: isSelected
+                            ? AppColors.accentPurple
+                            : textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
 
-                    // Savings
-                    if (savings > 0) ...[
+                    if (pricing.hasBundleDiscount &&
+                        pricing.originalPrice != null) ...[
                       SizedBox(height: AppSpacing.spacingXS),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.spacingSM,
-                          vertical: AppSpacing.spacingXS,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.onlineGreen.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                        ),
-                        child: Text(
-                          'Save ${_formatPrice(savings, offer.currency)}',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.onlineGreen,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Text(
+                        'Was ${_formatPrice(pricing.originalPrice!, offer.currency)}',
+                        style: AppTypography.body.copyWith(
+                          color: secondaryTextColor,
+                          decoration: TextDecoration.lineThrough,
                         ),
                       ),
                     ],
 
                     // Per month price (for non-monthly offers)
-                    if (offer.duration != 'monthly' && offer.duration != 'month') ...[
+                    if (offer.monthsCount > 1) ...[
                       SizedBox(height: AppSpacing.spacingXS),
                       Text(
-                        '${_formatPrice(_getPerMonthPrice(offer), offer.currency)}/month',
+                        '${_formatPrice(offer.perMonthPrice, offer.currency)}/month',
                         style: AppTypography.caption.copyWith(
                           color: secondaryTextColor,
                         ),
@@ -215,83 +220,8 @@ class OfferSelectionWidget extends StatelessWidget {
     return 120; // For 3+ offers
   }
 
-  String _getDurationLabel(String? duration) {
-    if (duration == null) return 'Monthly';
-    final d = duration.toLowerCase();
-    if (d.contains('month') && !d.contains('3') && !d.contains('6') && !d.contains('12')) {
-      return 'Monthly';
-    } else if (d.contains('3') || d.contains('quarter')) {
-      return 'Quarterly';
-    } else if (d.contains('6')) {
-      return '6 Months';
-    } else if (d.contains('12') || d.contains('year') || d.contains('annual')) {
-      return 'Annual';
-    }
-    return duration;
-  }
-
   String _formatPrice(double price, String currency) {
     final symbol = currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
     return '$symbol${price.toStringAsFixed(2)}';
-  }
-
-  bool _hasDiscount(SubPlan offer) {
-    // Check if this offer has a discount compared to monthly
-    final monthlyOffer = offers.firstWhere(
-      (o) => o.duration?.toLowerCase().contains('month') == true &&
-          !o.duration!.toLowerCase().contains('3') &&
-          !o.duration!.toLowerCase().contains('6') &&
-          !o.duration!.toLowerCase().contains('12'),
-      orElse: () => offers.first,
-    );
-
-    if (offer.id == monthlyOffer.id) return false;
-
-    // Calculate expected price if no discount
-    final monthlyPrice = monthlyOffer.price;
-    final months = _getMonths(offer.duration);
-    final expectedPrice = monthlyPrice * months;
-
-    return offer.price < expectedPrice;
-  }
-
-  double _getOriginalPrice(SubPlan offer, List<SubPlan> allOffers) {
-    final monthlyOffer = allOffers.firstWhere(
-      (o) => o.duration?.toLowerCase().contains('month') == true &&
-          !o.duration!.toLowerCase().contains('3') &&
-          !o.duration!.toLowerCase().contains('6') &&
-          !o.duration!.toLowerCase().contains('12'),
-      orElse: () => allOffers.first,
-    );
-
-    final months = _getMonths(offer.duration);
-    return monthlyOffer.price * months;
-  }
-
-  double _calculateSavings(SubPlan offer, List<SubPlan> allOffers) {
-    if (!_hasDiscount(offer)) return 0;
-    final originalPrice = _getOriginalPrice(offer, allOffers);
-    return originalPrice - offer.price;
-  }
-
-  double _getPerMonthPrice(SubPlan offer) {
-    final months = _getMonths(offer.duration);
-    if (months == 0) return offer.price;
-    return offer.price / months;
-  }
-
-  int _getMonths(String? duration) {
-    if (duration == null) return 1;
-    final d = duration.toLowerCase();
-    if (d.contains('month') && !d.contains('3') && !d.contains('6') && !d.contains('12')) {
-      return 1;
-    } else if (d.contains('3') || d.contains('quarter')) {
-      return 3;
-    } else if (d.contains('6')) {
-      return 6;
-    } else if (d.contains('12') || d.contains('year') || d.contains('annual')) {
-      return 12;
-    }
-    return 1;
   }
 }

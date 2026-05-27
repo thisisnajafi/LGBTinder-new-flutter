@@ -13,27 +13,42 @@ class SuperlikePackService {
     try {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.superlikePacksAvailable,
+        useCache: false,
       );
 
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-
-      if (dataList != null) {
+      final dataList = _extractAvailablePacksList(response.data);
+      if (dataList != null && dataList.isNotEmpty) {
         return dataList
-            .map((item) => SuperlikePack.fromJson(item as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((item) =>
+                SuperlikePack.fromJson(Map<String, dynamic>.from(item)))
+            .where((pack) => pack.id > 0)
             .toList();
       }
       return [];
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Backend: `{ data: { packs: [...] } }` or inner `{ packs: [...] }`.
+  List<dynamic>? _extractAvailablePacksList(dynamic raw) {
+    if (raw is List) return raw;
+    if (raw is! Map) return null;
+
+    final map = Map<String, dynamic>.from(raw as Map);
+    final directPacks = map['packs'];
+    if (directPacks is List) return directPacks;
+
+    final nested = map['data'];
+    if (nested is List) return nested;
+    if (nested is Map) {
+      final nestedMap = Map<String, dynamic>.from(nested);
+      final packs = nestedMap['packs'];
+      if (packs is List) return packs;
+    }
+
+    return null;
   }
 
   /// Purchase a superlike pack

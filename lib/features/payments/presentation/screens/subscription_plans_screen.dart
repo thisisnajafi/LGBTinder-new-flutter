@@ -10,7 +10,7 @@ import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
-import '../../../../widgets/loading/skeleton_loading.dart';
+import '../../../../widgets/loading/skeleton_subscription_plans.dart';
 import '../../providers/payment_providers.dart';
 import '../../providers/google_play_billing_provider.dart';
 import '../../data/models/subscription_plan.dart';
@@ -289,7 +289,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
       showBackButton: true,
       backgroundColor: backgroundColor,
       body: _isLoading
-          ? SkeletonLoading()
+          ? const SkeletonSubscriptionPlans()
           : _hasError && _plans.isEmpty
               ? ErrorDisplayWidget(
                   errorMessage: _errorMessage ?? 'Failed to load plans',
@@ -339,7 +339,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     final selectedPlan = _selectedPlan;
     final selectedSubPlan = _selectedSubPlan;
     final summary = selectedPlan != null && selectedSubPlan != null
-        ? '${selectedPlan.name} · ${selectedSubPlan.durationLabel} · ${_formatPrice(selectedSubPlan.effectivePrice, selectedSubPlan.currency)}'
+        ? '${selectedPlan.name} · ${selectedSubPlan.durationLabel} · ${_formatPrice(selectedSubPlan.price, selectedSubPlan.currency)}'
         : 'Select a plan and billing period';
 
     return Container(

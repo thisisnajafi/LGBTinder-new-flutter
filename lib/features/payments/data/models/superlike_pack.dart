@@ -32,13 +32,20 @@ class SuperlikePack {
     // Get superlike count from multiple possible fields
     int superlikeCount = 0;
     if (json['superlike_count'] != null) {
-      superlikeCount = (json['superlike_count'] is int) ? json['superlike_count'] as int : int.tryParse(json['superlike_count'].toString()) ?? 0;
+      superlikeCount = (json['superlike_count'] is int)
+          ? json['superlike_count'] as int
+          : int.tryParse(json['superlike_count'].toString()) ?? 0;
+    } else if (json['quantity'] != null) {
+      superlikeCount = (json['quantity'] is int)
+          ? json['quantity'] as int
+          : int.tryParse(json['quantity'].toString()) ?? 0;
     } else if (json['count'] != null) {
-      superlikeCount = (json['count'] is int) ? json['count'] as int : int.tryParse(json['count'].toString()) ?? 0;
+      superlikeCount = (json['count'] is int)
+          ? json['count'] as int
+          : int.tryParse(json['count'].toString()) ?? 0;
     }
-    
-    // Get price
-    double price = (json['price'] as num?)?.toDouble() ?? 0.0;
+
+    final price = _parseDouble(json['price']) ?? 0.0;
     
     // Get name from multiple possible fields
     String name = json['name']?.toString() ?? 
@@ -78,6 +85,13 @@ class SuperlikePack {
       'is_popular': isPopular,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
     };
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    return null;
   }
 }
 

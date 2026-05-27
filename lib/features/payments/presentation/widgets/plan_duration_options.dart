@@ -4,6 +4,7 @@ import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../data/models/sub_plan_bundle_pricing.dart';
 import '../../data/models/subscription_plan.dart';
 
 /// Duration pricing rows for a single plan tier (1 month → yearly).
@@ -57,6 +58,7 @@ class PlanDurationOptions extends StatelessWidget {
         ...sorted.map((option) {
           final isSelected = selectedOption?.id == option.id;
           final isBestValue = bestValue?.id == option.id && sorted.length > 1;
+          final pricing = SubPlanBundlePricing.forOption(option, sorted);
 
           return Padding(
             padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
@@ -111,17 +113,17 @@ class PlanDurationOptions extends StatelessWidget {
                                     background: accent,
                                   ),
                                 ],
-                                if (option.isNewUserDiscount &&
-                                    option.discountLabel != null) ...[
+                                if (pricing.hasBundleDiscount &&
+                                    pricing.discountPercent != null) ...[
                                   SizedBox(width: AppSpacing.spacingSM),
                                   _Badge(
-                                    label: option.discountLabel!,
+                                    label: '${pricing.discountPercent}% OFF',
                                     background: AppColors.feedbackSuccess,
                                   ),
                                 ],
                               ],
                             ),
-                            if ((option.durationDays ?? 0) > 30) ...[
+                            if (option.monthsCount > 1) ...[
                               SizedBox(height: AppSpacing.spacingXS),
                               Text(
                                 '${_formatPrice(option.perMonthPrice, option.currency)}/month',
@@ -130,11 +132,10 @@ class PlanDurationOptions extends StatelessWidget {
                                 ),
                               ),
                             ],
-                            if (option.hasDiscount &&
-                                option.savingsPercent != null) ...[
+                            if (pricing.hasBundleDiscount) ...[
                               SizedBox(height: AppSpacing.spacingXS),
                               Text(
-                                'Save ${option.savingsPercent}% (${_formatPrice(option.savingsAmount, option.currency)})',
+                                'Save ${_formatPrice(pricing.savingsAmount, option.currency)}',
                                 style: AppTypography.caption.copyWith(
                                   color: AppColors.feedbackSuccess,
                                   fontWeight: FontWeight.w600,
@@ -149,7 +150,7 @@ class PlanDurationOptions extends StatelessWidget {
                         children: [
                           Text(
                             _formatPrice(
-                              option.effectivePrice,
+                              pricing.sellingPrice,
                               option.currency,
                             ),
                             style: AppTypography.h3.copyWith(
@@ -157,13 +158,11 @@ class PlanDurationOptions extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          if (option.hasDiscount) ...[
+                          if (pricing.hasBundleDiscount &&
+                              pricing.originalPrice != null) ...[
                             SizedBox(height: AppSpacing.spacingXS),
                             Text(
-                              _formatPrice(
-                                option.originalPrice,
-                                option.currency,
-                              ),
+                              'Was ${_formatPrice(pricing.originalPrice!, option.currency)}',
                               style: AppTypography.caption.copyWith(
                                 color: secondaryTextColor,
                                 decoration: TextDecoration.lineThrough,

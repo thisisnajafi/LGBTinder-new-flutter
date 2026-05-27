@@ -324,28 +324,6 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
                   ),
                 ),
               ),
-
-              if (packInfo['savings'] != null) ...[
-                SizedBox(height: AppSpacing.spacingSM),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingSM,
-                    vertical: AppSpacing.spacingXS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.onlineGreen.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(color: AppColors.onlineGreen),
-                  ),
-                  child: Text(
-                    'Save ${packInfo['savings']}%',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.onlineGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -407,35 +385,30 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
           'name': 'Small Pack',
           'description': 'Perfect for casual users',
           'count': 10,
-          'savings': null,
         };
       case 'superlike_medium':
         return {
           'name': 'Medium Pack',
           'description': 'Great value for regular users',
           'count': 25,
-          'savings': 15,
         };
       case 'superlike_large':
         return {
           'name': 'Large Pack',
           'description': 'Best for power users',
           'count': 50,
-          'savings': 25,
         };
       case 'superlike_mega':
         return {
           'name': 'Mega Pack',
           'description': 'Maximum superlikes for serious daters',
           'count': 100,
-          'savings': 35,
         };
       default:
         return {
           'name': 'Superlike Pack',
           'description': 'Extra superlikes for your account',
           'count': null,
-          'savings': null,
         };
     }
   }

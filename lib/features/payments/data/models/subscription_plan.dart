@@ -77,7 +77,7 @@ class SubscriptionPlan {
     }
 
     if (parsedSubPlans != null && parsedSubPlans.isNotEmpty && price <= 0) {
-      price = parsedSubPlans.first.effectivePrice;
+      price = parsedSubPlans.first.price;
     }
 
     return SubscriptionPlan(
@@ -125,12 +125,6 @@ class SubPlan {
   final String? duration;
   final int? durationDays;
   final String? durationText;
-  final double? discountedPrice;
-  final double? pricePerMonth;
-  final String? discountType;
-  final double? discountValue;
-  final String? discountLabel;
-  final bool isNewUserDiscount;
   final String? stripePriceId;
   final String? googleOfferId;
 
@@ -144,31 +138,9 @@ class SubPlan {
     this.duration,
     this.durationDays,
     this.durationText,
-    this.discountedPrice,
-    this.pricePerMonth,
-    this.discountType,
-    this.discountValue,
-    this.discountLabel,
-    this.isNewUserDiscount = false,
     this.stripePriceId,
     this.googleOfferId,
   });
-
-  /// Price the user pays after plan-level discounts.
-  double get effectivePrice => discountedPrice ?? price;
-
-  /// Original total before any period discount (list price).
-  double get originalPrice => price;
-
-  bool get hasDiscount => effectivePrice < originalPrice - 0.001;
-
-  double get savingsAmount =>
-      hasDiscount ? (originalPrice - effectivePrice).clamp(0, double.infinity) : 0;
-
-  int? get savingsPercent {
-    if (!hasDiscount || originalPrice <= 0) return null;
-    return ((savingsAmount / originalPrice) * 100).round();
-  }
 
   String get durationLabel {
     if (durationText != null && durationText!.isNotEmpty) return durationText!;
@@ -190,13 +162,12 @@ class SubPlan {
   }
 
   double get perMonthPrice {
-    if (pricePerMonth != null && pricePerMonth! > 0) return pricePerMonth!;
-    final months = _monthsFromDuration();
-    if (months <= 0) return effectivePrice;
-    return effectivePrice / months;
+    final months = monthsCount;
+    if (months <= 0) return price;
+    return price / months;
   }
 
-  int _monthsFromDuration() {
+  int get monthsCount {
     if (durationDays != null) {
       if (durationDays == 30) return 1;
       if (durationDays == 90) return 3;
@@ -282,9 +253,6 @@ class SubPlan {
       planId = name.hashCode.abs();
     }
 
-    final discountedPrice = _parseDouble(json['discounted_price']) ??
-        _parseDouble(json['final_price']);
-
     return SubPlan(
       id: subPlanId,
       planId: planId,
@@ -296,14 +264,6 @@ class SubPlan {
       duration: duration,
       durationDays: durationDays,
       durationText: durationText,
-      discountedPrice: discountedPrice,
-      pricePerMonth: _parseDouble(json['monthly_price']) ??
-          _parseDouble(json['price_per_month']),
-      discountType: json['discount_type']?.toString(),
-      discountValue: _parseDouble(json['discount_value']),
-      discountLabel: json['discount_label']?.toString(),
-      isNewUserDiscount: json['is_new_user_discount'] == true ||
-          json['is_new_user_eligible'] == true,
       stripePriceId:
           json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
       googleOfferId: json['google_offer_id']?.toString(),
@@ -321,12 +281,6 @@ class SubPlan {
       if (duration != null) 'duration': duration,
       if (durationDays != null) 'duration_days': durationDays,
       if (durationText != null) 'duration_text': durationText,
-      if (discountedPrice != null) 'discounted_price': discountedPrice,
-      if (pricePerMonth != null) 'monthly_price': pricePerMonth,
-      if (discountType != null) 'discount_type': discountType,
-      if (discountValue != null) 'discount_value': discountValue,
-      if (discountLabel != null) 'discount_label': discountLabel,
-      'is_new_user_discount': isNewUserDiscount,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
       if (googleOfferId != null) 'google_offer_id': googleOfferId,
     };
