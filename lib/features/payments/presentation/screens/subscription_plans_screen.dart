@@ -16,7 +16,7 @@ import '../../providers/google_play_billing_provider.dart';
 import '../../data/models/subscription_plan.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
-import '../widgets/offer_selection_widget.dart';
+import '../widgets/plan_duration_options.dart';
 import '../utils/plan_theme_helper.dart';
 import 'subscription_management_screen.dart';
 import '../../../../shared/analytics/app_event_tracker.dart';
@@ -62,16 +62,26 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
       final subPlans = await paymentService.getSubPlans();
 
       if (mounted) {
+        final embeddedSubPlans = plans
+            .expand((plan) => plan.subPlans)
+            .toList();
+        final resolvedSubPlans = embeddedSubPlans.isNotEmpty
+            ? embeddedSubPlans
+            : subPlans;
+
         setState(() {
           _plans = plans;
-          _subPlans = subPlans;
+          _subPlans = resolvedSubPlans;
           if (plans.isNotEmpty) {
-            _selectedPlanId = plans.first.id;
-            final firstSubPlan = subPlans.firstWhere(
-              (sp) => sp.planId == plans.first.id,
-              orElse: () => subPlans.first,
+            final defaultPlan = plans.firstWhere(
+              (p) => p.name.toLowerCase().contains('premium'),
+              orElse: () => plans.first,
             );
-            _selectedSubPlanId = firstSubPlan.id;
+            _selectedPlanId = defaultPlan.id;
+            final planOptions = _subPlansForPlan(defaultPlan.id);
+            if (planOptions.isNotEmpty) {
+              _selectedSubPlanId = planOptions.first.id;
+            }
           }
           _isLoading = false;
         });
@@ -143,12 +153,8 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
       }
 
       String? offerId;
-      if (_selectedSubPlanId != null) {
-        final selectedSubPlan = _subPlans.firstWhere(
-          (sp) => sp.id == _selectedSubPlanId,
-          orElse: () =>
-              _subPlans.firstWhere((sp) => sp.planId == _selectedPlanId!),
-        );
+      final selectedSubPlan = _selectedSubPlan;
+      if (selectedSubPlan != null) {
         offerId = selectedSubPlan.googleOfferId;
       }
 
@@ -222,6 +228,47 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     }
   }
 
+  List<SubPlan> _subPlansForPlan(int planId) {
+    final fromEmbedded =
+        _plans.where((p) => p.id == planId).expand((p) => p.subPlans);
+    final merged = <SubPlan>[...fromEmbedded];
+    for (final sp in _subPlans.where((sp) => sp.planId == planId)) {
+      if (!merged.any((m) => m.id == sp.id && sp.id != 0)) {
+        merged.add(sp);
+      }
+    }
+    merged.sort((a, b) => (a.durationDays ?? 0).compareTo(b.durationDays ?? 0));
+    return merged;
+  }
+
+  SubPlan? get _selectedSubPlan {
+    if (_selectedSubPlanId == null) return null;
+    for (final sp in _subPlans) {
+      if (sp.id == _selectedSubPlanId) return sp;
+    }
+    for (final plan in _plans) {
+      for (final sp in plan.subPlans) {
+        if (sp.id == _selectedSubPlanId) return sp;
+      }
+    }
+    return null;
+  }
+
+  SubscriptionPlan? get _selectedPlan {
+    if (_selectedPlanId == null) return null;
+    for (final plan in _plans) {
+      if (plan.id == _selectedPlanId) return plan;
+    }
+    return null;
+  }
+
+  String _formatPrice(double price, String currency) {
+    final symbol =
+        currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
+    final decimals = price % 1 == 0 ? 0 : 2;
+    return '$symbol${price.toStringAsFixed(decimals)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -250,33 +297,100 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                 )
               : _plans.isEmpty
                   ? _buildEmptyState(secondaryTextColor, textColor)
-                  : RefreshIndicator(
-                      onRefresh: _loadPlans,
-                      child: ListView(
-                        padding: EdgeInsets.all(AppSpacing.spacingLG),
-                        children: [
-                          _buildHeader(textColor, secondaryTextColor),
-                          _buildPaymentBadge(borderColor, textColor),
-                          SizedBox(height: AppSpacing.spacingXL),
-                          ..._plans.map((plan) => _buildPlanCard(
-                                plan,
-                                surfaceColor,
-                                borderColor,
-                                textColor,
-                                secondaryTextColor,
-                                isDark,
-                              )),
-                          SizedBox(height: AppSpacing.spacingXL),
-                          GradientButton(
-                            text: 'Subscribe Now',
-                            onPressed: _subscribe,
-                            isFullWidth: true,
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _loadPlans,
+                            child: ListView(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.spacingLG,
+                                AppSpacing.spacingLG,
+                                AppSpacing.spacingLG,
+                                AppSpacing.spacingSM,
+                              ),
+                              children: [
+                                _buildHeader(textColor, secondaryTextColor),
+                                _buildPaymentBadge(borderColor, textColor),
+                                SizedBox(height: AppSpacing.spacingXL),
+                                ..._plans.map(
+                                  (plan) => _buildPlanCard(
+                                    plan,
+                                    surfaceColor,
+                                    borderColor,
+                                    textColor,
+                                    secondaryTextColor,
+                                    isDark,
+                                  ),
+                                ),
+                                _buildViewSubscriptionLink(textColor),
+                                SizedBox(height: AppSpacing.spacingMD),
+                              ],
+                            ),
                           ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          _buildViewSubscriptionLink(textColor),
-                        ],
-                      ),
+                        ),
+                        _buildSubscribeBar(isDark, textColor),
+                      ],
                     ),
+    );
+  }
+
+  Widget _buildSubscribeBar(bool isDark, Color textColor) {
+    final selectedPlan = _selectedPlan;
+    final selectedSubPlan = _selectedSubPlan;
+    final summary = selectedPlan != null && selectedSubPlan != null
+        ? '${selectedPlan.name} · ${selectedSubPlan.durationLabel} · ${_formatPrice(selectedSubPlan.effectivePrice, selectedSubPlan.currency)}'
+        : 'Select a plan and billing period';
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.spacingLG,
+        AppSpacing.spacingMD,
+        AppSpacing.spacingLG,
+        AppSpacing.spacingLG,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? AppColors.borderMediumDark
+                : AppColors.borderMediumLight,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              summary,
+              textAlign: TextAlign.center,
+              style: AppTypography.caption.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: AppSpacing.spacingSM),
+            GradientButton(
+              text: 'Subscribe Now',
+              onPressed: _subscribe,
+              isFullWidth: true,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -376,8 +490,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     bool isDark,
   ) {
     final isSelected = _selectedPlanId == plan.id;
-    final planSubPlans =
-        _subPlans.where((sp) => sp.planId == plan.id).toList();
+    final planSubPlans = _subPlansForPlan(plan.id);
     final themeData = getPlanTheme(plan.name);
     final accent = themeData.accent;
     final cardBg = isSelected
@@ -408,7 +521,10 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
           });
         },
         onOfferSelected: (offer) {
-          setState(() => _selectedSubPlanId = offer.id);
+          setState(() {
+            _selectedPlanId = plan.id;
+            _selectedSubPlanId = offer.id;
+          });
         },
       ),
     );
@@ -475,6 +591,23 @@ class _PlanCard extends StatelessWidget {
         plan.features?.isNotEmpty == true ? plan.features! : planTheme.features;
     final tagline =
         plan.description?.isNotEmpty == true ? plan.description! : planTheme.tagline;
+    final startingPerMonth = planSubPlans.isEmpty
+        ? plan.price
+        : planSubPlans
+            .map((sp) => sp.perMonthPrice)
+            .reduce((a, b) => a < b ? a : b);
+    final startingCurrency =
+        planSubPlans.isNotEmpty ? planSubPlans.first.currency : plan.currency;
+
+    SubPlan? selectedOption;
+    if (isSelected && selectedSubPlanId != null) {
+      for (final sp in planSubPlans) {
+        if (sp.id == selectedSubPlanId) {
+          selectedOption = sp;
+          break;
+        }
+      }
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -570,6 +703,16 @@ class _PlanCard extends StatelessWidget {
                               height: 1.35,
                             ),
                           ),
+                          if (planSubPlans.isNotEmpty) ...[
+                            SizedBox(height: AppSpacing.spacingSM),
+                            Text(
+                              'From ${_formatCardPrice(startingPerMonth, startingCurrency)}/month',
+                              style: AppTypography.labelMedium.copyWith(
+                                color: planTheme.accent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -603,40 +746,20 @@ class _PlanCard extends StatelessWidget {
             ),
           ),
 
-          // Sub plans (billing cycle)
-          if (planSubPlans.isNotEmpty && isSelected) ...[
+          // Duration pricing — always visible for each tier
+          if (planSubPlans.isNotEmpty) ...[
             Divider(height: 1, color: borderColor),
             Padding(
               padding: EdgeInsets.all(AppSpacing.spacingMD),
-              child: OfferSelectionWidget(
-                offers: planSubPlans,
-                selectedOffer: planSubPlans.firstWhere(
-                  (sp) => sp.id == selectedSubPlanId,
-                  orElse: () => planSubPlans.first,
-                ),
-                onOfferSelected: onOfferSelected,
-                recommendedOffer: planSubPlans.length > 1
-                    ? planSubPlans.firstWhere(
-                          (sp) =>
-                              sp.duration
-                                  ?.toLowerCase()
-                                  .contains('12') ==
-                                  true ||
-                              sp.duration
-                                  ?.toLowerCase()
-                                  .contains('year') ==
-                                  true ||
-                              sp.duration
-                                  ?.toLowerCase()
-                                  .contains('annual') ==
-                                  true ||
-                              sp.name
-                                  .toLowerCase()
-                                  .contains('12') ==
-                                  true,
-                          orElse: () => planSubPlans.last,
-                        )
-                    : null,
+              child: PlanDurationOptions(
+                options: planSubPlans,
+                selectedOption: selectedOption,
+                accent: planTheme.accent,
+                isDark: isDark,
+                onOptionSelected: (offer) {
+                  onOfferSelected(offer);
+                  if (!isSelected) onPlanTap();
+                },
               ),
             ),
           ],
@@ -689,5 +812,12 @@ class _PlanCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatCardPrice(double price, String currency) {
+    final symbol =
+        currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
+    final decimals = price % 1 == 0 ? 0 : 2;
+    return '$symbol${price.toStringAsFixed(decimals)}';
   }
 }

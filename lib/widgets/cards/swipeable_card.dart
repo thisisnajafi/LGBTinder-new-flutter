@@ -24,6 +24,8 @@ class SwipeableCard extends ConsumerStatefulWidget {
   final VoidCallback? onDislike;
   final VoidCallback? onSuperlike;
   final VoidCallback? onTap;
+  /// When true, only the photo is shown (stack cards behind the active card).
+  final bool isBackgroundPreview;
 
   const SwipeableCard({
     super.key,
@@ -42,6 +44,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.onDislike,
     this.onSuperlike,
     this.onTap,
+    this.isBackgroundPreview = false,
   });
 
   static const double cardRadius = 20;
@@ -127,7 +130,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
                   ),
                 ),
               ),
-              if (distanceLabel.isNotEmpty)
+              if (distanceLabel.isNotEmpty && !widget.isBackgroundPreview)
                 Positioned(
                   top: AppSpacing.spacingMD,
                   right: AppSpacing.spacingMD,
@@ -160,60 +163,61 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard> {
                     ),
                   ),
                 ),
-              Positioned(
-                left: AppSpacing.spacingLG,
-                right: AppSpacing.spacingLG,
-                bottom: AppSpacing.spacingLG,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            nameLine,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (widget.isVerified) ...[
-                          const SizedBox(width: AppSpacing.spacingXS),
-                          Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: AppSvgIcon(
-                              assetPath: AppIcons.check,
-                              size: 11,
-                              color: theme.colorScheme.onPrimary,
+              if (!widget.isBackgroundPreview)
+                Positioned(
+                  left: AppSpacing.spacingLG,
+                  right: AppSpacing.spacingLG,
+                  bottom: AppSpacing.spacingLG,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              nameLine,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (widget.isVerified) ...[
+                            const SizedBox(width: AppSpacing.spacingXS),
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.check,
+                                size: 11,
+                                color: theme.colorScheme.onPrimary,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    if (widget.bio != null && widget.bio!.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.spacingXS),
-                      Text(
-                        widget.bio!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.88),
-                        ),
                       ),
+                      if (widget.bio != null && widget.bio!.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.spacingXS),
+                        Text(
+                          widget.bio!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.88),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (images.length > 1)
+              if (!widget.isBackgroundPreview && images.length > 1)
                 Positioned.fill(
                   child: Row(
                     children: [

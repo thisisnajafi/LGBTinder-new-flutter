@@ -546,8 +546,61 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
+  List<String> _celebrationPhotoSources() {
+    final uploaded = _uploadedImages
+        .map((image) => image.imageUrl)
+        .where((url) => url.isNotEmpty)
+        .toList();
+    if (uploaded.isNotEmpty) return uploaded;
+
+    final local = <String>[];
+    if (_primaryImageFile != null) {
+      local.add(_primaryImageFile!.path);
+    }
+    local.addAll(_additionalImageFiles.map((file) => file.path));
+    if (local.isNotEmpty) return local;
+
+    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      return [_avatarUrl!];
+    }
+    return const [];
+  }
+
+  String? _celebrationLocation() {
+    final countries = ref.read(countriesProvider).valueOrNull ?? [];
+    final cities = _countryId != null
+        ? ref.read(citiesProvider(_countryId!)).valueOrNull ?? []
+        : <ReferenceItem>[];
+
+    final country = countries.firstWhere(
+      (item) => item.id == _countryId,
+      orElse: () => ReferenceItem(id: -1, title: ''),
+    );
+    final city = cities.firstWhere(
+      (item) => item.id == _cityId,
+      orElse: () => ReferenceItem(id: -1, title: ''),
+    );
+
+    final parts = <String>[
+      if (city.id != -1 && city.title.isNotEmpty) city.title,
+      if (country.id != -1 && country.title.isNotEmpty) country.title,
+    ];
+    if (parts.isEmpty) return null;
+    return parts.join(', ');
+  }
+
+  String? _celebrationRelationshipGoal() {
+    final goals = ref.read(relationshipGoalsProvider).valueOrNull ?? [];
+    for (final goalId in _relationGoals) {
+      final match = goals.where((goal) => goal.id == goalId).toList();
+      if (match.isNotEmpty && match.first.title.isNotEmpty) {
+        return match.first.title;
+      }
+    }
+    return null;
+  }
+
   Future<void> _completeWizard() async {
-    // Validate phone form first (if it exists)
     if (_phoneFormKey.currentState != null && !_phoneFormKey.currentState!.validate()) {
       return;
     }
@@ -698,8 +751,13 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           MaterialPageRoute(
             builder: (context) => OnboardingCelebrationScreen(
               displayName: _name.isNotEmpty ? _name : 'You',
-              avatarUrl: _avatarUrl,
-              topInterests: _selectedInterests.take(3).toList(),
+              age: _age,
+              location: _celebrationLocation(),
+              bio: _bio.isNotEmpty ? _bio : null,
+              relationshipGoal: _celebrationRelationshipGoal(),
+              heightCm: _height,
+              photoSources: _celebrationPhotoSources(),
+              topInterests: _selectedInterests.take(6).toList(),
             ),
           ),
         );

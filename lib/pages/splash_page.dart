@@ -87,19 +87,30 @@ class _SplashPageState extends ConsumerState<SplashPage>
     context.go(AppRoutes.onboarding);
   }
 
-  void _goToWelcome(TokenStorageService tokenStorage) {
+  void _goToWelcome(
+    TokenStorageService tokenStorage, {
+    bool clearTokens = true,
+  }) {
     if (_redirected || !mounted) return;
     _redirected = true;
     _absoluteEscapeTimer?.cancel();
     markStartupFlowLeft();
-    authLog('Splash: no valid session → welcome');
+    authLog('Splash: no valid session → welcome (clearTokens=$clearTokens)');
     routeLog('go(${AppRoutes.welcome})');
     context.go(AppRoutes.welcome);
-    Future.microtask(() async {
-      try {
-        await tokenStorage.clearAllTokens();
-      } catch (e) { AppLogger.warning('Silently caught exception', tag: 'splash_page', error: e); }
-    });
+    if (clearTokens) {
+      Future.microtask(() async {
+        try {
+          await tokenStorage.clearAllTokens();
+        } catch (e) {
+          AppLogger.warning(
+            'Silently caught exception',
+            tag: 'splash_page',
+            error: e,
+          );
+        }
+      });
+    }
   }
 
   void _goToHome() {
@@ -165,27 +176,31 @@ class _SplashPageState extends ConsumerState<SplashPage>
           _goToHome();
           return;
         }
-        _goToWelcome(tokenStorage);
+        if (code == 401) {
+          _goToWelcome(tokenStorage);
+          return;
+        }
+        // Non-auth failures (e.g. 403 plan gate) — keep stored session.
+        authLog('Splash: check-token status=$code with token → home');
+        _goToHome();
       } on DioException catch (e) {
         final status = e.response?.statusCode;
-        authLog('Splash: check-token error status=$status → welcome');
         if (!mounted || _redirected) return;
-        if (status == 401 || status == 403) {
-          Future.microtask(() async {
-            try {
-              await tokenStorage.clearAllTokens();
-            } catch (e) { AppLogger.warning('Silently caught exception', tag: 'splash_page', error: e); }
-          });
+        if (status == 401) {
+          authLog('Splash: check-token 401 → welcome');
+          _goToWelcome(tokenStorage);
+          return;
         }
-        _goToWelcome(tokenStorage);
+        authLog('Splash: check-token error status=$status with token → home');
+        _goToHome();
       } on TimeoutException catch (_) {
-        authLog('Splash: check-token timeout → welcome');
+        authLog('Splash: check-token timeout with token → home');
         if (!mounted || _redirected) return;
-        _goToWelcome(tokenStorage);
+        _goToHome();
       } catch (e) {
-        authLog('Splash: check-token exception $e → welcome');
+        authLog('Splash: check-token exception $e with token → home');
         if (!mounted || _redirected) return;
-        _goToWelcome(tokenStorage);
+        _goToHome();
       }
     } catch (_) {
       startupLog('SplashPage: bootstrap failed');

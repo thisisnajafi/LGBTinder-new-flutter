@@ -336,7 +336,7 @@ class PaymentService {
     if (!response.isSuccess) throw Exception(response.message);
   }
 
-  /// Get all sub plans
+  /// Get all sub plans (supports nested /sub-plans index format)
   Future<List<SubPlan>> getSubPlans() async {
     try {
       final response = await _apiService.get<dynamic>(
@@ -353,10 +353,35 @@ class PaymentService {
         dataList = response.data as List;
       }
 
-      if (dataList != null) {
-        return dataList.map((item) => SubPlan.fromJson(item as Map<String, dynamic>)).toList();
+      if (dataList == null) return [];
+
+      final result = <SubPlan>[];
+      for (final item in dataList) {
+        if (item is! Map<String, dynamic>) continue;
+
+        if (item['duration_options'] is List && item['plan'] is Map) {
+          final planMap = Map<String, dynamic>.from(item['plan'] as Map);
+          final planId = (planMap['id'] as num?)?.toInt() ?? 0;
+          for (final option in item['duration_options'] as List) {
+            if (option is Map<String, dynamic>) {
+              result.add(
+                SubPlan.fromJson(<String, dynamic>{
+                  ...option,
+                  'plan_id': planId,
+                }),
+              );
+            }
+          }
+          continue;
+        }
+
+        result.add(SubPlan.fromJson(item));
       }
-      return [];
+
+      result.sort(
+        (a, b) => (a.durationDays ?? 0).compareTo(b.durationDays ?? 0),
+      );
+      return result;
     } catch (e) {
       rethrow;
     }

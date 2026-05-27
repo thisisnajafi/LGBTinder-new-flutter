@@ -9,6 +9,7 @@ class SubscriptionPlan {
   final List<String>? features;
   final bool isPopular;
   final String? stripePriceId;
+  final List<SubPlan> subPlans;
 
   SubscriptionPlan({
     required this.id,
@@ -20,40 +21,65 @@ class SubscriptionPlan {
     this.features,
     this.isPopular = false,
     this.stripePriceId,
+    this.subPlans = const [],
   });
 
   factory SubscriptionPlan.fromJson(Map<String, dynamic> json) {
-    // Get ID - use 0 as fallback if not provided
     int planId = 0;
     if (json['id'] != null) {
-      planId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+      planId = (json['id'] is int)
+          ? json['id'] as int
+          : int.tryParse(json['id'].toString()) ?? 0;
     } else if (json['plan_id'] != null) {
-      planId = (json['plan_id'] is int) ? json['plan_id'] as int : int.tryParse(json['plan_id'].toString()) ?? 0;
+      planId = (json['plan_id'] is int)
+          ? json['plan_id'] as int
+          : int.tryParse(json['plan_id'].toString()) ?? 0;
     }
-    
-    // Get price and duration for name construction fallback
+
     double price = (json['price'] as num?)?.toDouble() ?? 0.0;
     String? duration = json['duration']?.toString();
-    
-    // Get name from multiple possible fields (name, title, plan_name, plan_title)
-    String name = json['name']?.toString() ?? 
-                  json['title']?.toString() ?? 
-                  json['plan_name']?.toString() ?? 
-                  json['plan_title']?.toString() ??
-                  '';
-    
-    // If name is still empty, construct from available data
+
+    String name = json['name']?.toString() ??
+        json['title']?.toString() ??
+        json['plan_name']?.toString() ??
+        json['plan_title']?.toString() ??
+        '';
+
     if (name.isEmpty) {
       if (duration != null && duration.isNotEmpty) {
         name = duration.toUpperCase();
       } else if (price > 0) {
-        String currencySymbol = (json['currency']?.toString() ?? 'usd').toUpperCase() == 'USD' ? '\$' : (json['currency']?.toString() ?? 'usd').toUpperCase();
+        String currencySymbol =
+            (json['currency']?.toString() ?? 'usd').toUpperCase() == 'USD'
+                ? '\$'
+                : (json['currency']?.toString() ?? 'usd').toUpperCase();
         name = '$currencySymbol${price.toStringAsFixed(2)} Plan';
       } else {
         name = planId > 0 ? 'Plan $planId' : 'Subscription Plan';
       }
     }
-    
+
+    List<SubPlan>? parsedSubPlans;
+    final rawSubPlans = json['sub_plans'];
+    if (rawSubPlans is List) {
+      parsedSubPlans = rawSubPlans
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => SubPlan.fromJson(<String, dynamic>{
+              ...item,
+              'plan_id': planId,
+            }),
+          )
+          .toList()
+        ..sort(
+          (a, b) => (a.durationDays ?? 0).compareTo(b.durationDays ?? 0),
+        );
+    }
+
+    if (parsedSubPlans != null && parsedSubPlans.isNotEmpty && price <= 0) {
+      price = parsedSubPlans.first.effectivePrice;
+    }
+
     return SubscriptionPlan(
       id: planId,
       name: name,
@@ -65,7 +91,9 @@ class SubscriptionPlan {
           ? (json['features'] as List).map((e) => e.toString()).toList()
           : null,
       isPopular: json['is_popular'] == true || json['is_popular'] == 1,
-      stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      stripePriceId:
+          json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      subPlans: parsedSubPlans ?? const [],
     );
   }
 
@@ -80,6 +108,8 @@ class SubscriptionPlan {
       if (features != null) 'features': features,
       'is_popular': isPopular,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
+      if (subPlans.isNotEmpty)
+        'sub_plans': subPlans.map((e) => e.toJson()).toList(),
     };
   }
 }
@@ -93,87 +123,189 @@ class SubPlan {
   final double price;
   final String currency;
   final String? duration;
+  final int? durationDays;
+  final String? durationText;
+  final double? discountedPrice;
+  final double? pricePerMonth;
+  final String? discountType;
+  final double? discountValue;
+  final String? discountLabel;
+  final bool isNewUserDiscount;
   final String? stripePriceId;
-  final String? googleOfferId; // Google Play offer ID for this billing cycle
+  final String? googleOfferId;
 
   SubPlan({
-    this.id = 0, // Made optional with default value
+    this.id = 0,
     required this.planId,
     required this.name,
     this.description,
     required this.price,
     this.currency = 'usd',
     this.duration,
+    this.durationDays,
+    this.durationText,
+    this.discountedPrice,
+    this.pricePerMonth,
+    this.discountType,
+    this.discountValue,
+    this.discountLabel,
+    this.isNewUserDiscount = false,
     this.stripePriceId,
     this.googleOfferId,
   });
 
+  /// Price the user pays after plan-level discounts.
+  double get effectivePrice => discountedPrice ?? price;
+
+  /// Original total before any period discount (list price).
+  double get originalPrice => price;
+
+  bool get hasDiscount => effectivePrice < originalPrice - 0.001;
+
+  double get savingsAmount =>
+      hasDiscount ? (originalPrice - effectivePrice).clamp(0, double.infinity) : 0;
+
+  int? get savingsPercent {
+    if (!hasDiscount || originalPrice <= 0) return null;
+    return ((savingsAmount / originalPrice) * 100).round();
+  }
+
+  String get durationLabel {
+    if (durationText != null && durationText!.isNotEmpty) return durationText!;
+    if (durationDays != null) {
+      switch (durationDays) {
+        case 30:
+          return '1 Month';
+        case 90:
+          return '3 Months';
+        case 180:
+          return '6 Months';
+        case 365:
+          return '1 Year';
+        default:
+          return '$durationDays days';
+      }
+    }
+    return _durationLabelFromString(duration);
+  }
+
+  double get perMonthPrice {
+    if (pricePerMonth != null && pricePerMonth! > 0) return pricePerMonth!;
+    final months = _monthsFromDuration();
+    if (months <= 0) return effectivePrice;
+    return effectivePrice / months;
+  }
+
+  int _monthsFromDuration() {
+    if (durationDays != null) {
+      if (durationDays == 30) return 1;
+      if (durationDays == 90) return 3;
+      if (durationDays == 180) return 6;
+      if (durationDays == 365) return 12;
+      return (durationDays! / 30).round().clamp(1, 12);
+    }
+    final d = duration?.toLowerCase() ?? '';
+    if (d.contains('year') || d.contains('annual') || d.contains('12')) return 12;
+    if (d.contains('6')) return 6;
+    if (d.contains('3') || d.contains('quarter')) return 3;
+    return 1;
+  }
+
+  static String _durationLabelFromString(String? duration) {
+    if (duration == null || duration.isEmpty) return '1 Month';
+    final d = duration.toLowerCase();
+    if (d.contains('year') || d.contains('annual') || d.contains('12')) {
+      return '1 Year';
+    }
+    if (d.contains('6')) return '6 Months';
+    if (d.contains('3') || d.contains('quarter')) return '3 Months';
+    return '1 Month';
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
   factory SubPlan.fromJson(Map<String, dynamic> json) {
-    // Get ID from multiple possible fields (id, sub_plan_id, subplan_id)
-    // ID is optional since some APIs might not send it for sub-plans
     int subPlanId = 0;
     if (json['id'] != null) {
-      subPlanId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
+      subPlanId = _parseInt(json['id']) ?? 0;
     } else if (json['sub_plan_id'] != null) {
-      subPlanId = (json['sub_plan_id'] is int) ? json['sub_plan_id'] as int : int.tryParse(json['sub_plan_id'].toString()) ?? 0;
-    } else if (json['subplan_id'] != null) {
-      subPlanId = (json['subplan_id'] is int) ? json['subplan_id'] as int : int.tryParse(json['subplan_id'].toString()) ?? 0;
+      subPlanId = _parseInt(json['sub_plan_id']) ?? 0;
     }
-    
-    // Get plan_id - this is required to link to parent plan
+
     int planId = 0;
     if (json['plan_id'] != null) {
-      planId = (json['plan_id'] is int) ? json['plan_id'] as int : int.tryParse(json['plan_id'].toString()) ?? 0;
+      planId = _parseInt(json['plan_id']) ?? 0;
     } else if (json['subscription_plan_id'] != null) {
-      planId = (json['subscription_plan_id'] is int) ? json['subscription_plan_id'] as int : int.tryParse(json['subscription_plan_id'].toString()) ?? 0;
+      planId = _parseInt(json['subscription_plan_id']) ?? 0;
     }
-    
-    // Get price - we'll need it for name construction
-    double price = (json['price'] as num?)?.toDouble() ?? 0.0;
-    String currency = json['currency']?.toString() ?? 'usd';
-    String? duration = json['duration']?.toString();
-    
-    // Get name from multiple possible fields (name, title, plan_name, duration_name, duration)
-    String name = json['name']?.toString() ?? 
-                  json['title']?.toString() ?? 
-                  json['plan_name']?.toString() ?? 
-                  json['duration_name']?.toString() ??
-                  duration ??
-                  '';
-    
-    // If name is still empty, construct from available data
+
+    final price = _parseDouble(json['price']) ?? 0.0;
+    final currency = json['currency']?.toString() ?? 'usd';
+    final durationDays = _parseInt(json['duration_days']);
+    final durationText = json['duration_text']?.toString();
+    final duration = json['duration']?.toString() ?? durationText;
+
+    String name = json['name']?.toString() ??
+        json['title']?.toString() ??
+        json['sub_plan_title']?.toString() ??
+        json['plan_name']?.toString() ??
+        durationText ??
+        duration ??
+        '';
+
     if (name.isEmpty) {
-      // Try to construct a meaningful name from price and duration
-      if (duration != null && duration.isNotEmpty) {
-        name = duration;
-        if (price > 0) {
-          String currencySymbol = currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
-          name = '$duration - $currencySymbol${price.toStringAsFixed(2)}';
-        }
+      if (durationText != null && durationText.isNotEmpty) {
+        name = durationText;
       } else if (price > 0) {
-        // Just use price if no duration
-        String currencySymbol = currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
-        name = '$currencySymbol${price.toStringAsFixed(2)}';
+        final symbol =
+            currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
+        name = '$symbol${price.toStringAsFixed(2)}';
       } else {
-        // Last resort - use a generic name with ID or index
         name = subPlanId > 0 ? 'Plan Option $subPlanId' : 'Plan Option';
       }
     }
-    
-    // If we still don't have a plan_id, generate one from the hash of constructed data
+
     if (planId == 0) {
       planId = name.hashCode.abs();
     }
-    
+
+    final discountedPrice = _parseDouble(json['discounted_price']) ??
+        _parseDouble(json['final_price']);
+
     return SubPlan(
       id: subPlanId,
       planId: planId,
       name: name,
-      description: json['description']?.toString(),
+      description: json['description']?.toString() ??
+          json['sub_plan_description']?.toString(),
       price: price,
       currency: currency,
       duration: duration,
-      stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      durationDays: durationDays,
+      durationText: durationText,
+      discountedPrice: discountedPrice,
+      pricePerMonth: _parseDouble(json['monthly_price']) ??
+          _parseDouble(json['price_per_month']),
+      discountType: json['discount_type']?.toString(),
+      discountValue: _parseDouble(json['discount_value']),
+      discountLabel: json['discount_label']?.toString(),
+      isNewUserDiscount: json['is_new_user_discount'] == true ||
+          json['is_new_user_eligible'] == true,
+      stripePriceId:
+          json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
       googleOfferId: json['google_offer_id']?.toString(),
     );
   }
@@ -187,6 +319,14 @@ class SubPlan {
       'price': price,
       'currency': currency,
       if (duration != null) 'duration': duration,
+      if (durationDays != null) 'duration_days': durationDays,
+      if (durationText != null) 'duration_text': durationText,
+      if (discountedPrice != null) 'discounted_price': discountedPrice,
+      if (pricePerMonth != null) 'monthly_price': pricePerMonth,
+      if (discountType != null) 'discount_type': discountType,
+      if (discountValue != null) 'discount_value': discountValue,
+      if (discountLabel != null) 'discount_label': discountLabel,
+      'is_new_user_discount': isNewUserDiscount,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
       if (googleOfferId != null) 'google_offer_id': googleOfferId,
     };

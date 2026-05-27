@@ -66,6 +66,30 @@ const Map<String, String> backendErrorMessages = {
   'FORBIDDEN': 'You don\'t have permission for this action.',
   'NOT_FOUND': 'The requested item was not found.',
   'SERVER_ERROR': 'Something went wrong. Please try again later.',
+  'MATCHES_PREMIUM_REQUIRED': 'Upgrade to see your matches.',
+  'REWIND_PREMIUM_REQUIRED': 'Rewind requires a Premium subscription.',
+  'TEMPORARY_TOKEN_RESTRICTION': 'Complete your profile to access this feature.',
+};
+
+/// Backend codes that mean plan/feature access denied — never treat as session logout.
+const Set<String> featureForbiddenErrorCodes = {
+  'FEATURE_NOT_AVAILABLE',
+  'PREMIUM_REQUIRED',
+  'SUBSCRIPTION_EXPIRED',
+  'MATCHES_PREMIUM_REQUIRED',
+  'REWIND_PREMIUM_REQUIRED',
+  'SUPERLIKE_LIMIT_REACHED',
+  'DAILY_LIMIT_REACHED',
+  'SWIPE_LIMIT_REACHED',
+  'DAILY_LIKE_LIMIT_REACHED',
+  'DAILY_VIEW_LIMIT_REACHED',
+  'CHAT_DAILY_SEND_LIMIT_REACHED',
+  'CHAT_IMAGE_UPLOAD_LIMIT_REACHED',
+  'STICKER_PACK_LOCKED',
+  'TEMPORARY_TOKEN_RESTRICTION',
+  'PROFILE_PICTURE_REQUIRED',
+  'PROFILE_INCOMPLETE',
+  'EMAIL_NOT_VERIFIED',
 };
 
 /// API Error model for handling API errors
@@ -180,22 +204,82 @@ class ApiError {
   }
 
   /// Create ApiError from response data
-  factory ApiError.fromResponse(Map<String, dynamic> json, {int? statusCode, Map<String, dynamic>? responseData}) {
+  factory ApiError.fromResponse(
+    Map<String, dynamic> json, {
+    int? statusCode,
+    Map<String, dynamic>? responseData,
+  }) {
+    final data = responseData ?? json;
+    final errorCode = data['error_code']?.toString() ?? data['code']?.toString();
+
     return ApiError(
-      code: statusCode ?? json['code'] as int?,
-      message: json['message'] as String? ?? 'An error occurred',
-      errors: json['errors'] != null
+      code: statusCode ?? data['code'] as int?,
+      message: data['message'] as String? ?? 'An error occurred',
+      errorCode: errorCode,
+      errors: data['errors'] != null
           ? Map<String, List<String>>.from(
-              (json['errors'] as Map).map(
+              (data['errors'] as Map).map(
                 (key, value) => MapEntry(
                   key.toString(),
-                  value is List ? value.map((e) => e.toString()).toList() : [value.toString()],
+                  value is List
+                      ? value.map((e) => e.toString()).toList()
+                      : [value.toString()],
                 ),
               ),
             )
           : null,
-      responseData: responseData ?? json, // Store the full response data
+      responseData: data,
     );
+  }
+
+  /// True when the HTTP response indicates plan/feature denial, not invalid session.
+  static bool isFeatureForbiddenResponse({
+    int? statusCode,
+    Map<String, dynamic>? body,
+  }) {
+    if (statusCode == 403) return true;
+    if (body == null) return false;
+
+    if (body['upgrade_required'] == true || body['purchase_required'] == true) {
+      return true;
+    }
+
+    final nested = body['data'];
+    if (nested is Map<String, dynamic>) {
+      if (nested['upgrade_required'] == true ||
+          nested['purchase_required'] == true) {
+        return true;
+      }
+    }
+
+    final errorCode = body['error_code']?.toString();
+    if (errorCode != null && featureForbiddenErrorCodes.contains(errorCode)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Only true for expired/invalid auth — never for premium/plan 403 responses.
+  static bool shouldForceLogout({
+    int? statusCode,
+    Map<String, dynamic>? body,
+    String? requestPath,
+  }) {
+    if (statusCode == 403) return false;
+    if (isFeatureForbiddenResponse(statusCode: statusCode, body: body)) {
+      return false;
+    }
+    if (statusCode != 401) return false;
+
+    final path = requestPath ?? '';
+    if (path.contains('/auth/login') ||
+        path.contains('login-password') ||
+        path.contains('/auth/register')) {
+      return false;
+    }
+
+    return true;
   }
 
   /// Get first error message from validation errors
@@ -274,17 +358,36 @@ class ApiError {
     return message;
   }
   
-  /// Check if error requires user to log in again
-  bool get requiresLogin => 
-      code == 401 || 
-      errorCode == 'TOKEN_EXPIRED' || 
-      errorCode == 'TOKEN_INVALID' ||
-      errorCode == 'UNAUTHORIZED';
-  
+  /// Check if error requires user to log in again (never for plan/feature 403).
+  bool get requiresLogin {
+    if (isFeatureForbidden) return false;
+    return code == 401 ||
+        errorCode == 'TOKEN_EXPIRED' ||
+        errorCode == 'TOKEN_INVALID' ||
+        errorCode == 'UNAUTHORIZED';
+  }
+
+  /// Plan, subscription, or permission denial — user stays logged in.
+  bool get isFeatureForbidden =>
+      ApiError.isFeatureForbiddenResponse(
+        statusCode: code,
+        body: responseData,
+      ) ||
+      isPlanLimitError ||
+      purchaseRequired;
+
+  bool get purchaseRequired {
+    final data = responseData?['data'];
+    return responseData?['purchase_required'] == true ||
+        (data is Map && data['purchase_required'] == true);
+  }
+
   /// Check if error is due to plan/subscription limits
   bool get isPlanLimitError =>
       errorCode == 'FEATURE_NOT_AVAILABLE' ||
       errorCode == 'PREMIUM_REQUIRED' ||
+      errorCode == 'MATCHES_PREMIUM_REQUIRED' ||
+      errorCode == 'REWIND_PREMIUM_REQUIRED' ||
       errorCode == 'DAILY_LIMIT_REACHED' ||
       errorCode == 'SWIPE_LIMIT_REACHED' ||
       errorCode == 'SUPERLIKE_LIMIT_REACHED' ||

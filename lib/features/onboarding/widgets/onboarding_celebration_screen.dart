@@ -11,18 +11,28 @@ import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../routes/app_router.dart';
 import '../../../widgets/buttons/gradient_button.dart';
-import '../../../widgets/navbar/lgbtfinder_logo.dart';
+import 'onboarding_profile_preview_card.dart';
 
 /// Full-screen celebration after profile wizard completion.
 class OnboardingCelebrationScreen extends ConsumerStatefulWidget {
   final String displayName;
-  final String? avatarUrl;
+  final int? age;
+  final String? location;
+  final String? bio;
+  final String? relationshipGoal;
+  final int? heightCm;
+  final List<String> photoSources;
   final List<String> topInterests;
 
   const OnboardingCelebrationScreen({
     super.key,
     required this.displayName,
-    this.avatarUrl,
+    this.age,
+    this.location,
+    this.bio,
+    this.relationshipGoal,
+    this.heightCm,
+    this.photoSources = const [],
     this.topInterests = const [],
   });
 
@@ -37,17 +47,28 @@ class _OnboardingCelebrationScreenState
   late ConfettiController _confettiController;
   late AnimationController _revealController;
   late Animation<double> _cardScale;
+  late Animation<double> _headerFade;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(milliseconds: 900));
+    _confettiController =
+        ConfettiController(duration: const Duration(milliseconds: 900));
     _revealController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
     );
-    _cardScale = Tween<double>(begin: 0.88, end: 1.0).animate(
-      CurvedAnimation(parent: _revealController, curve: Curves.easeOutBack),
+    _cardScale = Tween<double>(begin: 0.9, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _revealController,
+        curve: const Interval(0.15, 1.0, curve: Curves.easeOutBack),
+      ),
+    );
+    _headerFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _revealController,
+        curve: const Interval(0.0, 0.55, curve: Curves.easeOut),
+      ),
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -73,11 +94,14 @@ class _OnboardingCelebrationScreenState
     context.go(AppRoutes.home);
   }
 
+  void _editProfile() {
+    Navigator.of(context).pop();
+    context.push(AppRoutes.profileEdit);
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     return Scaffold(
       body: Stack(
@@ -93,115 +117,163 @@ class _OnboardingCelebrationScreenState
               blastDirectionality: BlastDirectionality.explosive,
               shouldLoop: false,
               colors: AppColors.lgbtGradient,
-              numberOfParticles: 24,
+              numberOfParticles: 28,
             ),
           ),
           SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingXL),
-              child: Column(
-                children: [
-                  const Spacer(),
-                  Text(
-                    "You're in!",
-                    style: textTheme.displayMedium?.copyWith(
-                      color: AppColors.textPrimaryDark,
-                      fontStyle: FontStyle.italic,
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.spacingXL,
+                      AppSpacing.spacingLG,
+                      AppSpacing.spacingXL,
+                      AppSpacing.spacingMD,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Text(
-                    'Your profile is ready to shine',
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textPrimaryDark.withValues(alpha: 0.9),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                  ScaleTransition(
-                    scale: _cardScale,
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(AppSpacing.spacingXL),
-                      decoration: BoxDecoration(
-                        color: surface,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.backgroundDark.withValues(alpha: 0.2),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 44,
-                            backgroundColor: AppColors.tintVioletLight,
-                            backgroundImage: widget.avatarUrl != null &&
-                                    widget.avatarUrl!.startsWith('http')
-                                ? NetworkImage(widget.avatarUrl!)
-                                : null,
-                            child: widget.avatarUrl == null ||
-                                    !widget.avatarUrl!.startsWith('http')
-                                ? const LGBTFinderLogo(size: 56)
-                                : null,
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Text(
-                            widget.displayName,
-                            style: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (widget.topInterests.isNotEmpty) ...[
-                            SizedBox(height: AppSpacing.spacingMD),
-                            Wrap(
-                              spacing: AppSpacing.spacingSM,
-                              runSpacing: AppSpacing.spacingSM,
-                              alignment: WrapAlignment.center,
-                              children: widget.topInterests.take(3).map((tag) {
-                                return Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.spacingMD,
-                                    vertical: AppSpacing.spacingXS,
+                    child: Column(
+                      children: [
+                        FadeTransition(
+                          opacity: _headerFade,
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.spacingMD,
+                                  vertical: AppSpacing.spacingXS,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.radiusRound,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.tintRoseLight,
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.radiusRound),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.28),
                                   ),
-                                  child: Text(
-                                    tag,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      color: AppColors.accentRose,
-                                      fontWeight: FontWeight.w600,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AppSvgIcon(
+                                      assetPath: AppIcons.checkCircle,
+                                      size: 16,
+                                      color: AppColors.textPrimaryDark,
                                     ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ],
+                                    SizedBox(width: AppSpacing.spacingXS),
+                                    Text(
+                                      'Profile complete',
+                                      style: textTheme.labelMedium?.copyWith(
+                                        color: AppColors.textPrimaryDark,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: AppSpacing.spacingLG),
+                              Text(
+                                "You're in!",
+                                style: textTheme.displayMedium?.copyWith(
+                                  color: AppColors.textPrimaryDark,
+                                  fontStyle: FontStyle.italic,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: AppSpacing.spacingSM),
+                              Text(
+                                'Your profile is ready to shine',
+                                style: textTheme.bodyLarge?.copyWith(
+                                  color: AppColors.textPrimaryDark
+                                      .withValues(alpha: 0.9),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: AppSpacing.spacingSM),
+                              Text(
+                                'This is how others will see you on Discover',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textPrimaryDark
+                                      .withValues(alpha: 0.75),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.spacingXL),
+                        ScaleTransition(
+                          scale: _cardScale,
+                          child: OnboardingProfilePreviewCard(
+                            displayName: widget.displayName,
+                            age: widget.age,
+                            location: widget.location,
+                            bio: widget.bio,
+                            relationshipGoal: widget.relationshipGoal,
+                            heightCm: widget.heightCm,
+                            photoSources: widget.photoSources,
+                            interests: widget.topInterests,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.spacingXL,
+                    AppSpacing.spacingSM,
+                    AppSpacing.spacingXL,
+                    AppSpacing.spacingLG,
+                  ),
+                  child: Column(
+                    children: [
+                      Semantics(
+                        label: 'Start discovering matches',
+                        button: true,
+                        child: GradientButton(
+                          text: 'Start Discovering',
+                          onPressed: _startDiscovering,
+                          usePrideGradient: true,
+                          iconPath: AppIcons.discover,
+                        ),
                       ),
-                    ),
+                      SizedBox(height: AppSpacing.spacingMD),
+                      Semantics(
+                        label: 'Edit profile before discovering',
+                        button: true,
+                        child: OutlinedButton.icon(
+                          onPressed: _editProfile,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            foregroundColor: AppColors.textPrimaryDark,
+                            side: BorderSide(
+                              color: AppColors.textPrimaryDark
+                                  .withValues(alpha: 0.55),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.radiusMD),
+                            ),
+                          ),
+                          icon: AppSvgIcon(
+                            assetPath: AppIcons.userEdit,
+                            size: 20,
+                            color: AppColors.textPrimaryDark,
+                          ),
+                          label: Text(
+                            'Edit Profile',
+                            style: textTheme.titleSmall?.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Semantics(
-                    label: 'Start discovering matches',
-                    button: true,
-                    child: GradientButton(
-                      text: 'Start Discovering',
-                      onPressed: _startDiscovering,
-                      usePrideGradient: true,
-                      iconPath: AppIcons.discover,
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

@@ -39,16 +39,23 @@ class ErrorHandlerService {
           }
           return 'Your session has expired. Please log in again.';
         case 403:
-          // Check if this is a special 403 (profile completion or email verification required)
-          // These should be handled by the auth service, not shown as generic errors
+          if (error.upgradeRequired ||
+              error.purchaseRequired ||
+              error.isFeatureForbidden) {
+            final friendly = error.getUserFriendlyMessage();
+            if (friendly.isNotEmpty && friendly != 'An error occurred') {
+              return friendly;
+            }
+            return 'This feature requires a higher plan. Upgrade to continue.';
+          }
+          // Profile/email gates during onboarding — not a session error
           final message = error.message.toLowerCase();
-          if (message.contains('profile completion required') || 
+          if (message.contains('profile completion required') ||
               message.contains('verify your email') ||
               message.contains('email verification required')) {
-            // Return the actual message instead of generic permission error
             return error.message;
           }
-          return 'You don\'t have permission to perform this action.';
+          return error.getUserFriendlyMessage();
         case 404:
           return 'The requested resource was not found.';
         case 422:
@@ -114,6 +121,9 @@ class ErrorHandlerService {
         case 401:
           return 'Authentication Required';
         case 403:
+          if (error.upgradeRequired || error.isFeatureForbidden) {
+            return 'Upgrade Required';
+          }
           return 'Access Denied';
         case 404:
           return 'Not Found';

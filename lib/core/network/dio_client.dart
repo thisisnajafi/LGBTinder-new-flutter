@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import '../../shared/models/api_error.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../auth/unauthorized_handler.dart';
@@ -125,14 +126,17 @@ class DioClient {
             }
           }
 
-          // Treat 401 as unauthenticated — except login/register where 401 = wrong credentials (stay on screen)
+          // Treat 401 as unauthenticated — except login/register and plan/feature denials.
           if (response.statusCode == 401) {
-            final path = response.requestOptions.path;
-            final isLoginOrRegister = path.contains('/auth/login') ||
-                path.contains('login-password') ||
-                path.contains('/auth/register');
-            clearAuthToken();
-            if (!isLoginOrRegister) {
+            final body = response.data is Map<String, dynamic>
+                ? response.data as Map<String, dynamic>
+                : null;
+            if (ApiError.shouldForceLogout(
+              statusCode: response.statusCode,
+              body: body,
+              requestPath: response.requestOptions.path,
+            )) {
+              clearAuthToken();
               _notifyUnauthorized();
             }
           }
@@ -155,13 +159,25 @@ class DioClient {
           if (error.response?.statusCode == 401) {
             final requestOptions = error.requestOptions;
             final path = requestOptions.path;
+            final body = error.response?.data is Map<String, dynamic>
+                ? error.response!.data as Map<String, dynamic>
+                : null;
 
-            // Login/register: 401 means wrong credentials — do NOT redirect to welcome; let screen show error
+            // Login/register: wrong credentials — do NOT redirect to welcome
             final isLoginOrRegisterRequest = path.contains('/auth/login') ||
                 path.contains('login-password') ||
                 path.contains('/auth/register');
             if (isLoginOrRegisterRequest) {
               clearAuthToken();
+              return handler.next(error);
+            }
+
+            // Plan/feature denial mislabeled as 401 — keep session
+            if (!ApiError.shouldForceLogout(
+              statusCode: 401,
+              body: body,
+              requestPath: path,
+            )) {
               return handler.next(error);
             }
 
