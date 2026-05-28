@@ -7,8 +7,9 @@ import '../core/widgets/avatar_widget.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_grouped_list_card.dart';
+import '../core/widgets/app_settings_detail.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_loading.dart';
 import '../features/safety/providers/user_actions_providers.dart';
@@ -146,21 +147,14 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
-      title: 'Blocked Users',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Blocked users',
       action: IconButton(
-        icon: Icon(
-          Icons.refresh,
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        icon: AppSvgIcon(
+          assetPath: AppIcons.getIconPath('refresh'),
+          size: 22,
+          color: theme.colorScheme.onSurface,
         ),
         onPressed: _loadBlockedUsers,
       ),
@@ -176,21 +170,23 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.block,
+                          AppSvgIcon(
+                            assetPath: AppIcons.block,
                             size: 64,
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.35),
                           ),
-                          SizedBox(height: AppSpacing.spacingMD),
+                          const SizedBox(height: AppSpacing.spacingMD),
                           Text(
-                            'No Blocked Users',
-                            style: AppTypography.h3.copyWith(color: textColor),
+                            'No blocked users',
+                            style: theme.textTheme.titleMedium,
                           ),
-                          SizedBox(height: AppSpacing.spacingSM),
+                          const SizedBox(height: AppSpacing.spacingSM),
                           Text(
-                            'You haven\'t blocked any users yet.',
-                            style: AppTypography.body.copyWith(
-                              color: secondaryTextColor,
+                            'You haven\'t blocked anyone yet.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.55),
                             ),
                           ),
                         ],
@@ -198,80 +194,115 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _loadBlockedUsers,
-                      child: ListView.builder(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        itemCount: _blockedUsers.length,
-                        itemBuilder: (context, index) {
-                          final blockedUser = _blockedUsers[index];
-                          final fullName = blockedUser.lastName != null
-                              ? '${blockedUser.firstName} ${blockedUser.lastName}'
-                              : blockedUser.firstName;
-
-                          return Container(
-                            margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                            padding: EdgeInsets.all(AppSpacing.spacingMD),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                              border: Border.all(color: borderColor),
-                            ),
-                            child: Row(
-                              children: [
-                                // Avatar
-                                AvatarWidget(
-                                  imageUrl: blockedUser.primaryImageUrl,
-                                  radius: 28,
-                                  fallbackInitial: fullName,
+                      child: AppSettingsDetailList(
+                        children: [
+                          AppGroupedListSection(
+                            title: 'Blocked',
+                            padding: AppSettingsLayout.firstSectionPadding,
+                            children: [
+                              for (var i = 0; i < _blockedUsers.length; i++)
+                                _BlockedUserRow(
+                                  blockedUser: _blockedUsers[i],
+                                  formatDate: _formatDate,
+                                  onUnblock: () =>
+                                      _unblockUser(_blockedUsers[i]),
+                                  showDivider: i < _blockedUsers.length - 1,
                                 ),
-                                SizedBox(width: AppSpacing.spacingMD),
-                                // User info
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        fullName,
-                                        style: AppTypography.body.copyWith(
-                                          color: textColor,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      SizedBox(height: AppSpacing.spacingXS),
-                                      Text(
-                                        'Blocked ${_formatDate(blockedUser.blockedAt)}',
-                                        style: AppTypography.caption.copyWith(
-                                          color: secondaryTextColor,
-                                        ),
-                                      ),
-                                      if (blockedUser.reason != null && blockedUser.reason!.isNotEmpty)
-                                        Padding(
-                                          padding: EdgeInsets.only(top: AppSpacing.spacingXS),
-                                          child: Text(
-                                            'Reason: ${blockedUser.reason}',
-                                            style: AppTypography.caption.copyWith(
-                                              color: secondaryTextColor,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                // Unblock button
-                                TextButton(
-                                  onPressed: () => _unblockUser(blockedUser),
-                                  child: Text(
-                                    'Unblock',
-                                    style: AppTypography.button.copyWith(
-                                      color: AppColors.accentPurple,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                            ],
+                          ),
+                        ],
                       ),
                     ),
+    );
+  }
+}
+
+class _BlockedUserRow extends StatelessWidget {
+  final BlockedUser blockedUser;
+  final String Function(DateTime) formatDate;
+  final VoidCallback onUnblock;
+  final bool showDivider;
+
+  const _BlockedUserRow({
+    required this.blockedUser,
+    required this.formatDate,
+    required this.onUnblock,
+    this.showDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fullName = blockedUser.lastName != null
+        ? '${blockedUser.firstName} ${blockedUser.lastName}'
+        : blockedUser.firstName;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingMD,
+            vertical: AppSpacing.spacingMD,
+          ),
+          child: Row(
+            children: [
+              AvatarWidget(
+                imageUrl: blockedUser.primaryImageUrl,
+                radius: 28,
+                fallbackInitial: fullName,
+              ),
+              const SizedBox(width: AppSpacing.spacingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fullName,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      'Blocked ${formatDate(blockedUser.blockedAt)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                    ),
+                    if (blockedUser.reason != null &&
+                        blockedUser.reason!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.spacingXS,
+                        ),
+                        child: Text(
+                          'Reason: ${blockedUser.reason}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: onUnblock,
+                child: const Text('Unblock'),
+              ),
+            ],
+          ),
+        ),
+        if (showDivider)
+          Divider(
+            height: 0.5,
+            thickness: 0.5,
+            indent: AppSpacing.spacingMD,
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+          ),
+      ],
     );
   }
 }

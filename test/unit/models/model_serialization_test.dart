@@ -69,6 +69,38 @@ void main() {
         expect(serialized['first_name'], equals('John'));
       });
 
+      test('should parse nested relation objects from API', () {
+        final json = {
+          'id': 1,
+          'first_name': 'Jasem',
+          'last_name': 'Savari',
+          'email': 'test@example.com',
+          'gender': 1,
+          'genderDetail': {'id': 1, 'title': 'Woman'},
+          'interests': [
+            {'id': 5, 'title': 'Travel'},
+            {'id': 8, 'title': 'Music'},
+          ],
+          'jobs': [
+            {'id': 2, 'title': 'Engineer'},
+          ],
+          'educations': [
+            {'id': 3, 'title': 'Bachelor'},
+          ],
+        };
+
+        final profile = UserProfile.fromJson(json);
+
+        expect(profile.gender, equals('Woman'));
+        expect(profile.genderId, equals(1));
+        expect(profile.interests, equals([5, 8]));
+        expect(profile.interestTitles, equals(['Travel', 'Music']));
+        expect(profile.jobs, equals([2]));
+        expect(profile.jobTitles, equals(['Engineer']));
+        expect(profile.educations, equals([3]));
+        expect(profile.educationTitles, equals(['Bachelor']));
+      });
+
       test('should handle null values correctly', () {
         // Arrange
         final json = {

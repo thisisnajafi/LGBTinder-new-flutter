@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/typography.dart';
-import '../../../../widgets/common/section_header.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_grouped_list_card.dart';
+import '../../../../core/widgets/app_settings_detail.dart';
 import '../../data/models/sound_preferences.dart';
 import '../../providers/sound_preferences_provider.dart';
 
@@ -20,8 +16,7 @@ class SoundPreferencesScreen extends ConsumerStatefulWidget {
       _SoundPreferencesScreenState();
 }
 
-class _SoundPreferencesScreenState
-    extends ConsumerState<SoundPreferencesScreen> {
+class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen> {
   bool _isSaving = false;
 
   Future<void> _save(SoundPreferences prefs) async {
@@ -48,36 +43,70 @@ class _SoundPreferencesScreenState
     await SoundService.instance.previewSound(soundId, category);
   }
 
+  List<Widget> _soundSection({
+    required String title,
+    required EdgeInsetsGeometry padding,
+    required List<SoundOption> options,
+    required String selectedId,
+    required SoundCategory category,
+    required ValueChanged<String> onSelect,
+  }) {
+    if (options.isEmpty) {
+      return [
+        AppGroupedListSection(
+          title: title,
+          padding: padding,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.spacingMD),
+              child: Text(
+                'No sounds available',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55),
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ];
+    }
+
+    return [
+      AppGroupedListSection(
+        title: title,
+        padding: padding,
+        children: [
+          for (var i = 0; i < options.length; i++)
+            AppGroupedSoundOptionTile(
+              label: options[i].name,
+              isSelected: options[i].id == selectedId,
+              onSelect: _isSaving ? null : () => onSelect(options[i].id),
+              onPreview: () => _preview(options[i].id, category),
+              showDivider: i < options.length - 1,
+            ),
+        ],
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor =
-        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
     final prefsAsync = ref.watch(soundPreferencesProvider);
     final catalogAsync = ref.watch(soundCatalogProvider);
 
-    return AppPageScaffold(
-      title: 'Sounds',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Sounds & notifications',
       body: prefsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Failed to load sounds', style: TextStyle(color: textColor)),
-              SizedBox(height: AppSpacing.spacingMD),
+              const Text('Failed to load sounds'),
+              const SizedBox(height: AppSpacing.spacingMD),
               ElevatedButton(
                 onPressed: () =>
                     ref.read(soundPreferencesProvider.notifier).refresh(),
@@ -89,178 +118,57 @@ class _SoundPreferencesScreenState
         data: (prefs) {
           return catalogAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => _buildContent(
-              prefs: prefs,
-              catalog: const SoundCatalog(),
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            data: (catalog) => _buildContent(
-              prefs: prefs,
-              catalog: catalog,
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
+            error: (_, __) => _buildContent(prefs, const SoundCatalog()),
+            data: (catalog) => _buildContent(prefs, catalog),
           );
         },
       ),
     );
   }
 
-  Widget _buildContent({
-    required SoundPreferences prefs,
-    required SoundCatalog catalog,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return ListView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
+  Widget _buildContent(SoundPreferences prefs, SoundCatalog catalog) {
+    return AppSettingsDetailList(
       children: [
-        SectionHeader(title: 'Message Sounds', icon: Icons.chat_bubble_outline),
-        SizedBox(height: AppSpacing.spacingMD),
-        ..._buildSoundOptions(
+        ..._soundSection(
+          title: 'Message sounds',
+          padding: AppSettingsLayout.firstSectionPadding,
           options: catalog.messageSounds,
           selectedId: prefs.messageSound,
           category: SoundCategory.message,
           onSelect: (id) => _save(prefs.copyWith(messageSound: id)),
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          surfaceColor: surfaceColor,
-          borderColor: borderColor,
         ),
-        SizedBox(height: AppSpacing.spacingLG),
-        SectionHeader(title: 'Call Ringtones', icon: Icons.phone_in_talk_outlined),
-        SizedBox(height: AppSpacing.spacingMD),
-        ..._buildSoundOptions(
+        ..._soundSection(
+          title: 'Call ringtones',
+          padding: AppSettingsLayout.sectionPadding,
           options: catalog.callRingtones,
           selectedId: prefs.callRingtone,
           category: SoundCategory.call,
           onSelect: (id) => _save(prefs.copyWith(callRingtone: id)),
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          surfaceColor: surfaceColor,
-          borderColor: borderColor,
         ),
-        SizedBox(height: AppSpacing.spacingLG),
-        SectionHeader(title: 'Notification Sounds', icon: Icons.notifications_outlined),
-        SizedBox(height: AppSpacing.spacingMD),
-        ..._buildSoundOptions(
+        ..._soundSection(
+          title: 'Notification sounds',
+          padding: AppSettingsLayout.sectionPadding,
           options: catalog.notificationSounds,
           selectedId: prefs.notificationSound,
           category: SoundCategory.notification,
           onSelect: (id) => _save(prefs.copyWith(notificationSound: id)),
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          surfaceColor: surfaceColor,
-          borderColor: borderColor,
         ),
-        SizedBox(height: AppSpacing.spacingLG),
-        Container(
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            border: Border.all(color: borderColor),
-          ),
-          child: SwitchListTile(
-            title: Text(
-              'Vibration',
-              style: AppTypography.body.copyWith(color: textColor),
+        AppGroupedListSection(
+          title: 'Haptics',
+          padding: AppSettingsLayout.sectionPadding,
+          children: [
+            AppGroupedSwitchTile(
+              label: 'Vibration',
+              subtitle: 'Vibrate when playing message sounds',
+              value: prefs.vibrationEnabled,
+              onChanged: _isSaving
+                  ? null
+                  : (value) => _save(prefs.copyWith(vibrationEnabled: value)),
+              showDivider: false,
             ),
-            subtitle: Text(
-              'Vibrate when playing message sounds',
-              style: AppTypography.caption.copyWith(color: secondaryTextColor),
-            ),
-            value: prefs.vibrationEnabled,
-            onChanged: _isSaving
-                ? null
-                : (value) => _save(prefs.copyWith(vibrationEnabled: value)),
-          ),
+          ],
         ),
       ],
     );
-  }
-
-  List<Widget> _buildSoundOptions({
-    required List<SoundOption> options,
-    required String selectedId,
-    required SoundCategory category,
-    required ValueChanged<String> onSelect,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    if (options.isEmpty) {
-      return [
-        Text(
-          'No sounds available',
-          style: AppTypography.caption.copyWith(color: secondaryTextColor),
-        ),
-      ];
-    }
-
-    return options.map((option) {
-      final isSelected = option.id == selectedId;
-      return Padding(
-        padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-        child: Material(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            onTap: _isSaving ? null : () => onSelect(option.id),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.primaryLight
-                      : borderColor,
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.spacingMD,
-                vertical: AppSpacing.spacingSM,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isSelected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: isSelected
-                        ? AppColors.primaryLight
-                        : secondaryTextColor,
-                  ),
-                  SizedBox(width: AppSpacing.spacingMD),
-                  Expanded(
-                    child: Text(
-                      option.name,
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Preview',
-                    onPressed: () => _preview(option.id, category),
-                    icon: Icon(Icons.volume_up, color: secondaryTextColor),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }).toList();
   }
 }

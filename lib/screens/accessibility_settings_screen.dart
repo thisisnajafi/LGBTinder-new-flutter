@@ -8,7 +8,6 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/widgets/app_page_scaffold.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
 
 /// Accessibility settings screen - Manage accessibility preferences
 class AccessibilitySettingsScreen extends ConsumerStatefulWidget {
@@ -94,6 +93,7 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
         children: [
           // Text & Display
           SectionHeader(
+            compactLayout: true,
             title: 'Text & Display',
             icon: Icons.text_fields,
           ),
@@ -216,11 +216,11 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Motion
           SectionHeader(
+            compactLayout: true,
             title: 'Motion',
             icon: Icons.animation,
           ),
@@ -256,11 +256,11 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Screen Reader
           SectionHeader(
+            compactLayout: true,
             title: 'Screen Reader',
             icon: Icons.hearing,
           ),
@@ -325,11 +325,11 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Touch & Interaction
           SectionHeader(
+            compactLayout: true,
             title: 'Touch & Interaction',
             icon: Icons.touch_app,
           ),
@@ -400,11 +400,11 @@ class _AccessibilitySettingsScreenState extends ConsumerState<AccessibilitySetti
               ),
             ),
           ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Audio
           SectionHeader(
+            compactLayout: true,
             title: 'Audio',
             icon: Icons.volume_up,
           ),

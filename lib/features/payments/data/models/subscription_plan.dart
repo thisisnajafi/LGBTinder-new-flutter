@@ -293,6 +293,7 @@ class SubscriptionStatus {
   final bool isActive;
   final String? planName;
   final int? planId;
+  final String? tier;
   final DateTime? startDate;
   final DateTime? endDate;
   final DateTime? nextBillingDate;
@@ -304,6 +305,7 @@ class SubscriptionStatus {
     this.isActive = false,
     this.planName,
     this.planId,
+    this.tier,
     this.startDate,
     this.endDate,
     this.nextBillingDate,
@@ -343,12 +345,13 @@ class SubscriptionStatus {
       isActive: parseBoolean(json['is_active']),
       planName: json['plan_name']?.toString(),
       planId: parseInt(json['plan_id']),
+      tier: json['tier']?.toString(),
       startDate: parseDateTime(json['start_date']),
-      endDate: parseDateTime(json['end_date']),
+      endDate: parseDateTime(json['end_date'] ?? json['ends_at'] ?? json['expiry_date']),
       nextBillingDate: parseDateTime(json['next_billing_date']),
-      status: json['status']?.toString(),
+      status: json['status']?.toString() ?? json['subscription_status']?.toString(),
       stripeSubscriptionId: json['stripe_subscription_id']?.toString(),
-      autoRenew: parseBoolean(json['auto_renew'], defaultValue: true),
+      autoRenew: parseBoolean(json['auto_renew'] ?? json['will_auto_renew'], defaultValue: true),
     );
   }
 
@@ -357,6 +360,7 @@ class SubscriptionStatus {
       'is_active': isActive,
       if (planName != null) 'plan_name': planName,
       if (planId != null) 'plan_id': planId,
+      if (tier != null) 'tier': tier,
       if (startDate != null) 'start_date': startDate!.toIso8601String(),
       if (endDate != null) 'end_date': endDate!.toIso8601String(),
       if (nextBillingDate != null) 'next_billing_date': nextBillingDate!.toIso8601String(),

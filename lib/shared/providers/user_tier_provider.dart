@@ -1,14 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/cache/session_cache_providers.dart';
 import '../../features/payments/data/models/plan_limits.dart';
 import '../../features/payments/providers/payment_providers.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../models/user_tier.dart';
 
 /// Best-effort tier provider (does not throw):
-/// - prefers `PlanLimits.planInfo` (authoritative for features)
+/// - prefers cached `user:tier`
+/// - then `PlanLimits.planInfo`
 /// - falls back to `SubscriptionStatus`
 final userTierProvider = Provider<UserTier>((ref) {
+  final cachedTier = ref.watch(cachedUserTierProvider);
+  if (cachedTier != null) {
+    return UserTier.values.firstWhere(
+      (t) => t.key == cachedTier,
+      orElse: () => UserTier.basid,
+    );
+  }
+
   final planLimits = ref.watch(planLimitsProvider).valueOrNull;
   if (planLimits != null) {
     return userTierFromPlan(planId: planLimits.planInfo.planId, planName: planLimits.planInfo.planName);

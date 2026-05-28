@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/app_settings_detail.dart';
 
 /// Privacy policy screen - Display privacy policy
 class PrivacyPolicyScreen extends ConsumerWidget {
@@ -14,17 +13,19 @@ class PrivacyPolicyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
-      title: 'Privacy Policy',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Privacy policy',
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        padding: const EdgeInsets.fromLTRB(
+          AppSettingsLayout.horizontalPadding,
+          0,
+          AppSettingsLayout.horizontalPadding,
+          AppSpacing.spacingXXL,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

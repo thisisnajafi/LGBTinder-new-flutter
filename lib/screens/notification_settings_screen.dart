@@ -1,25 +1,20 @@
-﻿// Screen: NotificationSettingsScreen
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
-import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+
+import '../core/widgets/app_grouped_list_card.dart';
+import '../core/widgets/app_settings_detail.dart';
 
 /// Notification settings screen - Manage notification preferences
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
-  const NotificationSettingsScreen({Key? key}) : super(key: key);
+  const NotificationSettingsScreen({super.key});
 
   @override
-  ConsumerState<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+  ConsumerState<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends ConsumerState<NotificationSettingsScreen> {
-  // Push notifications
+class _NotificationSettingsScreenState
+    extends ConsumerState<NotificationSettingsScreen> {
   bool _pushEnabled = true;
   bool _newMatches = true;
   bool _newMessages = true;
@@ -30,361 +25,157 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
   bool _profileViews = true;
   bool _likes = true;
 
-  // Email notifications
   bool _emailEnabled = true;
   bool _emailMatches = false;
   bool _emailMessages = false;
   bool _emailPromotions = true;
   bool _emailUpdates = true;
 
-  // In-app notifications
-  bool _inAppEnabled = true;
-  bool _inAppMatches = true;
-  bool _inAppMessages = true;
-  bool _inAppLikes = true;
-
-  // Sound & vibration
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
-  String _soundType = 'default';
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    return AppPageScaffold(
-      title: 'Notifications',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppPageHeader.horizontalPadding,
-        ),
-        children: [
-          // Push notifications
-          SectionHeader(
-            title: 'Push Notifications',
-            icon: Icons.notifications,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Enable Push Notifications',
-            subtitle: 'Receive notifications on your device',
-            value: _pushEnabled,
-            onChanged: (value) {
-              setState(() {
-                _pushEnabled = value;
-              });
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_pushEnabled) ...[
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'New Matches',
-              subtitle: 'When someone likes you back',
-              value: _newMatches,
-              onChanged: (value) {
-                setState(() {
-                  _newMatches = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'New Messages',
-              subtitle: 'When you receive a message',
-              value: _newMessages,
-              onChanged: (value) {
-                setState(() {
-                  _newMessages = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Message Likes',
-              subtitle: 'When someone likes your message',
-              value: _messageLikes,
-              onChanged: (value) {
-                setState(() {
-                  _messageLikes = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Superlikes',
-              subtitle: 'When someone superlikes you',
-              value: _superlikes,
-              onChanged: (value) {
-                setState(() {
-                  _superlikes = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Top Picks',
-              subtitle: 'Daily top picks for you',
-              value: _topPicks,
-              onChanged: (value) {
-                setState(() {
-                  _topPicks = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Boosts',
-              subtitle: 'Boost reminders and updates',
-              value: _boosts,
-              onChanged: (value) {
-                setState(() {
-                  _boosts = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Profile Views',
-              subtitle: 'When someone views your profile',
-              value: _profileViews,
-              onChanged: (value) {
-                setState(() {
-                  _profileViews = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Likes',
-              subtitle: 'When someone likes you',
-              value: _likes,
-              onChanged: (value) {
-                setState(() {
-                  _likes = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Email notifications
-          SectionHeader(
-            title: 'Email Notifications',
-            icon: Icons.email,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Enable Email Notifications',
-            subtitle: 'Receive notifications via email',
-            value: _emailEnabled,
-            onChanged: (value) {
-              setState(() {
-                _emailEnabled = value;
-              });
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_emailEnabled) ...[
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'New Matches',
-              subtitle: 'Email when you get a new match',
-              value: _emailMatches,
-              onChanged: (value) {
-                setState(() {
-                  _emailMatches = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'New Messages',
-              subtitle: 'Email when you receive messages',
-              value: _emailMessages,
-              onChanged: (value) {
-                setState(() {
-                  _emailMessages = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Promotions',
-              subtitle: 'Special offers and promotions',
-              value: _emailPromotions,
-              onChanged: (value) {
-                setState(() {
-                  _emailPromotions = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Updates',
-              subtitle: 'App updates and news',
-              value: _emailUpdates,
-              onChanged: (value) {
-                setState(() {
-                  _emailUpdates = value;
-                });
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Sound & vibration
-          SectionHeader(
-            title: 'Sound & Vibration',
-            icon: Icons.volume_up,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Sound',
-            subtitle: 'Play sound for notifications',
-            value: _soundEnabled,
-            onChanged: (value) {
-              setState(() {
-                _soundEnabled = value;
-              });
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Vibration',
-            subtitle: 'Vibrate for notifications',
-            value: _vibrationEnabled,
-            onChanged: (value) {
-              setState(() {
-                _vibrationEnabled = value;
-              });
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
+  AppGroupedSwitchTile _switch({
+    required String label,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    bool showDivider = true,
+  }) {
+    return AppGroupedSwitchTile(
+      label: label,
+      subtitle: subtitle,
+      value: value,
+      onChanged: onChanged,
+      showDivider: showDivider,
     );
   }
 
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  @override
+  Widget build(BuildContext context) {
+    return AppSettingsDetailScaffold(
+      title: 'Notifications',
+      body: AppSettingsDetailList(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+          AppGroupedListSection(
+            title: 'Push notifications',
+            padding: AppSettingsLayout.firstSectionPadding,
+            children: [
+              _switch(
+                label: 'Enable push notifications',
+                subtitle: 'Receive notifications on your device',
+                value: _pushEnabled,
+                onChanged: (v) => setState(() => _pushEnabled = v),
+              ),
+              if (_pushEnabled) ...[
+                _switch(
+                  label: 'New matches',
+                  subtitle: 'When someone likes you back',
+                  value: _newMatches,
+                  onChanged: (v) => setState(() => _newMatches = v),
                 ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
+                _switch(
+                  label: 'New messages',
+                  subtitle: 'When you receive a message',
+                  value: _newMessages,
+                  onChanged: (v) => setState(() => _newMessages = v),
+                ),
+                _switch(
+                  label: 'Message likes',
+                  subtitle: 'When someone likes your message',
+                  value: _messageLikes,
+                  onChanged: (v) => setState(() => _messageLikes = v),
+                ),
+                _switch(
+                  label: 'Superlikes',
+                  subtitle: 'When someone superlikes you',
+                  value: _superlikes,
+                  onChanged: (v) => setState(() => _superlikes = v),
+                ),
+                _switch(
+                  label: 'Top picks',
+                  subtitle: 'Daily top picks for you',
+                  value: _topPicks,
+                  onChanged: (v) => setState(() => _topPicks = v),
+                ),
+                _switch(
+                  label: 'Boosts',
+                  subtitle: 'Boost reminders and updates',
+                  value: _boosts,
+                  onChanged: (v) => setState(() => _boosts = v),
+                ),
+                _switch(
+                  label: 'Profile views',
+                  subtitle: 'When someone views your profile',
+                  value: _profileViews,
+                  onChanged: (v) => setState(() => _profileViews = v),
+                ),
+                _switch(
+                  label: 'Likes',
+                  subtitle: 'When someone likes you',
+                  value: _likes,
+                  onChanged: (v) => setState(() => _likes = v),
+                  showDivider: false,
+                ),
               ],
-            ),
+            ],
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
+          AppGroupedListSection(
+            title: 'Email notifications',
+            padding: AppSettingsLayout.sectionPadding,
+            children: [
+              _switch(
+                label: 'Enable email notifications',
+                subtitle: 'Receive notifications via email',
+                value: _emailEnabled,
+                onChanged: (v) => setState(() => _emailEnabled = v),
+              ),
+              if (_emailEnabled) ...[
+                _switch(
+                  label: 'New matches',
+                  subtitle: 'Email when you get a new match',
+                  value: _emailMatches,
+                  onChanged: (v) => setState(() => _emailMatches = v),
+                ),
+                _switch(
+                  label: 'New messages',
+                  subtitle: 'Email when you receive messages',
+                  value: _emailMessages,
+                  onChanged: (v) => setState(() => _emailMessages = v),
+                ),
+                _switch(
+                  label: 'Promotions',
+                  subtitle: 'Special offers and promotions',
+                  value: _emailPromotions,
+                  onChanged: (v) => setState(() => _emailPromotions = v),
+                ),
+                _switch(
+                  label: 'Updates',
+                  subtitle: 'App updates and news',
+                  value: _emailUpdates,
+                  onChanged: (v) => setState(() => _emailUpdates = v),
+                  showDivider: false,
+                ),
+              ],
+            ],
+          ),
+          AppGroupedListSection(
+            title: 'Sound & vibration',
+            padding: AppSettingsLayout.sectionPadding,
+            children: [
+              _switch(
+                label: 'Sound',
+                subtitle: 'Play sound for notifications',
+                value: _soundEnabled,
+                onChanged: (v) => setState(() => _soundEnabled = v),
+              ),
+              _switch(
+                label: 'Vibration',
+                subtitle: 'Vibrate for notifications',
+                value: _vibrationEnabled,
+                onChanged: (v) => setState(() => _vibrationEnabled = v),
+                showDivider: false,
+              ),
+            ],
           ),
         ],
       ),

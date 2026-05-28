@@ -17,7 +17,6 @@ import '../features/profile/providers/profile_page_cache_provider.dart';
 import '../features/matching/data/models/match.dart' as match_models;
 import '../features/matching/widgets/match_celebration_launcher.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
-import '../features/payments/data/models/plan_limits.dart';
 import '../widgets/premium/upgrade_dialog.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
@@ -25,6 +24,8 @@ import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';
+import '../widgets/discovery/superlike_packs_sheet.dart';
+import '../core/cache/session_cache_providers.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../core/cache/cache_invalidator.dart';
@@ -208,30 +209,35 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Future<void> _showSuperlikeBottomSheet(int userId) async {
     if (_isSwipeInProgress) return;
 
-    final planLimitsService = ref.read(planLimitsServiceProvider);
-    SuperlikeInfo superlikeInfo;
+    final sessionCache = ref.read(sessionDataCacheServiceProvider);
+    final remaining = sessionCache.getSuperlikesRemainingSync();
 
-    try {
-      final limits =
-          await planLimitsService.getPlanLimits(forceRefresh: true);
-      superlikeInfo = limits.effectiveSuperlikeInfo;
-    } catch (e, stack) {
-      AppLogger.warning(
-        'Plan limits fetch failed before superlike sheet — using cache/fallback',
-        tag: 'DiscoveryPage',
-        error: e,
+    if (remaining == null) {
+      await showSuperlikePacksSheet(
+        context,
+        headerMessage: "You're out of superlikes — get more below",
+        fetchCountInBackground: true,
       );
-      AppLogger.debug('Plan limits stack: $stack', tag: 'DiscoveryPage');
-      final cached = planLimitsService.getCachedLimits();
-      superlikeInfo = cached?.effectiveSuperlikeInfo ??
-          const SuperlikeInfo(
-            canSuperlike: true,
-            totalRemaining: 1,
-            dailyRemaining: 1,
-            extraPacksRemaining: 0,
-            dailyLimit: 1,
-            dailyUsed: 0,
-          );
+      ref.read(superlikesRemainingProvider.notifier).refreshFromCache();
+      return;
+    }
+
+    if (remaining <= 0) {
+      await showSuperlikePacksSheet(
+        context,
+        headerMessage: "You're out of superlikes — get more below",
+      );
+      return;
+    }
+
+    final superlikeInfo = sessionCache.superlikeInfoFromCache();
+    if (superlikeInfo == null) {
+      await showSuperlikePacksSheet(
+        context,
+        headerMessage: "You're out of superlikes — get more below",
+        fetchCountInBackground: true,
+      );
+      return;
     }
 
     if (!mounted) return;
@@ -244,14 +250,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       if (!mounted || result == null) return;
 
       if (result.openPurchase) {
-        await Navigator.push(
+        await showSuperlikePacksSheet(
           context,
-          MaterialPageRoute(
-            builder: (context) => const SuperlikePacksScreen(),
-          ),
+          headerMessage: "You're out of superlikes — get more below",
         );
-        planLimitsService.clearCache();
-        ref.invalidate(planLimitsProvider);
         return;
       }
 

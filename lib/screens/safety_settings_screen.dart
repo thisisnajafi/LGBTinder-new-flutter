@@ -8,7 +8,6 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/widgets/app_page_scaffold.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../features/settings/providers/settings_provider.dart';
 import 'blocked_users_screen.dart';
@@ -51,6 +50,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
         children: [
           // Privacy settings
           SectionHeader(
+            compactLayout: true,
             title: 'Privacy',
             icon: Icons.lock,
           ),
@@ -103,11 +103,11 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Safety features
           SectionHeader(
+            compactLayout: true,
             title: 'Safety Features',
             icon: Icons.shield,
           ),
@@ -136,11 +136,11 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Safety actions
           SectionHeader(
+            compactLayout: true,
             title: 'Safety Actions',
             icon: Icons.security,
           ),
@@ -190,11 +190,11 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Danger zone
           SectionHeader(
+            compactLayout: true,
             title: 'Account Actions',
             icon: Icons.warning,
           ),

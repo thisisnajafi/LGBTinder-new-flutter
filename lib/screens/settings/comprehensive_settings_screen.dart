@@ -8,7 +8,6 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/widgets/app_page_scaffold.dart';
 import '../../core/widgets/app_page_header.dart';
 import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
 import '../../widgets/avatar/avatar_with_status.dart';
 import '../../widgets/badges/premium_badge.dart';
 import '../../widgets/badges/verification_badge.dart';
@@ -170,7 +169,7 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Privacy & Safety
           SectionHeader(
@@ -228,7 +227,7 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Notifications
           SectionHeader(
@@ -269,7 +268,7 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Premium & Payments
           SectionHeader(
@@ -293,7 +292,7 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Support
           SectionHeader(
@@ -317,7 +316,7 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // App info
           SectionHeader(

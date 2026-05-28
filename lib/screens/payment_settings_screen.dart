@@ -8,7 +8,6 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/widgets/app_page_scaffold.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
 import '../core/providers/feature_flags_provider.dart';
 import '../features/payments/providers/google_play_billing_provider.dart';
 
@@ -42,6 +41,7 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
         children: [
           // Payment Systems Section
           SectionHeader(
+            compactLayout: true,
             title: 'Payment Systems',
             icon: Icons.payment,
           ),
@@ -58,10 +58,11 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
             borderColor: borderColor,
           ),
 
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Features Section
           SectionHeader(
+            compactLayout: true,
             title: 'Features',
             icon: Icons.settings,
           ),
@@ -90,10 +91,11 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
             borderColor: borderColor,
           ),
 
-          DividerCustom(),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Status Section
           SectionHeader(
+            compactLayout: true,
             title: 'Status',
             icon: Icons.info,
           ),

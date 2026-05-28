@@ -1,25 +1,25 @@
-﻿// Screen: ActiveSessionsScreen
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
-import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
-import '../widgets/modals/confirmation_dialog.dart';
-import '../widgets/error_handling/empty_state.dart';
+
 import '../core/constants/api_endpoints.dart';
+import '../core/providers/api_providers.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/border_radius_constants.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_grouped_list_card.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
+import '../widgets/modals/confirmation_dialog.dart';
 
 /// Active sessions screen - Manage active sessions
 class ActiveSessionsScreen extends ConsumerStatefulWidget {
-  const ActiveSessionsScreen({Key? key}) : super(key: key);
+  const ActiveSessionsScreen({super.key});
 
   @override
-  ConsumerState<ActiveSessionsScreen> createState() => _ActiveSessionsScreenState();
+  ConsumerState<ActiveSessionsScreen> createState() =>
+      _ActiveSessionsScreenState();
 }
 
 class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
@@ -33,9 +33,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
   }
 
   Future<void> _loadSessions() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final apiService = ref.read(apiServiceProvider);
@@ -47,7 +45,8 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
       if (response.isSuccess && response.data != null) {
         final data = response.data!['data'] as List<dynamic>? ?? [];
         setState(() {
-          _sessions = data.map((session) => session as Map<String, dynamic>).toList();
+          _sessions =
+              data.map((session) => session as Map<String, dynamic>).toList();
           _isLoading = false;
         });
       } else {
@@ -82,17 +81,18 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
           data: {},
           fromJson: (json) => json as Map<String, dynamic>,
         );
-
-        // Reload sessions to reflect changes
         await _loadSessions();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session terminated')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Session terminated')),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to terminate session: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to terminate session: $e')),
+          );
+        }
       }
     }
   }
@@ -101,7 +101,8 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     final confirmed = await ConfirmationDialog.show(
       context,
       title: 'Terminate All Sessions',
-      message: 'Are you sure you want to terminate all other sessions? You will remain logged in on this device.',
+      message:
+          'Are you sure you want to terminate all other sessions? You will remain logged in on this device.',
       confirmText: 'Terminate All',
       cancelText: 'Cancel',
       isDestructive: true,
@@ -115,289 +116,324 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
           data: {},
           fromJson: (json) => json as Map<String, dynamic>,
         );
-
-        // Reload sessions to reflect changes
         await _loadSessions();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All other sessions terminated')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('All other sessions terminated')),
+          );
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to terminate sessions: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to terminate sessions: $e')),
+          );
+        }
       }
     }
   }
 
-  String _formatTime(DateTime time) {
+  String _formatTime(dynamic raw) {
+    final time = raw is DateTime
+        ? raw
+        : DateTime.tryParse(raw?.toString() ?? '') ?? DateTime.now();
     final now = DateTime.now();
     final difference = now.difference(time);
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    return '${difference.inDays}d ago';
   }
 
-  IconData _getPlatformIcon(String platform) {
+  String _platformIconPath(String platform) {
     switch (platform.toLowerCase()) {
       case 'ios':
-        return Icons.phone_iphone;
       case 'android':
-        return Icons.phone_android;
+        return AppIcons.phone;
       case 'web':
-        return Icons.language;
+        return AppIcons.getIconPath('monitor');
       default:
-        return Icons.device_unknown;
+        return AppIcons.getIconPath('monitor');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final otherSessions =
+        _sessions.where((s) => s['is_current'] != true).toList();
+    final currentMatches =
+        _sessions.where((s) => s['is_current'] == true).toList();
+    final currentSession =
+        currentMatches.isEmpty ? null : currentMatches.first;
 
-    final otherSessions = _sessions.where((s) => s['is_current'] != true).toList();
-
-    return AppPageScaffold(
-      title: 'Active Sessions',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Active sessions',
       body: _isLoading
           ? ListView.builder(
+              padding: AppSettingsLayout.firstSectionPadding,
               itemCount: 3,
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                  child: SkeletonLoader(
-                    width: double.infinity,
-                    height: 120,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  ),
-                );
-              },
-            )
-          : ListView(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              children: [
-                // Current session
-                SectionHeader(
-                  title: 'This Device',
-                  icon: Icons.phone_iphone,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+                child: SkeletonLoader(
+                  width: double.infinity,
+                  height: 120,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                 ),
-                SizedBox(height: AppSpacing.spacingMD),
-                if (_sessions.any((s) => s['is_current'] == true))
-                  _buildSessionCard(
-                    session: _sessions.firstWhere((s) => s['is_current'] == true),
-                    isCurrent: true,
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                    surfaceColor: surfaceColor,
-                    borderColor: borderColor,
-                  )
-                else
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Text(
-                      'No current session',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
-                    ),
-                  ),
-                SizedBox(height: AppSpacing.spacingXXL),
-                // Other sessions
-                if (otherSessions.isNotEmpty) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      SectionHeader(
-                        title: 'Other Devices',
-                        icon: Icons.devices,
+              ),
+            )
+          : AppSettingsDetailList(
+              children: [
+                AppGroupedListSection(
+                  title: 'This device',
+                  padding: AppSettingsLayout.firstSectionPadding,
+                  children: [
+                    if (currentSession != null)
+                      _SessionTile(
+                        session: currentSession,
+                        isCurrent: true,
+                        platformIconPath:
+                            _platformIconPath(currentSession['platform']?.toString() ?? ''),
+                        formatTime: _formatTime,
+                      )
+                    else
+                      const AppSettingsInset(
+                        child: Text('No current session'),
                       ),
-                      TextButton(
-                        onPressed: _handleTerminateAllSessions,
-                        child: Text(
-                          'Terminate All',
-                          style: AppTypography.button.copyWith(
-                            color: AppColors.notificationRed,
+                  ],
+                ),
+                if (otherSessions.isNotEmpty) ...[
+                  Padding(
+                    padding: AppSettingsLayout.sectionPadding,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Other devices',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.60),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        TextButton(
+                          onPressed: _handleTerminateAllSessions,
+                          child: Text(
+                            'Terminate all',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: AppColors.feedbackError,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  ...otherSessions.map((session) {
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                      child: _buildSessionCard(
-                        session: session,
-                        isCurrent: false,
-                        textColor: textColor,
-                        secondaryTextColor: secondaryTextColor,
-                        surfaceColor: surfaceColor,
-                        borderColor: borderColor,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSettingsLayout.horizontalPadding,
+                    ),
+                    child: Material(
+                      color: theme.colorScheme.surface,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.radiusMD),
+                        side: BorderSide(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.35),
+                          width: 0.5,
+                        ),
                       ),
-                    );
-                  }),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          for (var i = 0; i < otherSessions.length; i++)
+                            _SessionTile(
+                              session: otherSessions[i],
+                              isCurrent: false,
+                              platformIconPath: _platformIconPath(
+                                otherSessions[i]['platform']?.toString() ?? '',
+                              ),
+                              formatTime: _formatTime,
+                              onTerminate: () => _handleTerminateSession(
+                                otherSessions[i]['id'].toString(),
+                              ),
+                              showDivider: i < otherSessions.length - 1,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ] else
-                  EmptyState(
-                    title: 'No Other Sessions',
-                    message: 'You\'re only logged in on this device',
-                    icon: Icons.check_circle,
+                  Padding(
+                    padding: AppSettingsLayout.sectionPadding,
+                    child: EmptyState(
+                      title: 'No other sessions',
+                      message: 'You\'re only logged in on this device',
+                      iconPath: AppIcons.tickCircle,
+                    ),
                   ),
               ],
             ),
     );
   }
+}
 
-  Widget _buildSessionCard({
-    required Map<String, dynamic> session,
-    required bool isCurrent,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(
-          color: isCurrent ? AppColors.accentPurple : borderColor,
-          width: isCurrent ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+class _SessionTile extends StatelessWidget {
+  final Map<String, dynamic> session;
+  final bool isCurrent;
+  final String platformIconPath;
+  final String Function(dynamic) formatTime;
+  final VoidCallback? onTerminate;
+  final bool showDivider;
+
+  const _SessionTile({
+    required this.session,
+    required this.isCurrent,
+    required this.platformIconPath,
+    required this.formatTime,
+    this.onTerminate,
+    this.showDivider = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppSettingsInset(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: EdgeInsets.all(AppSpacing.spacingSM),
-                decoration: BoxDecoration(
-                  color: AppColors.accentPurple.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                ),
-                child: Icon(
-                  _getPlatformIcon(session['platform']),
-                  color: AppColors.accentPurple,
-                  size: 24,
-                ),
-              ),
-              SizedBox(width: AppSpacing.spacingMD),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          session['device'],
-                          style: AppTypography.h3.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (isCurrent) ...[
-                          SizedBox(width: AppSpacing.spacingSM),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.spacingSM,
-                              vertical: AppSpacing.spacingXS,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentPurple.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                            ),
-                            child: Text(
-                              'CURRENT',
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.accentPurple,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.radiusXS),
                     ),
-                    SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      session['location'],
-                      style: AppTypography.caption.copyWith(
-                        color: secondaryTextColor,
+                    child: Center(
+                      child: AppSvgIcon(
+                        assetPath: platformIconPath,
+                        size: 20,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: AppSpacing.spacingMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                session['device']?.toString() ?? 'Unknown device',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (isCurrent)
+                              Text(
+                                'Current',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.spacingXS),
+                        Text(
+                          session['location']?.toString() ?? '',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isCurrent && onTerminate != null)
+                    IconButton(
+                      tooltip: 'Terminate session',
+                      onPressed: onTerminate,
+                      icon: AppSvgIcon(
+                        assetPath: AppIcons.close,
+                        size: 18,
+                        color: AppColors.feedbackError,
+                      ),
+                    ),
+                ],
               ),
-              if (!isCurrent)
-                IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    color: AppColors.notificationRed,
-                  ),
-                  onPressed: () => _handleTerminateSession(session['id']),
-                ),
-            ],
-          ),
-          DividerCustom(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: AppSpacing.spacingMD),
+              Row(
                 children: [
-                  Text(
-                    'IP Address',
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
+                  Expanded(
+                    child: _Meta(
+                      label: 'IP address',
+                      value: session['ip_address']?.toString() ?? '—',
                     ),
                   ),
-                  Text(
-                    session['ip_address'],
-                    style: AppTypography.body.copyWith(
-                      color: textColor,
-                    ),
+                  _Meta(
+                    label: 'Last active',
+                    value: formatTime(session['last_active']),
+                    alignEnd: true,
                   ),
                 ],
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Last Active',
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                  Text(
-                    _formatTime(session['last_active']),
-                    style: AppTypography.body.copyWith(
-                      color: textColor,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
-        ],
-      ),
+        ),
+        if (showDivider)
+          Divider(
+            height: 0.5,
+            thickness: 0.5,
+            indent: AppSpacing.spacingMD,
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+          ),
+      ],
+    );
+  }
+}
+
+class _Meta extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  const _Meta({
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 }

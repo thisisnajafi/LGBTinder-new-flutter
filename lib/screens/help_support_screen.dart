@@ -9,10 +9,8 @@ import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/landing_service.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/widgets/app_settings_detail.dart';
 import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/bottom_sheet_custom.dart';
 import '../routes/app_router.dart';
@@ -70,23 +68,20 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final surfaceColor = theme.colorScheme.surface;
+    final borderColor =
+        theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
 
-    return AppPageScaffold(
-      title: 'Help & Support',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppPageHeader.horizontalPadding,
-        ),
+    return AppSettingsDetailScaffold(
+      title: 'Help & support',
+      body: AppSettingsDetailList(
         children: [
           // About (from GET landing/settings)
           SectionHeader(
+            compactLayout: true,
             title: 'About',
             icon: Icons.info_outline,
           ),
@@ -134,11 +129,11 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               );
             },
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Tips & Blog (from GET landing/blogs)
           SectionHeader(
+            compactLayout: true,
             title: 'Tips & Blog',
             icon: Icons.article_outlined,
           ),
@@ -168,11 +163,11 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               );
             },
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Contact support
           SectionHeader(
+            compactLayout: true,
             title: 'Contact Support',
             icon: Icons.support_agent,
           ),
@@ -292,11 +287,11 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // FAQ
           SectionHeader(
+            compactLayout: true,
             title: 'Frequently Asked Questions',
             icon: Icons.help_outline,
           ),
@@ -311,11 +306,11 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               borderColor: borderColor,
             );
           }),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+          const SizedBox(height: AppSpacing.spacingXL),
 
           // Legal
           SectionHeader(
+            compactLayout: true,
             title: 'Legal',
             icon: Icons.gavel,
           ),

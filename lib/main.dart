@@ -21,8 +21,10 @@ import 'shared/services/push_notification_service.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'shared/services/deep_linking_service.dart';
 import 'core/providers/feature_flags_provider.dart';
+import 'core/providers/theme_mode_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'core/cache/cache_lifecycle_listener.dart';
+import 'core/widgets/startup_cache_listener.dart';
 import 'core/cache/match_realtime_sync.dart';
 import 'features/chat/providers/chat_pusher_providers.dart';
 import 'features/chat/providers/chat_typing_providers.dart';
@@ -270,13 +272,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
 
     return ErrorBoundary(
-      child: CacheLifecycleListener(
-        child: MaterialApp.router(
+      child: StartupCacheListener(
+        child: CacheLifecycleListener(
+          child: MaterialApp.router(
           title: 'LGBTFinder',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.system,
+          themeMode: ref.watch(themeModeProvider),
           routerConfig: router,
           builder: (context, child) {
             if (IncomingCallHandler.hasPendingCall()) {
@@ -336,6 +339,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               child: child ?? const SizedBox.shrink(),
             );
           },
+        ),
         ),
       ),
     );

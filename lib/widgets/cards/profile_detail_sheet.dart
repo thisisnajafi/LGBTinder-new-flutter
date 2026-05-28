@@ -26,37 +26,32 @@ class ProfileDetailSheet extends StatefulWidget {
 }
 
 class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onSheetSizeChanged);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onSheetSizeChanged);
-    super.dispose();
-  }
-
-  void _onSheetSizeChanged() {
-    if (widget.controller.size <= 0.50 + 0.01 &&
-        widget.controller.isAttached) {
-      widget.onClose();
-    }
-  }
+  bool _wasBelowSnap = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return DraggableScrollableSheet(
-      controller: widget.controller,
-      initialChildSize: 0.58,
-      minChildSize: 0.50,
-      maxChildSize: 0.90,
-      snap: true,
-      snapSizes: const [0.58, 0.90],
-      builder: (context, scrollController) {
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        if (notification.extent <= notification.minExtent + 0.005) {
+          if (_wasBelowSnap) {
+            widget.onClose();
+          }
+          _wasBelowSnap = true;
+        } else if (notification.extent > 0.55) {
+          _wasBelowSnap = false;
+        }
+        return false;
+      },
+      child: DraggableScrollableSheet(
+        controller: widget.controller,
+        initialChildSize: 0.58,
+        minChildSize: 0.50,
+        maxChildSize: 0.90,
+        snap: true,
+        snapSizes: const [0.58, 0.90],
+        builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
@@ -85,6 +80,7 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
           ),
         );
       },
+      ),
     );
   }
 }

@@ -7,6 +7,7 @@ class UserProfile {
   final String firstName;
   final String lastName;
   final String email;
+  final String? phoneNumber;
   final int? countryId;
   final String? country;
   final int? cityId;
@@ -26,6 +27,12 @@ class UserProfile {
   final List<int>? jobs;
   final List<int>? languages;
   final List<int>? interests;
+  /// Human-readable labels when API returns `interests: [{id, title}, ...]`.
+  final List<String>? interestTitles;
+  /// Human-readable labels when API returns `jobs: [{id, title}, ...]`.
+  final List<String>? jobTitles;
+  /// Human-readable labels when API returns `educations: [{id, title}, ...]`.
+  final List<String>? educationTitles;
   final List<int>? preferredGenders;
   final List<int>? relationGoals;
   final int? minAgePreference;
@@ -46,6 +53,7 @@ class UserProfile {
     required this.firstName,
     required this.lastName,
     required this.email,
+    this.phoneNumber,
     this.countryId,
     this.country,
     this.cityId,
@@ -65,6 +73,9 @@ class UserProfile {
     this.jobs,
     this.languages,
     this.interests,
+    this.interestTitles,
+    this.jobTitles,
+    this.educationTitles,
     this.preferredGenders,
     this.relationGoals,
     this.minAgePreference,
@@ -80,6 +91,96 @@ class UserProfile {
     this.matchReasons = const [],
     this.additionalData,
   });
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static String? _labelFromMap(Map<String, dynamic> map) {
+    final raw = map['title'] ?? map['name'] ?? map['label'];
+    if (raw == null) return null;
+    final text = raw.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  /// Parses API lists that may be `[1, 2]` or `[{id: 1, title: "..."}, ...]`.
+  static ({List<int>? ids, List<String>? titles}) _parseRelationField(dynamic raw) {
+    if (raw == null || raw is! List || raw.isEmpty) {
+      return (ids: null, titles: null);
+    }
+    final ids = <int>[];
+    final titles = <String>[];
+    for (final entry in raw) {
+      if (entry is int) {
+        if (entry > 0) ids.add(entry);
+      } else if (entry is num) {
+        final id = entry.toInt();
+        if (id > 0) ids.add(id);
+      } else if (entry is Map) {
+        final map = Map<String, dynamic>.from(entry);
+        final id = _parseInt(map['id']);
+        final title = _labelFromMap(map);
+        if (id != null && id > 0) ids.add(id);
+        if (title != null) titles.add(title);
+      } else {
+        final parsed = int.tryParse(entry.toString());
+        if (parsed != null && parsed > 0) ids.add(parsed);
+      }
+    }
+    return (
+      ids: ids.isEmpty ? null : ids,
+      titles: titles.isEmpty ? null : titles,
+    );
+  }
+
+  static String? _parseGenderLabel(Map<String, dynamic> json) {
+    final detail = json['gender_detail'] ?? json['genderDetail'];
+    if (detail is Map) {
+      final label = _labelFromMap(Map<String, dynamic>.from(detail));
+      if (label != null) return label;
+    }
+    final gender = json['gender'];
+    if (gender is Map) {
+      final label = _labelFromMap(Map<String, dynamic>.from(gender));
+      if (label != null) return label;
+    }
+    if (gender is String) {
+      final text = gender.trim();
+      if (text.isNotEmpty && int.tryParse(text) == null) return text;
+    }
+    return null;
+  }
+
+  static List<String>? _titlesWithCacheFallback(
+    List<String>? parsed,
+    dynamic cached,
+  ) {
+    if (parsed != null && parsed.isNotEmpty) return parsed;
+    if (cached is List && cached.isNotEmpty) {
+      return cached.map((e) => e.toString()).where((t) => t.isNotEmpty).toList();
+    }
+    return parsed;
+  }
+
+  static int? _parseGenderId(Map<String, dynamic> json) {
+    final fromField = _parseInt(json['gender_id']);
+    if (fromField != null) return fromField;
+
+    final detail = json['gender_detail'] ?? json['genderDetail'];
+    if (detail is Map) {
+      return _parseInt(Map<String, dynamic>.from(detail)['id']);
+    }
+
+    final gender = json['gender'];
+    if (gender is int) return gender;
+    if (gender is num) return gender.toInt();
+    if (gender is String) return int.tryParse(gender);
+
+    return null;
+  }
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     // Get ID - use 0 as fallback (though this should typically be provided)
@@ -115,12 +216,14 @@ class UserProfile {
       firstName: firstName,
       lastName: lastName,
       email: email,
+      phoneNumber: json['phone_number']?.toString() ??
+          json['phoneNumber']?.toString(),
       countryId: json['country_id'] != null ? ((json['country_id'] is int) ? json['country_id'] as int : int.tryParse(json['country_id'].toString())) : null,
       country: json['country']?.toString(),
       cityId: json['city_id'] != null ? ((json['city_id'] is int) ? json['city_id'] as int : int.tryParse(json['city_id'].toString())) : null,
       city: json['city']?.toString(),
-      genderId: json['gender_id'] != null ? ((json['gender_id'] is int) ? json['gender_id'] as int : int.tryParse(json['gender_id'].toString())) : null,
-      gender: json['gender']?.toString(),
+      genderId: _parseGenderId(json),
+      gender: _parseGenderLabel(json),
       birthDate: json['birth_date']?.toString(),
       profileBio: json['profile_bio']?.toString(),
       height: json['height'] != null ? ((json['height'] is int) ? json['height'] as int : int.tryParse(json['height'].toString())) : null,
@@ -142,27 +245,29 @@ class UserProfile {
               .whereType<UserImage>()
               .toList()
           : null,
-      musicGenres: json['music_genres'] != null && json['music_genres'] is List
-          ? (json['music_genres'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
-      educations: json['educations'] != null && json['educations'] is List
-          ? (json['educations'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
-      jobs: json['jobs'] != null && json['jobs'] is List
-          ? (json['jobs'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
-      languages: json['languages'] != null && json['languages'] is List
-          ? (json['languages'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
-      interests: json['interests'] != null && json['interests'] is List
-          ? (json['interests'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
-      preferredGenders: json['preferred_genders'] != null && json['preferred_genders'] is List
-          ? (json['preferred_genders'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
-      relationGoals: json['relation_goals'] != null && json['relation_goals'] is List
-          ? (json['relation_goals'] as List).map((e) => (e is int) ? e : int.tryParse(e.toString()) ?? 0).toList()
-          : null,
+      musicGenres: _parseRelationField(json['music_genres'] ?? json['musicGenres']).ids,
+      educations: _parseRelationField(json['educations']).ids,
+      educationTitles: _titlesWithCacheFallback(
+        _parseRelationField(json['educations']).titles,
+        json['education_titles'],
+      ),
+      jobs: _parseRelationField(json['jobs']).ids,
+      jobTitles: _titlesWithCacheFallback(
+        _parseRelationField(json['jobs']).titles,
+        json['job_titles'],
+      ),
+      languages: _parseRelationField(json['languages']).ids,
+      interests: _parseRelationField(json['interests']).ids,
+      interestTitles: _titlesWithCacheFallback(
+        _parseRelationField(json['interests']).titles,
+        json['interest_titles'],
+      ),
+      preferredGenders: _parseRelationField(
+        json['preferred_genders'] ?? json['preferredGenders'],
+      ).ids,
+      relationGoals: _parseRelationField(
+        json['relation_goals'] ?? json['relationGoals'],
+      ).ids,
       minAgePreference: json['min_age_preference'] != null ? ((json['min_age_preference'] is int) ? json['min_age_preference'] as int : int.tryParse(json['min_age_preference'].toString())) : null,
       maxAgePreference: json['max_age_preference'] != null ? ((json['max_age_preference'] is int) ? json['max_age_preference'] as int : int.tryParse(json['max_age_preference'].toString())) : null,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
@@ -193,6 +298,7 @@ class UserProfile {
       'first_name': firstName,
       'last_name': lastName,
       'email': email,
+      if (phoneNumber != null) 'phone_number': phoneNumber,
       if (countryId != null) 'country_id': countryId,
       if (country != null) 'country': country,
       if (cityId != null) 'city_id': cityId,
@@ -212,6 +318,9 @@ class UserProfile {
       if (jobs != null) 'jobs': jobs,
       if (languages != null) 'languages': languages,
       if (interests != null) 'interests': interests,
+      if (interestTitles != null) 'interest_titles': interestTitles,
+      if (jobTitles != null) 'job_titles': jobTitles,
+      if (educationTitles != null) 'education_titles': educationTitles,
       if (preferredGenders != null) 'preferred_genders': preferredGenders,
       if (relationGoals != null) 'relation_goals': relationGoals,
       if (minAgePreference != null) 'min_age_preference': minAgePreference,

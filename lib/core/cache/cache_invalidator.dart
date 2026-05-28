@@ -4,6 +4,7 @@ import '../../features/discover/providers/discover_cache_provider.dart';
 import '../../shared/services/cache_service.dart';
 import '../providers/api_providers.dart';
 import 'cache_providers.dart';
+import 'session_cache_providers.dart';
 import 'image_cache_service.dart';
 import 'user_cache_service.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
@@ -21,6 +22,15 @@ class CacheInvalidator {
   Future<void> purgeAll() async {
     await _userCache.invalidateAll();
     await _legacyCache.clearAllCache();
+    try {
+      await _ref.read(sessionDataCacheServiceProvider).clearAll();
+    } catch (e) {
+      AppLogger.warning(
+        'Session cache purge failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
     try {
       await LgbtfinderImageCacheManager().emptyCache();
     } catch (e) { AppLogger.warning('Silently caught exception', tag: 'cache_invalidator', error: e); }

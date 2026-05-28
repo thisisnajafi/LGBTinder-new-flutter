@@ -8,6 +8,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/app_logger.dart';
 import '../../../core/cache/cache_invalidator.dart';
+import '../../../core/cache/session_cache_providers.dart';
+import '../../../core/cache/session_data_cache_service.dart';
+import '../../payments/providers/payment_providers.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../shared/models/api_error.dart';
 import '../../../shared/services/cache_service.dart';
@@ -50,30 +53,36 @@ String encodeDiscoverFeedForCache(List<Map<String, dynamic>> raw) {
 final discoverCacheProvider =
     StateNotifierProvider<DiscoverCacheNotifier, DiscoverCacheState>((ref) {
   return DiscoverCacheNotifier(
+    ref,
     ref.read(discoveryServiceProvider),
     ref.read(likesServiceProvider),
     ref.read(planLimitsServiceProvider),
     ref.read(cacheServiceProvider),
     ref.read(cacheInvalidatorProvider),
+    ref.read(sessionDataCacheServiceProvider),
   );
 });
 
 class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
   DiscoverCacheNotifier(
+    this._ref,
     this._discoveryService,
     this._likesService,
     this._planLimitsService,
     this._cacheService,
     this._cacheInvalidator,
+    this._sessionCache,
   ) : super(const DiscoverCacheState()) {
     _init();
   }
 
+  final Ref _ref;
   final DiscoveryService _discoveryService;
   final LikesService _likesService;
   final PlanLimitsService _planLimitsService;
   final CacheService _cacheService;
   final CacheInvalidator _cacheInvalidator;
+  final SessionDataCacheService _sessionCache;
 
   static const int _pageSize = 20;
   bool _isRefreshing = false;
@@ -328,6 +337,28 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           _planLimitsService.incrementUsage('swipes');
           _planLimitsService.incrementUsage('superlikes');
           _markSynced(userId);
+          if (response.subscription != null &&
+              response.superlikesRemaining != null) {
+            await _sessionCache.applySuperlikeSendResponse(
+              superlikesRemaining: response.superlikesRemaining!,
+              subscriptionJson: response.subscription!.toJson(),
+            );
+            _ref
+                .read(superlikesRemainingProvider.notifier)
+                .setCount(response.superlikesRemaining!);
+            _ref
+                .read(cachedUserTierProvider.notifier)
+                .setTier(response.subscription!.tier);
+          } else if (response.superlikesRemaining != null) {
+            await _sessionCache.setSuperlikesRemaining(
+              response.superlikesRemaining!,
+            );
+            _ref
+                .read(superlikesRemainingProvider.notifier)
+                .setCount(response.superlikesRemaining!);
+          }
+          _ref.invalidate(planLimitsProvider);
+          _ref.invalidate(subscriptionStatusProvider);
           if (response.isMatch) {
             unawaited(_cacheInvalidator.purgeMatchList());
             if (onMatch != null) onMatch(response.match);

@@ -92,24 +92,87 @@ class LikeActionRequest {
 }
 
 /// Like response (for match detection)
+class SuperlikeSubscriptionSnapshot {
+  final String tier;
+  final bool isActive;
+  final int superlikesPerDay;
+  final int superlikesUsedToday;
+
+  const SuperlikeSubscriptionSnapshot({
+    required this.tier,
+    required this.isActive,
+    required this.superlikesPerDay,
+    required this.superlikesUsedToday,
+  });
+
+  factory SuperlikeSubscriptionSnapshot.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString()) ?? 0;
+    }
+
+    bool parseBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is int) return value == 1;
+      if (value is String) {
+        return value.toLowerCase() == 'true' || value == '1';
+      }
+      return false;
+    }
+
+    return SuperlikeSubscriptionSnapshot(
+      tier: json['tier']?.toString() ?? 'basid',
+      isActive: parseBool(json['is_active']),
+      superlikesPerDay: parseInt(json['superlikes_per_day']),
+      superlikesUsedToday: parseInt(json['superlikes_used_today']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'tier': tier,
+        'is_active': isActive,
+        'superlikes_per_day': superlikesPerDay,
+        'superlikes_used_today': superlikesUsedToday,
+      };
+}
+
+/// Like response (for match detection)
 class LikeResponse {
   final bool isMatch;
   final match_models.Match? match;
   final String? message;
+  final int? likedUserId;
+  final int? superlikesRemaining;
+  final SuperlikeSubscriptionSnapshot? subscription;
 
   LikeResponse({
     required this.isMatch,
     this.match,
     this.message,
+    this.likedUserId,
+    this.superlikesRemaining,
+    this.subscription,
   });
 
   factory LikeResponse.fromJson(Map<String, dynamic> json) {
+    final subscriptionRaw = json['subscription'];
     return LikeResponse(
       isMatch: json['is_match'] == true || json['is_match'] == 1,
       match: json['match'] != null && json['match'] is Map
           ? match_models.Match.fromJson(Map<String, dynamic>.from(json['match'] as Map))
           : null,
       message: json['message']?.toString(),
+      likedUserId: json['liked_user_id'] != null
+          ? int.tryParse(json['liked_user_id'].toString())
+          : null,
+      superlikesRemaining: json['superlikes_remaining'] != null
+          ? int.tryParse(json['superlikes_remaining'].toString())
+          : null,
+      subscription: subscriptionRaw is Map<String, dynamic>
+          ? SuperlikeSubscriptionSnapshot.fromJson(subscriptionRaw)
+          : null,
     );
   }
 }

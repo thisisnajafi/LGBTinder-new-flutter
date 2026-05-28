@@ -11,7 +11,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/widgets/app_page_header.dart';
-import '../features/profile/presentation/widgets/profile_hub_view.dart';
+import '../features/profile/presentation/widgets/own_profile/own_profile_view.dart';
 import '../features/profile/widgets/profile_photo_carousel.dart';
 import '../features/profile/widgets/tier_badge.dart';
 import '../features/profile/widgets/profile_completeness_indicator.dart';
@@ -43,7 +43,6 @@ import '../features/safety/data/models/report.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../pages/profile_edit_page.dart';
-import '../features/settings/presentation/screens/matching_preferences_screen.dart';
 import '../routes/app_router.dart';
 import '../core/utils/app_icons.dart';
 import '../core/utils/app_logger.dart';
@@ -573,7 +572,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return profile?.isPremium ?? false;
   }
 
-  List<String>? _mapIdsToTitles(List<int>? ids, List<dynamic> refs) {
+  List<String>? _labelsFromProfile(
+    List<String>? apiTitles,
+    List<int>? ids,
+    List<dynamic> refs,
+  ) {
+    if (apiTitles != null && apiTitles.isNotEmpty) return apiTitles;
     if (ids == null || ids.isEmpty) return null;
     final byId = <int, String>{};
     for (final item in refs) {
@@ -583,8 +587,24 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         byId[id] = title;
       }
     }
-    final values = ids.map((id) => byId[id] ?? id.toString()).toSet().toList(growable: false);
+    final values = ids
+        .map((id) => byId[id])
+        .whereType<String>()
+        .where((t) => t.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
     return values.isEmpty ? null : values;
+  }
+
+  String? _genderLabel(UserProfile profile, List<dynamic> gendersRef) {
+    if (profile.gender != null && profile.gender!.trim().isNotEmpty) {
+      return profile.gender;
+    }
+    if (profile.genderId == null) return null;
+    for (final item in gendersRef) {
+      if (item.id == profile.genderId) return item.title as String?;
+    }
+    return null;
   }
 
   UserTier _resolveTier(UserProfile? profile) {
@@ -601,75 +621,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   String _creditsLabel(UserProfile profile) {
     return '${profile.viewsCount ?? _matchesCount}';
-  }
-
-  List<ProfileHubSection> _profileHubSections(UserProfile profile) {
-    return [
-      ProfileHubSection(
-        title: 'Main info',
-        items: [
-          ProfileHubMenuItem(
-            iconPath: AppIcons.userEdit,
-            label: 'Edit profile',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfileEditPage(),
-                ),
-              );
-            },
-          ),
-          ProfileHubMenuItem(
-            iconPath: AppIcons.verify,
-            label: 'Verification',
-            onTap: () => context.go('/profile/verification'),
-          ),
-          ProfileHubMenuItem(
-            iconPath: AppIcons.discover,
-            label: 'Discovery preferences',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MatchingPreferencesScreen(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      ProfileHubSection(
-        title: 'Account',
-        items: [
-          ProfileHubMenuItem(
-            iconPath: AppIcons.settings,
-            label: 'Settings',
-            onTap: () => context.go('${AppRoutes.home}/settings'),
-          ),
-          ProfileHubMenuItem(
-            iconPath: AppIcons.notification,
-            label: 'Notifications',
-            onTap: () => context.go('${AppRoutes.home}/notifications'),
-          ),
-        ],
-      ),
-      ProfileHubSection(
-        title: 'Our help',
-        items: [
-          ProfileHubMenuItem(
-            iconPath: AppIcons.help,
-            label: 'Help & support',
-            onTap: () => context.push(AppRoutes.helpSupport),
-          ),
-          ProfileHubMenuItem(
-            iconPath: AppIcons.shield,
-            label: 'Privacy policy',
-            onTap: () => context.push(AppRoutes.privacyPolicy),
-          ),
-        ],
-      ),
-    ];
   }
 
   void _openFullProfileView(UserProfile profile) {
@@ -721,6 +672,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final preferredGendersRef = ref.watch(preferredGendersProvider).valueOrNull ?? const [];
     final relationGoalsRef = ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
     final musicRef = ref.watch(musicGenresProvider).valueOrNull ?? const [];
+    final gendersRef = ref.watch(gendersProvider).valueOrNull ?? const [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,14 +719,22 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               : null,
         ),
         ProfileInfoSections(
-          interests: _mapIdsToTitles(profile.interests, interestsRef),
-          jobs: _mapIdsToTitles(profile.jobs, jobsRef),
-          educations: _mapIdsToTitles(profile.educations, educationsRef),
-          languages: _mapIdsToTitles(profile.languages, languagesRef),
-          musicGenres: _mapIdsToTitles(profile.musicGenres, musicRef),
-          relationGoals: _mapIdsToTitles(profile.relationGoals, relationGoalsRef),
-          gender: profile.gender,
-          preferredGenders: _mapIdsToTitles(profile.preferredGenders, preferredGendersRef),
+          interests: _labelsFromProfile(profile.interestTitles, profile.interests, interestsRef),
+          jobs: _labelsFromProfile(profile.jobTitles, profile.jobs, jobsRef),
+          educations: _labelsFromProfile(
+            profile.educationTitles,
+            profile.educations,
+            educationsRef,
+          ),
+          languages: _labelsFromProfile(null, profile.languages, languagesRef),
+          musicGenres: _labelsFromProfile(null, profile.musicGenres, musicRef),
+          relationGoals: _labelsFromProfile(null, profile.relationGoals, relationGoalsRef),
+          gender: _genderLabel(profile, gendersRef),
+          preferredGenders: _labelsFromProfile(
+            null,
+            profile.preferredGenders,
+            preferredGendersRef,
+          ),
           height: profile.height,
           weight: profile.weight,
           smoke: profile.smoke,
@@ -804,10 +764,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (profile.images == null || profile.images!.isEmpty) {
       missing.add('photos');
     }
-    if (profile.interests == null || profile.interests!.length < 3) {
+    final interestCount =
+        profile.interestTitles?.length ?? profile.interests?.length ?? 0;
+    if (interestCount < 3) {
       missing.add('interests');
     }
-    if (profile.jobs == null || profile.jobs!.isEmpty) {
+    final hasJob = (profile.jobTitles != null && profile.jobTitles!.isNotEmpty) ||
+        (profile.jobs != null && profile.jobs!.isNotEmpty);
+    if (!hasJob) {
       missing.add('job');
     }
     if (profile.city == null || profile.city!.isEmpty) {
@@ -875,15 +839,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     } else if (profile == null) {
       bodyContent = const Center(child: Text('No profile data'));
     } else if (isOwn) {
-      bodyContent = ProfileHubView(
-        fullName: _getFullName(profile),
-        avatarUrl: avatarUrl,
-        age: _calculateAge(profile),
-        activityLabel: _activityLabel(profile),
-        creditsLabel: _creditsLabel(profile),
-        isVerified: _badgeVerified(profile),
+      bodyContent = OwnProfileView(
+        profile: profile,
         onViewProfile: () => _openFullProfileView(profile),
-        sections: _profileHubSections(profile),
+        onEditPhotos: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => const ProfileEditPage(),
+            ),
+          );
+        },
+        onAddPhoto: _openImagePicker,
+        onPhotoTap: _openImageViewer,
       );
     } else {
       bodyContent = Column(
@@ -952,7 +920,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.photo_camera),
+                leading: AppSvgIcon(assetPath: AppIcons.camera, size: 24),
                 title: const Text('Take Photo'),
                 onTap: () async {
                   Navigator.of(context).pop();
@@ -979,7 +947,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
+                leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 24),
                 title: const Text('Choose from Gallery'),
                 onTap: () async {
                   Navigator.of(context).pop();
@@ -1006,7 +974,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.cancel),
+                leading: AppSvgIcon(assetPath: AppIcons.close, size: 24),
                 title: const Text('Cancel'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -1063,7 +1031,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
+              icon: AppSvgIcon(
+                assetPath: AppIcons.close,
+                size: 24,
+                color: Colors.white,
+              ),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),

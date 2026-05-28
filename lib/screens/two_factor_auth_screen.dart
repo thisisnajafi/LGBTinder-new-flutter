@@ -8,13 +8,12 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/widgets/app_grouped_list_card.dart';
+import '../core/widgets/app_settings_detail.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
 import '../core/constants/api_endpoints.dart';
+import '../core/providers/api_providers.dart';
 
 /// Two-factor authentication screen - Setup 2FA
 class TwoFactorAuthScreen extends ConsumerStatefulWidget {
@@ -230,21 +229,17 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final surfaceColor = theme.colorScheme.surface;
+    final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
 
-    return AppPageScaffold(
-      title: 'Two-Factor Authentication',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Two-factor authentication',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+          : AppSettingsDetailList(
               children: [
                 // Status card
                 Container(
@@ -299,59 +294,56 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                 SizedBox(height: AppSpacing.spacingXXL),
 
                 if (!_isEnabled) ...[
-                  // Setup instructions
-                  SectionHeader(
-                    title: 'How It Works',
-                    icon: Icons.info,
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  _buildInstructionStep(
+                  AppGroupedListSection(
+                    title: 'How it works',
+                    padding: AppSettingsLayout.sectionPadding,
+                    children: [
+                      _buildInstructionStep(
                     number: '1',
                     title: 'Scan QR Code',
                     description: 'Use an authenticator app to scan the QR code',
                     textColor: textColor,
                     secondaryTextColor: secondaryTextColor,
+                    showDivider: true,
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  _buildInstructionStep(
+                      _buildInstructionStep(
                     number: '2',
                     title: 'Enter Code',
                     description: 'Enter the 6-digit code from your authenticator app',
                     textColor: textColor,
                     secondaryTextColor: secondaryTextColor,
+                    showDivider: true,
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  _buildInstructionStep(
+                      _buildInstructionStep(
                     number: '3',
                     title: 'Save Backup Codes',
                     description: 'Keep your backup codes in a safe place',
                     textColor: textColor,
                     secondaryTextColor: secondaryTextColor,
+                    showDivider: false,
                   ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                  GradientButton(
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.spacingXL),
+                  Padding(
+                    padding: AppSettingsLayout.sectionPadding,
+                    child: GradientButton(
                     text: 'Enable 2FA',
                     onPressed: _enable2FA,
                     isFullWidth: true,
                     icon: Icons.security,
+                    ),
                   ),
                 ] else ...[
                   // QR Code
                   if (_qrCodeUrl != null) ...[
-                    SectionHeader(
-                      title: 'QR Code',
-                      icon: Icons.qr_code,
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Center(
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingLG),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: CachedNetworkImage(
+                    AppGroupedListSection(
+                      title: 'QR code',
+                      padding: AppSettingsLayout.sectionPadding,
+                      children: [
+                        AppSettingsInset(
+                          child: Center(
+                            child: CachedNetworkImage(
                           imageUrl: _qrCodeUrl!,
                           cacheManager: ref.watch(imageCacheServiceProvider),
                           fadeInDuration: const Duration(milliseconds: 200),
@@ -369,27 +361,20 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                               ),
                             );
                           },
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    SizedBox(height: AppSpacing.spacingXXL),
                   ],
 
                   if (_showVerificationStep) ...[
-                    SizedBox(height: AppSpacing.spacingLG),
-                    SectionHeader(
-                      title: 'Verify Setup',
-                      icon: Icons.verified_user,
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingLG),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Column(
+                    AppGroupedListSection(
+                      title: 'Verify setup',
+                      padding: AppSettingsLayout.sectionPadding,
+                      children: [
+                        AppSettingsInset(
+                          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -414,25 +399,19 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                             },
                           ),
                         ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
 
-                  // Backup codes
                   if (_backupCodes.isNotEmpty) ...[
-                    SectionHeader(
-                      title: 'Backup Codes',
-                      icon: Icons.key,
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingLG),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Column(
+                    AppGroupedListSection(
+                      title: 'Backup codes',
+                      padding: AppSettingsLayout.sectionPadding,
+                      children: [
+                        AppSettingsInset(
+                          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -448,7 +427,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                               child: Container(
                                 padding: EdgeInsets.all(AppSpacing.spacingMD),
                                 decoration: BoxDecoration(
-                                  color: backgroundColor,
+                                  color: theme.scaffoldBackgroundColor,
                                   borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                                   border: Border.all(color: borderColor),
                                 ),
@@ -486,12 +465,14 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                             );
                           }),
                         ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: AppSpacing.spacingXXL),
                   ],
-                  // Disable button
-                  OutlinedButton(
+                  Padding(
+                    padding: AppSettingsLayout.sectionPadding,
+                    child: OutlinedButton(
                     onPressed: _disable2FA,
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
@@ -502,6 +483,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                       style: AppTypography.button.copyWith(
                         color: AppColors.notificationRed,
                       ),
+                    ),
                     ),
                   ),
                 ],
@@ -516,49 +498,66 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
     required String description,
     required Color textColor,
     required Color secondaryTextColor,
+    bool showDivider = true,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final theme = Theme.of(context);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: AppColors.accentPurple,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              number,
-              style: AppTypography.body.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(width: AppSpacing.spacingMD),
-        Expanded(
-          child: Column(
+        AppSettingsInset(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: AppTypography.h3.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w600,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: AppColors.accentPurple,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    number,
+                    style: AppTypography.body.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-              SizedBox(height: AppSpacing.spacingXS),
-              Text(
-                description,
-                style: AppTypography.body.copyWith(
-                  color: secondaryTextColor,
+              const SizedBox(width: AppSpacing.spacingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.h3.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+        if (showDivider)
+          Divider(
+            height: 0.5,
+            thickness: 0.5,
+            indent: AppSpacing.spacingMD,
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+          ),
       ],
     );
   }

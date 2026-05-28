@@ -6,7 +6,7 @@ import '../core/widgets/app_bottom_nav_bar.dart';
 import '../pages/discovery_page.dart';
 import '../pages/chat_list_page.dart';
 import '../pages/profile_page.dart';
-import '../screens/settings_screen.dart';
+import '../features/settings/pages/settings_page.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../core/utils/app_logger.dart';
@@ -109,7 +109,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         const ChatListPage(),
         const NotificationsScreen(),
         ProfilePage(userId: profileUserId),
-        const SettingsScreen(),
+        const SettingsPage(),
       ];
 
   @override

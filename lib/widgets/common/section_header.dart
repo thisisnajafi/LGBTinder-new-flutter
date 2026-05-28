@@ -17,6 +17,10 @@ class SectionHeader extends ConsumerWidget {
   final String? iconPath; // SVG icon path
   /// When null, matches section title color (same as list row icons in settings).
   final Color? iconColor;
+  /// Extra space above the section title (e.g. after a group of cards).
+  final double topSpacing;
+  /// Use when the parent [ListView] already applies horizontal padding.
+  final bool compactLayout;
 
   const SectionHeader({
     Key? key,
@@ -26,6 +30,8 @@ class SectionHeader extends ConsumerWidget {
     this.icon,
     this.iconPath,
     this.iconColor,
+    this.topSpacing = 0,
+    this.compactLayout = false,
   }) : super(key: key);
 
   @override
@@ -36,9 +42,11 @@ class SectionHeader extends ConsumerWidget {
     final resolvedIconColor = iconColor ?? textColor;
 
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.spacingLG,
-        vertical: AppSpacing.spacingMD,
+      padding: EdgeInsets.fromLTRB(
+        compactLayout ? 0 : AppSpacing.spacingLG,
+        topSpacing,
+        compactLayout ? 0 : AppSpacing.spacingLG,
+        AppSpacing.spacingMD,
       ),
       child: Row(
         children: [

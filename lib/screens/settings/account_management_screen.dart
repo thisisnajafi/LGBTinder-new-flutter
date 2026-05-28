@@ -5,15 +5,14 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
+import '../../core/widgets/app_grouped_list_card.dart';
+import '../../core/widgets/app_settings_detail.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/confirmation_dialog.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/providers/api_providers.dart';
+import '../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../features/profile/providers/profile_provider.dart';
 import '../../features/profile/providers/profile_providers.dart';
 
@@ -26,11 +25,28 @@ class AccountManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountManagementScreenState extends ConsumerState<AccountManagementScreen> {
-  final _emailController = TextEditingController(text: 'user@example.com');
+  final _emailController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProfileEmail());
+  }
+
+  void _loadProfileEmail() {
+    final profile = ref.read(profilePageCacheProvider).valueOrNull?.profile;
+    final email = profile?.email;
+    if (email != null &&
+        email.isNotEmpty &&
+        email != 'user@unknown.com' &&
+        mounted) {
+      _emailController.text = email;
+    }
+  }
 
   @override
   void dispose() {
@@ -200,37 +216,24 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final borderColor =
+        theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
 
-    return AppPageScaffold(
-      title: 'Account Management',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Account management',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppPageHeader.horizontalPadding,
-              ),
+          : AppSettingsDetailList(
               children: [
-                // Email
-                SectionHeader(
-                  title: 'Email Address',
-                  icon: Icons.email,
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: surfaceColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: TextField(
+                AppGroupedListSection(
+                  title: 'Email address',
+                  padding: AppSettingsLayout.firstSectionPadding,
+                  children: [
+                    AppSettingsInset(
+                      child: TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
@@ -254,32 +257,25 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                       prefixIcon: Icon(Icons.email, color: secondaryTextColor),
                     ),
                     style: AppTypography.body.copyWith(color: textColor),
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: AppSettingsLayout.sectionPadding,
+                  child: GradientButton(
+                    text: 'Update email',
+                    onPressed: _handleChangeEmail,
+                    isFullWidth: true,
+                    icon: Icons.save,
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingMD),
-                GradientButton(
-                  text: 'Update Email',
-                  onPressed: _handleChangeEmail,
-                  isFullWidth: true,
-                  icon: Icons.save,
-                ),
-                DividerCustom(),
-                SizedBox(height: AppSpacing.spacingLG),
-
-                // Change password
-                SectionHeader(
-                  title: 'Change Password',
-                  icon: Icons.lock,
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: surfaceColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Column(
+                AppGroupedListSection(
+                  title: 'Change password',
+                  padding: AppSettingsLayout.sectionPadding,
+                  children: [
+                    AppSettingsInset(
+                      child: Column(
                     children: [
                       TextField(
                         controller: _currentPasswordController,
@@ -359,32 +355,25 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                         style: AppTypography.body.copyWith(color: textColor),
                       ),
                     ],
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: AppSettingsLayout.sectionPadding,
+                  child: GradientButton(
+                    text: 'Change password',
+                    onPressed: _handleChangePassword,
+                    isFullWidth: true,
+                    icon: Icons.lock_reset,
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingMD),
-                GradientButton(
-                  text: 'Change Password',
-                  onPressed: _handleChangePassword,
-                  isFullWidth: true,
-                  icon: Icons.lock_reset,
-                ),
-                DividerCustom(),
-                SizedBox(height: AppSpacing.spacingLG),
-
-                // Danger zone
-                SectionHeader(
-                  title: 'Danger Zone',
-                  icon: Icons.warning,
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingLG),
-                  decoration: BoxDecoration(
-                    color: AppColors.notificationRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    border: Border.all(color: AppColors.notificationRed),
-                  ),
-                  child: Column(
+                AppGroupedListSection(
+                  title: 'Danger zone',
+                  padding: AppSettingsLayout.sectionPadding,
+                  children: [
+                    AppSettingsInset(
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -427,9 +416,10 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                         ),
                       ),
                     ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: AppSpacing.spacingXXL),
               ],
             ),
     );
