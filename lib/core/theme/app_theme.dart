@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'typography.dart';
-import 'spacing_constants.dart';
-import 'border_radius_constants.dart';
 
 /// Main theme configuration for LGBTFinder app
 /// Supports both light and dark modes
@@ -68,6 +66,16 @@ class AppTheme {
     colors: [AppColors.accentGradientStart, AppColors.accentGradientEnd],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
+  );
+
+  /// Splash screen rainbow gradient — sourced from [AppColors.lgbtGradient].
+  static const List<Color> splashGradientColors = AppColors.lgbtGradient;
+
+  static const LinearGradient splashGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: splashGradientColors,
+    stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
   );
 }
 

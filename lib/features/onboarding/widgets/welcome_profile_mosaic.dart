@@ -218,6 +218,8 @@ class _MosaicTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
@@ -235,14 +237,16 @@ class _MosaicTile extends StatelessWidget {
           gradient: gradient,
           borderRadius: BorderRadius.circular(AppRadius.radiusSM),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.35),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.28)
+                : Colors.white.withValues(alpha: 0.55),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+              blurRadius: isDark ? 12 : 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -251,7 +255,7 @@ class _MosaicTile extends StatelessWidget {
                 child: AppSvgIcon(
                   assetPath: AppIcons.userOutline,
                   size: 28,
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               )
             : null,

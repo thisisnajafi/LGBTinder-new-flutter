@@ -238,11 +238,6 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius:
                             BorderRadius.circular(AppRadius.radiusMD),
-                        side: BorderSide(
-                          color: theme.colorScheme.outlineVariant
-                              .withValues(alpha: 0.35),
-                          width: 0.5,
-                        ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Column(
@@ -392,13 +387,7 @@ class _SessionTile extends StatelessWidget {
             ],
           ),
         ),
-        if (showDivider)
-          Divider(
-            height: 0.5,
-            thickness: 0.5,
-            indent: AppSpacing.spacingMD,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-          ),
+        if (showDivider) const AppGroupedRowSeparator(),
       ],
     );
   }

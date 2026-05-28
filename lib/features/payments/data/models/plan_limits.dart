@@ -1,3 +1,5 @@
+import '../../../../shared/models/user_tier.dart';
+
 /// Safe type parsing helpers for plan limits
 /// FIXED: Task 5.2.1 - Added safe type parsing to prevent crashes from backend type mismatches
 class _SafeParser {
@@ -72,10 +74,46 @@ class PlanLimits {
   static PlanLimits? tryParse(dynamic raw) {
     if (raw is! Map<String, dynamic>) return null;
     try {
-      return PlanLimits.fromJson(raw);
+      return PlanLimits.fromJson(raw).correctSwipeLimitsForTier();
     } catch (_) {
       return null;
     }
+  }
+
+  /// Golden / Silder must not be capped by a low `daily_profile` value from the API.
+  PlanLimits correctSwipeLimitsForTier() {
+    final tier = userTierFromPlan(
+      planId: planInfo.planId,
+      planName: planInfo.planName,
+    );
+    if (tier != UserTier.golden && tier != UserTier.silder) {
+      return this;
+    }
+
+    const unlimitedSwipeLimit = 9999;
+    final swipes = usage.swipes;
+    return copyWith(
+      limits: Limits(
+        swipes: LimitDetail(
+          dailyLimit: unlimitedSwipeLimit,
+          isUnlimited: true,
+        ),
+        likes: limits.likes,
+        superlikes: limits.superlikes,
+        messages: limits.messages,
+      ),
+      usage: Usage(
+        swipes: UsageDetail(
+          usedToday: swipes.usedToday,
+          limit: unlimitedSwipeLimit,
+          remaining: unlimitedSwipeLimit,
+          isUnlimited: true,
+        ),
+        likes: usage.likes,
+        superlikes: usage.superlikes,
+        messages: usage.messages,
+      ),
+    );
   }
 
   Map<String, dynamic> toJson() {

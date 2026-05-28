@@ -16,18 +16,26 @@ class WelcomeGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
     return Container(
       width: double.infinity,
       padding: padding ??
-          EdgeInsets.symmetric(
+          const EdgeInsets.symmetric(
             horizontal: AppSpacing.spacingLG,
             vertical: AppSpacing.spacingMD,
           ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.12)
+            : colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.22),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.18)
+              : colorScheme.outlineVariant.withValues(alpha: 0.45),
           width: 1,
         ),
       ),

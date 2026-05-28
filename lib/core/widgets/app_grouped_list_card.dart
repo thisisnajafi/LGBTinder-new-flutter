@@ -52,10 +52,6 @@ class AppGroupedListSection extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-                width: 0.5,
-              ),
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -162,7 +158,9 @@ class AppGroupedListTile extends StatelessWidget {
           ),
         ),
         if (showDivider)
-          _groupedDivider(theme, indent: AppSpacing.spacingMD + 32 + 14),
+          AppGroupedRowSeparator(
+            indent: AppSpacing.spacingMD + 32 + 14,
+          ),
       ],
     );
   }
@@ -207,7 +205,7 @@ class AppGroupedSwitchTile extends StatelessWidget {
             ],
           ),
         ),
-        if (showDivider) _groupedDivider(theme),
+        if (showDivider) const AppGroupedRowSeparator(),
       ],
     );
   }
@@ -265,7 +263,7 @@ class AppGroupedOptionTile extends StatelessWidget {
             ),
           ),
         ),
-        if (showDivider) _groupedDivider(theme),
+        if (showDivider) const AppGroupedRowSeparator(),
       ],
     );
   }
@@ -338,7 +336,7 @@ class AppGroupedSoundOptionTile extends StatelessWidget {
             ),
           ),
         ),
-        if (showDivider) _groupedDivider(theme),
+        if (showDivider) const AppGroupedRowSeparator(),
       ],
     );
   }
@@ -406,7 +404,7 @@ class AppGroupedInfoTile extends StatelessWidget {
             ],
           ),
         ),
-        if (showDivider) _groupedDivider(theme),
+        if (showDivider) const AppGroupedRowSeparator(),
       ],
     );
   }
@@ -445,11 +443,30 @@ class _GroupedRowLabels extends StatelessWidget {
   }
 }
 
-Divider _groupedDivider(ThemeData theme, {double indent = AppSpacing.spacingMD}) {
-  return Divider(
-    height: 0.5,
-    thickness: 0.5,
-    indent: indent,
-    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-  );
+/// Inset separator between rows inside a grouped settings card.
+class AppGroupedRowSeparator extends StatelessWidget {
+  final double indent;
+  final double endIndent;
+
+  const AppGroupedRowSeparator({
+    super.key,
+    this.indent = AppSpacing.spacingMD,
+    this.endIndent = AppSpacing.spacingMD,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.spacingSM),
+      child: Divider(
+        height: 0.5,
+        thickness: 0.5,
+        indent: indent,
+        endIndent: endIndent,
+        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+      ),
+    );
+  }
 }

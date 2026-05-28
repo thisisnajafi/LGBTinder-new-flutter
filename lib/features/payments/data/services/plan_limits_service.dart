@@ -44,7 +44,7 @@ class PlanLimitsService {
 
       final parsed = PlanLimits.tryParse(response.data);
       if (parsed != null) {
-        _cachedLimits = parsed;
+        _cachedLimits = parsed.correctSwipeLimitsForTier();
         _lastFetchTime = DateTime.now();
         return _cachedLimits!;
       }

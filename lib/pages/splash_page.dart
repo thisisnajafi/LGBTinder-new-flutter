@@ -5,12 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../core/constants/animation_constants.dart';
-import '../core/theme/app_colors.dart';
-import '../core/theme/spacing_constants.dart';
+import '../core/theme/app_theme.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
-import '../core/widgets/splash_arc_loader.dart';
 import '../shared/services/token_storage_service.dart';
 import '../shared/services/onboarding_service.dart';
 import '../widgets/navbar/lgbtfinder_logo.dart';
@@ -26,15 +25,32 @@ class SplashPage extends ConsumerStatefulWidget {
 }
 
 class _SplashPageState extends ConsumerState<SplashPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const Duration _splashDelay = Duration(milliseconds: 400);
   static const Duration _tokenCheckTimeout = Duration(seconds: 4);
   static const Duration _absoluteMaxOnSplash = Duration(seconds: 8);
 
   bool _redirected = false;
+  bool _dotsStarted = false;
   Timer? _absoluteEscapeTimer;
+  Timer? _dotsDelayTimer;
+
   late AnimationController _logoController;
+  late AnimationController _dotsController;
+
   late Animation<double> _logoScale;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _titleSlide;
+  late Animation<double> _titleFade;
+  late Animation<Offset> _taglineSlide;
+  late Animation<double> _taglineFade;
+  late Animation<double> _dotsFade;
+
+  late Animation<double> _dot1Anim;
+  late Animation<double> _dot2Anim;
+  late Animation<double> _dot3Anim;
+
+  final Future<PackageInfo> _packageInfoFuture = PackageInfo.fromPlatform();
 
   @override
   void initState() {
@@ -44,14 +60,77 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 1400),
     );
-    _logoScale = Tween<double>(begin: 0.92, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _logoController,
-        curve: Curves.easeOutCubic,
+    _dotsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _logoScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.08)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 42,
       ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.08, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 16,
+      ),
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 42),
+    ]).animate(_logoController);
+
+    _logoFade = CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
     );
+
+    _titleSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.35, 0.70, curve: Curves.easeOutCubic),
+    ));
+
+    _titleFade = CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.35, 0.70, curve: Curves.easeOutCubic),
+    );
+
+    _taglineSlide = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.45, 0.78, curve: Curves.easeOutCubic),
+    ));
+
+    _taglineFade = CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.45, 0.78, curve: Curves.easeOutCubic),
+    );
+
+    _dotsFade = CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.65, 0.85, curve: Curves.easeIn),
+    );
+
+    _dot1Anim = CurvedAnimation(
+      parent: _dotsController,
+      curve: const Interval(0.0, 0.4, curve: Curves.linear),
+    );
+    _dot2Anim = CurvedAnimation(
+      parent: _dotsController,
+      curve: const Interval(0.15, 0.55, curve: Curves.linear),
+    );
+    _dot3Anim = CurvedAnimation(
+      parent: _dotsController,
+      curve: const Interval(0.30, 0.70, curve: Curves.linear),
+    );
+
+    _logoController.addStatusListener(_onLogoAnimationStatus);
 
     _absoluteEscapeTimer = Timer(_absoluteMaxOnSplash, () {
       if (_redirected || !mounted) return;
@@ -63,6 +142,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       if (!mounted) return;
       if (AppAnimations.animationsEnabled(context)) {
         _logoController.forward();
+        _dotsDelayTimer = Timer(const Duration(milliseconds: 900), _startDots);
       } else {
         _logoController.value = 1;
       }
@@ -70,10 +150,27 @@ class _SplashPageState extends ConsumerState<SplashPage>
     });
   }
 
+  void _onLogoAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _startDots();
+    }
+  }
+
+  void _startDots() {
+    if (_dotsStarted || !mounted) return;
+    _dotsStarted = true;
+    if (AppAnimations.animationsEnabled(context)) {
+      _dotsController.repeat();
+    }
+  }
+
   @override
   void dispose() {
     _absoluteEscapeTimer?.cancel();
+    _dotsDelayTimer?.cancel();
+    _logoController.removeStatusListener(_onLogoAnimationStatus);
     _logoController.dispose();
+    _dotsController.dispose();
     super.dispose();
   }
 
@@ -180,7 +277,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
           _goToWelcome(tokenStorage);
           return;
         }
-        // Non-auth failures (e.g. 403 plan gate) — keep stored session.
         authLog('Splash: check-token status=$code with token → home');
         _goToHome();
       } on DioException catch (e) {
@@ -210,63 +306,201 @@ class _SplashPageState extends ConsumerState<SplashPage>
     }
   }
 
+  double _pulseScale(double t) {
+    if (t <= 0.0 || t >= 1.0) return 1.0;
+    if (t <= 0.5) return 1.0 + t;
+    return 1.5 - (t - 0.5);
+  }
+
+  Widget _buildLogoCircle() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 124,
+          height: 124,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.18),
+          ),
+        ),
+        Container(
+          width: 108,
+          height: 108,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 24,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Image.asset(
+              LGBTFinderLogo.assetPath,
+              width: 56,
+              height: 56,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPulsingDots({required bool animationsEnabled}) {
+    Widget dot(Animation<double> anim) {
+      if (!animationsEnabled) {
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
+        );
+      }
+      return AnimatedBuilder(
+        animation: anim,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _pulseScale(anim.value),
+            child: child,
+          );
+        },
+        child: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        dot(_dot1Anim),
+        const SizedBox(width: 8),
+        dot(_dot2Anim),
+        const SizedBox(width: 8),
+        dot(_dot3Anim),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final animationsEnabled = AppAnimations.animationsEnabled(context);
+    final titleFontSize = textTheme.displaySmall?.fontSize ?? 24.0;
+    final taglineFontSize = textTheme.bodyLarge?.fontSize ?? 16.0;
 
     return Scaffold(
       body: RepaintBoundary(
-        child: Container(
-          decoration: const BoxDecoration(gradient: AppColors.prideGradient),
-          child: SafeArea(
-            child: Center(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.splashGradient,
+                ),
+              ),
+            ),
+            Positioned(
+              top: screenHeight * 0.30,
+              left: 0,
+              right: 0,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  ScaleTransition(
-                    scale: _logoScale,
-                    child: Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingXL),
-                      decoration: BoxDecoration(
-                        color: AppColors.backgroundLight,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.backgroundDark.withValues(alpha: 0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                  FadeTransition(
+                    opacity: _logoFade,
+                    child: ScaleTransition(
+                      scale: _logoScale,
+                      child: _buildLogoCircle(),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SlideTransition(
+                    position: _titleSlide,
+                    child: FadeTransition(
+                      opacity: _titleFade,
+                      child: Text(
+                        'LGBTFinder',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                      child: const LGBTFinderLogo(size: 80),
                     ),
                   ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                  Text(
-                    'LGBTFinder',
-                    style: textTheme.displayLarge?.copyWith(
-                      color: AppColors.textPrimaryDark,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
+                  const SizedBox(height: 10),
+                  SlideTransition(
+                    position: _taglineSlide,
+                    child: FadeTransition(
+                      opacity: _taglineFade,
+                      child: Text(
+                        'Find your perfect match',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: taglineFontSize,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withValues(alpha: 0.82),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Text(
-                    'Find your perfect match',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AppColors.textPrimaryDark.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingXXL),
-                  const SplashArcLoader(
-                    size: 44,
-                    strokeWidth: 3,
-                    color: AppColors.accentRose,
                   ),
                 ],
               ),
             ),
-          ),
+            Positioned(
+              bottom: screenHeight * 0.12,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: FadeTransition(
+                  opacity: _dotsFade,
+                  child: _buildPulsingDots(
+                    animationsEnabled: animationsEnabled,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: FutureBuilder<PackageInfo>(
+                future: _packageInfoFuture,
+                builder: (context, snapshot) {
+                  final version = snapshot.hasData
+                      ? 'v${snapshot.data!.version}'
+                      : 'v1.0.0';
+                  return Text(
+                    version,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.40),
+                      fontSize: 12,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

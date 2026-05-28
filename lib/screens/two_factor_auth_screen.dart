@@ -551,13 +551,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
             ],
           ),
         ),
-        if (showDivider)
-          Divider(
-            height: 0.5,
-            thickness: 0.5,
-            indent: AppSpacing.spacingMD,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-          ),
+        if (showDivider) const AppGroupedRowSeparator(),
       ],
     );
   }

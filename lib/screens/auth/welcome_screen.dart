@@ -120,18 +120,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildBrandingBlock(BuildContext context, {required bool animated}) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final onSurface = theme.colorScheme.onSurface;
     final titleStyle = textTheme.displayLarge?.copyWith(
       fontWeight: FontWeight.w900,
       letterSpacing: 1.5,
-      color: AppColors.textPrimaryDark,
+      color: onSurface,
     );
     final taglineStyle = textTheme.displaySmall?.copyWith(
-      color: AppColors.textPrimaryDark,
+      color: onSurface,
       fontWeight: FontWeight.w600,
     );
     final bodyStyle = textTheme.bodyLarge?.copyWith(
-      color: AppColors.textPrimaryDark.withValues(alpha: 0.9),
+      color: onSurface.withValues(alpha: 0.75),
       height: 1.6,
     );
 
@@ -179,24 +181,26 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildLogo(BuildContext context, {required bool animated}) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final width = MediaQuery.sizeOf(context).width;
+    final logoSize = (width * 0.28).clamp(104.0, 132.0);
+
     final logo = Semantics(
       label: 'LGBTFinder logo',
-      child: Container(
-        padding: EdgeInsets.all(AppSpacing.spacingMD),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: AppColors.textPrimaryDark.withValues(alpha: 0.35),
-              blurRadius: 32,
-            ),
-            BoxShadow(
-              color: AppColors.backgroundDark.withValues(alpha: 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: theme.colorScheme.shadow.withValues(
+                alpha: isDark ? 0.22 : 0.06,
+              ),
+              blurRadius: isDark ? 16 : 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: const LGBTFinderLogo(size: 72),
+        child: LGBTFinderLogo(size: logoSize),
       ),
     );
 
@@ -220,6 +224,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildActions(BuildContext context, {required bool animated}) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     final actions = Column(
       children: [
         Semantics(
@@ -241,7 +247,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             child: TextButton(
               onPressed: () => context.go(AppRoutes.login),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.textPrimaryDark,
+                foregroundColor: onSurface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.radiusLG),
                 ),
@@ -249,7 +255,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               child: Text(
                 'Sign In',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: onSurface,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -294,17 +300,25 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       });
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final size = MediaQuery.of(context).size;
     final mosaicHeight = size.height * 0.32;
     final animated = !_minimalFirstFrame;
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(gradient: AppColors.brandGradient),
-          ),
-          if (_showFloatingShapes && !kDebugMode)
+          if (isDark)
+            const DecoratedBox(
+              decoration: BoxDecoration(gradient: AppColors.brandGradient),
+              child: SizedBox.expand(),
+            )
+          else
+            ColoredBox(color: colorScheme.surface),
+          if (_showFloatingShapes && !kDebugMode && isDark)
             RepaintBoundary(
               child: Stack(
                 children: [
@@ -313,7 +327,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     left: size.width * 0.08,
                     child: _FloatingShape(
                       size: 64,
-                      color: AppColors.textPrimaryDark.withValues(alpha: 0.1),
+                      color: colorScheme.onSurface.withValues(alpha: 0.1),
                       animation: _floatingAnimation,
                     ),
                   ),
@@ -322,7 +336,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     right: size.width * 0.1,
                     child: _FloatingShape(
                       size: 48,
-                      color: AppColors.textPrimaryDark.withValues(alpha: 0.08),
+                      color: colorScheme.onSurface.withValues(alpha: 0.08),
                       animation: _floatingAnimation,
                       phaseOffset: 2 * math.pi / 3,
                     ),
