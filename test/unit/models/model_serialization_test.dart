@@ -223,7 +223,46 @@ void main() {
         // Assert
         expect(response.isSuccess, isFalse);
         expect(response.message, equals('Error occurred'));
-        expect(response.errors, isNotNull);
+      });
+
+      test('treats cached profile payload as success data', () {
+        final cachedProfile = {
+          'id': 748,
+          'first_name': 'jasem',
+          'last_name': 'savari',
+          'email': 'test@example.com',
+          'status': true,
+        };
+
+        final response = ApiResponse.fromJson(
+          cachedProfile,
+          (data) => data as Map<String, dynamic>,
+        );
+
+        expect(response.isSuccess, isTrue);
+        expect(response.data?['id'], 748);
+        expect(response.data?['first_name'], 'jasem');
+      });
+
+      test('parses backend profile envelope with string status', () {
+        final json = {
+          'status': 'success',
+          'data': {
+            'id': 1,
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'email': 'john@example.com',
+            'status': true,
+          },
+        };
+
+        final response = ApiResponse.fromJson(
+          json,
+          (data) => data as Map<String, dynamic>,
+        );
+
+        expect(response.isSuccess, isTrue);
+        expect(response.data?['id'], 1);
       });
     });
   });

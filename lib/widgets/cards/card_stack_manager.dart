@@ -2,12 +2,10 @@
 // Card stack manager with horizontal swipe gestures
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/typography.dart';
 import '../../core/constants/animation_constants.dart';
 import 'swipeable_card.dart';
-import '../error_handling/empty_state.dart';
+import '../../features/discover/widgets/discover_empty_state.dart';
 import '../../core/widgets/loading_indicator.dart';
 
 /// Card stack manager widget
@@ -15,7 +13,7 @@ import '../../core/widgets/loading_indicator.dart';
 class CardStackManager extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> cards;
   final Function(int userId, String action)? onSwipe;
-  final Function(int userId)? onCardTap;
+  final Function(int userId)? onViewProfile;
   final bool isLoading;
   final VoidCallback? onRefresh;
   final String? emptyActionLabel;
@@ -27,7 +25,7 @@ class CardStackManager extends ConsumerStatefulWidget {
     super.key,
     required this.cards,
     this.onSwipe,
-    this.onCardTap,
+    this.onViewProfile,
     this.isLoading = false,
     this.onRefresh,
     this.emptyActionLabel,
@@ -44,6 +42,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     with TickerProviderStateMixin {
   Map<String, dynamic>? _exitingCardSnapshot;
   Offset _dragOffset = Offset.zero;
+  bool _isCardExpanded = false;
   late AnimationController _exitController;
   late Animation<Offset> _exitSlide;
   late Animation<double> _exitFade;
@@ -72,6 +71,12 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   @override
   void didUpdateWidget(CardStackManager oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final oldTopId =
+        oldWidget.cards.isNotEmpty ? oldWidget.cards.first['id'] : null;
+    final newTopId = widget.cards.isNotEmpty ? widget.cards.first['id'] : null;
+    if (oldTopId != newTopId) {
+      _isCardExpanded = false;
+    }
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
       _dragOffset = Offset.zero;
     }
@@ -106,6 +111,29 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
   void _onPanEnd(DragEndDetails details) {
     if (_exitingCardSnapshot != null) return;
+    final isPrimarilyVertical =
+        _dragOffset.dy.abs() > (_dragOffset.dx.abs() * 1.35);
+    if (isPrimarilyVertical) {
+      if (_dragOffset.dy < -100 || details.velocity.pixelsPerSecond.dy < -300) {
+        setState(() {
+          _isCardExpanded = true;
+          _dragOffset = Offset.zero;
+        });
+        return;
+      }
+      if (_isCardExpanded &&
+          (_dragOffset.dy > 100 || details.velocity.pixelsPerSecond.dy > 300)) {
+        setState(() {
+          _isCardExpanded = false;
+          _dragOffset = Offset.zero;
+        });
+        return;
+      }
+    }
+    if (_isCardExpanded) {
+      setState(() => _dragOffset = Offset.zero);
+      return;
+    }
     if (_dragOffset.dx > _swipeThreshold) {
       _handleAction('like');
       return;
@@ -124,16 +152,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     }
 
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
-      return EmptyState(
-        title: 'No more profiles',
-        message:
-            'Try widening filters or expanding distance to find more people.',
-        icon: Icons.person_outline,
-        actionLabel: widget.emptyActionLabel ??
-            (widget.onRefresh != null ? 'Refresh' : null),
-        onAction: widget.onEmptyAction ?? widget.onRefresh,
-        secondaryActionLabel: widget.emptySecondaryActionLabel,
-        onSecondaryAction: widget.onEmptySecondaryAction,
+      return DiscoverEmptyState(
+        onAdjustFilters: widget.onEmptyAction ?? widget.onRefresh,
       );
     }
 
@@ -214,43 +234,82 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   }
 
   Widget _buildSwipeOverlay() {
-    if (_dragOffset.dx.abs() < 12) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final likeOpacity = (_dragOffset.dx / 80.0).clamp(0.0, 1.0);
+    final nopeOpacity = ((-_dragOffset.dx) / 80.0).clamp(0.0, 1.0);
+    final superOpacity = ((-_dragOffset.dy) / 60.0).clamp(0.0, 1.0);
+    final likeColor = theme.colorScheme.tertiary;
+    final nopeColor = theme.colorScheme.error;
+    final superColor = theme.colorScheme.primary;
 
-    final isLike = _dragOffset.dx > 0;
-    final opacity = (_dragOffset.dx.abs() / _swipeThreshold).clamp(0.0, 1.0);
-
-    return Positioned(
-      top: 48,
-      left: isLike ? 32 : null,
-      right: isLike ? null : 32,
-      child: Opacity(
+    Widget label({
+      required String text,
+      required Color color,
+      required double opacity,
+      required double angle,
+    }) {
+      return Opacity(
         opacity: opacity,
         child: Transform.rotate(
-          angle: isLike ? -0.35 : 0.35,
+          angle: angle,
           child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingMD,
-              vertical: AppSpacing.spacingSM,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
               border: Border.all(
-                color:
-                    isLike ? AppColors.onlineGreen : AppColors.notificationRed,
-                width: 3,
+                color: color,
+                width: 2.5,
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              isLike ? 'LIKE' : 'NOPE',
-              style: AppTypography.h2.copyWith(
-                color:
-                    isLike ? AppColors.onlineGreen : AppColors.notificationRed,
+              text,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: color,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 2,
               ),
             ),
           ),
         ),
+      );
+    }
+
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned(
+            top: 20,
+            left: 20,
+            child: label(
+              text: 'LIKE',
+              color: likeColor,
+              opacity: likeOpacity,
+              angle: -0.2,
+            ),
+          ),
+          Positioned(
+            top: 20,
+            right: 20,
+            child: label(
+              text: 'NOPE',
+              color: nopeColor,
+              opacity: nopeOpacity,
+              angle: 0.2,
+            ),
+          ),
+          Positioned(
+            top: 20,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: label(
+                text: 'SUPER',
+                color: superColor,
+                opacity: superOpacity,
+                angle: 0,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -271,10 +330,27 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       avatarUrl: cardData['avatar_url'],
       imageUrls: cardData['image_urls']?.cast<String>(),
       bio: cardData['bio'],
+      interests: (cardData['interests'] as List?)
+          ?.map((item) => item.toString())
+          .toList(),
+      sharedInterests: (cardData['shared_interests'] as List?)
+          ?.map((item) => item.toString())
+          .toList(),
+      jobTitle: cardData['job']?.toString() ?? cardData['job_title']?.toString(),
+      educationTitle: cardData['education']?.toString() ??
+          cardData['education_title']?.toString(),
       isVerified: cardData['is_verified'] ?? false,
       isPremium: cardData['is_premium'] ?? false,
       distance: cardData['distance']?.toDouble(),
       compatibilityScore: (cardData['compatibility_score'] as num?)?.toInt(),
+      isExpanded: depth == 0 ? _isCardExpanded : false,
+      onExpandedChanged: depth == 0
+          ? (expanded) {
+              setState(() {
+                _isCardExpanded = expanded;
+              });
+            }
+          : null,
       isBackgroundPreview: isBackgroundPreview,
       onLike: depth == 0 && _exitingCardSnapshot == null
           ? () => _handleAction('like')
@@ -285,7 +361,9 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       onSuperlike: depth == 0 && _exitingCardSnapshot == null
           ? () => _handleAction('superlike')
           : null,
-      onTap: () => widget.onCardTap?.call(userId),
+      onViewProfile: depth == 0
+          ? () => widget.onViewProfile?.call(userId)
+          : null,
     );
   }
 
@@ -294,6 +372,9 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     if (action == 'superlike') {
       final userId = widget.cards[0]['id'] as int? ?? 0;
+      if (_isCardExpanded) {
+        setState(() => _isCardExpanded = false);
+      }
       widget.onSwipe?.call(userId, 'superlike');
       return;
     }
@@ -319,6 +400,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     setState(() {
       _exitingCardSnapshot = exitingCard;
       _dragOffset = Offset.zero;
+      _isCardExpanded = false;
     });
 
     widget.onSwipe?.call(userId, action);

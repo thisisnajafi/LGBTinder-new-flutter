@@ -5,22 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/cards/card_stack_manager.dart';
-import '../core/widgets/loading_indicator.dart';
-import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_discovery.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/discover/providers/discovery_providers.dart';
 import '../features/discover/data/models/discovery_profile.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart';
-import '../features/matching/providers/likes_providers.dart';
 import '../features/matching/data/models/match.dart' as match_models;
 import '../features/matching/widgets/match_celebration_launcher.dart';
-import '../features/payments/providers/payment_providers.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/payments/data/models/plan_limits.dart';
 import '../widgets/premium/upgrade_dialog.dart';
@@ -28,9 +22,7 @@ import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
-import '../features/chat/providers/chat_providers.dart';
 import '../core/utils/app_icons.dart';
-import '../widgets/buttons/scale_tap_feedback.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
@@ -38,15 +30,16 @@ import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
 import '../core/widgets/cached_content_banner.dart';
+import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../routes/app_router.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
   const DiscoveryPage({
-    Key? key,
+    super.key,
     this.selectedTabIndex,
     this.discoveryTabIndex,
-  }) : super(key: key);
+  });
 
   /// When used inside a tab shell (e.g. HomePage), pass current tab index so we call nearby-suggestions when user switches to this tab.
   final int? selectedTabIndex;
@@ -87,45 +80,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         filters: _activeFilters,
       );
     }
-  }
-
-  Widget _buildDiscoveryActionButton({
-    required String icon,
-    required VoidCallback onPressed,
-    required double size,
-    Color? fillColor,
-    required bool filled,
-    required bool outlined,
-  }) {
-    final theme = Theme.of(context);
-    final fill = fillColor ?? theme.colorScheme.primary;
-
-    return ScaleTapFeedback(
-      onTap: onPressed,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: filled ? fill : Colors.transparent,
-          border: outlined
-              ? Border.all(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
-                  width: 1.5,
-                )
-              : null,
-        ),
-        child: Center(
-          child: AppSvgIcon(
-            assetPath: icon,
-            size: filled && size <= 44 ? 22 : 24,
-            color: filled
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurface.withValues(alpha: 0.55),
-          ),
-        ),
-      ),
-    );
   }
 
   void _handleAction(String action) {
@@ -303,14 +257,16 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       'id': profile.id,
       'name': profile.firstName,
       'age': profile.age,
+      'country': profile.country,
+      'gender': profile.gender,
       'location': profile.city != null && profile.country != null
           ? '${profile.city}, ${profile.country}'
           : profile.city ?? profile.country ?? '',
       'avatar_url': profile.primaryImageUrl ?? profile.imageUrls?.first,
       'image_urls': profile.imageUrls ?? [profile.primaryImageUrl].whereType<String>().toList(),
       'bio': profile.profileBio ?? '',
-      'is_verified': profile?.isVerified ?? false,
-      'is_premium': profile?.isPremium ?? false,
+      'is_verified': profile.isVerified ?? false,
+      'is_premium': profile.isPremium ?? false,
       'distance': profile.distance,
       'compatibility_score': profile.compatibilityScore,
       'is_superliked': profile.isSuperliked ?? false,
@@ -331,8 +287,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
       if (action == 'like' || action == 'dislike') {
         final hasReached = await _hasReachedSwipeLimit(planLimitsService);
-        if (hasReached && mounted) {
+        if (!mounted) return false;
+        if (hasReached) {
           final limits = await planLimitsService.getPlanLimits();
+          if (!mounted) return false;
           UpgradeDialog.showSwipeLimitDialog(
             context,
             limits.usage.swipes.usedToday,
@@ -519,13 +477,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: remaining > 3
-                ? AppColors.onlineGreen.withOpacity(0.1)
-                : AppColors.warningYellow.withOpacity(0.1),
+                ? AppColors.onlineGreen.withValues(alpha: 0.1)
+                : AppColors.warningYellow.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: remaining > 3
-                  ? AppColors.onlineGreen.withOpacity(0.3)
-                  : AppColors.warningYellow.withOpacity(0.3),
+                  ? AppColors.onlineGreen.withValues(alpha: 0.3)
+                  : AppColors.warningYellow.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -628,6 +586,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Widget _buildHeaderActions(BuildContext context, bool isDark) {
     final iconColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final iconBackgroundColor = Theme.of(context).colorScheme.onSurface.withValues(
+      alpha: 0.08,
+    );
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -641,55 +602,91 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                       error: (_, __) => null,
                     );
 
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.notification,
-                    size: 24,
-                    color: iconColor,
-                  ),
-                  onPressed: () =>
-                      context.go('${AppRoutes.home}/notifications'),
-                ),
-                if (notificationCount != null && notificationCount > 0)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: AppColors.notificationRed,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
-                      ),
-                      child: Text(
-                        notificationCount > 99 ? '99+' : '$notificationCount',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
+            final hasUnreadNotifications =
+                notificationCount != null && notificationCount > 0;
+            return _buildHeaderIconButton(
+              context: context,
+              iconPath: AppIcons.notification,
+              iconColor: iconColor,
+              backgroundColor: iconBackgroundColor,
+              semanticLabel: 'Notifications',
+              onTap: () => context.go('${AppRoutes.home}/notifications'),
+              showBadge: hasUnreadNotifications,
             );
           },
         ),
-        IconButton(
-          icon: AppSvgIcon(
-            assetPath: AppIcons.filter,
-            size: 24,
-            color: iconColor,
-          ),
-          onPressed: _openFilters,
+        const SizedBox(width: AppSpacing.spacingXS),
+        _buildHeaderIconButton(
+          context: context,
+          iconPath: AppIcons.filter,
+          iconColor: iconColor,
+          backgroundColor: iconBackgroundColor,
+          semanticLabel: 'Open filters',
+          onTap: _openFilters,
         ),
       ],
+    );
+  }
+
+  Widget _buildHeaderIconButton({
+    required BuildContext context,
+    required String iconPath,
+    required Color iconColor,
+    required Color backgroundColor,
+    required String semanticLabel,
+    required VoidCallback onTap,
+    bool showBadge = false,
+  }) {
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: Ink(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                shape: BoxShape.circle,
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onTap,
+                    child: Center(
+                      child: AppSvgIcon(
+                        assetPath: iconPath,
+                        size: 22,
+                        color: iconColor,
+                      ),
+                    ),
+                  ),
+                  if (showBadge)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -712,7 +709,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               title: 'Discover',
               action: _buildHeaderActions(context, isDark),
             ),
-            const SizedBox(height: AppSpacing.spacingLG),
+            const DiscoverGreetingWidget(),
             const CachedContentBanner(),
             // Limit indicator
             _buildLimitIndicator(),
@@ -725,7 +722,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   : CardStackManager(
                       cards: cards,
                       onSwipe: _onCardStackSwipe,
-                      onCardTap: _handleCardTap,
+                      onViewProfile: _handleCardTap,
                       isLoading: false,
                       onRefresh: () async {
                         await ref.read(appCacheManagerProvider).revalidateAll();
@@ -754,32 +751,38 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _buildDiscoveryActionButton(
+                        semanticLabel: 'Dislike profile',
                         icon: AppIcons.close,
                         onPressed: _isSwipeInProgress
-                            ? () {}
+                            ? null
                             : () => _handleAction('dislike'),
-                        size: 52,
-                        filled: false,
-                        outlined: true,
-                      ),
-                      const SizedBox(width: AppSpacing.spacingXL),
-                      _buildDiscoveryActionButton(
-                        icon: AppIcons.star,
-                        onPressed: _isSwipeInProgress
-                            ? () {}
-                            : () => _handleAction('superlike'),
-                        size: 44,
-                        fillColor: AppColors.warningYellow,
+                        size: 58,
+                        fillColor: AppColors.feedbackError,
                         filled: true,
                         outlined: false,
                       ),
                       const SizedBox(width: AppSpacing.spacingXL),
                       _buildDiscoveryActionButton(
+                        semanticLabel: 'Super like profile',
+                        icon: AppIcons.star,
+                        onPressed: _isSwipeInProgress
+                            ? null
+                            : () => _handleAction('superlike'),
+                        size: 54,
+                        fillColor: AppColors.accentPurple,
+                        filled: true,
+                        outlined: false,
+                        enableStarRotation: true,
+                      ),
+                      const SizedBox(width: AppSpacing.spacingXL),
+                      _buildDiscoveryActionButton(
+                        semanticLabel: 'Like profile',
                         icon: AppIcons.heart,
                         onPressed: _isSwipeInProgress
-                            ? () {}
+                            ? null
                             : () => _handleAction('like'),
-                        size: 52,
+                        size: 58,
+                        fillColor: AppColors.onlineGreen,
                         filled: true,
                         outlined: false,
                       ),
@@ -788,6 +791,212 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryActionButton({
+    required String semanticLabel,
+    required String icon,
+    required VoidCallback? onPressed,
+    required double size,
+    Color? fillColor,
+    required bool filled,
+    required bool outlined,
+    bool enableStarRotation = false,
+  }) {
+    final theme = Theme.of(context);
+    final fill = fillColor ?? theme.colorScheme.primary;
+    return _DiscoveryActionButton(
+      semanticLabel: semanticLabel,
+      iconPath: icon,
+      onPressed: onPressed,
+      size: size,
+      fillColor: fill,
+      filled: filled,
+      outlined: outlined,
+      enableStarRotation: enableStarRotation,
+    );
+  }
+}
+
+class _DiscoveryActionButton extends StatefulWidget {
+  const _DiscoveryActionButton({
+    required this.semanticLabel,
+    required this.iconPath,
+    required this.onPressed,
+    required this.size,
+    required this.fillColor,
+    required this.filled,
+    required this.outlined,
+    this.enableStarRotation = false,
+  });
+
+  final String semanticLabel;
+  final String iconPath;
+  final VoidCallback? onPressed;
+  final double size;
+  final Color fillColor;
+  final bool filled;
+  final bool outlined;
+  final bool enableStarRotation;
+
+  @override
+  State<_DiscoveryActionButton> createState() => _DiscoveryActionButtonState();
+}
+
+class _DiscoveryActionButtonState extends State<_DiscoveryActionButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _rotation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+      reverseDuration: const Duration(milliseconds: 180),
+      lowerBound: 0,
+      upperBound: 1,
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.92).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
+        reverseCurve: Curves.easeOutCubic,
+      ),
+    );
+    _rotation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 0.08).chain(
+          CurveTween(curve: Curves.easeOutBack),
+        ),
+        weight: 120,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.08, end: 0.0).chain(
+          CurveTween(curve: Curves.easeOutBack),
+        ),
+        weight: 130,
+      ),
+    ]).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _animatePressDown(bool disableAnimations) async {
+    if (disableAnimations) return;
+    _controller.duration = const Duration(milliseconds: 100);
+    await _controller.animateTo(0.4, curve: Curves.easeOutCubic);
+  }
+
+  Future<void> _animateRelease(bool disableAnimations) async {
+    if (disableAnimations) return;
+    _controller.reverseDuration = const Duration(milliseconds: 180);
+    await _controller.animateBack(0.0, curve: Curves.easeOutCubic);
+  }
+
+  Future<void> _animateSuperlikePulse(bool disableAnimations) async {
+    if (disableAnimations || !widget.enableStarRotation) return;
+    _controller.duration = const Duration(milliseconds: 250);
+    await _controller.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    final iconColor = widget.filled
+        ? Colors.white
+        : theme.colorScheme.onSurface.withValues(alpha: 0.55);
+
+    return Semantics(
+      button: true,
+      enabled: widget.onPressed != null,
+      label: widget.semanticLabel,
+      child: SizedBox(
+        width: widget.size < 48 ? 48 : widget.size,
+        height: widget.size < 48 ? 48 : widget.size,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => _animatePressDown(disableAnimations),
+          onTapCancel: () => _animateRelease(disableAnimations),
+          onTapUp: (_) => _animateRelease(disableAnimations),
+          onTap: widget.onPressed == null
+              ? null
+              : () async {
+                  await _animateSuperlikePulse(disableAnimations);
+                  widget.onPressed?.call();
+                },
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final scale = disableAnimations ? 1.0 : _scale.value;
+              return Transform.scale(
+                scale: scale,
+                child: child,
+              );
+            },
+            child: Container(
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.filled
+                    ? widget.fillColor
+                    : theme.colorScheme.surface.withValues(alpha: 0.15),
+                border: widget.outlined
+                    ? Border.all(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.28),
+                        width: 1.5,
+                      )
+                    : Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        width: 1,
+                      ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.22),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                  BoxShadow(
+                    color: (widget.filled ? widget.fillColor : Colors.white)
+                        .withValues(alpha: widget.filled ? 0.28 : 0.08),
+                    blurRadius: widget.filled ? 22 : 8,
+                    spreadRadius: widget.filled ? 1 : 0,
+                    offset: const Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    final turns = (widget.enableStarRotation && !disableAnimations)
+                        ? _rotation.value
+                        : 0.0;
+                    return RotationTransition(
+                      turns: AlwaysStoppedAnimation<double>(turns),
+                      child: child,
+                    );
+                  },
+                  child: AppSvgIcon(
+                    assetPath: widget.iconPath,
+                    size: widget.filled && widget.size <= 44 ? 22 : 24,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -19,6 +19,7 @@ class ProfileService {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.profile,
         fromJson: (json) => json as Map<String, dynamic>,
+        useCache: false,
       );
 
       profileLog(
@@ -39,7 +40,11 @@ class ProfileService {
         }
       } else {
         profileLog('getMyProfile: API returned failure — ${response.message}');
-        throw Exception(response.message);
+        throw Exception(
+          response.message.isNotEmpty
+              ? response.message
+              : 'Failed to load profile',
+        );
       }
     } on ApiError catch (e) {
       profileLogError('getMyProfile', e);

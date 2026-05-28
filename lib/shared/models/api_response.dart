@@ -17,6 +17,14 @@ class ApiResponse<T> {
     Map<String, dynamic> json,
     T Function(dynamic)? fromJsonT,
   ) {
+    if (!_looksLikeApiEnvelope(json)) {
+      return ApiResponse<T>(
+        status: true,
+        message: json['message']?.toString() ?? '',
+        data: fromJsonT != null ? fromJsonT(json) : json as T,
+      );
+    }
+
     // Handle status field - can be bool, string ("success"), or `success` key
     bool status = false;
     if (json['success'] is bool) {
@@ -39,6 +47,23 @@ class ApiResponse<T> {
           : null,
       meta: json['meta'] as Map<String, dynamic>?,
     );
+  }
+
+  static bool _looksLikeApiEnvelope(Map<String, dynamic> json) {
+    if (json.containsKey('data') || json.containsKey('success')) return true;
+    if (json['status'] is String || json['status'] is int) return true;
+    if (json.containsKey('error')) return true;
+
+    // `{status: false, message: "..."}` without a nested `data` field.
+    if (json.containsKey('message') &&
+        json.containsKey('status') &&
+        !json.containsKey('id') &&
+        !json.containsKey('first_name') &&
+        !json.containsKey('email')) {
+      return true;
+    }
+
+    return false;
   }
 
   /// Create ApiResponse from response data (when data is directly the response)
