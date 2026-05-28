@@ -1,4 +1,5 @@
 import 'models.dart';
+import '../../../../shared/models/match_reason.dart';
 
 /// User profile model with full details
 class UserProfile {
@@ -36,6 +37,8 @@ class UserProfile {
   final bool? isEmailVerified;
   final int? viewsCount;
   final DateTime? lastSeen;
+  final int? matchPercentage;
+  final List<MatchReason> matchReasons;
   final Map<String, dynamic>? additionalData;
 
   UserProfile({
@@ -73,6 +76,8 @@ class UserProfile {
     this.isEmailVerified,
     this.viewsCount,
     this.lastSeen,
+    this.matchPercentage,
+    this.matchReasons = const [],
     this.additionalData,
   });
 
@@ -167,6 +172,17 @@ class UserProfile {
       isEmailVerified: json['is_email_verified'] == true || json['is_email_verified'] == 1,
       viewsCount: json['views_count'] != null ? ((json['views_count'] is int) ? json['views_count'] as int : int.tryParse(json['views_count'].toString())) : null,
       lastSeen: json['last_seen'] != null ? DateTime.tryParse(json['last_seen'].toString()) : null,
+      matchPercentage: json['match_percentage'] != null
+          ? ((json['match_percentage'] is int)
+              ? json['match_percentage'] as int
+              : int.tryParse(json['match_percentage'].toString()))
+          : null,
+      matchReasons: json['match_reasons'] != null && json['match_reasons'] is List
+          ? (json['match_reasons'] as List)
+              .whereType<Map>()
+              .map((e) => MatchReason.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+          : const [],
       additionalData: json,
     );
   }
@@ -207,6 +223,9 @@ class UserProfile {
       if (isEmailVerified != null) 'is_email_verified': isEmailVerified,
       if (viewsCount != null) 'views_count': viewsCount,
       if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
+      if (matchPercentage != null) 'match_percentage': matchPercentage,
+      if (matchReasons.isNotEmpty)
+        'match_reasons': matchReasons.map((e) => e.toJson()).toList(),
     };
   }
 }

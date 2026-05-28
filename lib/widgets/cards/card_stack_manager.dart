@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/constants/animation_constants.dart';
+import '../../shared/models/match_reason.dart';
 import 'swipeable_card.dart';
 import '../../features/discover/widgets/discover_empty_state.dart';
 import '../../core/widgets/loading_indicator.dart';
@@ -14,24 +15,28 @@ class CardStackManager extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> cards;
   final Function(int userId, String action)? onSwipe;
   final Function(int userId)? onViewProfile;
+  final ValueChanged<bool>? onSheetOpenChanged;
   final bool isLoading;
   final VoidCallback? onRefresh;
   final String? emptyActionLabel;
   final VoidCallback? onEmptyAction;
   final String? emptySecondaryActionLabel;
   final VoidCallback? onEmptySecondaryAction;
+  final bool isSheetOpen;
 
   const CardStackManager({
     super.key,
     required this.cards,
     this.onSwipe,
     this.onViewProfile,
+    this.onSheetOpenChanged,
     this.isLoading = false,
     this.onRefresh,
     this.emptyActionLabel,
     this.onEmptyAction,
     this.emptySecondaryActionLabel,
     this.onEmptySecondaryAction,
+    this.isSheetOpen = false,
   });
 
   @override
@@ -42,7 +47,6 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     with TickerProviderStateMixin {
   Map<String, dynamic>? _exitingCardSnapshot;
   Offset _dragOffset = Offset.zero;
-  bool _isCardExpanded = false;
   late AnimationController _exitController;
   late Animation<Offset> _exitSlide;
   late Animation<double> _exitFade;
@@ -74,8 +78,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     final oldTopId =
         oldWidget.cards.isNotEmpty ? oldWidget.cards.first['id'] : null;
     final newTopId = widget.cards.isNotEmpty ? widget.cards.first['id'] : null;
-    if (oldTopId != newTopId) {
-      _isCardExpanded = false;
+    if (oldTopId != newTopId && widget.isSheetOpen) {
+      widget.onSheetOpenChanged?.call(false);
     }
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
       _dragOffset = Offset.zero;
@@ -103,36 +107,22 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   double get _swipeThreshold => MediaQuery.sizeOf(context).width * 0.22;
 
   void _onPanUpdate(DragUpdateDetails details) {
-    if (_exitingCardSnapshot != null) return;
+    if (_exitingCardSnapshot != null || widget.isSheetOpen) return;
     setState(() {
       _dragOffset += details.delta;
     });
   }
 
   void _onPanEnd(DragEndDetails details) {
-    if (_exitingCardSnapshot != null) return;
+    if (_exitingCardSnapshot != null || widget.isSheetOpen) return;
     final isPrimarilyVertical =
         _dragOffset.dy.abs() > (_dragOffset.dx.abs() * 1.35);
     if (isPrimarilyVertical) {
       if (_dragOffset.dy < -100 || details.velocity.pixelsPerSecond.dy < -300) {
-        setState(() {
-          _isCardExpanded = true;
-          _dragOffset = Offset.zero;
-        });
+        widget.onSheetOpenChanged?.call(true);
+        setState(() => _dragOffset = Offset.zero);
         return;
       }
-      if (_isCardExpanded &&
-          (_dragOffset.dy > 100 || details.velocity.pixelsPerSecond.dy > 300)) {
-        setState(() {
-          _isCardExpanded = false;
-          _dragOffset = Offset.zero;
-        });
-        return;
-      }
-    }
-    if (_isCardExpanded) {
-      setState(() => _dragOffset = Offset.zero);
-      return;
     }
     if (_dragOffset.dx > _swipeThreshold) {
       _handleAction('like');
@@ -186,10 +176,15 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         child: Transform.scale(
           scale: scale,
           alignment: Alignment.topCenter,
-          child: _buildCard(
-            cardData,
-            depth: depth,
-            isBackgroundPreview: depth > 0,
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: SwipeableCard.cardAspectRatio,
+              child: _buildCard(
+                cardData,
+                depth: depth,
+                isBackgroundPreview: depth > 0,
+              ),
+            ),
           ),
         ),
       ),
@@ -198,21 +193,26 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
   Widget _buildInteractiveTopCard(Map<String, dynamic> cardData) {
     final width = MediaQuery.sizeOf(context).width;
-    final rotation = (_dragOffset.dx / width * 0.12).clamp(-0.15, 0.15);
+    final rotation = widget.isSheetOpen
+        ? 0.0
+        : (_dragOffset.dx / width * 0.12).clamp(-0.15, 0.15);
 
     return Positioned.fill(
       child: GestureDetector(
         onPanUpdate: _onPanUpdate,
         onPanEnd: _onPanEnd,
         child: Transform.translate(
-          offset: _dragOffset,
+          offset: widget.isSheetOpen ? Offset.zero : _dragOffset,
           child: Transform.rotate(
             angle: rotation,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                _buildCard(cardData, depth: 0),
-                _buildSwipeOverlay(),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: _buildCard(cardData, depth: 0),
+                ),
+                if (!widget.isSheetOpen) _buildSwipeOverlay(),
               ],
             ),
           ),
@@ -227,7 +227,12 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         position: _exitSlide,
         child: FadeTransition(
           opacity: _exitFade,
-          child: _buildCard(cardData, depth: 0),
+          child: Center(
+            child: AspectRatio(
+              aspectRatio: SwipeableCard.cardAspectRatio,
+              child: _buildCard(cardData, depth: 0),
+            ),
+          ),
         ),
       ),
     );
@@ -320,61 +325,54 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     bool isBackgroundPreview = false,
   }) {
     final userId = cardData['id'] as int? ?? 0;
+    final matchReasons = (cardData['match_reasons'] as List?)
+            ?.map((e) => e is MatchReason
+                ? e
+                : MatchReason.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList() ??
+        const <MatchReason>[];
 
     return SwipeableCard(
       key: ValueKey('discover_card_$userId'),
       userId: userId,
-      name: cardData['name'] ?? 'User',
-      age: cardData['age'],
-      location: cardData['location'],
-      avatarUrl: cardData['avatar_url'],
-      imageUrls: cardData['image_urls']?.cast<String>(),
-      bio: cardData['bio'],
-      interests: (cardData['interests'] as List?)
-          ?.map((item) => item.toString())
-          .toList(),
-      sharedInterests: (cardData['shared_interests'] as List?)
-          ?.map((item) => item.toString())
-          .toList(),
-      jobTitle: cardData['job']?.toString() ?? cardData['job_title']?.toString(),
-      educationTitle: cardData['education']?.toString() ??
-          cardData['education_title']?.toString(),
-      isVerified: cardData['is_verified'] ?? false,
-      isPremium: cardData['is_premium'] ?? false,
-      distance: cardData['distance']?.toDouble(),
-      compatibilityScore: (cardData['compatibility_score'] as num?)?.toInt(),
-      isExpanded: depth == 0 ? _isCardExpanded : false,
-      onExpandedChanged: depth == 0
-          ? (expanded) {
-              setState(() {
-                _isCardExpanded = expanded;
-              });
-            }
-          : null,
+      name: cardData['name']?.toString() ?? 'User',
+      age: cardData['age'] as int?,
+      city: cardData['city']?.toString() ?? _cityFromLocation(cardData['location']),
+      country: cardData['country']?.toString(),
+      avatarUrl: cardData['avatar_url']?.toString(),
+      imageUrls: (cardData['image_urls'] as List?)?.cast<String>(),
+      bio: cardData['bio']?.toString(),
+      isVerified: cardData['is_verified'] == true,
+      isPremium: cardData['is_premium'] == true,
+      isOnline: cardData['is_online'] == true,
+      distance: (cardData['distance'] as num?)?.toDouble(),
+      matchPercentage: (cardData['match_percentage'] as num?)?.toInt() ??
+          (cardData['compatibility_score'] as num?)?.toInt(),
+      matchReasons: matchReasons,
+      isExpanded: depth == 0 && widget.isSheetOpen,
       isBackgroundPreview: isBackgroundPreview,
-      onLike: depth == 0 && _exitingCardSnapshot == null
-          ? () => _handleAction('like')
-          : null,
-      onDislike: depth == 0 && _exitingCardSnapshot == null
-          ? () => _handleAction('dislike')
-          : null,
-      onSuperlike: depth == 0 && _exitingCardSnapshot == null
-          ? () => _handleAction('superlike')
-          : null,
-      onViewProfile: depth == 0
-          ? () => widget.onViewProfile?.call(userId)
+      onBioMoreTap: depth == 0 && !isBackgroundPreview
+          ? () => widget.onSheetOpenChanged?.call(true)
           : null,
     );
+  }
+
+  String? _cityFromLocation(dynamic location) {
+    if (location == null) return null;
+    final text = location.toString();
+    if (text.isEmpty) return null;
+    return text.split(',').first.trim();
   }
 
   void _handleAction(String action) {
     if (widget.cards.isEmpty || _exitingCardSnapshot != null) return;
 
+    if (widget.isSheetOpen) {
+      widget.onSheetOpenChanged?.call(false);
+    }
+
     if (action == 'superlike') {
       final userId = widget.cards[0]['id'] as int? ?? 0;
-      if (_isCardExpanded) {
-        setState(() => _isCardExpanded = false);
-      }
       widget.onSwipe?.call(userId, 'superlike');
       return;
     }
@@ -400,7 +398,6 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     setState(() {
       _exitingCardSnapshot = exitingCard;
       _dragOffset = Offset.zero;
-      _isCardExpanded = false;
     });
 
     widget.onSwipe?.call(userId, action);

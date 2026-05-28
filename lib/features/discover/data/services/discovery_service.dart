@@ -441,11 +441,47 @@ class DiscoveryService {
         .map((item) {
           final map = item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item as Map);
           final user = map['user'];
-          if (user == null || user is! Map<String, dynamic>) return null;
-          return DiscoveryProfile.fromJson(user as Map<String, dynamic>);
+          if (user == null || user is! Map) return null;
+          final userMap = Map<String, dynamic>.from(user as Map);
+          if (map['match_percentage'] != null) {
+            userMap['match_percentage'] = map['match_percentage'];
+          }
+          if (map['match_reasons'] != null) {
+            userMap['match_reasons'] = map['match_reasons'];
+          }
+          if (userMap['match_percentage'] == null && map['match_score'] != null) {
+            userMap['compatibility_score'] = map['match_score'];
+          }
+          if (userMap['match_reasons'] == null && map['suggestion_reasons'] != null) {
+            userMap['match_reasons'] = _legacySuggestionReasons(map['suggestion_reasons']);
+          }
+          return DiscoveryProfile.fromJson(userMap);
         })
         .whereType<DiscoveryProfile>()
         .toList();
+  }
+
+  /// Converts legacy string suggestion reasons to typed match reasons.
+  static List<Map<String, dynamic>> _legacySuggestionReasons(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.map((reason) {
+      final text = reason.toString().toLowerCase();
+      String type = 'unknown';
+      if (text.contains('music')) {
+        type = 'music';
+      } else if (text.contains('interest')) {
+        type = 'interests';
+      } else if (text.contains('city') || text.contains('country') || text.contains('location') || text.contains('nearby')) {
+        type = 'location';
+      } else if (text.contains('job') || text.contains('profession')) {
+        type = 'job';
+      } else if (text.contains('education')) {
+        type = 'education';
+      } else if (text.contains('age')) {
+        type = 'age';
+      }
+      return {'type': type, 'label': reason.toString()};
+    }).toList();
   }
 }
 

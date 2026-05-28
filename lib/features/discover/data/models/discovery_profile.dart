@@ -1,5 +1,5 @@
 import '../../../../core/constants/api_endpoints.dart';
-import '../../../profile/data/models/user_profile.dart';
+import '../../../../shared/models/match_reason.dart';
 
 /// Discovery profile model (simplified user profile for discovery)
 class DiscoveryProfile {
@@ -16,6 +16,12 @@ class DiscoveryProfile {
   final String? primaryImageUrl;
   final double? distance;
   final int? compatibilityScore;
+  final int? matchPercentage;
+  final List<MatchReason> matchReasons;
+  final List<String>? interestNames;
+  final List<String>? sharedInterestNames;
+  final String? jobTitle;
+  final String? educationTitle;
   final bool? isSuperliked;
   final bool? isVerified;
   final bool? isPremium;
@@ -36,6 +42,12 @@ class DiscoveryProfile {
     this.primaryImageUrl,
     this.distance,
     this.compatibilityScore,
+    this.matchPercentage,
+    this.matchReasons = const [],
+    this.interestNames,
+    this.sharedInterestNames,
+    this.jobTitle,
+    this.educationTitle,
     this.isSuperliked,
     this.isVerified,
     this.isPremium,
@@ -72,7 +84,13 @@ class DiscoveryProfile {
         json['primary_image_url']?.toString() ?? json['image_url']?.toString() ?? json['avatar_url']?.toString() ?? json['avatar']?.toString(),
       ),
       distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
-      compatibilityScore: json['compatibility_score'] != null ? ((json['compatibility_score'] is int) ? json['compatibility_score'] as int : int.tryParse(json['compatibility_score'].toString())) : null,
+      compatibilityScore: _parseInt(json['compatibility_score'] ?? json['match_score']),
+      matchPercentage: _parseInt(json['match_percentage']),
+      matchReasons: _parseMatchReasons(json['match_reasons']),
+      interestNames: _parseTitleList(json['interests']),
+      sharedInterestNames: _parseStringList(json['shared_interests']),
+      jobTitle: _parseFirstTitle(json['jobs']) ?? json['job']?.toString() ?? json['job_title']?.toString(),
+      educationTitle: _parseFirstTitle(json['educations']) ?? json['education']?.toString() ?? json['education_title']?.toString(),
       isSuperliked: json['is_superliked'] == true || json['is_superliked'] == 1,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
       isPremium: json['is_premium'] == true || json['is_premium'] == 1,
@@ -96,12 +114,58 @@ class DiscoveryProfile {
       if (primaryImageUrl != null) 'primary_image_url': primaryImageUrl,
       if (distance != null) 'distance': distance,
       if (compatibilityScore != null) 'compatibility_score': compatibilityScore,
+      if (matchPercentage != null) 'match_percentage': matchPercentage,
+      if (matchReasons.isNotEmpty) 'match_reasons': matchReasons.map((e) => e.toJson()).toList(),
+      if (interestNames != null) 'interests': interestNames,
+      if (sharedInterestNames != null) 'shared_interests': sharedInterestNames,
+      if (jobTitle != null) 'job_title': jobTitle,
+      if (educationTitle != null) 'education_title': educationTitle,
       if (isSuperliked != null) 'is_superliked': isSuperliked,
       if (isVerified != null) 'is_verified': isVerified,
       if (isPremium != null) 'is_premium': isPremium,
       if (isOnline != null) 'is_online': isOnline,
       if (lastActive != null) 'last_active': lastActive!.toIso8601String(),
     };
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value.toString());
+  }
+
+  static List<MatchReason> _parseMatchReasons(dynamic raw) {
+    if (raw == null || raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) => MatchReason.fromJson(Map<String, dynamic>.from(e)))
+        .where((e) => e.label.isNotEmpty)
+        .toList();
+  }
+
+  static List<String>? _parseTitleList(dynamic raw) {
+    if (raw == null || raw is! List) return null;
+    final titles = <String>[];
+    for (final item in raw) {
+      if (item is Map && item['title'] != null) {
+        titles.add(item['title'].toString());
+      } else if (item is String && item.isNotEmpty) {
+        titles.add(item);
+      }
+    }
+    return titles.isEmpty ? null : titles;
+  }
+
+  static List<String>? _parseStringList(dynamic raw) {
+    if (raw == null || raw is! List) return null;
+    final list = raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+    return list.isEmpty ? null : list;
+  }
+
+  static String? _parseFirstTitle(dynamic raw) {
+    final titles = _parseTitleList(raw);
+    return titles != null && titles.isNotEmpty ? titles.first : null;
   }
 
   /// Parse images from API: list of { image_url: string } or list of URL strings.

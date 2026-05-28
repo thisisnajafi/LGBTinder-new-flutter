@@ -8,6 +8,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/cards/card_stack_manager.dart';
+import '../widgets/cards/profile_detail_sheet.dart';
 import '../widgets/loading/skeleton_discovery.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/discover/providers/discovery_providers.dart';
@@ -53,14 +54,102 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   // Filter state
   Map<String, dynamic>? _activeFilters;
   bool _isSwipeInProgress = false;
+  bool _isProfileSheetOpen = false;
+  late final DraggableScrollableController _sheetController;
 
   @override
   void initState() {
     super.initState();
+    _sheetController = DraggableScrollableController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profilePageCacheProvider.notifier).refresh();
       ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
     });
+  }
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  void _setProfileSheetOpen(bool open) {
+    if (_isProfileSheetOpen == open) return;
+    setState(() => _isProfileSheetOpen = open);
+    if (open) {
+      if (_sheetController.isAttached) {
+        _sheetController.jumpTo(0.58);
+      }
+    }
+  }
+
+  void _closeProfileSheet() {
+    if (!_isProfileSheetOpen) return;
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    if (disableAnimations || !_sheetController.isAttached) {
+      setState(() => _isProfileSheetOpen = false);
+      return;
+    }
+    _sheetController.animateTo(
+      0.50,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    ).whenComplete(() {
+      if (mounted) setState(() => _isProfileSheetOpen = false);
+    });
+  }
+
+  Future<void> _handleSheetAction(String action) async {
+    final stack = ref.read(discoverCacheProvider).stack;
+    if (stack.isEmpty) return;
+    final userId = stack.first.id;
+    _closeProfileSheet();
+    switch (action) {
+      case 'like':
+      case 'dislike':
+        await _handleSwipe(userId, action, fromRow: true);
+        break;
+      case 'superlike':
+        await _showSuperlikeBottomSheet(userId);
+        break;
+    }
+  }
+
+  DiscoverySheetProfile? _sheetProfileFromStack(List<DiscoveryProfile> stack) {
+    if (stack.isEmpty) return null;
+    final profile = stack.first;
+    return DiscoverySheetProfile(
+      firstName: profile.firstName,
+      age: profile.age,
+      city: profile.city,
+      country: profile.country,
+      bio: profile.profileBio,
+      isVerified: profile.isVerified ?? false,
+      isOnline: profile.isOnline ?? false,
+      matchPercentage: profile.matchPercentage ?? profile.compatibilityScore,
+      matchReasons: profile.matchReasons,
+      jobTitle: profile.jobTitle,
+      educationTitle: profile.educationTitle,
+      height: profile.height,
+      distance: profile.distance,
+      interests: profile.interestNames ?? const [],
+      imageUrls: profile.imageUrls ?? const [],
+    );
+  }
+
+  Set<String> _sharedInterestSet(DiscoveryProfile profile) {
+    final fromApi = profile.sharedInterestNames ?? const [];
+    if (fromApi.isNotEmpty) {
+      return fromApi.map((e) => e.toLowerCase()).toSet();
+    }
+    final myProfile = ref.read(profilePageCacheProvider).valueOrNull?.profile;
+    final myInterestIds = (myProfile?.interests ?? const <int>[]).toSet();
+    final candidateInterests = profile.interestNames ?? const [];
+    if (myInterestIds.isEmpty || candidateInterests.isEmpty) {
+      return const {};
+    }
+    // When only titles are available, highlight overlapping names case-insensitively.
+    return candidateInterests.map((e) => e.toLowerCase()).toSet();
   }
 
   @override
@@ -257,6 +346,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       'id': profile.id,
       'name': profile.firstName,
       'age': profile.age,
+      'city': profile.city,
       'country': profile.country,
       'gender': profile.gender,
       'location': profile.city != null && profile.country != null
@@ -267,8 +357,15 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       'bio': profile.profileBio ?? '',
       'is_verified': profile.isVerified ?? false,
       'is_premium': profile.isPremium ?? false,
+      'is_online': profile.isOnline ?? false,
       'distance': profile.distance,
       'compatibility_score': profile.compatibilityScore,
+      'match_percentage': profile.matchPercentage ?? profile.compatibilityScore,
+      'match_reasons': profile.matchReasons,
+      'interests': profile.interestNames,
+      'shared_interests': profile.sharedInterestNames,
+      'job': profile.jobTitle,
+      'education': profile.educationTitle,
       'is_superliked': profile.isSuperliked ?? false,
     };
   }
@@ -698,97 +795,117 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final stack = cacheState.stack;
     final cards = stack.map(_profileToCardMap).toList();
     final showSkeleton = !cacheState.initialLoadComplete && stack.isEmpty;
+    final sheetProfile = _sheetProfileFromStack(stack);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
-            AppPageHeader(
-              title: 'Discover',
-              action: _buildHeaderActions(context, isDark),
-            ),
-            const DiscoverGreetingWidget(),
-            const CachedContentBanner(),
-            // Limit indicator
-            _buildLimitIndicator(),
-            // Card stack with top/bottom margin so shadow doesn't sit under header or buttons
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 16, bottom: 16),
-                child: showSkeleton
-                  ? SkeletonDiscovery()
-                  : CardStackManager(
-                      cards: cards,
-                      onSwipe: _onCardStackSwipe,
-                      onViewProfile: _handleCardTap,
-                      isLoading: false,
-                      onRefresh: () async {
-                        await ref.read(appCacheManagerProvider).revalidateAll();
-                        await ref
-                            .read(discoverCacheProvider.notifier)
-                            .refresh(filters: _activeFilters);
-                      },
-                      emptyActionLabel: 'Adjust filters',
-                      onEmptyAction: _openFilters,
-                      emptySecondaryActionLabel: 'Increase distance + retry',
-                      onEmptySecondaryAction: _expandRadiusAndRetry,
-                    ),
-              ),
-            ),
-            // Action buttons row: Nope, Super Like (center), Like — Chat removed
-            if (!showSkeleton && cards.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppPageHeader.horizontalPadding,
-                  vertical: AppSpacing.spacingLG,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppPageHeader(
+                  title: 'Discover',
+                  action: _buildHeaderActions(context, isDark),
                 ),
-                child: AnimatedOpacity(
-                  opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                  duration: const Duration(milliseconds: 150),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildDiscoveryActionButton(
-                        semanticLabel: 'Dislike profile',
-                        icon: AppIcons.close,
-                        onPressed: _isSwipeInProgress
-                            ? null
-                            : () => _handleAction('dislike'),
-                        size: 58,
-                        fillColor: AppColors.feedbackError,
-                        filled: true,
-                        outlined: false,
-                      ),
-                      const SizedBox(width: AppSpacing.spacingXL),
-                      _buildDiscoveryActionButton(
-                        semanticLabel: 'Super like profile',
-                        icon: AppIcons.star,
-                        onPressed: _isSwipeInProgress
-                            ? null
-                            : () => _handleAction('superlike'),
-                        size: 54,
-                        fillColor: AppColors.accentPurple,
-                        filled: true,
-                        outlined: false,
-                        enableStarRotation: true,
-                      ),
-                      const SizedBox(width: AppSpacing.spacingXL),
-                      _buildDiscoveryActionButton(
-                        semanticLabel: 'Like profile',
-                        icon: AppIcons.heart,
-                        onPressed: _isSwipeInProgress
-                            ? null
-                            : () => _handleAction('like'),
-                        size: 58,
-                        fillColor: AppColors.onlineGreen,
-                        filled: true,
-                        outlined: false,
-                      ),
-                    ],
+                const DiscoverGreetingWidget(),
+                const CachedContentBanner(),
+                _buildLimitIndicator(),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 16),
+                    child: showSkeleton
+                        ? SkeletonDiscovery()
+                        : CardStackManager(
+                            cards: cards,
+                            onSwipe: _onCardStackSwipe,
+                            onViewProfile: _handleCardTap,
+                            isSheetOpen: _isProfileSheetOpen,
+                            onSheetOpenChanged: _setProfileSheetOpen,
+                            isLoading: false,
+                            onRefresh: () async {
+                              await ref.read(appCacheManagerProvider).revalidateAll();
+                              await ref
+                                  .read(discoverCacheProvider.notifier)
+                                  .refresh(filters: _activeFilters);
+                            },
+                            emptyActionLabel: 'Adjust filters',
+                            onEmptyAction: _openFilters,
+                            emptySecondaryActionLabel: 'Increase distance + retry',
+                            onEmptySecondaryAction: _expandRadiusAndRetry,
+                          ),
                   ),
                 ),
+                if (!showSkeleton && cards.isNotEmpty && !_isProfileSheetOpen)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppPageHeader.horizontalPadding,
+                      vertical: AppSpacing.spacingLG,
+                    ),
+                    child: AnimatedOpacity(
+                      opacity: _isSwipeInProgress ? 0.5 : 1.0,
+                      duration: const Duration(milliseconds: 150),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildDiscoveryActionButton(
+                            semanticLabel: 'Dislike profile',
+                            icon: AppIcons.close,
+                            onPressed: _isSwipeInProgress
+                                ? null
+                                : () => _handleAction('dislike'),
+                            size: 58,
+                            fillColor: AppColors.feedbackError,
+                            filled: true,
+                            outlined: false,
+                          ),
+                          const SizedBox(width: AppSpacing.spacingXL),
+                          _buildDiscoveryActionButton(
+                            semanticLabel: 'Super like profile',
+                            icon: AppIcons.star,
+                            onPressed: _isSwipeInProgress
+                                ? null
+                                : () => _handleAction('superlike'),
+                            size: 54,
+                            fillColor: AppColors.accentPurple,
+                            filled: true,
+                            outlined: false,
+                            enableStarRotation: true,
+                          ),
+                          const SizedBox(width: AppSpacing.spacingXL),
+                          _buildDiscoveryActionButton(
+                            semanticLabel: 'Like profile',
+                            icon: AppIcons.heart,
+                            onPressed: _isSwipeInProgress
+                                ? null
+                                : () => _handleAction('like'),
+                            size: 58,
+                            fillColor: AppColors.onlineGreen,
+                            filled: true,
+                            outlined: false,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (_isProfileSheetOpen && sheetProfile != null)
+              Positioned.fill(
+                child: ProfileDetailSheet(
+                  controller: _sheetController,
+                  profile: sheetProfile,
+                  sharedInterests: _sharedInterestSet(stack.first),
+                  onClose: _closeProfileSheet,
+                ),
+              ),
+            if (_isProfileSheetOpen)
+              DiscoveryFloatingActions(
+                disabled: _isSwipeInProgress,
+                onDislike: () => _handleSheetAction('dislike'),
+                onSuperlike: () => _handleSheetAction('superlike'),
+                onLike: () => _handleSheetAction('like'),
               ),
           ],
         ),
