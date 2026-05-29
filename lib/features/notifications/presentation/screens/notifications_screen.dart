@@ -16,6 +16,7 @@ import '../../providers/notification_providers.dart';
 import '../widgets/notification_tile.dart';
 import '../../../../widgets/error_handling/empty_state.dart';
 import '../../../../routes/app_router.dart';
+import '../../../../shared/services/notification_navigation.dart';
 
 /// Notifications screen - Displays all user notifications
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -273,42 +274,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   void _handleNotificationTap(app_models.Notification notification) {
-    // Mark as read if not already read
     if (!notification.isRead) {
       _markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
-    if (notification.actionUrl != null) {
-      context.go(notification.actionUrl!);
-      return;
-    }
-
-    switch (notification.type) {
-      case 'match':
-      case 'like':
-      case 'superlike':
-        if (notification.userId != null) {
-          final target = Uri(
-            path: '${AppRoutes.home}/profile',
-            queryParameters: {'userId': notification.userId.toString()},
-          ).toString();
-          context.go(target);
-        }
-        break;
-      case 'message':
-        if (notification.userId != null) {
-          final target = Uri(
-            path: AppRoutes.chat,
-            queryParameters: {'userId': notification.userId.toString()},
-          ).toString();
-          context.go(target);
-        }
-        break;
-      default:
-        // Do nothing for other types
-        break;
-    }
+    NotificationNavigation.navigateFromNotification(context, notification);
   }
 
   Widget? _buildHeaderAction(BuildContext context, int unreadCount) {

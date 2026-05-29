@@ -10,32 +10,45 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/payments/data/services/marketing_attribution_service.dart';
 import '../../routes/app_router.dart';
+import 'notification_navigation.dart';
 
 String? resolveUrlSchemeRoute(Uri uri) {
   if (uri.scheme != 'lgbtfinder') return null;
   final host = uri.host;
   final pathSegments = uri.pathSegments;
+  final peerId = pathSegments.isNotEmpty ? int.tryParse(pathSegments.first) : null;
 
   switch (host) {
     case 'match':
-      return '${AppRoutes.home}/matches';
-    case 'chat':
-      if (pathSegments.isNotEmpty) {
-        return Uri(
-          path: AppRoutes.chat,
-          queryParameters: {'userId': pathSegments.first},
-        ).toString();
+      if (peerId != null && peerId > 0) {
+        return NotificationNavigation.chatThreadLocation(userId: peerId);
       }
-      return AppRoutes.chat;
+      return '${AppRoutes.home}/matches';
+    case 'superlike':
+    case 'message':
+      if (peerId != null && peerId > 0) {
+        return NotificationNavigation.chatThreadLocation(userId: peerId);
+      }
+      return host == 'superlike'
+          ? '${AppRoutes.home}/discovery'
+          : '${AppRoutes.home}/chat-list';
+    case 'chat':
+      if (peerId != null && peerId > 0) {
+        return NotificationNavigation.chatThreadLocation(userId: peerId);
+      }
+      return '${AppRoutes.home}/chat-list';
     case 'profile':
-      if (pathSegments.isNotEmpty) {
+      if (peerId != null && peerId > 0) {
         return Uri(
           path: AppRoutes.profileDetail,
-          queryParameters: {'userId': pathSegments.first},
+          queryParameters: {'userId': peerId.toString()},
         ).toString();
       }
       return null;
     case 'call':
+      if (peerId != null && peerId > 0) {
+        return NotificationNavigation.chatThreadLocation(userId: peerId);
+      }
       return AppRoutes.chat;
     case 'notifications':
       return '${AppRoutes.home}/notifications';
@@ -66,65 +79,36 @@ class DeepLinkingService {
     Future.microtask(() => _marketingAttributionService.initialize());
   }
 
+  void _navigateFromPayload(Map<String, dynamic> data, {bool usePush = false}) {
+    final router = _router;
+    if (router == null) return;
+    NotificationNavigation.navigateWithRouter(
+      router,
+      data: data,
+      usePush: usePush,
+    );
+  }
+
   /// Register default deep link handlers
   void _registerDefaultHandlers() {
-    // Match notification → Navigate to matches screen
-    registerHandler('match', (data) async {
-      _router?.go('${AppRoutes.home}/matches');
-    });
-
-    // Like notification → Navigate to likes screen (if premium)
-    registerHandler('like', (data) async {
-      _router?.go('${AppRoutes.home}/discovery');
-    });
-
-    // Message notification → Navigate to specific chat
-    registerHandler('message', (data) async {
-      final userId = data['user_id']?.toString();
-      final chatId = data['chat_id']?.toString();
-      if (userId != null) {
-        final target = Uri(
-          path: AppRoutes.chat,
-          queryParameters: {'userId': userId},
-        ).toString();
-        _router?.go(target);
-      } else if (chatId != null) {
-        final target = Uri(
-          path: AppRoutes.chat,
-          queryParameters: {'userId': chatId},
-        ).toString();
-        _router?.go(target);
-      } else {
-        _router?.go(AppRoutes.chat);
-      }
-    });
-
-    // Call notification → Navigate to call screen
-    registerHandler('call', (data) async {
-      _router?.go(AppRoutes.chat);
-    });
-
-    // General notification → Navigate to notifications screen
-    registerHandler('notification', (data) async {
-      _router?.go('/home/notifications');
-    });
-
-    // Profile view → Navigate to user profile
-    registerHandler('profile', (data) async {
-      final userId = data['user_id']?.toString();
-      if (userId != null) {
-        final target = Uri(
-          path: AppRoutes.profileDetail,
-          queryParameters: {'userId': userId},
-        ).toString();
-        _router?.go(target);
-      }
-    });
-
-    // Superlike notification → Navigate to discovery
-    registerHandler('superlike', (data) async {
-      _router?.go('${AppRoutes.home}/discovery');
-    });
+    for (final type in [
+      'message',
+      'chat',
+      'match',
+      'superlike',
+      'like',
+      'call',
+      'incoming_call',
+      'incoming_call_audio',
+      'incoming_call_video',
+      'profile',
+      'profile_view',
+      'notification',
+    ]) {
+      registerHandler(type, (data) async {
+        _navigateFromPayload(data);
+      });
+    }
   }
 
   /// Register a custom deep link handler
@@ -133,27 +117,14 @@ class DeepLinkingService {
   }
 
   /// Handle deep link from notification data
-  /// 
-  /// Expected data format:
-  /// ```json
-  /// {
-  ///   "type": "message|match|like|call|notification",
-  ///   "user_id": "123",
-  ///   "match_id": "456",
-  ///   "chat_id": "789",
-  ///   "call_id": "101",
-  ///   "utm_source": "email",
-  ///   "utm_campaign": "promo",
-  ///   ...
-  /// }
-  /// ```
   Future<void> handleDeepLink(Map<String, dynamic> data) async {
     if (_router == null) {
       debugPrint('⚠️ DeepLinkingService not initialized. Call initialize() first.');
       return;
     }
 
-    final type = data['type']?.toString();
+    final payload = NotificationNavigation.normalizePayload(data);
+    final type = payload['type']?.toString();
     if (type == null) {
       debugPrint('⚠️ Deep link data missing "type" field');
       return;
@@ -166,36 +137,31 @@ class DeepLinkingService {
     }
 
     try {
-      // Extract and store UTM parameters for marketing attribution
       final utmParams = <String, String>{};
-      if (data.containsKey('utm_source')) utmParams['utm_source'] = data['utm_source'].toString();
-      if (data.containsKey('utm_medium')) utmParams['utm_medium'] = data['utm_medium'].toString();
-      if (data.containsKey('utm_campaign')) utmParams['utm_campaign'] = data['utm_campaign'].toString();
-      if (data.containsKey('utm_term')) utmParams['utm_term'] = data['utm_term'].toString();
-      if (data.containsKey('utm_content')) utmParams['utm_content'] = data['utm_content'].toString();
-      if (data.containsKey('campaign_id')) utmParams['campaign_id'] = data['campaign_id'].toString();
-      if (data.containsKey('referral_code')) utmParams['referral_code'] = data['referral_code'].toString();
-      if (data.containsKey('marketing_source')) utmParams['marketing_source'] = data['marketing_source'].toString();
+      if (payload.containsKey('utm_source')) utmParams['utm_source'] = payload['utm_source'].toString();
+      if (payload.containsKey('utm_medium')) utmParams['utm_medium'] = payload['utm_medium'].toString();
+      if (payload.containsKey('utm_campaign')) utmParams['utm_campaign'] = payload['utm_campaign'].toString();
+      if (payload.containsKey('utm_term')) utmParams['utm_term'] = payload['utm_term'].toString();
+      if (payload.containsKey('utm_content')) utmParams['utm_content'] = payload['utm_content'].toString();
+      if (payload.containsKey('campaign_id')) utmParams['campaign_id'] = payload['campaign_id'].toString();
+      if (payload.containsKey('referral_code')) utmParams['referral_code'] = payload['referral_code'].toString();
+      if (payload.containsKey('marketing_source')) {
+        utmParams['marketing_source'] = payload['marketing_source'].toString();
+      }
 
       if (utmParams.isNotEmpty) {
         await _marketingAttributionService.storeUtmParameters(utmParams);
         debugPrint('📊 Stored marketing attribution: ${utmParams.keys.join(", ")}');
       }
 
-      debugPrint('🔗 Handling deep link: type=$type, data=$data');
-      await handler(data);
+      debugPrint('🔗 Handling deep link: type=$type, data=$payload');
+      await handler(payload);
     } catch (e) {
       debugPrint('❌ Error handling deep link: $e');
     }
   }
 
   /// Handle URL scheme (lgbtfinder://)
-  /// 
-  /// Supported formats:
-  /// - lgbtfinder://match/123
-  /// - lgbtfinder://chat/456
-  /// - lgbtfinder://profile/789
-  /// - lgbtfinder://call/101
   Future<void> handleUrlScheme(String url) async {
     if (_router == null) {
       debugPrint('⚠️ DeepLinkingService not initialized');
@@ -204,9 +170,8 @@ class DeepLinkingService {
 
     try {
       final uri = Uri.parse(url);
-      final scheme = uri.scheme;
-      if (scheme != 'lgbtfinder') {
-        debugPrint('⚠️ Unsupported URL scheme: $scheme');
+      if (uri.scheme != 'lgbtfinder') {
+        debugPrint('⚠️ Unsupported URL scheme: ${uri.scheme}');
         return;
       }
 
@@ -223,8 +188,6 @@ class DeepLinkingService {
   }
 
   /// Handle universal link (iOS) or app link (Android)
-  /// 
-  /// Format: https://lgbtfinder.com/deep-link?type=message&user_id=123
   Future<void> handleUniversalLink(String url) async {
     if (_router == null) {
       debugPrint('⚠️ DeepLinkingService not initialized');
@@ -235,22 +198,24 @@ class DeepLinkingService {
       final uri = Uri.parse(url);
       final queryParams = uri.queryParameters;
 
-      // Extract and store UTM parameters for marketing attribution
       final utmParams = <String, String>{};
       queryParams.forEach((key, value) {
-        if (key.startsWith('utm_') || key == 'campaign_id' || key == 'referral_code' || key == 'marketing_source') {
+        if (key.startsWith('utm_') ||
+            key == 'campaign_id' ||
+            key == 'referral_code' ||
+            key == 'marketing_source') {
           utmParams[key] = value;
         }
       });
 
       if (utmParams.isNotEmpty) {
         await _marketingAttributionService.storeUtmParameters(utmParams);
-        debugPrint('📊 Stored marketing attribution from universal link: ${utmParams.keys.join(", ")}');
+        debugPrint(
+          '📊 Stored marketing attribution from universal link: ${utmParams.keys.join(", ")}',
+        );
       }
 
-      // Extract type and data from query parameters
       final data = Map<String, dynamic>.from(queryParams);
-      
       await handleDeepLink(data);
     } catch (e) {
       debugPrint('❌ Error parsing universal link: $e');
@@ -265,15 +230,11 @@ class DeepLinkingService {
     String? chatId,
     String? callId,
   }) {
+    final segment = userId ?? matchId ?? chatId ?? callId;
     final uri = Uri(
       scheme: 'lgbtfinder',
       host: type,
-      pathSegments: [
-        if (userId != null) userId,
-        if (matchId != null) matchId,
-        if (chatId != null) chatId,
-        if (callId != null) callId,
-      ].where((s) => s.isNotEmpty).toList(),
+      pathSegments: segment != null ? [segment] : const [],
     );
     return uri.toString();
   }
@@ -281,4 +242,3 @@ class DeepLinkingService {
 
 /// Deep link handler function type
 typedef DeepLinkHandler = Future<void> Function(Map<String, dynamic> data);
-

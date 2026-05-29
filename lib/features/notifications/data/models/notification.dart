@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Notification model
 /// FIXED: Updated to handle backend response structure with nested from_user object
 class Notification {
@@ -57,9 +59,29 @@ class Notification {
     }
     
     // Fallback to direct fields if from_user not present
-    userId ??= json['user_id'] != null 
-        ? ((json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString())) 
+    userId ??= json['user_id'] != null
+        ? ((json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()))
         : null;
+
+    // Backend stores actor id in notifications.data JSON (e.g. plan-restricted likes)
+    if (userId == null && json['data'] != null) {
+      Map<String, dynamic>? dataMap;
+      final rawData = json['data'];
+      if (rawData is Map) {
+        dataMap = Map<String, dynamic>.from(rawData);
+      } else if (rawData is String && rawData.trim().isNotEmpty) {
+        try {
+          final parsed = jsonDecode(rawData);
+          if (parsed is Map) {
+            dataMap = Map<String, dynamic>.from(parsed);
+          }
+        } catch (_) {}
+      }
+      final rawId = dataMap?['user_id'] ?? dataMap?['sender_id'] ?? dataMap?['from_user_id'];
+      if (rawId != null) {
+        userId = rawId is int ? rawId : int.tryParse(rawId.toString());
+      }
+    }
     userImageUrl ??= json['user_image_url']?.toString() ?? json['image_url']?.toString();
     
     // FIXED: Check both 'is_read' and 'read_at' for read status

@@ -5,11 +5,13 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
+import 'notification_navigation.dart';
 import '../../features/settings/providers/sound_preferences_provider.dart';
 import '../../features/settings/data/models/sound_preferences.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
@@ -269,7 +271,7 @@ class PushNotificationService {
       notification.title,
       notification.body,
       details,
-      payload: message.data.toString(),
+      payload: jsonEncode(message.data),
     );
 
     // Show summary notification for grouped messages (Android)
@@ -288,46 +290,58 @@ class PushNotificationService {
   /// Handle notification tap
   /// FEATURE ENHANCEMENT (Task 9.1.2): Enhanced with deep linking
   void _handleNotificationTap(RemoteMessage message) {
-    final data = message.data;
-    
-    // Use deep linking service if available
+    final data = NotificationNavigation.normalizePayload(
+      Map<String, dynamic>.from(message.data),
+    );
+
+    final type = data['type']?.toString() ?? '';
+    if (_isIncomingCallPayload(data)) {
+      _handleIncomingCall(data);
+      return;
+    }
+
     try {
-      final deepLinkingService = DeepLinkingService();
-      deepLinkingService.handleDeepLink(data);
+      DeepLinkingService().handleDeepLink(data);
       return;
     } catch (e) {
       debugPrint('Deep linking service not available, using fallback: $e');
     }
-    
-    // Fallback to callback-based navigation
-    if (data.containsKey('type')) {
-      final type = data['type'] as String;
-      
-      switch (type) {
-        case 'like':
-          _navigateToMatches?.call();
-          break;
-        case 'match':
+
+    _handleNotificationTapFallback(data, type);
+  }
+
+  void _handleNotificationTapFallback(Map<String, dynamic> data, String type) {
+    final userId = NotificationNavigation.resolvePeerUserId(data);
+
+    switch (type) {
+      case 'like':
+        _navigateToMatches?.call();
+        break;
+      case 'match':
+      case 'superlike':
+        if (userId != null && _navigateToChat != null) {
+          _navigateToChat!.call(userId.toString());
+        } else {
           _navigateToMatch?.call();
-          break;
-        case 'message':
-          final userId = data['user_id'];
-          if (userId != null && _navigateToChat != null) {
-            _navigateToChat?.call(userId);
-          }
-          break;
-        case 'call':
-        case 'incoming_call':
-        case 'incoming_call_audio':
-        case 'incoming_call_video':
-          _handleIncomingCall(data);
-          break;
-        case 'notification':
-          _navigateToNotifications?.call();
-          break;
-        default:
-          break;
-      }
+        }
+        break;
+      case 'message':
+      case 'chat':
+        if (userId != null && _navigateToChat != null) {
+          _navigateToChat!.call(userId.toString());
+        }
+        break;
+      case 'call':
+      case 'incoming_call':
+      case 'incoming_call_audio':
+      case 'incoming_call_video':
+        _handleIncomingCall(data);
+        break;
+      case 'notification':
+        _navigateToNotifications?.call();
+        break;
+      default:
+        break;
     }
   }
 
@@ -348,11 +362,31 @@ class PushNotificationService {
         data.containsKey('callId');
   }
 
-  /// Handle local notification tap
+  /// Handle local notification tap (foreground FCM shown as local notification).
   void _onNotificationTapped(NotificationResponse response) {
-    if (response.payload != null) {
-      // Parse payload and navigate
-      AppLogger.debug('Notification tapped: ${response.payload}');
+    final payload = NotificationNavigation.parseLocalNotificationPayload(
+      response.payload,
+    );
+    if (payload == null) {
+      AppLogger.debug('Notification tapped with empty or invalid payload');
+      return;
+    }
+
+    AppLogger.debug('Local notification tapped: $payload');
+
+    if (_isIncomingCallPayload(payload)) {
+      _handleIncomingCall(payload);
+      return;
+    }
+
+    try {
+      DeepLinkingService().handleDeepLink(payload);
+    } catch (e) {
+      AppLogger.debug('Local notification deep link failed: $e');
+      _handleNotificationTapFallback(
+        payload,
+        payload['type']?.toString() ?? '',
+      );
     }
   }
 

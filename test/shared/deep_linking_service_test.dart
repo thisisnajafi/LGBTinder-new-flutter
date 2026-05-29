@@ -9,10 +9,24 @@ void main() {
       expect(route, isNull);
     });
 
-    test('maps match route', () {
+    test('maps match route with user id to chat thread', () {
       expect(
         resolveUrlSchemeRoute(Uri.parse('lgbtfinder://match/123')),
+        Uri(path: AppRoutes.chat, queryParameters: {'userId': '123'}).toString(),
+      );
+    });
+
+    test('maps match route without user id to matches list', () {
+      expect(
+        resolveUrlSchemeRoute(Uri.parse('lgbtfinder://match')),
         '${AppRoutes.home}/matches',
+      );
+    });
+
+    test('maps superlike route with user id to chat', () {
+      expect(
+        resolveUrlSchemeRoute(Uri.parse('lgbtfinder://superlike/42')),
+        Uri(path: AppRoutes.chat, queryParameters: {'userId': '42'}).toString(),
       );
     });
 
@@ -26,7 +40,7 @@ void main() {
     test('maps chat route without user id', () {
       expect(
         resolveUrlSchemeRoute(Uri.parse('lgbtfinder://chat')),
-        AppRoutes.chat,
+        '${AppRoutes.home}/chat-list',
       );
     });
 
@@ -49,4 +63,3 @@ void main() {
     });
   });
 }
-
