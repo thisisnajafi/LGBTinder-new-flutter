@@ -1,9 +1,12 @@
 // Widget: SwipeableCard — full-bleed discovery profile card (Phase 1 spec)
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
 
@@ -27,6 +30,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
   final int? matchPercentage;
   final List<MatchReason> matchReasons;
   final VoidCallback? onBioMoreTap;
+  final VoidCallback? onProfileTap;
   final bool isExpanded;
   final bool isBackgroundPreview;
   final bool hideBioMore;
@@ -48,6 +52,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.matchPercentage,
     this.matchReasons = const [],
     this.onBioMoreTap,
+    this.onProfileTap,
     this.isExpanded = false,
     this.isBackgroundPreview = false,
     this.hideBioMore = false,
@@ -55,6 +60,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
 
   static const double cardRadius = 28;
   static const double cardAspectRatio = 0.62;
+  static const Duration imageCarouselInterval = Duration(seconds: 5);
 
   @override
   ConsumerState<SwipeableCard> createState() => _SwipeableCardState();
@@ -63,6 +69,8 @@ class SwipeableCard extends ConsumerStatefulWidget {
 class _SwipeableCardState extends ConsumerState<SwipeableCard>
     with SingleTickerProviderStateMixin {
   int _currentImageIndex = 0;
+  Timer? _imageCarouselTimer;
+  int _carouselGeneration = 0;
   late final AnimationController _headerController;
   late final Animation<double> _headerCurve;
 
@@ -80,6 +88,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeInCubic,
     );
+    _scheduleImageCarousel();
   }
 
   @override
@@ -87,6 +96,17 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
       _currentImageIndex = 0;
+      _scheduleImageCarousel();
+    } else if (oldWidget.imageUrls != widget.imageUrls ||
+        oldWidget.avatarUrl != widget.avatarUrl) {
+      _scheduleImageCarousel();
+    }
+    if (oldWidget.isExpanded != widget.isExpanded) {
+      if (widget.isExpanded) {
+        _stopImageCarousel();
+      } else {
+        _scheduleImageCarousel();
+      }
     }
     if (oldWidget.isExpanded == widget.isExpanded) return;
     final shouldAnimate = !MediaQuery.of(context).disableAnimations;
@@ -102,24 +122,87 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
   }
 
   @override
+  void deactivate() {
+    _stopImageCarousel();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    _stopImageCarousel();
     _headerController.dispose();
     super.dispose();
+  }
+
+  void _scheduleImageCarousel() {
+    _stopImageCarousel();
+    if (!mounted || widget.isBackgroundPreview || widget.isExpanded) return;
+
+    final count = _images.length;
+    if (count <= 1) return;
+
+    if (MediaQuery.of(context).disableAnimations) return;
+
+    final generation = ++_carouselGeneration;
+    _imageCarouselTimer = Timer.periodic(
+      SwipeableCard.imageCarouselInterval,
+      (_) {
+        if (!mounted || generation != _carouselGeneration) return;
+        setState(() {
+          _currentImageIndex = (_currentImageIndex + 1) % count;
+        });
+      },
+    );
+  }
+
+  void _stopImageCarousel() {
+    _carouselGeneration++;
+    _imageCarouselTimer?.cancel();
+    _imageCarouselTimer = null;
   }
 
   void _cycleImage(int delta, int imageCount) {
     if (imageCount <= 1) return;
     setState(() {
       final nextIndex = _currentImageIndex + delta;
-      if (nextIndex < 0 || nextIndex >= imageCount) return;
-      _currentImageIndex = nextIndex;
+      if (nextIndex < 0) {
+        _currentImageIndex = imageCount - 1;
+      } else if (nextIndex >= imageCount) {
+        _currentImageIndex = 0;
+      } else {
+        _currentImageIndex = nextIndex;
+      }
     });
+    _scheduleImageCarousel();
   }
 
   List<String> get _images {
-    final urls = widget.imageUrls ??
-        (widget.avatarUrl != null ? [widget.avatarUrl!] : <String>[]);
-    return urls.where((e) => e.isNotEmpty).toList();
+    final seen = <String>{};
+    final list = <String>[];
+    for (final url in widget.imageUrls ?? const <String>[]) {
+      final trimmed = url.trim();
+      if (trimmed.isEmpty || !seen.add(trimmed)) continue;
+      list.add(trimmed);
+    }
+    final avatar = widget.avatarUrl?.trim();
+    if (avatar != null && avatar.isNotEmpty && seen.add(avatar)) {
+      if (list.isEmpty) {
+        list.add(avatar);
+      } else if (!list.contains(avatar)) {
+        list.insert(0, avatar);
+      }
+    }
+    return list;
+  }
+
+  Border? _cardBorder(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Border.all(
+      color: widget.isBackgroundPreview
+          ? (isDark ? AppColors.borderSubtleDark : AppColors.borderSubtleLight)
+          : (isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight),
+      width: widget.isBackgroundPreview ? 1 : 1.5,
+    );
   }
 
   @override
@@ -151,9 +234,14 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
               child: child,
             );
           },
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
-            child: Stack(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
+              border: _cardBorder(context),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
+              child: Stack(
               fit: StackFit.expand,
               children: [
                 _PhotoLayer(
@@ -201,10 +289,12 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                       isOnline: widget.isOnline,
                       hideBioMore: widget.hideBioMore || widget.isExpanded,
                       onBioMoreTap: widget.onBioMoreTap,
+                      onProfileTap: widget.onProfileTap,
                     ),
                   ),
                 ],
               ],
+            ),
             ),
           ),
         );
@@ -237,9 +327,15 @@ class _PhotoLayer extends StatelessWidget {
       children: [
         AnimatedSwitcher(
           duration:
-              disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
+              disableAnimations ? Duration.zero : const Duration(milliseconds: 320),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
           child: currentImage != null
               ? CachedNetworkImage(
                   key: ValueKey<String>(currentImage!),
@@ -426,6 +522,7 @@ class _BottomTextBlock extends StatelessWidget {
     required this.isOnline,
     required this.hideBioMore,
     required this.onBioMoreTap,
+    required this.onProfileTap,
   });
 
   final String name;
@@ -435,77 +532,89 @@ class _BottomTextBlock extends StatelessWidget {
   final bool isOnline;
   final bool hideBioMore;
   final VoidCallback? onBioMoreTap;
+  final VoidCallback? onProfileTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final trimmedBio = bio?.trim() ?? '';
+    final openProfile = onProfileTap ?? onBioMoreTap;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                age != null ? '$name, $age' : name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            if (isOnline) ...[
-              const SizedBox(width: 8),
-              Semantics(
-                label: 'Online now',
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: kDiscoveryOnlineGreen,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        if (city != null && city!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: openProfile,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AppSvgIcon(
-                assetPath: AppIcons.getIconPath('location'),
-                size: 13,
-                color: Colors.white.withValues(alpha: 0.75),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  city!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.75),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      age != null ? '$name, $age' : name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                ),
+                  if (isOnline) ...[
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: 'Online now',
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: kDiscoveryOnlineGreen,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
+              if (city != null && city!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    AppSvgIcon(
+                      assetPath: AppIcons.getIconPath('location'),
+                      size: 13,
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        city!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (trimmedBio.isNotEmpty && !hideBioMore) ...[
+                const SizedBox(height: 8),
+                _BioPreview(
+                  bio: trimmedBio,
+                  onMoreTap: openProfile,
+                ),
+              ],
             ],
           ),
-        ],
-        if (trimmedBio.isNotEmpty && !hideBioMore) ...[
-          const SizedBox(height: 8),
-          _BioPreview(
-            bio: trimmedBio,
-            onMoreTap: onBioMoreTap,
-          ),
-        ],
-      ],
+        ),
+      ),
     );
   }
 }

@@ -43,10 +43,21 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!['data'] as List<dynamic>? ?? [];
+        final root = response.data!;
+        final dataField = root['data'];
+        List<dynamic> rawList = [];
+        if (dataField is List) {
+          rawList = dataField;
+        } else if (dataField is Map && dataField['sessions'] is List) {
+          rawList = dataField['sessions'] as List;
+        } else if (root['meta'] is Map &&
+            (root['meta'] as Map)['sessions'] is List) {
+          rawList = (root['meta'] as Map)['sessions'] as List;
+        }
         setState(() {
-          _sessions =
-              data.map((session) => session as Map<String, dynamic>).toList();
+          _sessions = rawList
+              .map((session) => session as Map<String, dynamic>)
+              .toList();
           _isLoading = false;
         });
       } else {

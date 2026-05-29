@@ -260,6 +260,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       final message = result.message;
       if (message == null || message.isEmpty) return;
 
+      if (_isProfileSheetOpen) {
+        _closeProfileSheet();
+      }
+
       final queued = await _handleSwipe(
         userId,
         'superlike',
@@ -343,7 +347,23 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
   }
 
+  List<String> _profileImageUrls(DiscoveryProfile profile) {
+    final seen = <String>{};
+    final urls = <String>[];
+    void add(String? url) {
+      final trimmed = url?.trim();
+      if (trimmed == null || trimmed.isEmpty || !seen.add(trimmed)) return;
+      urls.add(trimmed);
+    }
+    for (final url in profile.imageUrls ?? const <String>[]) {
+      add(url);
+    }
+    add(profile.primaryImageUrl);
+    return urls;
+  }
+
   Map<String, dynamic> _profileToCardMap(DiscoveryProfile profile) {
+    final imageUrls = _profileImageUrls(profile);
     return {
       'id': profile.id,
       'name': profile.firstName,
@@ -354,8 +374,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       'location': profile.city != null && profile.country != null
           ? '${profile.city}, ${profile.country}'
           : profile.city ?? profile.country ?? '',
-      'avatar_url': profile.primaryImageUrl ?? profile.imageUrls?.first,
-      'image_urls': profile.imageUrls ?? [profile.primaryImageUrl].whereType<String>().toList(),
+      'avatar_url': imageUrls.isNotEmpty ? imageUrls.first : null,
+      'image_urls': imageUrls,
       'bio': profile.profileBio ?? '',
       'is_verified': profile.isVerified ?? false,
       'is_premium': profile.isPremium ?? false,
@@ -409,19 +429,21 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             ),
           );
           planLimitsService.clearCache();
-          ref.invalidate(planLimitsProvider);
+          ref.read(planLimitsProvider.notifier).clearCache();
           return false;
         }
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _applySwipeToCache(
-          userId,
-          action,
-          superlikeMessage: superlikeMessage,
-        );
-      });
+      if (action == 'superlike') {
+        // Let the bottom sheet finish closing before mutating the card stack.
+        await Future<void>.delayed(Duration.zero);
+        if (!mounted) return false;
+      }
+      _applySwipeToCache(
+        userId,
+        action,
+        superlikeMessage: superlikeMessage,
+      );
       return true;
     } catch (e, stack) {
       AppLogger.error(
@@ -488,7 +510,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       if (action == 'superlike' &&
           (purchaseRequired || e.code == 403)) {
         ref.read(planLimitsServiceProvider).clearCache();
-        ref.invalidate(planLimitsProvider);
+        ref.read(planLimitsProvider.notifier).clearCache();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -816,7 +838,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 _buildLimitIndicator(),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 16),
+                    padding: const EdgeInsets.only(
+                      top: AppSpacing.spacingSM,
+                      bottom: AppSpacing.spacingLG,
+                    ),
                     child: showSkeleton
                         ? SkeletonDiscovery()
                         : CardStackManager(
@@ -1082,16 +1107,15 @@ class _DiscoveryActionButtonState extends State<_DiscoveryActionButton>
                       ),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.colorScheme.shadow.withValues(alpha: 0.22),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                    color: widget.fillColor.withValues(alpha: 0.38),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                    spreadRadius: -4,
                   ),
                   BoxShadow(
-                    color: (widget.filled ? widget.fillColor : Colors.white)
-                        .withValues(alpha: widget.filled ? 0.28 : 0.08),
-                    blurRadius: widget.filled ? 22 : 8,
-                    spreadRadius: widget.filled ? 1 : 0,
-                    offset: const Offset(0, 0),
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),

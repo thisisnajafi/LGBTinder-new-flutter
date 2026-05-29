@@ -50,6 +50,11 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   late AnimationController _exitController;
   late Animation<Offset> _exitSlide;
   late Animation<double> _exitFade;
+  late AnimationController _revealController;
+  late Animation<double> _revealScale;
+  late Animation<double> _revealOpacity;
+  late Animation<Offset> _revealSlide;
+  Object? _lastTopCardId;
 
   @override
   void initState() {
@@ -70,6 +75,35 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         curve: AppAnimations.curveDefault,
       ),
     );
+    _revealController = AnimationController(
+      duration: AppAnimations.cardReveal,
+      vsync: this,
+    );
+    final revealCurve = CurvedAnimation(
+      parent: _revealController,
+      curve: AppAnimations.curveDefault,
+    );
+    _revealScale = Tween<double>(begin: 0.94, end: 1).animate(revealCurve);
+    _revealOpacity = Tween<double>(begin: 0, end: 1).animate(revealCurve);
+    _revealSlide = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(revealCurve);
+    if (widget.cards.isNotEmpty) {
+      _lastTopCardId = widget.cards.first['id'];
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _playRevealAnimation();
+      });
+    }
+  }
+
+  void _playRevealAnimation() {
+    if (!mounted) return;
+    if (!AppAnimations.animationsEnabled(context)) {
+      _revealController.value = 1;
+      return;
+    }
+    _revealController.forward(from: 0);
   }
 
   @override
@@ -81,8 +115,13 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     if (oldTopId != newTopId && widget.isSheetOpen) {
       widget.onSheetOpenChanged?.call(false);
     }
+    if (newTopId != null && newTopId != _lastTopCardId) {
+      _lastTopCardId = newTopId;
+      _playRevealAnimation();
+    }
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
       _dragOffset = Offset.zero;
+      _lastTopCardId = null;
     }
   }
 
@@ -90,6 +129,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   void dispose() {
     _exitController.removeStatusListener(_onExitStatus);
     _exitController.dispose();
+    _revealController.dispose();
     super.dispose();
   }
 
@@ -148,42 +188,67 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     }
 
     return ClipRect(
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          if (widget.cards.length > 2)
-            _buildStackCard(widget.cards[2], depth: 2),
-          if (widget.cards.length > 1)
-            _buildStackCard(widget.cards[1], depth: 1),
-          if (widget.cards.isNotEmpty)
-            _exitingCardSnapshot == null
-                ? _buildInteractiveTopCard(widget.cards[0])
-                : _buildStackCard(widget.cards[0], depth: 0),
-          if (_exitingCardSnapshot != null)
-            _buildExitingCard(_exitingCardSnapshot!),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            if (widget.cards.length > 2)
+              _buildStackCard(widget.cards[2], depth: 2),
+            if (widget.cards.length > 1)
+              _buildStackCard(widget.cards[1], depth: 1),
+            if (widget.cards.isNotEmpty)
+              _exitingCardSnapshot == null
+                  ? _buildInteractiveTopCard(widget.cards[0])
+                  : _buildStackCard(widget.cards[0], depth: 0),
+            if (_exitingCardSnapshot != null)
+              _buildExitingCard(_exitingCardSnapshot!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Perspective + scale/offset per stack depth for a layered 3D deck.
+  Widget _applyStackDepth({
+    required Widget child,
+    required int depth,
+  }) {
+    final scale = 1.0 - (depth * 0.05);
+    final verticalOffset = depth * 12.0;
+    final tiltX = depth * 0.035;
+    final tiltZ = depth == 1 ? -0.018 : depth == 2 ? 0.018 : 0.0;
+    final opacity = (1.0 - depth * 0.14).clamp(0.72, 1.0);
+
+    return Opacity(
+      opacity: opacity,
+      child: Transform(
+        alignment: Alignment.topCenter,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, 0.0011)
+          ..rotateX(tiltX)
+          ..rotateZ(tiltZ)
+          ..scale(scale, scale, 1),
+        child: Padding(
+          padding: EdgeInsets.only(top: verticalOffset),
+          child: child,
+        ),
       ),
     );
   }
 
   Widget _buildStackCard(Map<String, dynamic> cardData, {required int depth}) {
-    final scale = 1.0 - (depth * 0.04);
-    final topInset = depth * AppSpacing.spacingSM;
-
     return Positioned.fill(
-      child: Padding(
-        padding: EdgeInsets.only(top: topInset),
-        child: Transform.scale(
-          scale: scale,
-          alignment: Alignment.topCenter,
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: SwipeableCard.cardAspectRatio,
-              child: _buildCard(
-                cardData,
-                depth: depth,
-                isBackgroundPreview: depth > 0,
-              ),
+      child: _applyStackDepth(
+        depth: depth,
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: SwipeableCard.cardAspectRatio,
+            child: _buildCard(
+              cardData,
+              depth: depth,
+              isBackgroundPreview: depth > 0,
             ),
           ),
         ),
@@ -198,22 +263,34 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         : (_dragOffset.dx / width * 0.12).clamp(-0.15, 0.15);
 
     return Positioned.fill(
-      child: GestureDetector(
-        onPanUpdate: _onPanUpdate,
-        onPanEnd: _onPanEnd,
-        child: Transform.translate(
-          offset: widget.isSheetOpen ? Offset.zero : _dragOffset,
-          child: Transform.rotate(
-            angle: rotation,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: _buildCard(cardData, depth: 0),
+      child: FadeTransition(
+        opacity: _revealOpacity,
+        child: SlideTransition(
+          position: _revealSlide,
+          child: ScaleTransition(
+            scale: _revealScale,
+            child: GestureDetector(
+              onPanUpdate: _onPanUpdate,
+              onPanEnd: _onPanEnd,
+              child: Transform.translate(
+                offset: widget.isSheetOpen ? Offset.zero : _dragOffset,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.0011)
+                    ..rotateZ(rotation),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: _buildCard(cardData, depth: 0),
+                      ),
+                      if (!widget.isSheetOpen) _buildSwipeOverlay(),
+                    ],
+                  ),
                 ),
-                if (!widget.isSheetOpen) _buildSwipeOverlay(),
-              ],
+              ),
             ),
           ),
         ),
@@ -340,7 +417,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       city: cardData['city']?.toString() ?? _cityFromLocation(cardData['location']),
       country: cardData['country']?.toString(),
       avatarUrl: cardData['avatar_url']?.toString(),
-      imageUrls: (cardData['image_urls'] as List?)?.cast<String>(),
+      imageUrls: _imageUrlsFromCard(cardData),
       bio: cardData['bio']?.toString(),
       isVerified: cardData['is_verified'] == true,
       isPremium: cardData['is_premium'] == true,
@@ -354,7 +431,34 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       onBioMoreTap: depth == 0 && !isBackgroundPreview
           ? () => widget.onSheetOpenChanged?.call(true)
           : null,
+      onProfileTap: depth == 0 && !isBackgroundPreview
+          ? () => widget.onSheetOpenChanged?.call(true)
+          : null,
     );
+  }
+
+  List<String>? _imageUrlsFromCard(Map<String, dynamic> cardData) {
+    final seen = <String>{};
+    final list = <String>[];
+    final raw = cardData['image_urls'];
+    if (raw is List) {
+      for (final entry in raw) {
+        final url = entry?.toString().trim() ?? '';
+        if (url.isNotEmpty && seen.add(url)) {
+          list.add(url);
+        }
+      }
+    }
+    final avatar = cardData['avatar_url']?.toString().trim();
+    if (avatar != null && avatar.isNotEmpty) {
+      if (seen.add(avatar)) {
+        list.insert(0, avatar);
+      } else if (list.isNotEmpty && list.first != avatar) {
+        list.remove(avatar);
+        list.insert(0, avatar);
+      }
+    }
+    return list.isEmpty ? null : list;
   }
 
   String? _cityFromLocation(dynamic location) {

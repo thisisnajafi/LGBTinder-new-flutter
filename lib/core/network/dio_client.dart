@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../auth/banned_handler.dart';
+import '../auth/banned_handler.dart';
 import '../auth/unauthorized_handler.dart';
 import '../utils/app_logger.dart';
 import 'app_dio_logger.dart';
@@ -152,6 +154,22 @@ class DioClient {
             if (uri.contains('/upload') && error.response!.data is Map) {
               final data = error.response!.data as Map;
               apiLog('  [UPLOAD_ERROR] message=${data['message']} error_code=${data['error_code']} detail=${data['detail']}');
+            }
+          }
+
+          // Handle 403 banned account
+          if (error.response?.statusCode == 403) {
+            final body = error.response?.data is Map<String, dynamic>
+                ? error.response!.data as Map<String, dynamic>
+                : null;
+            final nested = body?['data'];
+            final userState = nested is Map<String, dynamic>
+                ? nested['user_state']?.toString()
+                : body?['user_state']?.toString();
+            if (userState == 'banned' || body?['data'] is Map && (body!['data'] as Map)['banned'] == true) {
+              clearAuthToken();
+              BannedHandler.invoke();
+              return handler.next(error);
             }
           }
 

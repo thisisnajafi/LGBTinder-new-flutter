@@ -138,6 +138,34 @@ class PlanLimitsService {
     _lastFetchTime = null;
   }
 
+  /// Authoritative superlike balance from API after send.
+  void applySuperlikesRemaining(int remaining) {
+    if (_cachedLimits == null) return;
+    final previous = _cachedLimits!.effectiveSuperlikeInfo;
+    _cachedLimits = _cachedLimits!.copyWith(
+      superlikeInfo: SuperlikeInfo(
+        canSuperlike: remaining > 0,
+        totalRemaining: remaining,
+        dailyRemaining: remaining.clamp(0, previous.dailyRemaining),
+        extraPacksRemaining: remaining,
+        dailyLimit: previous.dailyLimit,
+        dailyUsed: previous.dailyUsed,
+      ),
+      usage: Usage(
+        swipes: _cachedLimits!.usage.swipes,
+        likes: _cachedLimits!.usage.likes,
+        superlikes: UsageDetail(
+          usedToday: _cachedLimits!.usage.superlikes.usedToday + 1,
+          limit: _cachedLimits!.usage.superlikes.limit,
+          remaining: remaining,
+          isUnlimited: false,
+        ),
+        messages: _cachedLimits!.usage.messages,
+      ),
+    );
+    _cachedLimits = _cachedLimits!.correctSwipeLimitsForTier();
+  }
+
   /// Get cached limits (without API call)
   PlanLimits? getCachedLimits() {
     return _cachedLimits?.correctSwipeLimitsForTier();
@@ -283,9 +311,15 @@ class PlanLimitsNotifier extends StateNotifier<AsyncValue<PlanLimits>> {
   /// Increment usage locally (optimistic update)
   void incrementUsage(String limitType) {
     _service.incrementUsage(limitType);
-    state.whenData((limits) {
-      state = AsyncValue.data(limits);
-    });
+    syncFromServiceCache();
+  }
+
+  /// Push in-memory service cache into provider state without recreating the notifier.
+  void syncFromServiceCache() {
+    final cached = _service.getCachedLimits();
+    if (cached != null) {
+      state = AsyncValue.data(cached);
+    }
   }
 
   /// Clear cache

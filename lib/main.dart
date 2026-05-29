@@ -13,6 +13,7 @@ import 'features/calls/presentation/widgets/incoming_call_banner.dart';
 import 'features/calls/providers/incoming_call_provider.dart';
 import 'core/constants/api_endpoints.dart';
 import 'core/theme/app_theme.dart';
+import 'core/auth/banned_handler.dart';
 import 'core/auth/unauthorized_handler.dart';
 import 'core/services/app_logger.dart';
 import 'routes/app_router.dart';
@@ -237,6 +238,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         if (!mounted || _servicesWired) return;
         _servicesWired = true;
         DeepLinkingService().initialize(router);
+        BannedHandler.setCallback(() {
+          authLog('403 Banned: redirecting to banned screen');
+          router.go(AppRoutes.accountBanned);
+        });
         UnauthorizedHandler.setCallback(() {
           authLog('401 Unauthorized: redirecting to login');
           try {

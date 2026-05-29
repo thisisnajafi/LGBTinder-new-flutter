@@ -35,12 +35,14 @@ import '../screens/help_support_screen.dart';
 import '../screens/support_tickets_screen.dart';
 import '../screens/legal/terms_of_service_screen.dart';
 import '../screens/legal/privacy_policy_screen.dart';
+import '../screens/banned_account_screen.dart';
 import '../features/payments/presentation/screens/subscription_management_screen.dart';
 
 /// Route names constants
 class AppRoutes {
   static const String splash = '/';
   static const String welcome = '/welcome';
+  static const String accountBanned = '/account-banned';
   static const String login = '/login';
   static const String register = '/register';
   static const String emailVerification = '/email-verification';
@@ -120,6 +122,7 @@ final RouteRedirector _redirector = RouteRedirector();
 const Set<String> _publicRoutes = {
   AppRoutes.splash,
   AppRoutes.welcome,
+  AppRoutes.accountBanned,
   AppRoutes.login,
   AppRoutes.register,
   AppRoutes.emailVerification,
@@ -128,6 +131,7 @@ const Set<String> _publicRoutes = {
 
 const Set<String> _authEntryRoutes = {
   AppRoutes.welcome,
+  AppRoutes.accountBanned,
   AppRoutes.login,
   AppRoutes.register,
 };
@@ -305,6 +309,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.welcome,
         name: 'welcome',
         pageBuilder: (context, state) => slideFadePage(state, const WelcomeScreen()),
+      ),
+
+      GoRoute(
+        path: AppRoutes.accountBanned,
+        name: 'account-banned',
+        pageBuilder: (context, state) => slideFadePage(state, const BannedAccountScreen()),
       ),
       
       // Login Screen (no guard - public)

@@ -335,7 +335,6 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           final response =
               await _likesService.superlikeUser(userId, message: superlikeMessage);
           _planLimitsService.incrementUsage('swipes');
-          _planLimitsService.incrementUsage('superlikes');
           _markSynced(userId);
           if (response.subscription != null &&
               response.superlikesRemaining != null) {
@@ -349,6 +348,9 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
             _ref
                 .read(cachedUserTierProvider.notifier)
                 .setTier(response.subscription!.tier);
+            _planLimitsService.applySuperlikesRemaining(
+              response.superlikesRemaining!,
+            );
           } else if (response.superlikesRemaining != null) {
             await _sessionCache.setSuperlikesRemaining(
               response.superlikesRemaining!,
@@ -356,9 +358,14 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
             _ref
                 .read(superlikesRemainingProvider.notifier)
                 .setCount(response.superlikesRemaining!);
+            _planLimitsService.applySuperlikesRemaining(
+              response.superlikesRemaining!,
+            );
+          } else {
+            _planLimitsService.incrementUsage('superlikes');
           }
-          _ref.invalidate(planLimitsProvider);
-          _ref.invalidate(subscriptionStatusProvider);
+          _deferPlanLimitsRefresh();
+          _deferSubscriptionRefresh();
           if (response.isMatch) {
             unawaited(_cacheInvalidator.purgeMatchList());
             if (onMatch != null) onMatch(response.match);
@@ -428,5 +435,19 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
       nextPage: state.nextPage,
     );
     unawaited(_persistState());
+  }
+
+  /// Avoid [ref.invalidate] on plan limits — it disposes the notifier while Discover still watches it.
+  void _deferPlanLimitsRefresh() {
+    _ref.read(planLimitsProvider.notifier).syncFromServiceCache();
+    Future.microtask(() {
+      unawaited(_ref.read(planLimitsProvider.notifier).refresh());
+    });
+  }
+
+  void _deferSubscriptionRefresh() {
+    Future.microtask(() {
+      _ref.invalidate(subscriptionStatusProvider);
+    });
   }
 }

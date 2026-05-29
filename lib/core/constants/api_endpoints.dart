@@ -14,6 +14,7 @@ class ApiEndpoints {
   static const String verifyLoginCode = '/auth/verify-login-code';
   /// Lightweight token validation for splash (GET, Bearer token). 200 = valid, 401 = invalid.
   static const String checkToken = '/auth/check-token';
+  static const String accountStatus = '/auth/account-status';
   static const String checkUserState = '/auth/check-user-state';
   static const String sendVerification = '/auth/send-verification';
   static const String resendVerification = '/auth/resend-verification';

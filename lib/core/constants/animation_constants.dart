@@ -28,6 +28,9 @@ class AppAnimations {
   /// Discovery card exit when advancing to next. ~200 ms.
   static const Duration cardExit = Duration(milliseconds: 200);
 
+  /// Discovery card reveal when the next profile becomes top of stack.
+  static const Duration cardReveal = Duration(milliseconds: 380);
+
   /// List item appear (fade + slide) for stagger. ~200 ms.
   static const Duration listItemAppear = Duration(milliseconds: 200);
 
