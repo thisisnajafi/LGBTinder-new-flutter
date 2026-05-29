@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#6A4C93</color>
+    <!-- Mid-gradient blue (#457B9D) — Android 12+ system splash API requires a solid color -->
+    <color name="splash_background">#457B9D</color>
 </resources>
