@@ -249,9 +249,19 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                   images: images,
                   disableAnimations: disableAnimations,
                   isBackgroundPreview: widget.isBackgroundPreview,
-                  onCycleImage: _cycleImage,
                 ),
-                const _PhotoGradientOverlay(),
+                const IgnorePointer(child: _PhotoGradientOverlay()),
+                if (!widget.isBackgroundPreview && images.length > 1)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 56,
+                    bottom: 120,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: () => _cycleImage(1, images.length),
+                    ),
+                  ),
                 if (!widget.isBackgroundPreview) ...[
                   if (matchPct != null && matchPct > 0)
                     Positioned(
@@ -309,14 +319,12 @@ class _PhotoLayer extends StatelessWidget {
     required this.images,
     required this.disableAnimations,
     required this.isBackgroundPreview,
-    required this.onCycleImage,
   });
 
   final String? currentImage;
   final List<String> images;
   final bool disableAnimations;
   final bool isBackgroundPreview;
-  final void Function(int delta, int count) onCycleImage;
 
   @override
   Widget build(BuildContext context) {
@@ -356,25 +364,6 @@ class _PhotoLayer extends StatelessWidget {
                   ),
                 ),
         ),
-        if (!isBackgroundPreview && images.length > 1)
-          Positioned.fill(
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: () => onCycleImage(-1, images.length),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: () => onCycleImage(1, images.length),
-                  ),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }

@@ -3,7 +3,8 @@ import '../../../core/cache/cache_invalidator.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../shared/services/token_storage_service.dart';
 import '../../../core/network/dio_client.dart';
-import '../domain/services/profile_service.dart';
+import '../domain/services/profile_service.dart' as domain;
+import '../data/repositories/profile_repository.dart';
 import '../data/models/user_profile.dart';
 import '../data/models/update_profile_request.dart';
 import '../data/models/user_image.dart';
@@ -236,27 +237,39 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 }
 
-// Use case providers
+/// Domain profile API service (used by repository + use cases).
+final domainProfileServiceProvider = Provider<domain.ProfileService>((ref) {
+  return domain.ProfileService(
+    ref.watch(apiServiceProvider),
+    ref.watch(tokenStorageServiceProvider),
+    ref.watch(dioClientProvider),
+  );
+});
+
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  return ProfileRepository(ref.watch(domainProfileServiceProvider));
+});
+
 final getProfileUseCaseProvider = Provider<GetProfileUseCase>((ref) {
-  throw UnimplementedError('GetProfileUseCase must be overridden in the provider scope');
+  return GetProfileUseCase(ref.watch(profileRepositoryProvider));
 });
 
 final updateProfileUseCaseProvider = Provider<UpdateProfileUseCase>((ref) {
-  throw UnimplementedError('UpdateProfileUseCase must be overridden in the provider scope');
+  return UpdateProfileUseCase(ref.watch(profileRepositoryProvider));
 });
 
 final uploadImageUseCaseProvider = Provider<UploadImageUseCase>((ref) {
-  throw UnimplementedError('UploadImageUseCase must be overridden in the provider scope');
+  return UploadImageUseCase(ref.watch(profileRepositoryProvider));
 });
 
 final deleteImageUseCaseProvider = Provider<DeleteImageUseCase>((ref) {
-  throw UnimplementedError('DeleteImageUseCase must be overridden in the provider scope');
+  return DeleteImageUseCase(ref.watch(profileRepositoryProvider));
 });
 
 final verifyProfileUseCaseProvider = Provider<VerifyProfileUseCase>((ref) {
-  throw UnimplementedError('VerifyProfileUseCase must be overridden in the provider scope');
+  return VerifyProfileUseCase(ref.watch(profileRepositoryProvider));
 });
 
 final completeProfileUseCaseProvider = Provider<CompleteProfileUseCase>((ref) {
-  throw UnimplementedError('CompleteProfileUseCase must be overridden in the provider scope');
+  return CompleteProfileUseCase(ref.watch(profileRepositoryProvider));
 });
