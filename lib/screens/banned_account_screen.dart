@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
-import '../core/widgets/app_svg_icon.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../routes/app_router.dart';
 
