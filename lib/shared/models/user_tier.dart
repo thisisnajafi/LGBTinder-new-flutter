@@ -34,7 +34,10 @@ extension UserTierX on UserTier {
 UserTier userTierFromPlan({int? planId, String? planName}) {
   final name = (planName ?? '').toLowerCase().trim();
 
-  if (planId == 3 || name.contains('golden') || name.contains(' gold')) {
+  if (planId == 3 ||
+      name.contains('golden') ||
+      name.contains('gold') ||
+      name.contains(' gold')) {
     return UserTier.golden;
   }
   if (planId == 2 || name.contains('silver') || name.contains('premium')) {

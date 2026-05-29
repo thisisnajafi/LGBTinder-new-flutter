@@ -85,5 +85,33 @@ void main() {
       expect(PlanLimits.tryParse({'foo': 'bar'}), isNull);
       expect(PlanLimits.tryParse(null), isNull);
     });
+
+    test('corrects golden tier swipe cap when API sends daily_profile=1', () {
+      final payload = Map<String, dynamic>.from(_innerPayload);
+      payload['plan_info'] = {
+        'is_premium': true,
+        'plan_name': 'Golden',
+        'plan_id': 3,
+        'tier': 'golden',
+        'expires_at': null,
+      };
+      payload['usage'] = Map<String, dynamic>.from(payload['usage'] as Map);
+      (payload['usage'] as Map)['swipes'] = {
+        'used_today': 2,
+        'limit': 1,
+        'remaining': 0,
+        'is_unlimited': false,
+      };
+      (payload['limits'] as Map)['swipes'] = {
+        'daily_limit': 1,
+        'is_unlimited': false,
+      };
+
+      final limits = PlanLimits.tryParse({'data': payload});
+      expect(limits, isNotNull);
+      expect(limits!.usage.swipes.isUnlimited, isTrue);
+      expect(limits.usage.swipes.limit, 9999);
+      expect(limits.hasReachedLimit('swipes'), isFalse);
+    });
   });
 }

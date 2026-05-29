@@ -37,16 +37,13 @@ final profilePageCacheProvider =
 
 PlanLimits? _parsePlanLimitsMap(Map<String, dynamic>? raw) {
   if (raw == null) return null;
-  try {
-    if (raw.containsKey('data')) {
-      return PlanLimits.fromJson(raw);
-    }
-    return PlanLimits.fromJson({'data': raw});
-  } catch (e, st) {
-    profileLog('parsePlanLimitsMap failed: $e');
-    profileLog('parsePlanLimitsMap stack: $st');
-    return null;
+  final parsed = raw.containsKey('data')
+      ? PlanLimits.tryParse(raw)
+      : PlanLimits.tryParse({'data': raw});
+  if (parsed == null) {
+    profileLog('parsePlanLimitsMap failed: invalid payload');
   }
+  return parsed;
 }
 
 PlanLimits _fallbackPlanLimits() {

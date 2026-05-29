@@ -21,7 +21,20 @@ final userTierProvider = Provider<UserTier>((ref) {
 
   final planLimits = ref.watch(planLimitsProvider).valueOrNull;
   if (planLimits != null) {
-    return userTierFromPlan(planId: planLimits.planInfo.planId, planName: planLimits.planInfo.planName);
+    final apiTier = planLimits.planInfo.tier?.toLowerCase().trim();
+    if (apiTier != null && apiTier.isNotEmpty) {
+      return UserTier.values.firstWhere(
+        (t) => t.key == apiTier,
+        orElse: () => userTierFromPlan(
+          planId: planLimits.planInfo.planId,
+          planName: planLimits.planInfo.planName,
+        ),
+      );
+    }
+    return userTierFromPlan(
+      planId: planLimits.planInfo.planId,
+      planName: planLimits.planInfo.planName,
+    );
   }
 
   final status = ref.watch(subscriptionStatusProvider).valueOrNull;

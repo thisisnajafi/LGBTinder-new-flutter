@@ -32,7 +32,7 @@ class PlanLimitsService {
       if (!forceRefresh && _cachedLimits != null && _lastFetchTime != null) {
         final timeSinceLastFetch = DateTime.now().difference(_lastFetchTime!);
         if (timeSinceLastFetch < cacheDuration) {
-          return _cachedLimits!;
+          return _cachedLimits!.correctSwipeLimitsForTier();
         }
       }
 
@@ -44,7 +44,7 @@ class PlanLimitsService {
 
       final parsed = PlanLimits.tryParse(response.data);
       if (parsed != null) {
-        _cachedLimits = parsed.correctSwipeLimitsForTier();
+        _cachedLimits = parsed;
         _lastFetchTime = DateTime.now();
         return _cachedLimits!;
       }
@@ -56,7 +56,7 @@ class PlanLimitsService {
     } catch (e) {
       // If we have cached data, return it even if it's stale
       if (_cachedLimits != null) {
-        return _cachedLimits!;
+        return _cachedLimits!.correctSwipeLimitsForTier();
       }
       rethrow;
     }
@@ -140,7 +140,7 @@ class PlanLimitsService {
 
   /// Get cached limits (without API call)
   PlanLimits? getCachedLimits() {
-    return _cachedLimits;
+    return _cachedLimits?.correctSwipeLimitsForTier();
   }
 
   /// Check if cache is valid
@@ -158,13 +158,16 @@ class PlanLimitsService {
 
     switch (limitType) {
       case 'swipes':
+        final swipeUsage = _cachedLimits!.usage.swipes;
         _cachedLimits = _cachedLimits!.copyWith(
           usage: Usage(
             swipes: UsageDetail(
-              usedToday: _cachedLimits!.usage.swipes.usedToday + 1,
-              limit: _cachedLimits!.usage.swipes.limit,
-              remaining: _cachedLimits!.usage.swipes.remaining - 1,
-              isUnlimited: _cachedLimits!.usage.swipes.isUnlimited,
+              usedToday: swipeUsage.usedToday + 1,
+              limit: swipeUsage.limit,
+              remaining: swipeUsage.isUnlimited
+                  ? swipeUsage.remaining
+                  : swipeUsage.remaining - 1,
+              isUnlimited: swipeUsage.isUnlimited,
             ),
             likes: _cachedLimits!.usage.likes,
             superlikes: _cachedLimits!.usage.superlikes,
@@ -205,6 +208,7 @@ class PlanLimitsService {
         );
         break;
     }
+    _cachedLimits = _cachedLimits!.correctSwipeLimitsForTier();
   }
 }
 

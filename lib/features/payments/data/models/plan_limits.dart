@@ -82,10 +82,7 @@ class PlanLimits {
 
   /// Golden / Silder must not be capped by a low `daily_profile` value from the API.
   PlanLimits correctSwipeLimitsForTier() {
-    final tier = userTierFromPlan(
-      planId: planInfo.planId,
-      planName: planInfo.planName,
-    );
+    final tier = _resolveTier();
     if (tier != UserTier.golden && tier != UserTier.silder) {
       return this;
     }
@@ -149,6 +146,23 @@ class PlanLimits {
     );
   }
 
+  UserTier _resolveTier() {
+    final apiTier = planInfo.tier?.toLowerCase().trim();
+    if (apiTier != null && apiTier.isNotEmpty) {
+      return UserTier.values.firstWhere(
+        (t) => t.key == apiTier,
+        orElse: () => userTierFromPlan(
+          planId: planInfo.planId,
+          planName: planInfo.planName,
+        ),
+      );
+    }
+    return userTierFromPlan(
+      planId: planInfo.planId,
+      planName: planInfo.planName,
+    );
+  }
+
   /// Check if user has reached a specific limit
   /// Logic: if user has used 0 today, they have not reached the limit (avoids backend returning wrong remaining).
   bool hasReachedLimit(String limitType) {
@@ -206,12 +220,14 @@ class PlanInfo {
   final String planName;
   final int? planId;
   final DateTime? expiresAt;
+  final String? tier;
 
   PlanInfo({
     required this.isPremium,
     required this.planName,
     this.planId,
     this.expiresAt,
+    this.tier,
   });
 
   factory PlanInfo.fromJson(Map<String, dynamic> json) {
@@ -220,6 +236,7 @@ class PlanInfo {
       planName: json['plan_name']?.toString() ?? 'Free',
       planId: _SafeParser.parseInt(json['plan_id']),
       expiresAt: _SafeParser.parseDateTime(json['expires_at']),
+      tier: json['tier']?.toString(),
     );
   }
 
@@ -229,6 +246,7 @@ class PlanInfo {
       'plan_name': planName,
       'plan_id': planId,
       'expires_at': expiresAt?.toIso8601String(),
+      if (tier != null) 'tier': tier,
     };
   }
 }
