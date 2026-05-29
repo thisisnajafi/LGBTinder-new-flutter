@@ -250,7 +250,11 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                   disableAnimations: disableAnimations,
                   isBackgroundPreview: widget.isBackgroundPreview,
                 ),
-                const IgnorePointer(child: _PhotoGradientOverlay()),
+                const Positioned.fill(
+                  child: IgnorePointer(
+                    child: _PhotoGradientOverlay(),
+                  ),
+                ),
                 if (!widget.isBackgroundPreview && images.length > 1)
                   Positioned(
                     top: 0,
@@ -374,20 +378,18 @@ class _PhotoGradientOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: const [0.0, 0.38, 0.68, 1.0],
-            colors: [
-              Colors.transparent,
-              Colors.transparent,
-              Colors.black.withValues(alpha: 0.45),
-              Colors.black.withValues(alpha: 0.88),
-            ],
-          ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0.0, 0.38, 0.68, 1.0],
+          colors: [
+            Colors.transparent,
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.45),
+            Colors.black.withValues(alpha: 0.88),
+          ],
         ),
       ),
     );
