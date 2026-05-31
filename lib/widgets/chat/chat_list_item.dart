@@ -46,6 +46,7 @@ class ChatListItem extends ConsumerWidget {
     final tier = ref.watch(userTierProvider);
     final isLocked = tier == UserTier.basid;
     final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final displayName = name.trim().isNotEmpty ? name.trim() : 'User';
 
     return Material(
       color: Colors.transparent,
@@ -96,11 +97,12 @@ class ChatListItem extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        name,
+                        displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.spacingXS),

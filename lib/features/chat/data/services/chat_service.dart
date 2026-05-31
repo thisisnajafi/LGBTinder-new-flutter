@@ -218,56 +218,41 @@ class ChatService {
 
   /// Set typing status (legacy: receiver_id body).
   Future<void> setTypingStatus(int receiverId, bool isTyping) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.chatTyping,
-        data: {
-          'receiver_id': receiverId,
-          'is_typing': isTyping,
-        },
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
+    final response = await _apiService.post<void>(
+      ApiEndpoints.chatTyping,
+      data: {
+        'receiver_id': receiverId,
+        'is_typing': isTyping,
+      },
+    );
 
-      if (!response.isSuccess) {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
   }
 
   /// Set typing status for a conversation (preferred when [conversationId] is known).
   Future<void> setConversationTyping(int conversationId, bool isTyping) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.chatConversationTyping(conversationId),
-        data: {'is_typing': isTyping},
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
+    final response = await _apiService.post<void>(
+      ApiEndpoints.chatConversationTyping(conversationId),
+      data: {'is_typing': isTyping},
+    );
 
-      if (!response.isSuccess) {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
   }
 
   /// Mark messages as read
   /// FIXED: Changed 'receiver_id' to 'sender_id' to match backend ChatController@markAsRead
   Future<void> markAsRead(int senderId) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.chatRead,
-        data: {'sender_id': senderId}, // Backend expects 'sender_id' - the user whose messages to mark as read
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
+    final response = await _apiService.post<void>(
+      ApiEndpoints.chatRead,
+      data: {'sender_id': senderId},
+    );
 
-      if (!response.isSuccess) {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
   }
 
@@ -567,17 +552,29 @@ class ChatService {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.chatPinnedCount,
         queryParameters: {'user_id': userId},
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) =>
+            json is Map<String, dynamic> ? json : <String, dynamic>{},
       );
 
-      if (response.isSuccess && response.data != null) {
-        final data = response.data!['data'] as Map<String, dynamic>?;
-        return data?['pinned_count'] as int? ?? 0;
+      if (!response.isSuccess || response.data == null) {
+        return 0;
       }
-      return 0;
+
+      final raw = response.data!;
+      final nested = raw['data'];
+      if (nested is Map<String, dynamic>) {
+        return _parsePinnedCount(nested['pinned_count']);
+      }
+      return _parsePinnedCount(raw['pinned_count']);
     } catch (e) {
       return 0;
     }
+  }
+
+  int _parsePinnedCount(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   /// Pin a message (Task 9 — POST /chat/pin-message)

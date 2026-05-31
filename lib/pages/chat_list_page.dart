@@ -57,6 +57,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   final TextEditingController _searchController = TextEditingController();
   _ChatFilter _activeFilter = _ChatFilter.all;
   bool _premiumBannerDismissed = false;
+  bool _retriedForMissingNames = false;
 
   @override
   void initState() {
@@ -148,7 +149,15 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
 
     try {
       final chatService = ref.read(chatServiceProvider);
-      final chats = await chatService.getChatUsers(forceRefresh: forceRefresh);
+      var chats = await chatService.getChatUsers(forceRefresh: forceRefresh);
+
+      if (!_retriedForMissingNames &&
+          !forceRefresh &&
+          chats.isNotEmpty &&
+          chats.every((chat) => chat.displayName == 'User')) {
+        _retriedForMissingNames = true;
+        chats = await chatService.getChatUsers(forceRefresh: true);
+      }
 
       if (mounted) {
         await ref
@@ -188,13 +197,24 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     }
   }
 
+  String _displayNameFromMap(Map<String, dynamic> chat) {
+    final name = chat['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+    final first = chat['first_name']?.toString().trim() ?? '';
+    final last = chat['last_name']?.toString().trim() ?? '';
+    if (first.isNotEmpty) {
+      return last.isNotEmpty ? '$first $last' : first;
+    }
+    return 'User';
+  }
+
   Map<String, dynamic> _chatToMap(Chat chat) {
     return {
       'id': chat.userId, // Use userId for navigation to chat
       'chat_id': chat.id, // Keep chat id for reference
-      'name': chat.lastName != null
-          ? '${chat.firstName} ${chat.lastName}'
-          : chat.firstName,
+      'name': chat.displayName,
+      'first_name': chat.firstName,
+      'last_name': chat.lastName,
       'avatar_url': chat.primaryImageUrl,
       'last_message': chat.lastMessage?.message ?? '',
       'last_message_time': chat.lastMessageAt ?? chat.lastMessage?.createdAt,
@@ -308,7 +328,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       path: AppRoutes.chat,
       queryParameters: {
         'userId': userId.toString(),
-        if ((chat['name'] as String?)?.isNotEmpty == true) 'userName': chat['name'] as String,
+        if (_displayNameFromMap(chat) != 'User')
+          'userName': _displayNameFromMap(chat),
         if ((chat['avatar_url'] as String?)?.isNotEmpty == true)
           'avatarUrl': chat['avatar_url'] as String,
       },
@@ -453,7 +474,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                                       typingUsers[userId] == true;
                                   final item = ChatListItem(
                                     userId: userId,
-                                    name: chat['name'],
+                                    name: _displayNameFromMap(chat),
                                     avatarUrl: chat['avatar_url'],
                                     lastMessage: chat['last_message'],
                                     lastMessageTime: chat['last_message_time'],

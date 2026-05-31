@@ -47,11 +47,9 @@ class ChatHeader extends ConsumerWidget {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top,
-        left: AppSpacing.spacingLG,
-        right: AppSpacing.spacingLG,
-        bottom: AppSpacing.spacingMD,
+      height: 64,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.spacingLG,
       ),
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -62,10 +60,8 @@ class ChatHeader extends ConsumerWidget {
           ),
         ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
+      child: Row(
+        children: [
             if (onBack != null)
               IconButton(
                 icon: AppSvgIcon(
@@ -82,11 +78,13 @@ class ChatHeader extends ConsumerWidget {
               ),
             GestureDetector(
               onTap: onHeaderTap ?? onInfo,
+              behavior: HitTestBehavior.opaque,
               child: AvatarWithStatus(
                 imageUrl: avatarUrl,
                 name: name,
                 isOnline: isOnline,
-                size: 40.0,
+                size: 44,
+                showRing: isOnline,
               ),
             ),
             SizedBox(width: AppSpacing.spacingMD),
@@ -160,7 +158,6 @@ class ChatHeader extends ConsumerWidget {
               ),
           ],
         ),
-      ),
     );
   }
 }

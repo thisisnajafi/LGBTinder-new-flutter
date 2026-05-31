@@ -47,16 +47,43 @@ class Chat {
       userId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
     }
 
-    // Get first name - provide default if missing
-    String firstName = json['first_name']?.toString() ??
-                       json['name']?.toString() ??
-                       'User';
+    final rawFirst = json['first_name']?.toString().trim() ?? '';
+    final rawLast = json['last_name']?.toString().trim() ?? '';
+    final rawName = json['name']?.toString().trim() ?? '';
+    final rawDisplay = json['display_name']?.toString().trim() ?? '';
+    final rawUsername = json['username']?.toString().trim() ?? '';
+
+    String firstName;
+    String? lastName;
+    if (rawFirst.isNotEmpty) {
+      firstName = rawFirst;
+      lastName = rawLast.isNotEmpty ? rawLast : null;
+    } else if (rawName.isNotEmpty) {
+      final parts = rawName.split(RegExp(r'\s+'));
+      firstName = parts.first;
+      lastName = parts.length > 1 ? parts.sublist(1).join(' ') : null;
+    } else if (rawDisplay.isNotEmpty) {
+      final parts = rawDisplay.split(RegExp(r'\s+'));
+      firstName = parts.first;
+      lastName = parts.length > 1 ? parts.sublist(1).join(' ') : null;
+    } else if (rawUsername.isNotEmpty) {
+      firstName = rawUsername;
+      lastName = null;
+    } else {
+      final nestedUser = json['user'] ?? json['peer'] ?? json['other_user'];
+      if (nestedUser is Map) {
+        final nested = Map<String, dynamic>.from(nestedUser);
+        return Chat.fromJson({...json, ...nested});
+      }
+      firstName = 'User';
+      lastName = null;
+    }
 
     return Chat(
       id: chatId,
       userId: userId,
       firstName: firstName,
-      lastName: json['last_name']?.toString(),
+      lastName: lastName,
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString() ?? json['avatar_url']?.toString(),
       lastMessage: json['last_message'] != null && json['last_message'] is Map
           ? Message.fromJson(Map<String, dynamic>.from(json['last_message'] as Map))
@@ -72,6 +99,15 @@ class Chat {
       isTyping: json['is_typing'] == true || json['is_typing'] == 1,
       isMuted: json['is_muted'] == true || json['is_muted'] == 1,
     );
+  }
+
+  /// Display name for list rows and headers.
+  String get displayName {
+    final first = firstName.trim();
+    final last = lastName?.trim() ?? '';
+    if (first.isEmpty) return 'User';
+    if (last.isEmpty) return first;
+    return '$first $last';
   }
 
   Map<String, dynamic> toJson() {

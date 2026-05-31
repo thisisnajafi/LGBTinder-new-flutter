@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/chat/chat_header.dart';
-import '../widgets/chat/chat_user_info_panel.dart';
+import 'chat_conversation_info_page.dart';
 import '../widgets/chat/message_input.dart';
 import '../widgets/chat/message_reply_widget.dart';
 import '../widgets/chat/pinned_messages_banner.dart';
@@ -32,6 +32,7 @@ import '../features/chat/providers/chat_pusher_providers.dart';
 import '../shared/services/pusher_websocket_service.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/user/providers/user_providers.dart';
+import '../features/profile/providers/profile_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../shared/utils/plan_guard.dart';
@@ -91,7 +92,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   StreamSubscription<CallSignalingEvent>? _callEventSubscription;
   bool _isOnline = false;
   DateTime? _lastSeenAt;
-  bool _showUserInfoPanel = false;
+  String? _resolvedUserName;
+  String? _resolvedAvatarUrl;
   bool _conversationMuted = false;
   Timer? _outboundTypingStopTimer;
 
@@ -99,8 +101,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _resolvedUserName = widget.userName;
+    _resolvedAvatarUrl = widget.avatarUrl;
     _loadCurrentUserId();
     if (widget.userId > 0) {
+      _resolvePeerDisplayIfNeeded();
       _loadMessages();
       _initializePusherListeners();
       _loadConversationMuteStatus();
@@ -124,6 +129,61 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _scrollController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  String get _peerDisplayName {
+    final name = _resolvedUserName ?? widget.userName;
+    if (name != null && name.trim().isNotEmpty && name.trim() != 'User') {
+      return name.trim();
+    }
+    return 'User';
+  }
+
+  String? get _peerAvatarUrl => _resolvedAvatarUrl ?? widget.avatarUrl;
+
+  Future<void> _resolvePeerDisplayIfNeeded() async {
+    final hasName = widget.userName != null &&
+        widget.userName!.trim().isNotEmpty &&
+        widget.userName!.trim() != 'User';
+    final hasAvatar =
+        widget.avatarUrl != null && widget.avatarUrl!.trim().isNotEmpty;
+    if (hasName && hasAvatar) return;
+
+    try {
+      final profile =
+          await ref.read(profileServiceProvider).getUserProfile(widget.userId);
+      if (!mounted) return;
+      setState(() {
+        if (!hasName) {
+          final first = profile.firstName.trim();
+          if (first.isNotEmpty) _resolvedUserName = first;
+        }
+        if (!hasAvatar &&
+            profile.images != null &&
+            profile.images!.isNotEmpty) {
+          _resolvedAvatarUrl = profile.images!.first.imageUrl;
+        }
+      });
+    } catch (e) {
+      AppLogger.warning(
+        'Could not resolve chat peer display',
+        tag: 'ChatPage',
+        error: e,
+      );
+    }
+  }
+
+  void _openConversationInfo() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatConversationInfoPage(
+          userId: widget.userId,
+          userName: _peerDisplayName,
+          avatarUrl: _peerAvatarUrl,
+          isOnline: _isOnline,
+        ),
+      ),
+    );
   }
 
   Future<void> _loadCurrentUserId() async {
@@ -298,11 +358,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final hasText = text.trim().isNotEmpty;
 
     Future<void> sendTyping(bool isTyping) async {
-      final conversationId = _conversationId;
-      if (conversationId != null && conversationId > 0) {
-        await chatService.setConversationTyping(conversationId, isTyping);
-      } else {
-        await chatService.setTypingStatus(widget.userId, isTyping);
+      try {
+        final conversationId = _conversationId;
+        if (conversationId != null && conversationId > 0) {
+          await chatService.setConversationTyping(conversationId, isTyping);
+        } else {
+          await chatService.setTypingStatus(widget.userId, isTyping);
+        }
+      } catch (e) {
+        AppLogger.warning(
+          'Typing indicator failed (non-blocking)',
+          tag: 'chat_page',
+          error: e,
+        );
       }
     }
 
@@ -681,8 +749,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       context: context,
       ref: ref,
       recipientId: widget.userId,
-      recipientName: widget.userName ?? 'User',
-      recipientAvatarUrl: widget.avatarUrl,
+      recipientName: _peerDisplayName,
+      recipientAvatarUrl: _peerAvatarUrl,
       type: call.isVideoCall ? OutgoingCallType.video : OutgoingCallType.voice,
     );
   }
@@ -1290,8 +1358,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       context: context,
       ref: ref,
       recipientId: widget.userId,
-      recipientName: widget.userName ?? 'User',
-      recipientAvatarUrl: widget.avatarUrl,
+      recipientName: _peerDisplayName,
+      recipientAvatarUrl: _peerAvatarUrl,
       type: OutgoingCallType.video,
     );
   }
@@ -1306,27 +1374,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: ChatHeader(
+        preferredSize: Size.fromHeight(
+          64 + MediaQuery.paddingOf(context).top,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: ChatHeader(
           userId: widget.userId,
-          name: widget.userName ?? 'User',
-          avatarUrl: widget.avatarUrl,
+          name: _peerDisplayName,
+          avatarUrl: _peerAvatarUrl,
           isOnline: _isOnline,
           lastSeenAt: _lastSeenAt,
           onBack: () => Navigator.of(context).pop(),
-          onHeaderTap: () {
-            setState(() => _showUserInfoPanel = !_showUserInfoPanel);
-          },
-          onInfo: () {
-            setState(() => _showUserInfoPanel = !_showUserInfoPanel);
-          },
+          onHeaderTap: _openConversationInfo,
+          onInfo: _openConversationInfo,
           onCall: () {
             startOutgoingCall(
               context: context,
               ref: ref,
               recipientId: widget.userId,
-              recipientName: widget.userName ?? 'User',
-              recipientAvatarUrl: widget.avatarUrl,
+              recipientName: _peerDisplayName,
+              recipientAvatarUrl: _peerAvatarUrl,
               type: OutgoingCallType.voice,
             );
           },
@@ -1334,28 +1402,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             _handleVideoCallTap();
           },
         ),
+        ),
       ),
       body: Column(
         children: [
-          AnimatedSize(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            alignment: Alignment.topCenter,
-            child: _showUserInfoPanel
-                ? ChatUserInfoPanel(
-                    userId: widget.userId,
-                    name: widget.userName ?? 'User',
-                    avatarUrl: widget.avatarUrl,
-                    onClose: () => setState(() => _showUserInfoPanel = false),
-                    onMuteChanged: (muted) {
-                      ref
-                          .read(conversationMuteCacheProvider.notifier)
-                          .setMuted(widget.userId, muted);
-                      setState(() => _conversationMuted = muted);
-                    },
-                  )
-                : const SizedBox.shrink(),
-          ),
           if (_conversationMuted)
             Container(
               width: double.infinity,
@@ -1484,7 +1534,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               ),
                               ChatPeerTypingIndicator(
                                 peerUserId: widget.userId,
-                                displayName: widget.userName,
+                                displayName: _peerDisplayName,
                               ),
                             ],
                           ),

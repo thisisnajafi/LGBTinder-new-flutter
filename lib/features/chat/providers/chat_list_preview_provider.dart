@@ -71,13 +71,10 @@ class ChatListPreviewItem {
       };
 
   factory ChatListPreviewItem.fromChat(Chat chat) {
-    final name = chat.lastName != null
-        ? '${chat.firstName} ${chat.lastName}'
-        : chat.firstName;
     return ChatListPreviewItem(
       id: chat.userId,
       chatId: chat.id,
-      name: name,
+      name: chat.displayName,
       avatarUrl: chat.primaryImageUrl,
       lastMessage: chat.lastMessage?.message ?? '',
       lastMessageTime: chat.lastMessageAt ?? chat.lastMessage?.createdAt,
@@ -133,11 +130,22 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
     );
   }
 
+  String _nameFromMap(Map<String, dynamic> map) {
+    final name = map['name']?.toString().trim();
+    if (name != null && name.isNotEmpty) return name;
+    final first = map['first_name']?.toString().trim() ?? '';
+    final last = map['last_name']?.toString().trim() ?? '';
+    if (first.isNotEmpty) {
+      return last.isNotEmpty ? '$first $last' : first;
+    }
+    return 'User';
+  }
+
   ChatListPreviewItem _fromMap(Map<String, dynamic> map) {
     return ChatListPreviewItem(
       id: map['id'] as int? ?? 0,
       chatId: map['chat_id'] as int? ?? 0,
-      name: map['name']?.toString() ?? 'User',
+      name: _nameFromMap(map),
       avatarUrl: map['avatar_url']?.toString(),
       lastMessage: map['last_message']?.toString() ?? '',
       lastMessageTime: map['last_message_time'] is DateTime
@@ -184,7 +192,7 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
       updated = ChatListPreviewItem(
         id: peerId,
         chatId: 0,
-        name: 'User',
+        name: _nameFromSenderPayload(message),
         lastMessage: previewText,
         lastMessageTime: message.createdAt,
         unreadCount: inActiveChat || !isIncoming ? 0 : 1,
@@ -268,6 +276,27 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
 
   void clearSeed() {
     state = const ChatListPreviewState();
+  }
+
+  String _nameFromSenderPayload(Message message) {
+    final meta = message.metadata;
+    if (meta == null) return 'User';
+    for (final key in ['sender_name', 'user_name', 'name', 'display_name']) {
+      final value = meta[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    final sender = meta['sender'];
+    if (sender is Map) {
+      final nested = Map<String, dynamic>.from(sender);
+      final first = nested['first_name']?.toString().trim() ?? '';
+      final last = nested['last_name']?.toString().trim() ?? '';
+      if (first.isNotEmpty) {
+        return last.isNotEmpty ? '$first $last' : first;
+      }
+      final name = nested['name']?.toString().trim();
+      if (name != null && name.isNotEmpty) return name;
+    }
+    return 'User';
   }
 
   String _previewTextForMessage(Message message) {

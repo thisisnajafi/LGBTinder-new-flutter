@@ -45,8 +45,15 @@ class ApiResponse<T> {
       data: json['data'] != null
           ? (fromJsonT != null ? fromJsonT(json['data']) : json['data'] as T)
           : null,
-      meta: json['meta'] as Map<String, dynamic>?,
+      meta: _parseMeta(json['meta']),
     );
+  }
+
+  /// Backend often sends `meta: []` for empty metadata; only maps are valid here.
+  static Map<String, dynamic>? _parseMeta(dynamic meta) {
+    if (meta is Map<String, dynamic>) return meta;
+    if (meta is Map) return Map<String, dynamic>.from(meta);
+    return null;
   }
 
   static bool _looksLikeApiEnvelope(Map<String, dynamic> json) {
@@ -110,8 +117,8 @@ class ApiResponse<T> {
     );
   }
 
-  /// Check if response is successful
-  bool get isSuccess => status && data != null;
+  /// Check if response is successful (allows empty/null [data] for void endpoints).
+  bool get isSuccess => status;
 
   /// Check if response has error
   bool get hasError => !status;
