@@ -20,9 +20,6 @@ String? resolveUrlSchemeRoute(Uri uri) {
 
   switch (host) {
     case 'match':
-      if (peerId != null && peerId > 0) {
-        return NotificationNavigation.chatThreadLocation(userId: peerId);
-      }
       return '${AppRoutes.home}/matches';
     case 'superlike':
     case 'message':

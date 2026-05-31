@@ -318,6 +318,8 @@ class PushNotificationService {
         _navigateToMatches?.call();
         break;
       case 'match':
+        _navigateToMatch?.call();
+        break;
       case 'superlike':
         if (userId != null && _navigateToChat != null) {
           _navigateToChat!.call(userId.toString());

@@ -221,6 +221,53 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
     state = state.copyWith(items: [updated, ...others]);
   }
 
+  /// Insert or promote a peer after superlike / new chat access (before next API refresh).
+  void upsertPeer({
+    required int peerUserId,
+    String? name,
+    String? avatarUrl,
+    String? lastMessage,
+    DateTime? lastMessageTime,
+  }) {
+    if (peerUserId <= 0) return;
+
+    final timestamp = lastMessageTime ?? DateTime.now();
+    final preview = lastMessage?.trim().isNotEmpty == true
+        ? lastMessage!.trim()
+        : '⭐ Superliked';
+
+    final index = state.items.indexWhere((item) => item.id == peerUserId);
+    final ChatListPreviewItem updated;
+    if (index >= 0) {
+      final existing = state.items[index];
+      updated = existing.copyWith(
+        name: name?.trim().isNotEmpty == true ? name!.trim() : existing.name,
+        avatarUrl: avatarUrl ?? existing.avatarUrl,
+        lastMessage: preview,
+        lastMessageTime: timestamp,
+      );
+    } else {
+      updated = ChatListPreviewItem(
+        id: peerUserId,
+        chatId: peerUserId,
+        name: name?.trim().isNotEmpty == true ? name!.trim() : 'User',
+        avatarUrl: avatarUrl,
+        lastMessage: preview,
+        lastMessageTime: timestamp,
+      );
+    }
+
+    final others = state.items.where((item) => item.id != peerUserId).toList();
+    state = ChatListPreviewState(
+      items: [updated, ...others],
+      isSeeded: true,
+    );
+  }
+
+  void clearSeed() {
+    state = const ChatListPreviewState();
+  }
+
   String _previewTextForMessage(Message message) {
     switch (message.messageType) {
       case 'sticker':

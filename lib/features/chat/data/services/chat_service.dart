@@ -157,30 +157,44 @@ class ChatService {
     return data ?? {};
   }
 
-  /// Get list of users with conversations
-  Future<List<Chat>> getChatUsers() async {
+  /// Get list of users with conversations (matches + superlikes).
+  Future<List<Chat>> getChatUsers({bool forceRefresh = false}) async {
     try {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.chatUsers,
+        forceRefresh: forceRefresh,
       );
 
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
+      if (!response.status) {
+        throw Exception(response.message);
       }
 
-      if (dataList != null) {
-        return dataList.map((item) => Chat.fromJson(item as Map<String, dynamic>)).toList();
-      }
-      return [];
+      final dataList = _extractChatUsersList(response.data);
+      return dataList
+          .map((item) => Chat.fromJson(item as Map<String, dynamic>))
+          .where((chat) => chat.userId > 0)
+          .toList();
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Parses unified API `data` (list) or legacy/nested shapes.
+  List<dynamic> _extractChatUsersList(dynamic data) {
+    if (data is List) {
+      return data;
+    }
+    if (data is Map<String, dynamic>) {
+      final users = data['users'];
+      if (users is List) return users;
+      final nested = data['data'];
+      if (nested is List) return nested;
+      if (nested is Map<String, dynamic>) {
+        final nestedUsers = nested['users'];
+        if (nestedUsers is List) return nestedUsers;
+      }
+    }
+    return [];
   }
 
   /// Delete a message

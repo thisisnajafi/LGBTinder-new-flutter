@@ -35,6 +35,8 @@ import '../core/widgets/cached_content_banner.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../routes/app_router.dart';
 
+enum _SuperlikeSource { profileSheet, actionRow, cardSwipe }
+
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
   const DiscoveryPage({
@@ -102,8 +104,21 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   Future<void> _handleSheetAction(String action) async {
     final stack = ref.read(discoverCacheProvider).stack;
-    if (stack.isEmpty) return;
+    if (stack.isEmpty) {
+      AppLogger.warning(
+        'Profile sheet action ignored — discovery stack is empty (action=$action)',
+        tag: 'DiscoveryPage:ProfileSheet',
+      );
+      return;
+    }
     final userId = stack.first.id;
+    final profileName = stack.first.firstName;
+    AppLogger.debug(
+      'Profile sheet action tapped | action=$action userId=$userId '
+      'name=$profileName profileSheetOpen=$_isProfileSheetOpen '
+      'swipeInProgress=$_isSwipeInProgress',
+      tag: 'DiscoveryPage:ProfileSheet',
+    );
     _closeProfileSheet();
     switch (action) {
       case 'like':
@@ -111,7 +126,17 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         await _handleSwipe(userId, action, fromRow: true);
         break;
       case 'superlike':
-        await _showSuperlikeBottomSheet(userId);
+        AppLogger.info(
+          'Superlike initiated from profile sheet floating actions | '
+          'userId=$userId name=$profileName — closing profile sheet, '
+          'opening superlike message sheet next',
+          tag: 'DiscoveryPage:Superlike',
+        );
+        await _showSuperlikeBottomSheet(
+          userId,
+          source: _SuperlikeSource.profileSheet,
+          profileName: profileName,
+        );
         break;
     }
   }
@@ -186,7 +211,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         unawaited(_handleSwipe(userId, action, fromRow: true));
         break;
       case 'superlike':
-        unawaited(_showSuperlikeBottomSheet(userId));
+        unawaited(_showSuperlikeBottomSheet(
+          userId,
+          source: _SuperlikeSource.actionRow,
+        ));
         break;
       case 'message':
         _handleCardTap(userId);
@@ -206,13 +234,40 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     return service.hasReachedSuperlikeLimit();
   }
 
-  Future<void> _showSuperlikeBottomSheet(int userId) async {
-    if (_isSwipeInProgress) return;
+  Future<void> _showSuperlikeBottomSheet(
+    int userId, {
+    _SuperlikeSource source = _SuperlikeSource.actionRow,
+    String? profileName,
+  }) async {
+    if (_isSwipeInProgress) {
+      AppLogger.warning(
+        'Superlike flow blocked — swipe already in progress | '
+        'source=$source userId=$userId',
+        tag: 'DiscoveryPage:Superlike',
+      );
+      return;
+    }
+
+    AppLogger.info(
+      'Superlike flow started | source=$source userId=$userId '
+      'name=${profileName ?? 'unknown'} profileSheetOpen=$_isProfileSheetOpen',
+      tag: 'DiscoveryPage:Superlike',
+    );
 
     final sessionCache = ref.read(sessionDataCacheServiceProvider);
     final remaining = sessionCache.getSuperlikesRemainingSync();
+    AppLogger.debug(
+      'Superlike quota check | source=$source userId=$userId '
+      'remaining=$remaining',
+      tag: 'DiscoveryPage:Superlike',
+    );
 
     if (remaining == null) {
+      AppLogger.info(
+        'Superlike count unavailable — opening purchase sheet | '
+        'source=$source userId=$userId',
+        tag: 'DiscoveryPage:Superlike',
+      );
       await showSuperlikePacksSheet(
         context,
         headerMessage: "You're out of superlikes — get more below",
@@ -223,6 +278,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     }
 
     if (remaining <= 0) {
+      AppLogger.info(
+        'Superlike quota exhausted (remaining=$remaining) — opening purchase sheet | '
+        'source=$source userId=$userId',
+        tag: 'DiscoveryPage:Superlike',
+      );
       await showSuperlikePacksSheet(
         context,
         headerMessage: "You're out of superlikes — get more below",
@@ -232,6 +292,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     final superlikeInfo = sessionCache.superlikeInfoFromCache();
     if (superlikeInfo == null) {
+      AppLogger.warning(
+        'Superlike info missing from cache — opening purchase sheet | '
+        'source=$source userId=$userId remaining=$remaining',
+        tag: 'DiscoveryPage:Superlike',
+      );
       await showSuperlikePacksSheet(
         context,
         headerMessage: "You're out of superlikes — get more below",
@@ -240,16 +305,48 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       return;
     }
 
-    if (!mounted) return;
+    if (!mounted) {
+      AppLogger.warning(
+        'Superlike flow aborted — widget unmounted before message sheet | '
+        'source=$source userId=$userId',
+        tag: 'DiscoveryPage:Superlike',
+      );
+      return;
+    }
 
     try {
+      AppLogger.debug(
+        'Opening superlike message sheet | source=$source userId=$userId '
+        'remaining=$remaining profileSheetOpen=$_isProfileSheetOpen',
+        tag: 'DiscoveryPage:Superlike',
+      );
       final result = await showSuperlikeMessageSheet(
         context,
         superlikeInfo: superlikeInfo,
       );
-      if (!mounted || result == null) return;
+      if (!mounted) {
+        AppLogger.warning(
+          'Superlike flow aborted — widget unmounted after message sheet | '
+          'source=$source userId=$userId result=${result != null}',
+          tag: 'DiscoveryPage:Superlike',
+        );
+        return;
+      }
+      if (result == null) {
+        AppLogger.debug(
+          'Superlike message sheet dismissed without result | '
+          'source=$source userId=$userId',
+          tag: 'DiscoveryPage:Superlike',
+        );
+        return;
+      }
 
       if (result.openPurchase) {
+        AppLogger.info(
+          'User chose to buy superlikes from message sheet | '
+          'source=$source userId=$userId',
+          tag: 'DiscoveryPage:Superlike',
+        );
         await showSuperlikePacksSheet(
           context,
           headerMessage: "You're out of superlikes — get more below",
@@ -258,17 +355,40 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       }
 
       final message = result.message;
-      if (message == null || message.isEmpty) return;
+      if (message == null || message.isEmpty) {
+        AppLogger.debug(
+          'Superlike message sheet returned empty message — aborting send | '
+          'source=$source userId=$userId',
+          tag: 'DiscoveryPage:Superlike',
+        );
+        return;
+      }
 
       if (_isProfileSheetOpen) {
+        AppLogger.debug(
+          'Profile sheet still open before superlike send — closing | '
+          'source=$source userId=$userId',
+          tag: 'DiscoveryPage:Superlike',
+        );
         _closeProfileSheet();
       }
 
+      AppLogger.info(
+        'Sending superlike swipe | source=$source userId=$userId '
+        'messageLength=${message.length} profileSheetOpen=$_isProfileSheetOpen',
+        tag: 'DiscoveryPage:Superlike',
+      );
       final queued = await _handleSwipe(
         userId,
         'superlike',
         fromRow: true,
         superlikeMessage: message,
+      );
+
+      AppLogger.info(
+        'Superlike swipe completed | source=$source userId=$userId '
+        'queued=$queued profileSheetOpen=$_isProfileSheetOpen',
+        tag: 'DiscoveryPage:Superlike',
       );
 
       if (queued && mounted) {
@@ -285,8 +405,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       }
     } catch (e, stack) {
       AppLogger.error(
-        'Super like sheet failed',
-        tag: 'DiscoveryPage',
+        'Super like sheet failed | source=$source userId=$userId '
+        'profileSheetOpen=$_isProfileSheetOpen',
+        tag: 'DiscoveryPage:Superlike',
         error: e,
         stackTrace: stack,
       );
@@ -304,7 +425,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     if (_isSwipeInProgress) return;
 
     if (action == 'superlike') {
-      unawaited(_showSuperlikeBottomSheet(userId));
+      unawaited(_showSuperlikeBottomSheet(
+        userId,
+        source: _SuperlikeSource.cardSwipe,
+      ));
       return;
     }
     unawaited(_handleSwipe(userId, action, fromRow: false));

@@ -521,7 +521,7 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-/// Floating discovery action buttons with subtle gradient backdrop.
+/// Floating discovery action buttons shown over the profile detail sheet.
 class DiscoveryFloatingActions extends StatelessWidget {
   const DiscoveryFloatingActions({
     super.key,
@@ -545,63 +545,40 @@ class DiscoveryFloatingActions extends StatelessWidget {
       left: 0,
       right: 0,
       bottom: bottom,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    theme.colorScheme.surface.withValues(alpha: 0.92),
-                  ],
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: AnimatedOpacity(
+          opacity: disabled ? 0.5 : 1,
+          duration: const Duration(milliseconds: 150),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _FloatingActionButton(
+                icon: AppIcons.getIconPath('close-circle'),
+                fillColor: AppColors.feedbackError,
+                size: 58,
+                onPressed: disabled ? null : onDislike,
+                semanticLabel: 'Dislike profile',
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: AnimatedOpacity(
-              opacity: disabled ? 0.5 : 1,
-              duration: const Duration(milliseconds: 150),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _FloatingActionButton(
-                    icon: AppIcons.getIconPath('close-circle'),
-                    fillColor: AppColors.feedbackError,
-                    size: 58,
-                    onPressed: disabled ? null : onDislike,
-                    semanticLabel: 'Dislike profile',
-                  ),
-                  const SizedBox(width: 32),
-                  _FloatingActionButton(
-                    icon: AppIcons.star,
-                    fillColor: theme.colorScheme.primary,
-                    size: 54,
-                    onPressed: disabled ? null : onSuperlike,
-                    semanticLabel: 'Super like profile',
-                  ),
-                  const SizedBox(width: 32),
-                  _FloatingActionButton(
-                    icon: AppIcons.heart,
-                    fillColor: AppColors.feedbackSuccess,
-                    size: 58,
-                    onPressed: disabled ? null : onLike,
-                    semanticLabel: 'Like profile',
-                  ),
-                ],
+              const SizedBox(width: 32),
+              _FloatingActionButton(
+                icon: AppIcons.star,
+                fillColor: theme.colorScheme.primary,
+                size: 54,
+                onPressed: disabled ? null : onSuperlike,
+                semanticLabel: 'Super like profile',
               ),
-            ),
+              const SizedBox(width: 32),
+              _FloatingActionButton(
+                icon: AppIcons.heart,
+                fillColor: AppColors.feedbackSuccess,
+                size: 58,
+                onPressed: disabled ? null : onLike,
+                semanticLabel: 'Like profile',
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

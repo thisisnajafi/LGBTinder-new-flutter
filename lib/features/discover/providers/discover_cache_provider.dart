@@ -17,6 +17,7 @@ import '../../../shared/services/cache_service.dart';
 import '../../matching/data/models/match.dart' as match_models;
 import '../../matching/data/services/likes_service.dart';
 import '../../matching/providers/likes_providers.dart';
+import '../../chat/providers/chat_list_preview_provider.dart';
 import '../../payments/data/services/plan_limits_service.dart';
 import '../data/models/cached_discover_item.dart';
 import '../data/models/discovery_profile.dart';
@@ -369,6 +370,12 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           if (response.isMatch) {
             unawaited(_cacheInvalidator.purgeMatchList());
             if (onMatch != null) onMatch(response.match);
+          } else {
+            _upsertChatListAfterSuperlike(
+              userId: userId,
+              currentList: currentList,
+              introMessage: superlikeMessage,
+            );
           }
           break;
         }
@@ -449,5 +456,34 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     Future.microtask(() {
       _ref.invalidate(subscriptionStatusProvider);
     });
+  }
+
+  void _upsertChatListAfterSuperlike({
+    required int userId,
+    required List<CachedDiscoverItem> currentList,
+    String? introMessage,
+  }) {
+    CachedDiscoverItem? cached;
+    for (final item in currentList) {
+      if (item.profile.id == userId) {
+        cached = item;
+        break;
+      }
+    }
+    final profile = cached?.profile;
+    final name = profile == null
+        ? null
+        : (profile.lastName != null && profile.lastName!.isNotEmpty)
+            ? '${profile.firstName} ${profile.lastName}'
+            : profile.firstName;
+
+    _ref.read(chatListPreviewProvider.notifier).upsertPeer(
+          peerUserId: userId,
+          name: name,
+          avatarUrl: profile?.primaryImageUrl,
+          lastMessage: introMessage?.trim().isNotEmpty == true
+              ? introMessage!.trim()
+              : null,
+        );
   }
 }

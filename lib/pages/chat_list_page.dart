@@ -31,7 +31,15 @@ enum _ChatFilter { all, unread, online }
 
 /// Chat list page - Displays list of conversations
 class ChatListPage extends ConsumerStatefulWidget {
-  const ChatListPage({super.key});
+  const ChatListPage({
+    super.key,
+    this.selectedTabIndex,
+    this.messengerTabIndex,
+  });
+
+  /// When embedded in [HomePage], reload when user opens the Messenger tab.
+  final int? selectedTabIndex;
+  final int? messengerTabIndex;
 
   @override
   ConsumerState<ChatListPage> createState() => _ChatListPageState();
@@ -56,6 +64,21 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     _loadPremiumBannerDismissed();
     _loadChats();
     _loadMatches();
+  }
+
+  @override
+  void didUpdateWidget(ChatListPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nowSelected = widget.selectedTabIndex != null &&
+        widget.messengerTabIndex != null &&
+        widget.selectedTabIndex == widget.messengerTabIndex;
+    final wasSelected = oldWidget.selectedTabIndex != null &&
+        oldWidget.messengerTabIndex != null &&
+        oldWidget.selectedTabIndex == oldWidget.messengerTabIndex;
+    if (nowSelected && !wasSelected) {
+      _loadChats(forceRefresh: true);
+      _loadMatches();
+    }
   }
 
   @override
@@ -91,7 +114,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     if (mounted) setState(() => _premiumBannerDismissed = true);
   }
 
-  Future<void> _loadChats() async {
+  Future<void> _loadChats({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -100,7 +123,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
 
     try {
       final chatService = ref.read(chatServiceProvider);
-      final chats = await chatService.getChatUsers();
+      final chats = await chatService.getChatUsers(forceRefresh: forceRefresh);
 
       if (mounted) {
         ref.read(conversationMuteCacheProvider.notifier).seedFromChats(chats);
@@ -374,7 +397,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                       : _filteredChats.isEmpty
                           ? RefreshIndicator(
                               onRefresh: () async {
-                                await _loadChats();
+                                await _loadChats(forceRefresh: true);
                                 await _loadMatches();
                               },
                               child: SingleChildScrollView(
@@ -387,7 +410,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                             )
                           : RefreshIndicator(
                               onRefresh: () async {
-                                await _loadChats();
+                                await _loadChats(forceRefresh: true);
                                 await _loadMatches();
                               },
                               child: ListView.separated(

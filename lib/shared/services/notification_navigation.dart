@@ -10,10 +10,10 @@ import '../../routes/app_router.dart';
 class NotificationNavigation {
   NotificationNavigation._();
 
+  /// Types that open a 1:1 chat thread (match always goes to matches list first).
   static const Set<String> _chatThreadTypes = {
     'message',
     'chat',
-    'match',
     'superlike',
   };
 
@@ -119,10 +119,6 @@ class NotificationNavigation {
         }
         return '${AppRoutes.home}/chat-list';
       case 'match':
-        if (userId != null && userId > 0) {
-          return chatThreadLocation(userId: userId, userName: name, avatarUrl: avatar) ??
-              '${AppRoutes.home}/matches';
-        }
         return '${AppRoutes.home}/matches';
       case 'superlike':
         if (userId != null && userId > 0) {

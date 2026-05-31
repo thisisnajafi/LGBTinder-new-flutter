@@ -106,7 +106,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           selectedTabIndex: selectedTabIndex,
           discoveryTabIndex: 0,
         ),
-        const ChatListPage(),
+        ChatListPage(
+          selectedTabIndex: selectedTabIndex,
+          messengerTabIndex: 1,
+        ),
         const NotificationsScreen(),
         ProfilePage(userId: profileUserId),
         const SettingsPage(),

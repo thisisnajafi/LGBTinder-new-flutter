@@ -9,10 +9,10 @@ void main() {
       expect(route, isNull);
     });
 
-    test('maps match route with user id to chat thread', () {
+    test('maps match route with user id to matches list', () {
       expect(
         resolveUrlSchemeRoute(Uri.parse('lgbtfinder://match/123')),
-        Uri(path: AppRoutes.chat, queryParameters: {'userId': '123'}).toString(),
+        '${AppRoutes.home}/matches',
       );
     });
 

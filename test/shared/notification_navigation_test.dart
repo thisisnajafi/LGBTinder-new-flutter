@@ -31,9 +31,18 @@ void main() {
       expect(normalized['type'], 'message');
     });
 
-    test('match opens chat thread when peer id known', () {
+    test('match always opens matches list even when peer id known', () {
       final route = NotificationNavigation.resolveDestination(
         type: 'match',
+        peerUserId: 12,
+        userName: 'Alex',
+      );
+      expect(route, '${AppRoutes.home}/matches');
+    });
+
+    test('superlike opens chat when peer id known', () {
+      final route = NotificationNavigation.resolveDestination(
+        type: 'superlike',
         peerUserId: 12,
         userName: 'Alex',
       );
@@ -70,6 +79,21 @@ void main() {
           data: {'user_id': 5, 'sender_id': 5},
         ),
         Uri(path: AppRoutes.chat, queryParameters: {'userId': '5'}).toString(),
+      );
+    });
+
+    test('resolveFromNotification match goes to matches list', () {
+      final notification = app_models.Notification.fromJson({
+        'id': 2,
+        'type': 'match',
+        'message': 'New match!',
+        'created_at': DateTime.now().toIso8601String(),
+        'from_user': {'id': 12, 'name': 'Alex'},
+      });
+
+      expect(
+        NotificationNavigation.resolveFromNotification(notification),
+        '${AppRoutes.home}/matches',
       );
     });
 
