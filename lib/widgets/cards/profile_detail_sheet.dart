@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../discovery/discovery_swipe_action_button.dart';
 import '../../shared/models/match_reason.dart';
 import 'swipeable_card.dart';
 
@@ -574,89 +574,30 @@ class DiscoverySheetActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AnimatedOpacity(
       opacity: disabled ? 0.5 : 1,
       duration: const Duration(milliseconds: 150),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _SheetActionButton(
-            icon: AppIcons.getIconPath('close-circle'),
-            fillColor: AppColors.feedbackError,
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.dislike,
             size: 58,
             onPressed: disabled ? null : onDislike,
-            semanticLabel: 'Dislike profile',
           ),
           const SizedBox(width: 32),
-          _SheetActionButton(
-            icon: AppIcons.star,
-            fillColor: theme.colorScheme.primary,
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.superlike,
             size: 54,
             onPressed: disabled ? null : onSuperlike,
-            semanticLabel: 'Super like profile',
           ),
           const SizedBox(width: 32),
-          _SheetActionButton(
-            icon: AppIcons.heart,
-            fillColor: AppColors.feedbackSuccess,
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.like,
             size: 58,
             onPressed: disabled ? null : onLike,
-            semanticLabel: 'Like profile',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SheetActionButton extends StatelessWidget {
-  const _SheetActionButton({
-    required this.icon,
-    required this.fillColor,
-    required this.size,
-    required this.onPressed,
-    required this.semanticLabel,
-  });
-
-  final String icon;
-  final Color fillColor;
-  final double size;
-  final VoidCallback? onPressed;
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      enabled: onPressed != null,
-      label: semanticLabel,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: fillColor,
-            boxShadow: [
-              BoxShadow(
-                color: fillColor.withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-                spreadRadius: -2,
-              ),
-            ],
-          ),
-          child: Center(
-            child: AppSvgIcon(
-              assetPath: icon,
-              size: size * 0.42,
-              color: Colors.white,
-            ),
-          ),
-        ),
       ),
     );
   }

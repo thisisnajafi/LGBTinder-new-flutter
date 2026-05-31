@@ -2,6 +2,7 @@
 // Card stack manager with horizontal swipe gestures
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../shared/models/match_reason.dart';
@@ -23,6 +24,10 @@ class CardStackManager extends ConsumerStatefulWidget {
   final String? emptySecondaryActionLabel;
   final VoidCallback? onEmptySecondaryAction;
   final bool isSheetOpen;
+  /// Resting position below header chrome; cards may paint above when swiping.
+  final double contentTopInset;
+  /// Keeps the default card position above the action row.
+  final double contentBottomInset;
 
   const CardStackManager({
     super.key,
@@ -37,6 +42,8 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.emptySecondaryActionLabel,
     this.onEmptySecondaryAction,
     this.isSheetOpen = false,
+    this.contentTopInset = 0,
+    this.contentBottomInset = 0,
   });
 
   @override
@@ -187,25 +194,28 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       );
     }
 
-    return ClipRect(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            if (widget.cards.length > 2)
-              _buildStackCard(widget.cards[2], depth: 2),
-            if (widget.cards.length > 1)
-              _buildStackCard(widget.cards[1], depth: 1),
-            if (widget.cards.isNotEmpty)
-              _exitingCardSnapshot == null
-                  ? _buildInteractiveTopCard(widget.cards[0])
-                  : _buildStackCard(widget.cards[0], depth: 0),
-            if (_exitingCardSnapshot != null)
-              _buildExitingCard(_exitingCardSnapshot!),
-          ],
-        ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.spacingLG,
+        widget.contentTopInset,
+        AppSpacing.spacingLG,
+        widget.contentBottomInset,
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          if (widget.cards.length > 2)
+            _buildStackCard(widget.cards[2], depth: 2),
+          if (widget.cards.length > 1)
+            _buildStackCard(widget.cards[1], depth: 1),
+          if (widget.cards.isNotEmpty)
+            _exitingCardSnapshot == null
+                ? _buildInteractiveTopCard(widget.cards[0])
+                : _buildStackCard(widget.cards[0], depth: 0),
+          if (_exitingCardSnapshot != null)
+            _buildExitingCard(_exitingCardSnapshot!),
+        ],
       ),
     );
   }
@@ -242,7 +252,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     return Positioned.fill(
       child: _applyStackDepth(
         depth: depth,
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: AspectRatio(
             aspectRatio: SwipeableCard.cardAspectRatio,
             child: _buildCard(
@@ -262,6 +273,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         ? 0.0
         : (_dragOffset.dx / width * 0.12).clamp(-0.15, 0.15);
 
+    final isDragging = !widget.isSheetOpen && _dragOffset != Offset.zero;
+
     return Positioned.fill(
       child: FadeTransition(
         opacity: _revealOpacity,
@@ -269,28 +282,47 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
           position: _revealSlide,
           child: ScaleTransition(
             scale: _revealScale,
-            child: GestureDetector(
-              onPanUpdate: _onPanUpdate,
-              onPanEnd: _onPanEnd,
-              child: Transform.translate(
-                offset: widget.isSheetOpen ? Offset.zero : _dragOffset,
-                child: Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.0011)
-                    ..rotateZ(rotation),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: _buildCard(cardData, depth: 0),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topCenter,
+              children: [
+                Transform.translate(
+                  offset: widget.isSheetOpen ? Offset.zero : _dragOffset,
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.0011)
+                      ..rotateZ(rotation),
+                    child: GestureDetector(
+                      onPanUpdate: _onPanUpdate,
+                      onPanEnd: _onPanEnd,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          boxShadow: isDragging
+                              ? [
+                                  BoxShadow(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .shadow
+                                        .withValues(alpha: 0.35),
+                                    blurRadius: 28,
+                                    offset: const Offset(0, 12),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _buildCard(cardData, depth: 0),
+                            if (!widget.isSheetOpen) _buildSwipeOverlay(),
+                          ],
+                        ),
                       ),
-                      if (!widget.isSheetOpen) _buildSwipeOverlay(),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -304,7 +336,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         position: _exitSlide,
         child: FadeTransition(
           opacity: _exitFade,
-          child: Center(
+          child: Align(
+            alignment: Alignment.topCenter,
             child: AspectRatio(
               aspectRatio: SwipeableCard.cardAspectRatio,
               child: _buildCard(cardData, depth: 0),
@@ -322,7 +355,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     final superOpacity = ((-_dragOffset.dy) / 60.0).clamp(0.0, 1.0);
     final likeColor = theme.colorScheme.tertiary;
     final nopeColor = theme.colorScheme.error;
-    final superColor = theme.colorScheme.primary;
+    final superColor = AppColors.warningYellow;
 
     Widget label({
       required String text,

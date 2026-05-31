@@ -115,23 +115,52 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   }
 
   Future<void> _loadChats({bool forceRefresh = false}) async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = null;
-    });
+    var showedCache = false;
+
+    if (!forceRefresh) {
+      try {
+        final cached =
+            await ref.read(chatLocalRepositoryProvider).getConversations();
+        if (cached.isNotEmpty && mounted) {
+          showedCache = true;
+          ref.read(conversationMuteCacheProvider.notifier).seedFromChats(cached);
+          final maps = cached.map((chat) => _chatToMap(chat)).toList();
+          ref.read(chatListPreviewProvider.notifier).seedFromMaps(maps);
+          setState(() {
+            _chats = maps;
+            _isLoading = false;
+            _hasError = false;
+            _errorMessage = null;
+          });
+        }
+      } catch (_) {
+        // Non-blocking — fall through to network.
+      }
+    }
+
+    if (!showedCache) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final chatService = ref.read(chatServiceProvider);
       final chats = await chatService.getChatUsers(forceRefresh: forceRefresh);
 
       if (mounted) {
+        await ref
+            .read(chatLocalRepositoryProvider)
+            .replaceAllConversations(chats);
         ref.read(conversationMuteCacheProvider.notifier).seedFromChats(chats);
         final maps = chats.map((chat) => _chatToMap(chat)).toList();
         ref.read(chatListPreviewProvider.notifier).seedFromMaps(maps);
         setState(() {
           _chats = maps;
           _isLoading = false;
+          _hasError = false;
         });
         Future.delayed(
           const Duration(milliseconds: 800),
@@ -141,7 +170,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         );
       }
     } on ApiError catch (e) {
-      if (mounted) {
+      if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
           _errorMessage = e.message;
@@ -149,7 +178,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
           _errorMessage = e.toString();
@@ -386,9 +415,9 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                 onUpgrade: () => context.push(AppRoutes.subscriptionPlans),
               ),
             Expanded(
-              child: _isLoading
+              child: _isLoading && _chats.isEmpty
                   ? const ChatListLoading(itemCount: 5)
-                  : _hasError
+                  : _hasError && _chats.isEmpty
                       ? ErrorDisplayWidget(
                           errorMessage:
                               _errorMessage ?? 'Failed to load conversations',

@@ -7,8 +7,43 @@ import '../models/chat.dart';
 import '../models/message.dart';
 import '../models/message_delivery_status.dart';
 import '../services/chat_outbound_queue_service.dart';
+import '../services/chat_service.dart';
 import 'app_database.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
+
+/// Saved cursor state for loading older messages in a conversation.
+class ChatHistoryPaginationMeta {
+  const ChatHistoryPaginationMeta({
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final bool hasMore;
+  final ChatHistoryCursor? nextCursor;
+
+  Map<String, dynamic> toJson() => {
+        'has_more': hasMore,
+        if (nextCursor != null)
+          'next_cursor': {
+            'before_id': nextCursor!.beforeId,
+            if (nextCursor!.beforeCreatedAt != null)
+              'before_created_at':
+                  nextCursor!.beforeCreatedAt!.toIso8601String(),
+          },
+      };
+
+  factory ChatHistoryPaginationMeta.fromJson(Map<String, dynamic> json) {
+    ChatHistoryCursor? cursor;
+    final rawCursor = json['next_cursor'];
+    if (rawCursor is Map<String, dynamic>) {
+      cursor = ChatHistoryCursor.fromJson(rawCursor);
+    }
+    return ChatHistoryPaginationMeta(
+      hasMore: json['has_more'] == true,
+      nextCursor: cursor,
+    );
+  }
+}
 
 /// Local-first read/write for chat list, messages, and outbound queue.
 class ChatLocalRepository {
@@ -186,6 +221,71 @@ class ChatLocalRepository {
         .get();
     return rows.map(_messageFromLocal).toList();
   }
+
+  /// All cached messages for a peer, oldest first.
+  Future<List<Message>> getAllMessagesForOtherUser(int otherUserId) async {
+    final rows = await (_db.select(_db.localMessages)
+          ..where((t) => t.otherUserId.equals(otherUserId))
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .get();
+    return rows.map(_messageFromLocal).toList();
+  }
+
+  /// Older cached messages before [beforeCreatedAt] (newest-first batch).
+  Future<List<Message>> getOlderMessagesForOtherUser(
+    int otherUserId, {
+    required DateTime beforeCreatedAt,
+    int limit = 30,
+  }) async {
+    final rows = await (_db.select(_db.localMessages)
+          ..where(
+            (t) =>
+                t.otherUserId.equals(otherUserId) &
+                t.createdAt.isSmallerThanValue(beforeCreatedAt),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .get();
+    return rows.map(_messageFromLocal).toList();
+  }
+
+  Future<void> saveHistoryPagination(
+    int otherUserId,
+    ChatHistoryPaginationMeta meta,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _historyMetaKey(otherUserId),
+      jsonEncode(meta.toJson()),
+    );
+  }
+
+  Future<ChatHistoryPaginationMeta?> loadHistoryPagination(int otherUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_historyMetaKey(otherUserId));
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return ChatHistoryPaginationMeta.fromJson(decoded);
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to parse chat history pagination meta',
+        tag: 'ChatLocalRepository',
+        error: e,
+      );
+    }
+    return null;
+  }
+
+  Future<void> clearHistoryPagination(int otherUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_historyMetaKey(otherUserId));
+  }
+
+  String _historyMetaKey(int otherUserId) =>
+      'chat_local_history_meta_$otherUserId';
 
   Stream<List<Message>> watchMessagesForOtherUser(
     int otherUserId, {

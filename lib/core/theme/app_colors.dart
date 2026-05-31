@@ -115,4 +115,23 @@ class AppColors {
     colors: [Color(0xFFF43F5E), Color(0xFF8B5CF6)],
     stops: [0.0, 1.0],
   );
+
+  /// Discover swipe action button fills (top-left → bottom-right).
+  static const LinearGradient discoverDislikeGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF6B7A), Color(0xFFE11D48)],
+  );
+
+  static const LinearGradient discoverSuperlikeGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFDE047), Color(0xFFF59E0B)],
+  );
+
+  static const LinearGradient discoverLikeGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF6EE7A8), Color(0xFF22C55E)],
+  );
 }

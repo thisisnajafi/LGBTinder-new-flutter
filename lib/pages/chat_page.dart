@@ -43,6 +43,7 @@ import '../features/calls/utils/call_log_labels.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../features/chat/providers/pinned_count_provider.dart';
 import '../features/chat/data/services/chat_service.dart';
+import '../features/chat/data/local/chat_local_repository.dart';
 import '../features/chat/utils/chat_timeline_merger.dart';
 import '../features/calls/utils/call_navigation.dart';
 import '../routes/app_router.dart';
@@ -327,7 +328,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  Future<void> _loadMessages() async {
+  Future<void> _loadMessages({bool forceRefresh = false}) async {
     if (widget.userId <= 0) {
       if (mounted) {
         setState(() {
@@ -339,11 +340,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
 
+    final localRepo = ref.read(chatLocalRepositoryProvider);
     var showedCache = false;
     try {
-      final cached = await ref
-          .read(chatLocalRepositoryProvider)
-          .getMessagesForOtherUser(widget.userId, limit: _historyPageSize);
+      final cached = await localRepo.getAllMessagesForOtherUser(widget.userId);
+      final pagination = await localRepo.loadHistoryPagination(widget.userId);
       if (cached.isNotEmpty && mounted) {
         showedCache = true;
         setState(() {
@@ -351,17 +352,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           _isLoading = false;
           _hasError = false;
           _errorMessage = null;
+          _hasMoreMessages = pagination?.hasMore ?? cached.length >= _historyPageSize;
+          _nextCursor = pagination?.nextCursor;
         });
         _scrollToBottom();
       }
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+    } catch (e) {
+      AppLogger.warning('Failed to load cached chat messages', tag: 'chat_page', error: e);
+    }
 
     setState(() {
       _isLoading = !showedCache;
       _hasError = false;
       _errorMessage = null;
-      _hasMoreMessages = true;
-      _nextCursor = null;
+      if (forceRefresh) {
+        _hasMoreMessages = true;
+        _nextCursor = null;
+      }
     });
 
     try {
@@ -370,7 +377,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         receiverId: widget.userId,
         page: 1,
         limit: _historyPageSize,
-        forceRefresh: true,
+        forceRefresh: forceRefresh,
       );
 
       List<Call> calls = [];
@@ -379,7 +386,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               peerUserId: widget.userId,
               limit: 50,
             );
-      } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+      } catch (e) {
+        AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e);
+      }
 
       if (mounted) {
         final messageMaps =
@@ -393,19 +402,58 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           messages: messageMaps,
           calls: callMaps,
         );
-        setState(() {
-          _messages = merged;
-          _isLoading = false;
-          _hasMoreMessages = history.hasMore;
-          _nextCursor = history.nextCursor;
-        });
+
+        if (showedCache && !forceRefresh) {
+          final existingIds = _messages
+              .where((item) => item['kind'] != 'call')
+              .map((item) => item['id'])
+              .whereType<int>()
+              .toSet();
+          final newFromNetwork = messageMaps
+              .where((m) => !existingIds.contains(m['id']))
+              .toList();
+          setState(() {
+            if (newFromNetwork.isNotEmpty) {
+              _messages = ChatTimelineMerger.merge(
+                messages: [
+                  ..._messages.where((item) => item['kind'] != 'call'),
+                  ...newFromNetwork,
+                ],
+                calls: [
+                  ...merged.where((item) => item['kind'] == 'call'),
+                  ..._messages.where((item) => item['kind'] == 'call'),
+                ],
+              );
+            }
+            _isLoading = false;
+            _hasMoreMessages = history.hasMore;
+            _nextCursor = history.nextCursor;
+          });
+        } else {
+          setState(() {
+            _messages = merged;
+            _isLoading = false;
+            _hasMoreMessages = history.hasMore;
+            _nextCursor = history.nextCursor;
+          });
+          _scrollToBottom();
+        }
         unawaited(
-          ref.read(chatLocalRepositoryProvider).upsertMessages(
-                history.messages,
-                widget.userId,
-              ),
+          localRepo.upsertMessages(history.messages, widget.userId),
         );
-        _scrollToBottom();
+        unawaited(
+          localRepo.saveHistoryPagination(
+            widget.userId,
+            ChatHistoryPaginationMeta(
+              hasMore: history.hasMore,
+              nextCursor: history.nextCursor,
+            ),
+          ),
+        );
+
+        if (!showedCache || forceRefresh) {
+          _scrollToBottom();
+        }
 
         final conversationId = history.conversationId;
         if (conversationId != null && conversationId > 0) {
@@ -415,7 +463,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         await _markAsRead();
       }
     } on ApiError catch (e) {
-      if (mounted) {
+      if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
           _errorMessage = e.message;
@@ -423,7 +471,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
           _errorMessage = e.toString();
@@ -433,11 +481,96 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  DateTime? _oldestMessageCreatedAt() {
+    DateTime? oldest;
+    for (final item in _messages) {
+      if (item['kind'] == 'call') continue;
+      final ts = item['timestamp'];
+      if (ts is! DateTime) continue;
+      if (oldest == null || ts.isBefore(oldest)) {
+        oldest = ts;
+      }
+    }
+    return oldest;
+  }
+
+  Future<bool> _loadMoreFromCache() async {
+    final oldest = _oldestMessageCreatedAt();
+    if (oldest == null) return false;
+
+    final localRepo = ref.read(chatLocalRepositoryProvider);
+    final older = await localRepo.getOlderMessagesForOtherUser(
+      widget.userId,
+      beforeCreatedAt: oldest,
+      limit: _historyPageSize,
+    );
+    if (older.isEmpty || !mounted) return false;
+
+    final existingMessageIds = _messages
+        .where((item) => item['kind'] != 'call')
+        .map((item) => item['id'])
+        .whereType<int>()
+        .toSet();
+
+    final newMessageMaps = older
+        .where((message) => !existingMessageIds.contains(message.id))
+        .map(_messageToMap)
+        .toList();
+    if (newMessageMaps.isEmpty) return false;
+
+    final previousMaxExtent = _scrollController.hasClients
+        ? _scrollController.position.maxScrollExtent
+        : 0.0;
+    final previousPixels =
+        _scrollController.hasClients ? _scrollController.position.pixels : 0.0;
+
+    final existingMessages =
+        _messages.where((item) => item['kind'] != 'call').toList();
+    final callItems = _messages.where((item) => item['kind'] == 'call').toList();
+
+    setState(() {
+      _messages = ChatTimelineMerger.merge(
+        messages: [...newMessageMaps, ...existingMessages],
+        calls: callItems,
+      );
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      final newMaxExtent = _scrollController.position.maxScrollExtent;
+      final delta = newMaxExtent - previousMaxExtent;
+      if (delta > 0) {
+        _scrollController.jumpTo(previousPixels + delta);
+      }
+    });
+    return true;
+  }
+
   Future<void> _loadMoreMessages() async {
     if (_isLoading || _isLoadingMore || !_hasMoreMessages) return;
 
-    final cursor = _nextCursor;
     setState(() => _isLoadingMore = true);
+
+    try {
+      final loadedFromCache = await _loadMoreFromCache();
+      if (loadedFromCache) {
+        if (mounted) setState(() => _isLoadingMore = false);
+        return;
+      }
+    } catch (_) {
+      // Fall through to network pagination.
+    }
+
+    final cursor = _nextCursor;
+    if (cursor == null) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+          _hasMoreMessages = false;
+        });
+      }
+      return;
+    }
 
     final previousMaxExtent = _scrollController.hasClients
         ? _scrollController.position.maxScrollExtent
@@ -447,11 +580,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     try {
       final chatService = ref.read(chatServiceProvider);
+      final localRepo = ref.read(chatLocalRepositoryProvider);
       final history = await chatService.getChatHistory(
         receiverId: widget.userId,
         limit: _historyPageSize,
-        beforeId: cursor?.beforeId,
-        beforeCreatedAt: cursor?.beforeCreatedAt,
+        beforeId: cursor.beforeId,
+        beforeCreatedAt: cursor.beforeCreatedAt,
       );
 
       if (!mounted) return;
@@ -473,6 +607,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           _hasMoreMessages = history.hasMore;
           _nextCursor = history.nextCursor;
         });
+        unawaited(
+          localRepo.saveHistoryPagination(
+            widget.userId,
+            ChatHistoryPaginationMeta(
+              hasMore: history.hasMore,
+              nextCursor: history.nextCursor,
+            ),
+          ),
+        );
         return;
       }
 
@@ -491,6 +634,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _hasMoreMessages = history.hasMore;
         _nextCursor = history.nextCursor;
       });
+
+      unawaited(
+        localRepo.upsertMessages(history.messages, widget.userId),
+      );
+      unawaited(
+        localRepo.saveHistoryPagination(
+          widget.userId,
+          ChatHistoryPaginationMeta(
+            hasMore: history.hasMore,
+            nextCursor: history.nextCursor,
+          ),
+        ),
+      );
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
@@ -1250,11 +1406,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 : _hasError
                     ? ErrorDisplayWidget(
                         errorMessage: _errorMessage ?? 'Failed to load messages',
-                        onRetry: _loadMessages,
+                        onRetry: () => _loadMessages(forceRefresh: true),
                       )
                     : _messages.isEmpty
                         ? RefreshIndicator(
-                            onRefresh: _loadMessages,
+                            onRefresh: () => _loadMessages(forceRefresh: true),
                             child: SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: SizedBox(
@@ -1285,7 +1441,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                 ),
                               Expanded(
                                 child: RefreshIndicator(
-                                  onRefresh: _loadMessages,
+                                  onRefresh: () => _loadMessages(forceRefresh: true),
                                   child: ListView.builder(
                                     controller: _scrollController,
                                     padding: const EdgeInsets.symmetric(vertical: 8),

@@ -612,17 +612,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return ref.watch(userTierProvider);
   }
 
-  String _activityLabel(UserProfile profile) {
-    final views = profile.viewsCount ?? 0;
-    if (views >= 50) return 'High';
-    if (views >= 10) return 'Moderate';
-    return 'Very low';
-  }
-
-  String _creditsLabel(UserProfile profile) {
-    return '${profile.viewsCount ?? _matchesCount}';
-  }
-
   void _openFullProfileView(UserProfile profile) {
     Navigator.push(
       context,

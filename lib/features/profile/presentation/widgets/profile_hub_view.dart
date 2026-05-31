@@ -7,13 +7,11 @@ import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 
-/// Profile hub layout (REF-01) — avatar hero, stats row, grouped menu list.
+/// Profile hub layout (REF-01) — avatar hero and grouped menu list.
 class ProfileHubView extends StatelessWidget {
   final String fullName;
   final String? avatarUrl;
   final int? age;
-  final String activityLabel;
-  final String creditsLabel;
   final bool isVerified;
   final VoidCallback onViewProfile;
   final List<ProfileHubSection> sections;
@@ -23,8 +21,6 @@ class ProfileHubView extends StatelessWidget {
     required this.fullName,
     this.avatarUrl,
     this.age,
-    required this.activityLabel,
-    required this.creditsLabel,
     this.isVerified = false,
     required this.onViewProfile,
     required this.sections,
@@ -59,33 +55,7 @@ class ProfileHubView extends StatelessWidget {
                 fullName: fullName,
                 avatarUrl: avatarUrl,
                 age: age,
-                activityLabel: activityLabel,
                 isVerified: isVerified,
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppPageHeader.horizontalPadding,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _ProfileStatCard(
-                        iconPath: AppIcons.flash,
-                        label: 'Activity',
-                        value: activityLabel,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.spacingMD),
-                    Expanded(
-                      child: _ProfileStatCard(
-                        iconPath: AppIcons.coin,
-                        label: 'Credits',
-                        value: creditsLabel,
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(height: AppSpacing.spacingXL),
               for (final section in sections)
@@ -142,21 +112,18 @@ class _ProfileHeroBlock extends StatelessWidget {
   final String fullName;
   final String? avatarUrl;
   final int? age;
-  final String activityLabel;
   final bool isVerified;
 
   const _ProfileHeroBlock({
     required this.fullName,
     this.avatarUrl,
     this.age,
-    required this.activityLabel,
     required this.isVerified,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     return Column(
       children: [
@@ -235,85 +202,7 @@ class _ProfileHeroBlock extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: AppSpacing.spacingXS),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppSvgIcon(
-              assetPath: AppIcons.flash,
-              size: 14,
-              color: mutedColor,
-            ),
-            const SizedBox(width: AppSpacing.spacingXS),
-            Text(
-              'Your activity · $activityLabel',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: mutedColor,
-              ),
-            ),
-          ],
-        ),
       ],
-    );
-  }
-}
-
-class _ProfileStatCard extends StatelessWidget {
-  final String iconPath;
-  final String label;
-  final String value;
-
-  const _ProfileStatCard({
-    required this.iconPath,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cardColor = theme.colorScheme.surface;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.spacingLG,
-        vertical: AppSpacing.spacingMD,
-      ),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-      ),
-      child: Row(
-        children: [
-          AppSvgIcon(
-            assetPath: iconPath,
-            size: 18,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: AppSpacing.spacingSM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-                Text(
-                  value,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

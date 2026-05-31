@@ -23,6 +23,7 @@ import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
 import '../core/utils/app_icons.dart';
+import '../widgets/discovery/discovery_swipe_action_button.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';
 import '../widgets/discovery/superlike_packs_sheet.dart';
 import '../core/cache/session_cache_providers.dart';
@@ -50,6 +51,12 @@ class DiscoveryPage extends ConsumerStatefulWidget {
   @override
   ConsumerState<DiscoveryPage> createState() => _DiscoveryPageState();
 }
+
+/// Resting card offset below header chrome (header + greeting).
+const double _kDiscoverCardTopInset = 128;
+
+/// Space reserved for the floating action row (button size + vertical padding).
+const double _kDiscoverActionBarHeight = 90;
 
 class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   // Filter state
@@ -943,10 +950,15 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final showSkeleton = !cacheState.initialLoadComplete && stack.isEmpty;
     final sheetProfile = _sheetProfileFromStack(stack);
 
+    final showActionRow =
+        !showSkeleton && cards.isNotEmpty && !_isProfileSheetOpen;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
+          clipBehavior: Clip.none,
+          fit: StackFit.expand,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -958,88 +970,65 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 const DiscoverGreetingWidget(),
                 const CachedContentBanner(),
                 _buildLimitIndicator(),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      top: AppSpacing.spacingSM,
-                      bottom: AppSpacing.spacingLG,
-                    ),
-                    child: showSkeleton
-                        ? SkeletonDiscovery()
-                        : CardStackManager(
-                            cards: cards,
-                            onSwipe: _onCardStackSwipe,
-                            onViewProfile: _handleCardTap,
-                            isSheetOpen: _isProfileSheetOpen,
-                            onSheetOpenChanged: _setProfileSheetOpen,
-                            isLoading: false,
-                            onRefresh: () async {
-                              await ref.read(appCacheManagerProvider).revalidateAll();
-                              await ref
-                                  .read(discoverCacheProvider.notifier)
-                                  .refresh(filters: _activeFilters);
-                            },
-                            emptyActionLabel: 'Adjust filters',
-                            onEmptyAction: _openFilters,
-                            emptySecondaryActionLabel: 'Increase distance + retry',
-                            onEmptySecondaryAction: _expandRadiusAndRetry,
-                          ),
-                  ),
-                ),
-                if (!showSkeleton && cards.isNotEmpty && !_isProfileSheetOpen)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppPageHeader.horizontalPadding,
-                      vertical: AppSpacing.spacingLG,
-                    ),
-                    child: AnimatedOpacity(
-                      opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                      duration: const Duration(milliseconds: 150),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildDiscoveryActionButton(
-                            semanticLabel: 'Dislike profile',
-                            icon: AppIcons.close,
-                            onPressed: _isSwipeInProgress
-                                ? null
-                                : () => _handleAction('dislike'),
-                            size: 58,
-                            fillColor: AppColors.feedbackError,
-                            filled: true,
-                            outlined: false,
-                          ),
-                          const SizedBox(width: AppSpacing.spacingXL),
-                          _buildDiscoveryActionButton(
-                            semanticLabel: 'Super like profile',
-                            icon: AppIcons.star,
-                            onPressed: _isSwipeInProgress
-                                ? null
-                                : () => _handleAction('superlike'),
-                            size: 54,
-                            fillColor: AppColors.accentPurple,
-                            filled: true,
-                            outlined: false,
-                            enableStarRotation: true,
-                          ),
-                          const SizedBox(width: AppSpacing.spacingXL),
-                          _buildDiscoveryActionButton(
-                            semanticLabel: 'Like profile',
-                            icon: AppIcons.heart,
-                            onPressed: _isSwipeInProgress
-                                ? null
-                                : () => _handleAction('like'),
-                            size: 58,
-                            fillColor: AppColors.onlineGreen,
-                            filled: true,
-                            outlined: false,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                const Spacer(),
+                if (showActionRow)
+                  SizedBox(height: _kDiscoverActionBarHeight),
               ],
             ),
+            if (showActionRow)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppPageHeader.horizontalPadding,
+                    vertical: AppSpacing.spacingLG,
+                  ),
+                  child: AnimatedOpacity(
+                    opacity: _isSwipeInProgress ? 0.5 : 1.0,
+                    duration: const Duration(milliseconds: 150),
+                    child: _buildDiscoveryActionRow(),
+                  ),
+                ),
+              ),
+            if (showSkeleton)
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: _kDiscoverCardTopInset + AppSpacing.spacingSM,
+                    bottom: _kDiscoverActionBarHeight,
+                    left: AppSpacing.spacingLG,
+                    right: AppSpacing.spacingLG,
+                  ),
+                  child: const SkeletonDiscovery(),
+                ),
+              )
+            else
+              Positioned.fill(
+                child: CardStackManager(
+                  cards: cards,
+                  onSwipe: _onCardStackSwipe,
+                  onViewProfile: _handleCardTap,
+                  isSheetOpen: _isProfileSheetOpen,
+                  onSheetOpenChanged: _setProfileSheetOpen,
+                  contentTopInset: _kDiscoverCardTopInset + AppSpacing.spacingSM,
+                  contentBottomInset: showActionRow
+                      ? _kDiscoverActionBarHeight
+                      : AppSpacing.spacingLG,
+                  isLoading: false,
+                  onRefresh: () async {
+                    await ref.read(appCacheManagerProvider).revalidateAll();
+                    await ref
+                        .read(discoverCacheProvider.notifier)
+                        .refresh(filters: _activeFilters);
+                  },
+                  emptyActionLabel: 'Adjust filters',
+                  onEmptyAction: _openFilters,
+                  emptySecondaryActionLabel: 'Increase distance + retry',
+                  onEmptySecondaryAction: _expandRadiusAndRetry,
+                ),
+              ),
             if (_isProfileSheetOpen && sheetProfile != null)
               Positioned.fill(
                 child: ProfileDetailSheet(
@@ -1059,208 +1048,30 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
   }
 
-  Widget _buildDiscoveryActionButton({
-    required String semanticLabel,
-    required String icon,
-    required VoidCallback? onPressed,
-    required double size,
-    Color? fillColor,
-    required bool filled,
-    required bool outlined,
-    bool enableStarRotation = false,
-  }) {
-    final theme = Theme.of(context);
-    final fill = fillColor ?? theme.colorScheme.primary;
-    return _DiscoveryActionButton(
-      semanticLabel: semanticLabel,
-      iconPath: icon,
-      onPressed: onPressed,
-      size: size,
-      fillColor: fill,
-      filled: filled,
-      outlined: outlined,
-      enableStarRotation: enableStarRotation,
-    );
-  }
-}
-
-class _DiscoveryActionButton extends StatefulWidget {
-  const _DiscoveryActionButton({
-    required this.semanticLabel,
-    required this.iconPath,
-    required this.onPressed,
-    required this.size,
-    required this.fillColor,
-    required this.filled,
-    required this.outlined,
-    this.enableStarRotation = false,
-  });
-
-  final String semanticLabel;
-  final String iconPath;
-  final VoidCallback? onPressed;
-  final double size;
-  final Color fillColor;
-  final bool filled;
-  final bool outlined;
-  final bool enableStarRotation;
-
-  @override
-  State<_DiscoveryActionButton> createState() => _DiscoveryActionButtonState();
-}
-
-class _DiscoveryActionButtonState extends State<_DiscoveryActionButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-  late final Animation<double> _rotation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-      reverseDuration: const Duration(milliseconds: 180),
-      lowerBound: 0,
-      upperBound: 1,
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 0.4, curve: Curves.easeOutCubic),
-        reverseCurve: Curves.easeOutCubic,
-      ),
-    );
-    _rotation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 0.08).chain(
-          CurveTween(curve: Curves.easeOutBack),
+  Widget _buildDiscoveryActionRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        DiscoverySwipeActionButton(
+          type: DiscoverySwipeActionType.dislike,
+          size: 58,
+          onPressed:
+              _isSwipeInProgress ? null : () => _handleAction('dislike'),
         ),
-        weight: 120,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.08, end: 0.0).chain(
-          CurveTween(curve: Curves.easeOutBack),
+        const SizedBox(width: AppSpacing.spacingXL),
+        DiscoverySwipeActionButton(
+          type: DiscoverySwipeActionType.superlike,
+          size: 54,
+          onPressed:
+              _isSwipeInProgress ? null : () => _handleAction('superlike'),
         ),
-        weight: 130,
-      ),
-    ]).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _animatePressDown(bool disableAnimations) async {
-    if (disableAnimations) return;
-    _controller.duration = const Duration(milliseconds: 100);
-    await _controller.animateTo(0.4, curve: Curves.easeOutCubic);
-  }
-
-  Future<void> _animateRelease(bool disableAnimations) async {
-    if (disableAnimations) return;
-    _controller.reverseDuration = const Duration(milliseconds: 180);
-    await _controller.animateBack(0.0, curve: Curves.easeOutCubic);
-  }
-
-  Future<void> _animateSuperlikePulse(bool disableAnimations) async {
-    if (disableAnimations || !widget.enableStarRotation) return;
-    _controller.duration = const Duration(milliseconds: 250);
-    await _controller.forward(from: 0);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
-    final iconColor = widget.filled
-        ? Colors.white
-        : theme.colorScheme.onSurface.withValues(alpha: 0.55);
-
-    return Semantics(
-      button: true,
-      enabled: widget.onPressed != null,
-      label: widget.semanticLabel,
-      child: SizedBox(
-        width: widget.size < 48 ? 48 : widget.size,
-        height: widget.size < 48 ? 48 : widget.size,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => _animatePressDown(disableAnimations),
-          onTapCancel: () => _animateRelease(disableAnimations),
-          onTapUp: (_) => _animateRelease(disableAnimations),
-          onTap: widget.onPressed == null
-              ? null
-              : () async {
-                  await _animateSuperlikePulse(disableAnimations);
-                  widget.onPressed?.call();
-                },
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final scale = disableAnimations ? 1.0 : _scale.value;
-              return Transform.scale(
-                scale: scale,
-                child: child,
-              );
-            },
-            child: Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.filled
-                    ? widget.fillColor
-                    : theme.colorScheme.surface.withValues(alpha: 0.15),
-                border: widget.outlined
-                    ? Border.all(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.28),
-                        width: 1.5,
-                      )
-                    : Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        width: 1,
-                      ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.fillColor.withValues(alpha: 0.38),
-                    blurRadius: 22,
-                    offset: const Offset(0, 10),
-                    spreadRadius: -4,
-                  ),
-                  BoxShadow(
-                    color: theme.colorScheme.shadow.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    final turns = (widget.enableStarRotation && !disableAnimations)
-                        ? _rotation.value
-                        : 0.0;
-                    return RotationTransition(
-                      turns: AlwaysStoppedAnimation<double>(turns),
-                      child: child,
-                    );
-                  },
-                  child: AppSvgIcon(
-                    assetPath: widget.iconPath,
-                    size: widget.filled && widget.size <= 44 ? 22 : 24,
-                    color: iconColor,
-                  ),
-                ),
-              ),
-            ),
-          ),
+        const SizedBox(width: AppSpacing.spacingXL),
+        DiscoverySwipeActionButton(
+          type: DiscoverySwipeActionType.like,
+          size: 58,
+          onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
         ),
-      ),
+      ],
     );
   }
 }

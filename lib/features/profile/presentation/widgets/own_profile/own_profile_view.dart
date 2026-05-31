@@ -84,8 +84,6 @@ class OwnProfileView extends ConsumerWidget {
     );
     final genderLabel = profile.gender ?? _labelForId(profile.genderId, gendersRef);
     final locationLabel = _locationLabel(profile);
-    final activityLabel = _activityLabel(profile);
-    final creditsLabel = '${profile.viewsCount ?? 0}';
 
     final photos = profile.images ?? [];
     final displayPhotos = photos.take(6).toList();
@@ -106,7 +104,6 @@ class OwnProfileView extends ConsumerWidget {
                 age: age,
                 isVerified: isVerified,
                 tier: tier,
-                activityLabel: activityLabel,
                 onEditPhoto: onEditPhotos,
               ),
               if (!completeness.isComplete) ...[
@@ -120,16 +117,16 @@ class OwnProfileView extends ConsumerWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _statsSection(
-                  context,
-                  activityLabel: activityLabel,
-                  creditsLabel: creditsLabel,
-                  superlikes: superlikes,
+              if (superlikes != null) ...[
+                const SizedBox(height: _sectionGap),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: _hPad),
+                  child: _superlikesSection(
+                    context,
+                    superlikes: superlikes,
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: _sectionGap),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: _hPad),
@@ -229,12 +226,10 @@ class OwnProfileView extends ConsumerWidget {
     required int? age,
     required bool isVerified,
     required UserTier tier,
-    required String activityLabel,
     required VoidCallback onEditPhoto,
   }) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     return Column(
       children: [
@@ -351,19 +346,6 @@ class OwnProfileView extends ConsumerWidget {
           )
         else
           _tierPill(context, tier),
-        const SizedBox(height: AppSpacing.spacingSM),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppSvgIcon(assetPath: AppIcons.flash, size: 14, color: muted),
-            const SizedBox(width: 5),
-            Text(
-              'Your activity · $activityLabel',
-              style: theme.textTheme.bodySmall?.copyWith(color: muted),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -470,127 +452,41 @@ class OwnProfileView extends ConsumerWidget {
     );
   }
 
-  Widget _statsSection(
+  Widget _superlikesSection(
     BuildContext context, {
-    required String activityLabel,
-    required String creditsLabel,
-    required int? superlikes,
+    required int superlikes,
   }) {
     final theme = Theme.of(context);
-    final surface = theme.colorScheme.surfaceContainerHighest;
-    final border = theme.colorScheme.outlineVariant.withValues(alpha: 0.45);
     final primary = theme.colorScheme.primary;
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _statCard(
-                context,
-                iconPath: AppIcons.flash,
-                label: 'Activity',
-                value: activityLabel,
-                surface: surface,
-                border: border,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.spacingMD),
-            Expanded(
-              child: _statCard(
-                context,
-                iconPath: AppIcons.coin,
-                label: 'Credits',
-                value: creditsLabel,
-                surface: surface,
-                border: border,
-              ),
-            ),
-          ],
-        ),
-        if (superlikes != null) ...[
-          const SizedBox(height: AppSpacing.spacingMD),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: primary.withValues(alpha: 0.30), width: 0.5),
-            ),
-            child: Row(
-              children: [
-                AppSvgIcon(
-                  assetPath: AppIcons.getIconPath('star'),
-                  size: 18,
-                  color: primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Superlikes remaining',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                ),
-                Text(
-                  '$superlikes',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _statCard(
-    BuildContext context, {
-    required String iconPath,
-    required String label,
-    required String value,
-    required Color surface,
-    required Color border,
-  }) {
-    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border, width: 0.5),
+        color: primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: primary.withValues(alpha: 0.30), width: 0.5),
       ),
       child: Row(
         children: [
           AppSvgIcon(
-            assetPath: iconPath,
-            size: 20,
-            color: theme.colorScheme.primary,
+            assetPath: AppIcons.getIconPath('star'),
+            size: 18,
+            color: primary,
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-                Text(
-                  value,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: Text(
+              'Superlikes remaining',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ),
+          Text(
+            '$superlikes',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: primary,
             ),
           ),
         ],
@@ -1221,13 +1117,6 @@ class OwnProfileView extends ConsumerWidget {
     } catch (_) {
       return null;
     }
-  }
-
-  String _activityLabel(UserProfile profile) {
-    final views = profile.viewsCount ?? 0;
-    if (views >= 50) return 'High';
-    if (views >= 10) return 'Moderate';
-    return 'Very low';
   }
 
   String? _locationLabel(UserProfile profile) {

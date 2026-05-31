@@ -7,12 +7,12 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
-import '../../../../widgets/loading/skeleton_loading.dart';
+import '../../../../widgets/loading/skeleton_notifications.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/error_handler_service.dart';
-import '../../data/services/notification_service.dart';
 import '../../data/models/notification.dart' as app_models;
 import '../../providers/notification_providers.dart';
+import '../../providers/notifications_cache_provider.dart';
 import '../widgets/notification_tile.dart';
 import '../../../../widgets/error_handling/empty_state.dart';
 import '../../../../routes/app_router.dart';
@@ -23,25 +23,17 @@ class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
-  bool _isLoadingMore = false;
-  bool _hasMore = true;
-  bool _hasError = false;
-  String? _errorMessage;
-  List<app_models.Notification> _notifications = [];
-  int _currentPage = 1;
-  final int _pageSize = 20;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadNotifications();
   }
 
   @override
@@ -51,73 +43,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients || _isLoading || _isLoadingMore || !_hasMore) {
+    final cacheState = ref.read(notificationsCacheProvider);
+    if (!_scrollController.hasClients ||
+        cacheState.isLoadingMore ||
+        cacheState.isRefreshing ||
+        cacheState.showSkeleton ||
+        !cacheState.hasMore) {
       return;
     }
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
-      _loadNotifications();
-    }
-  }
-
-  Future<void> _loadNotifications({bool refresh = false}) async {
-    if (refresh) {
-      _currentPage = 1;
-      _hasMore = true;
-    }
-    if (!_hasMore && !refresh) return;
-
-    setState(() {
-      if (refresh || _notifications.isEmpty) {
-        _isLoading = true;
-      } else {
-        _isLoadingMore = true;
-      }
-      _hasError = false;
-      _errorMessage = null;
-    });
-
-    try {
-      final notificationService = ref.read(notificationServiceProvider);
-      final notifications = await notificationService.getNotifications(
-        page: _currentPage,
-        limit: _pageSize,
-      );
-
-      if (mounted) {
-        setState(() {
-          if (refresh) {
-            _notifications = notifications;
-          } else {
-            final existingIds = _notifications.map((e) => e.id).toSet();
-            _notifications.addAll(
-              notifications.where((n) => !existingIds.contains(n.id)),
-            );
-          }
-          _hasMore = notifications.length >= _pageSize;
-          if (_hasMore) _currentPage++;
-          _isLoading = false;
-          _isLoadingMore = false;
-        });
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.message;
-          _isLoading = false;
-          _isLoadingMore = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.toString();
-          _isLoading = false;
-          _isLoadingMore = false;
-        });
-      }
+      ref.read(notificationsCacheProvider.notifier).loadMore();
     }
   }
 
@@ -127,23 +63,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       await notificationService.markAsRead(notificationId);
 
       if (mounted) {
-        setState(() {
-          final index = _notifications.indexWhere((n) => n.id == notificationId);
-          if (index != -1) {
-            _notifications[index] = app_models.Notification(
-              id: _notifications[index].id,
-              type: _notifications[index].type,
-              title: _notifications[index].title,
-              message: _notifications[index].message,
-              createdAt: _notifications[index].createdAt,
-              isRead: true,
-              data: _notifications[index].data,
-              userId: _notifications[index].userId,
-              userImageUrl: _notifications[index].userImageUrl,
-              actionUrl: _notifications[index].actionUrl,
+        ref.read(notificationsCacheProvider.notifier).markAsReadLocal(
+              notificationId,
             );
-          }
-        });
         ref.invalidate(unreadNotificationCountProvider);
       }
     } on ApiError catch (e) {
@@ -171,22 +93,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       await notificationService.markAllAsRead();
 
       if (mounted) {
-        setState(() {
-          _notifications = _notifications.map((n) {
-            return app_models.Notification(
-              id: n.id,
-              type: n.type,
-              title: n.title,
-              message: n.message,
-              createdAt: n.createdAt,
-              isRead: true,
-              data: n.data,
-              userId: n.userId,
-              userImageUrl: n.userImageUrl,
-              actionUrl: n.actionUrl,
-            );
-          }).toList();
-        });
+        ref.read(notificationsCacheProvider.notifier).markAllAsReadLocal();
         ref.invalidate(unreadNotificationCountProvider);
       }
     } on ApiError catch (e) {
@@ -209,16 +116,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _clearAllNotifications() async {
-    if (_notifications.isEmpty) return;
+    final notifications = ref.read(notificationsCacheProvider).notifications;
+    if (notifications.isEmpty) return;
     try {
       final notificationService = ref.read(notificationServiceProvider);
       await notificationService.deleteAllNotifications();
       if (mounted) {
-        setState(() {
-          _notifications.clear();
-          _currentPage = 1;
-          _hasMore = true;
-        });
+        ref.read(notificationsCacheProvider.notifier).clearAllLocal();
         ref.invalidate(unreadNotificationCountProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('All notifications cleared')),
@@ -249,9 +153,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       await notificationService.deleteNotification(notificationId);
 
       if (mounted) {
-        setState(() {
-          _notifications.removeWhere((n) => n.id == notificationId);
-        });
+        ref.read(notificationsCacheProvider.notifier).removeLocal(
+              notificationId,
+            );
         ref.invalidate(unreadNotificationCountProvider);
       }
     } on ApiError catch (e) {
@@ -281,8 +185,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     NotificationNavigation.navigateFromNotification(context, notification);
   }
 
-  Widget? _buildHeaderAction(BuildContext context, int unreadCount) {
-    if (_notifications.isEmpty) return null;
+  Widget? _buildHeaderAction(
+    BuildContext context,
+    int unreadCount,
+    List<app_models.Notification> notifications,
+  ) {
+    if (notifications.isEmpty) return null;
 
     final theme = Theme.of(context);
 
@@ -316,19 +224,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    if (_isLoading && _notifications.isEmpty) {
-      return const SkeletonLoading();
+  Widget _buildBody(NotificationsCacheState cacheState) {
+    if (cacheState.showSkeleton) {
+      return const SkeletonNotifications();
     }
 
-    if (_hasError && _notifications.isEmpty) {
+    if (cacheState.showError) {
       return ErrorDisplayWidget(
-        errorMessage: _errorMessage ?? 'Failed to load notifications',
-        onRetry: () => _loadNotifications(refresh: true),
+        errorMessage: cacheState.errorMessage ?? 'Failed to load notifications',
+        onRetry: () => ref.read(notificationsCacheProvider.notifier).refresh(),
       );
     }
 
-    if (_notifications.isEmpty) {
+    if (cacheState.notifications.isEmpty) {
       return EmptyState(
         title: 'No notifications',
         message:
@@ -343,9 +251,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     final theme = Theme.of(context);
     final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final notifications = cacheState.notifications;
+    final footerCount = cacheState.isLoadingMore ? 1 : 0;
 
     return RefreshIndicator(
-      onRefresh: () => _loadNotifications(refresh: true),
+      onRefresh: () =>
+          ref.read(notificationsCacheProvider.notifier).refresh(),
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -355,7 +266,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           AppPageHeader.horizontalPadding,
           AppSpacing.spacingLG,
         ),
-        itemCount: _notifications.length + 1 + (_isLoadingMore ? 1 : 0),
+        itemCount: notifications.length + 1 + footerCount,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
@@ -371,7 +282,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           }
 
           final notificationIndex = index - 1;
-          if (notificationIndex >= _notifications.length) {
+          if (notificationIndex >= notifications.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingLG),
               child: Center(
@@ -384,7 +295,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             );
           }
 
-          final notification = _notifications[notificationIndex];
+          final notification = notifications[notificationIndex];
           return Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.spacingXS),
             child: NotificationTile(
@@ -405,7 +316,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor =
         isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final unreadCount = _notifications.where((n) => !n.isRead).length;
+    final cacheState = ref.watch(notificationsCacheProvider);
+    final unreadCount =
+        cacheState.notifications.where((n) => !n.isRead).length;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -415,11 +328,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           children: [
             AppPageHeader(
               title: 'Notifications',
-              action: _buildHeaderAction(context, unreadCount),
+              action: _buildHeaderAction(
+                context,
+                unreadCount,
+                cacheState.notifications,
+              ),
             ),
             const SizedBox(height: AppSpacing.spacingLG),
             Expanded(
-              child: _buildBody(context),
+              child: _buildBody(cacheState),
             ),
           ],
         ),
