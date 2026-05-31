@@ -59,6 +59,7 @@ class ChatService {
     int? limit,
     int? beforeId,
     DateTime? beforeCreatedAt,
+    bool forceRefresh = false,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -73,6 +74,7 @@ class ChatService {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.chatHistory,
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        forceRefresh: forceRefresh,
       );
 
       return _parseChatHistoryResponse(response.data, meta: response.meta);

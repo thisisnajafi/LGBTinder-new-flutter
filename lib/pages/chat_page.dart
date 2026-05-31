@@ -370,6 +370,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         receiverId: widget.userId,
         page: 1,
         limit: _historyPageSize,
+        forceRefresh: true,
       );
 
       List<Call> calls = [];

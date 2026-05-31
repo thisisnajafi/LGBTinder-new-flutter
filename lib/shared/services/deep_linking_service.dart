@@ -93,6 +93,7 @@ class DeepLinkingService {
       'chat',
       'match',
       'superlike',
+      'superlike_sent',
       'like',
       'call',
       'incoming_call',

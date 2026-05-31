@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
 import 'swipeable_card.dart';
@@ -14,12 +15,20 @@ class ProfileDetailSheet extends StatefulWidget {
     required this.profile,
     required this.sharedInterests,
     required this.onClose,
+    this.onDislike,
+    this.onSuperlike,
+    this.onLike,
+    this.actionsDisabled = false,
   });
 
   final DraggableScrollableController controller;
   final DiscoverySheetProfile profile;
   final Set<String> sharedInterests;
   final VoidCallback onClose;
+  final VoidCallback? onDislike;
+  final VoidCallback? onSuperlike;
+  final VoidCallback? onLike;
+  final bool actionsDisabled;
 
   @override
   State<ProfileDetailSheet> createState() => _ProfileDetailSheetState();
@@ -52,30 +61,57 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
         snap: true,
         snapSizes: const [0.58, 0.90],
         builder: (context, scrollController) {
+        final showActions =
+            widget.onDislike != null ||
+            widget.onSuperlike != null ||
+            widget.onLike != null;
+
         return Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(top: 10, bottom: 16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.20),
-                    borderRadius: BorderRadius.circular(100),
+              ListView(
+                controller: scrollController,
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  0,
+                  20,
+                  showActions ? 132 : 24,
+                ),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 10, bottom: 16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                    ),
+                  ),
+                  ProfileSheetContent(
+                    profile: widget.profile,
+                    sharedInterests: widget.sharedInterests,
+                  ),
+                ],
+              ),
+              if (showActions)
+                Positioned(
+                  left: AppSpacing.spacingXL,
+                  right: AppSpacing.spacingXL,
+                  bottom: AppSpacing.spacingLG,
+                  child: DiscoverySheetActionBar(
+                    disabled: widget.actionsDisabled,
+                    onDislike: widget.onDislike,
+                    onSuperlike: widget.onSuperlike,
+                    onLike: widget.onLike,
                   ),
                 ),
-              ),
-              ProfileSheetContent(
-                profile: widget.profile,
-                sharedInterests: widget.sharedInterests,
-              ),
             ],
           ),
         );
@@ -521,9 +557,9 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-/// Floating discovery action buttons shown over the profile detail sheet.
-class DiscoveryFloatingActions extends StatelessWidget {
-  const DiscoveryFloatingActions({
+/// Like / superlike / dislike buttons pinned to the profile detail sheet footer.
+class DiscoverySheetActionBar extends StatelessWidget {
+  const DiscoverySheetActionBar({
     super.key,
     required this.onDislike,
     required this.onSuperlike,
@@ -539,53 +575,44 @@ class DiscoveryFloatingActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottom = MediaQuery.paddingOf(context).bottom + 16;
 
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: bottom,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: AnimatedOpacity(
-          opacity: disabled ? 0.5 : 1,
-          duration: const Duration(milliseconds: 150),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _FloatingActionButton(
-                icon: AppIcons.getIconPath('close-circle'),
-                fillColor: AppColors.feedbackError,
-                size: 58,
-                onPressed: disabled ? null : onDislike,
-                semanticLabel: 'Dislike profile',
-              ),
-              const SizedBox(width: 32),
-              _FloatingActionButton(
-                icon: AppIcons.star,
-                fillColor: theme.colorScheme.primary,
-                size: 54,
-                onPressed: disabled ? null : onSuperlike,
-                semanticLabel: 'Super like profile',
-              ),
-              const SizedBox(width: 32),
-              _FloatingActionButton(
-                icon: AppIcons.heart,
-                fillColor: AppColors.feedbackSuccess,
-                size: 58,
-                onPressed: disabled ? null : onLike,
-                semanticLabel: 'Like profile',
-              ),
-            ],
+    return AnimatedOpacity(
+      opacity: disabled ? 0.5 : 1,
+      duration: const Duration(milliseconds: 150),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _SheetActionButton(
+            icon: AppIcons.getIconPath('close-circle'),
+            fillColor: AppColors.feedbackError,
+            size: 58,
+            onPressed: disabled ? null : onDislike,
+            semanticLabel: 'Dislike profile',
           ),
-        ),
+          const SizedBox(width: 32),
+          _SheetActionButton(
+            icon: AppIcons.star,
+            fillColor: theme.colorScheme.primary,
+            size: 54,
+            onPressed: disabled ? null : onSuperlike,
+            semanticLabel: 'Super like profile',
+          ),
+          const SizedBox(width: 32),
+          _SheetActionButton(
+            icon: AppIcons.heart,
+            fillColor: AppColors.feedbackSuccess,
+            size: 58,
+            onPressed: disabled ? null : onLike,
+            semanticLabel: 'Like profile',
+          ),
+        ],
       ),
     );
   }
 }
 
-class _FloatingActionButton extends StatelessWidget {
-  const _FloatingActionButton({
+class _SheetActionButton extends StatelessWidget {
+  const _SheetActionButton({
     required this.icon,
     required this.fillColor,
     required this.size,
@@ -605,22 +632,28 @@ class _FloatingActionButton extends StatelessWidget {
       button: true,
       enabled: onPressed != null,
       label: semanticLabel,
-      child: Material(
-        color: fillColor,
-        shape: const CircleBorder(),
-        elevation: 4,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onPressed,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Center(
-              child: AppSvgIcon(
-                assetPath: icon,
-                size: size * 0.42,
-                color: Colors.white,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: fillColor,
+            boxShadow: [
+              BoxShadow(
+                color: fillColor.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+                spreadRadius: -2,
               ),
+            ],
+          ),
+          child: Center(
+            child: AppSvgIcon(
+              assetPath: icon,
+              size: size * 0.42,
+              color: Colors.white,
             ),
           ),
         ),

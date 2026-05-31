@@ -34,6 +34,8 @@ class ChatListPreviewItem {
   });
 
   ChatListPreviewItem copyWith({
+    String? name,
+    String? avatarUrl,
     String? lastMessage,
     DateTime? lastMessageTime,
     int? unreadCount,
@@ -44,8 +46,8 @@ class ChatListPreviewItem {
     return ChatListPreviewItem(
       id: id,
       chatId: chatId,
-      name: name,
-      avatarUrl: avatarUrl,
+      name: name ?? this.name,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       lastMessage: lastMessage ?? this.lastMessage,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,

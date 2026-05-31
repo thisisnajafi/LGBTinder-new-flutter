@@ -139,6 +139,36 @@ class SuperlikeSubscriptionSnapshot {
 }
 
 /// Like response (for match detection)
+class SuperlikeIntroMessage {
+  final String text;
+  final bool sent;
+  final int? messageId;
+  final int? conversationId;
+
+  const SuperlikeIntroMessage({
+    required this.text,
+    this.sent = false,
+    this.messageId,
+    this.conversationId,
+  });
+
+  factory SuperlikeIntroMessage.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const SuperlikeIntroMessage(text: '');
+    }
+    return SuperlikeIntroMessage(
+      text: json['text']?.toString() ?? '',
+      sent: json['sent'] == true || json['sent'] == 1,
+      messageId: json['message_id'] != null
+          ? int.tryParse(json['message_id'].toString())
+          : null,
+      conversationId: json['conversation_id'] != null
+          ? int.tryParse(json['conversation_id'].toString())
+          : null,
+    );
+  }
+}
+
 class LikeResponse {
   final bool isMatch;
   final match_models.Match? match;
@@ -146,6 +176,7 @@ class LikeResponse {
   final int? likedUserId;
   final int? superlikesRemaining;
   final SuperlikeSubscriptionSnapshot? subscription;
+  final SuperlikeIntroMessage? introMessage;
 
   LikeResponse({
     required this.isMatch,
@@ -154,10 +185,12 @@ class LikeResponse {
     this.likedUserId,
     this.superlikesRemaining,
     this.subscription,
+    this.introMessage,
   });
 
   factory LikeResponse.fromJson(Map<String, dynamic> json) {
     final subscriptionRaw = json['subscription'];
+    final introRaw = json['intro_message'];
     return LikeResponse(
       isMatch: json['is_match'] == true || json['is_match'] == 1,
       match: json['match'] != null && json['match'] is Map
@@ -172,6 +205,9 @@ class LikeResponse {
           : null,
       subscription: subscriptionRaw is Map<String, dynamic>
           ? SuperlikeSubscriptionSnapshot.fromJson(subscriptionRaw)
+          : null,
+      introMessage: introRaw is Map<String, dynamic>
+          ? SuperlikeIntroMessage.fromJson(introRaw)
           : null,
     );
   }

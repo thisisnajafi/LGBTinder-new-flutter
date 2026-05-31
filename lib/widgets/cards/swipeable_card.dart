@@ -88,9 +88,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeInCubic,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _scheduleImageCarousel();
-    });
+    _scheduleImageCarousel();
   }
 
   @override

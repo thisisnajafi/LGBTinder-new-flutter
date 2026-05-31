@@ -14,10 +14,14 @@ import '../../payments/providers/payment_providers.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../shared/models/api_error.dart';
 import '../../../shared/services/cache_service.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../chat/data/models/message.dart';
+import '../../chat/providers/chat_list_preview_provider.dart';
+import '../../chat/providers/chat_providers.dart';
+import '../../matching/data/models/like.dart';
 import '../../matching/data/models/match.dart' as match_models;
 import '../../matching/data/services/likes_service.dart';
 import '../../matching/providers/likes_providers.dart';
-import '../../chat/providers/chat_list_preview_provider.dart';
 import '../../payments/data/services/plan_limits_service.dart';
 import '../data/models/cached_discover_item.dart';
 import '../data/models/discovery_profile.dart';
@@ -253,6 +257,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function(match_models.Match?)? onMatch,
     void Function(dynamic)? onLimitError,
     void Function()? onTheyLikedYou,
+    void Function()? onSuperlikeSent,
   }) {
     final idx = state.items.indexWhere((e) => e.profile.id == userId);
     if (idx < 0) return;
@@ -269,6 +274,10 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         break;
       case 'superlike':
         newState = DiscoverInteractionState.superLiked;
+        AppLogger.debug(
+          'recordSwipe optimistic userId=$userId hasMessage=${superlikeMessage?.isNotEmpty == true}',
+          tag: 'DiscoverySuperlike',
+        );
         break;
       default:
         return;
@@ -296,6 +305,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         onMatch,
         onLimitError,
         onTheyLikedYou,
+        onSuperlikeSent,
       ),
     );
   }
@@ -309,6 +319,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function(match_models.Match?)? onMatch,
     void Function(dynamic)? onLimitError,
     void Function()? onTheyLikedYou,
+    void Function()? onSuperlikeSent,
   ) async {
     try {
       switch (action) {
@@ -333,8 +344,16 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           break;
         }
         case 'superlike': {
+          AppLogger.debug(
+            'sync superlike API start userId=$userId messageLen=${superlikeMessage?.length ?? 0}',
+            tag: 'DiscoverySuperlike',
+          );
           final response =
               await _likesService.superlikeUser(userId, message: superlikeMessage);
+          AppLogger.debug(
+            'sync superlike API ok userId=$userId remaining=${response.superlikesRemaining} isMatch=${response.isMatch}',
+            tag: 'DiscoverySuperlike',
+          );
           _planLimitsService.incrementUsage('swipes');
           _markSynced(userId);
           if (response.subscription != null &&
@@ -371,11 +390,13 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
             unawaited(_cacheInvalidator.purgeMatchList());
             if (onMatch != null) onMatch(response.match);
           } else {
-            _upsertChatListAfterSuperlike(
+            await _upsertChatListAfterSuperlike(
               userId: userId,
               currentList: currentList,
               introMessage: superlikeMessage,
+              response: response,
             );
+            onSuperlikeSent?.call();
           }
           break;
         }
@@ -458,11 +479,12 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     });
   }
 
-  void _upsertChatListAfterSuperlike({
+  Future<void> _upsertChatListAfterSuperlike({
     required int userId,
     required List<CachedDiscoverItem> currentList,
     String? introMessage,
-  }) {
+    required LikeResponse response,
+  }) async {
     CachedDiscoverItem? cached;
     for (final item in currentList) {
       if (item.profile.id == userId) {
@@ -477,13 +499,48 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
             ? '${profile.firstName} ${profile.lastName}'
             : profile.firstName;
 
+    final intro = response.introMessage;
+    final previewText = (intro?.text.isNotEmpty == true)
+        ? intro!.text
+        : (introMessage?.trim().isNotEmpty == true ? introMessage!.trim() : null);
+
     _ref.read(chatListPreviewProvider.notifier).upsertPeer(
           peerUserId: userId,
           name: name,
           avatarUrl: profile?.primaryImageUrl,
-          lastMessage: introMessage?.trim().isNotEmpty == true
-              ? introMessage!.trim()
-              : null,
+          lastMessage: previewText,
         );
+
+    if (intro?.sent == true &&
+        intro!.messageId != null &&
+        previewText != null &&
+        previewText.isNotEmpty) {
+      final senderId = _ref.read(authProvider).user?.id;
+      if (senderId != null && senderId > 0) {
+        final msg = Message(
+          id: intro.messageId!,
+          senderId: senderId,
+          receiverId: userId,
+          message: previewText,
+          messageType: 'text',
+          createdAt: DateTime.now(),
+          isRead: true,
+        );
+        try {
+          await _ref.read(chatLocalRepositoryProvider).upsertMessage(msg, userId);
+          _ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+                peerUserId: userId,
+                previewText: previewText,
+                timestamp: msg.createdAt,
+              );
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to cache superlike intro locally',
+            tag: 'DiscoverCache',
+            error: e,
+          );
+        }
+      }
+    }
   }
 }

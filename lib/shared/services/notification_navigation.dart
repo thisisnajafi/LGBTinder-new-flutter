@@ -15,6 +15,7 @@ class NotificationNavigation {
     'message',
     'chat',
     'superlike',
+    'superlike_sent',
   };
 
   /// Peer user id from push / OneSignal `data` or nested `data` JSON.
@@ -121,6 +122,7 @@ class NotificationNavigation {
       case 'match':
         return '${AppRoutes.home}/matches';
       case 'superlike':
+      case 'superlike_sent':
         if (userId != null && userId > 0) {
           return chatThreadLocation(userId: userId, userName: name, avatarUrl: avatar) ??
               '${AppRoutes.home}/discovery';
