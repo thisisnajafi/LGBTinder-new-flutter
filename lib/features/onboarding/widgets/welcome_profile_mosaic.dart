@@ -235,7 +235,7 @@ class _MosaicTile extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: gradient,
-          borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
           border: Border.all(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.28)

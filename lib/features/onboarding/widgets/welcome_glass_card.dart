@@ -7,11 +7,13 @@ import '../../../core/theme/spacing_constants.dart';
 class WelcomeGlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
+  final bool onGradient;
 
   const WelcomeGlassCard({
     super.key,
     required this.child,
     this.padding,
+    this.onGradient = false,
   });
 
   @override
@@ -19,6 +21,7 @@ class WelcomeGlassCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final colorScheme = theme.colorScheme;
+    final frostedOnGradient = onGradient || isDark;
 
     return Container(
       width: double.infinity,
@@ -28,16 +31,25 @@ class WelcomeGlassCard extends StatelessWidget {
             vertical: AppSpacing.spacingMD,
           ),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.12)
+        color: frostedOnGradient
+            ? Colors.white.withValues(alpha: 0.14)
             : colorScheme.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        borderRadius: BorderRadius.circular(AppRadius.radiusXL),
         border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.18)
+          color: frostedOnGradient
+              ? Colors.white.withValues(alpha: 0.28)
               : colorScheme.outlineVariant.withValues(alpha: 0.45),
           width: 1,
         ),
+        boxShadow: frostedOnGradient
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : null,
       ),
       child: child,
     );
