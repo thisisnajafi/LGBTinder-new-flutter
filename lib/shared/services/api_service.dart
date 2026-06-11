@@ -185,6 +185,7 @@ class ApiService {
     Options? options,
     bool queueIfOffline = true,
     bool deduplicateIdempotent = false,
+    RetryConfig? retryConfig,
   }) async {
     if (deduplicateIdempotent && data is Map<String, dynamic>) {
       final requestKey = _generateCacheKey('POST', endpoint, data);
@@ -198,7 +199,14 @@ class ApiService {
           rethrow;
         }
       }
-      final future = _executePost<T>(endpoint: endpoint, data: data, fromJson: fromJson, options: options, queueIfOffline: queueIfOffline);
+      final future = _executePost<T>(
+        endpoint: endpoint,
+        data: data,
+        fromJson: fromJson,
+        options: options,
+        queueIfOffline: queueIfOffline,
+        retryConfig: retryConfig,
+      );
       _inFlightPost[requestKey] = future as Future<ApiResponse<dynamic>>;
       try {
         return await future;
@@ -207,7 +215,14 @@ class ApiService {
       }
     }
 
-    return _executePost<T>(endpoint: endpoint, data: data, fromJson: fromJson, options: options, queueIfOffline: queueIfOffline);
+    return _executePost<T>(
+      endpoint: endpoint,
+      data: data,
+      fromJson: fromJson,
+      options: options,
+      queueIfOffline: queueIfOffline,
+      retryConfig: retryConfig,
+    );
   }
 
   Future<ApiResponse<T>> _executePost<T>(
@@ -216,6 +231,7 @@ class ApiService {
     T Function(dynamic)? fromJson,
     Options? options,
     bool queueIfOffline = true,
+    RetryConfig? retryConfig,
   }) async {
     if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
@@ -250,25 +266,28 @@ class ApiService {
           );
           return _handleResponse<T>(response, fromJson);
         },
-        config: RetryConfig(
-          maxRetries: 2,
-          initialDelay: const Duration(seconds: 1),
-          backoffMultiplier: 2.0,
-          maxDelay: const Duration(seconds: 15),
-          shouldRetry: (error) {
-            if (error is ApiError) {
-              if (error.code != null) {
-                if (error.code! >= 400 && error.code! < 500 && error.code != 429) {
-                  return false;
+        config: retryConfig ??
+            RetryConfig(
+              maxRetries: 2,
+              initialDelay: const Duration(seconds: 1),
+              backoffMultiplier: 2.0,
+              maxDelay: const Duration(seconds: 15),
+              shouldRetry: (error) {
+                if (error is ApiError) {
+                  if (error.code != null) {
+                    if (error.code! >= 400 &&
+                        error.code! < 500 &&
+                        error.code != 429) {
+                      return false;
+                    }
+                  }
+                  if (error.errors != null && error.errors!.isNotEmpty) {
+                    return false;
+                  }
                 }
-              }
-              if (error.errors != null && error.errors!.isNotEmpty) {
-                return false;
-              }
-            }
-            return RetryService.isRetryableError(error);
-          },
-        ),
+                return RetryService.isRetryableError(error);
+              },
+            ),
       );
     } on DioException catch (e) {
       if (queueIfOffline &&

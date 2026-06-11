@@ -42,6 +42,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _rememberMe = false;
+  bool _trackedView = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _trackedView) return;
+      _trackedView = true;
+      ref.read(appEventTrackerProvider).track(
+            'auth_view',
+            meta: {'screen': 'login'},
+          );
+    });
+  }
 
   @override
   void dispose() {
@@ -76,7 +90,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await ref.read(appEventTrackerProvider).track('auth_submit', meta: {'screen': 'login'});
+      ref.read(appEventTrackerProvider).track(
+            'auth_submit',
+            meta: {'screen': 'login'},
+          );
       final authService = ref.read(authServiceProvider);
       final deviceName = await _getDeviceName();
       
@@ -275,10 +292,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref.read(appEventTrackerProvider).track('auth_view', meta: {'screen': 'login'});
-    });
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;

@@ -8,4 +8,8 @@ if not exist "%FLUTTER_BIN%" (
     exit /b 1
 )
 echo Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn
+if /I "%~1"=="run" (
+    adb shell setprop log.tag.EGL_emulation SUPPRESS 2>nul
+    adb shell setprop log.tag.EGL_emulation_app_time_stats SUPPRESS 2>nul
+)
 "%FLUTTER_BIN%" %*

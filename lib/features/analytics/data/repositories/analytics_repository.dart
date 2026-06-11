@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/providers/api_providers.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../../../shared/services/retry_service.dart';
 import '../models/user_analytics.dart';
 
 /// Analytics repository - handles analytics data operations
@@ -42,6 +44,13 @@ class AnalyticsRepository {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.analyticsTrackActivity,
         data: requestData,
+        options: const Options(
+          connectTimeout: Duration(seconds: 8),
+          sendTimeout: Duration(seconds: 8),
+          receiveTimeout: Duration(seconds: 8),
+        ),
+        queueIfOffline: false,
+        retryConfig: const RetryConfig(maxRetries: 0),
       );
 
       if (!response.isSuccess) {

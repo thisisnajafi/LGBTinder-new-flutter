@@ -8,7 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../features/onboarding/widgets/welcome_glass_card.dart';
-import '../../features/onboarding/widgets/welcome_profile_mosaic.dart';
+import '../../features/onboarding/widgets/welcome_value_props.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/navbar/lgbtfinder_logo.dart';
 import 'package:go_router/go_router.dart';
@@ -333,7 +333,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     }
 
     final size = MediaQuery.of(context).size;
-    final mosaicHeight = size.height * 0.30;
     final animated = !_minimalFirstFrame;
     final animationsEnabled = AppAnimations.animationsEnabled(context);
 
@@ -416,11 +415,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   children: [
                     FadeTransition(
                       opacity: animated ? _mosaicFade : const AlwaysStoppedAnimation(1),
-                      child: WelcomeProfileMosaic(
-                        maxHeight: mosaicHeight.clamp(150, 240),
-                      ),
+                      child: const WelcomeValueProps(),
                     ),
-                    SizedBox(height: AppSpacing.spacingLG),
+                    SizedBox(height: AppSpacing.spacingMD),
                     _buildLogo(context, animated: animated),
                     SizedBox(height: AppSpacing.spacingMD),
                     Expanded(

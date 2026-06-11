@@ -11,5 +11,18 @@ if (-not (Test-Path $flutterBin)) {
 $env:PUB_HOSTED_URL = "https://pub.flutter-io.cn"
 $env:FLUTTER_STORAGE_BASE_URL = "https://storage.flutter-io.cn"
 
+function Suppress-AndroidNoiseLogs {
+    $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+    if (-not (Test-Path $adb)) {
+        $adbCmd = Get-Command adb -ErrorAction SilentlyContinue
+        if ($adbCmd) { $adb = $adbCmd.Source } else { return }
+    }
+    & $adb shell setprop log.tag.EGL_emulation SUPPRESS 2>$null
+    & $adb shell setprop log.tag.EGL_emulation_app_time_stats SUPPRESS 2>$null
+}
+
 Write-Host "Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn" -ForegroundColor Cyan
+if ($args.Count -gt 0 -and $args[0] -eq 'run') {
+    Suppress-AndroidNoiseLogs
+}
 & $flutterBin @args
