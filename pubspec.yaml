@@ -254,16 +254,21 @@ flutter:
           weight: 400
           style: italic
 
-# Native splash — gradient PNG matches AppTheme.splashGradient (Android 12 still uses solid fallback)
+# Native splash — gradient + white-circle logo (matches Flutter splash)
 flutter_native_splash:
   background_image: assets/images/splash_gradient_bg.png
   background_image_dark: assets/images/splash_gradient_bg.png
-  image: assets/images/splash_logo.png
-  image_dark: assets/images/splash_logo.png
+  image: assets/images/splash_icon_circle.png
+  image_dark: assets/images/splash_icon_circle.png
+  branding: assets/images/splash_branding.png
+  branding_bottom_padding: 72
+  branding_dark: assets/images/splash_branding.png
   android_12:
-    image: assets/images/splash_logo.png
-    color: "#457B9D"
-    image_dark: assets/images/splash_logo.png
-    color_dark: "#457B9D"
+    image: assets/images/splash_android12_icon.png
+    color: "#76AC80"
+    image_dark: assets/images/splash_android12_icon.png
+    color_dark: "#76AC80"
+    icon_background_color: "#FFFFFF"
+    icon_background_color_dark: "#FFFFFF"
   web: false
   ios: false
