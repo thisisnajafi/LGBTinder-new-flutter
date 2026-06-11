@@ -19,6 +19,7 @@ import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/providers/chat_typing_providers.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../features/chat/data/models/chat.dart';
+import '../features/chat/utils/chat_message_preview.dart';
 import '../shared/models/api_error.dart';
 import '../shared/models/user_tier.dart';
 import '../shared/providers/user_tier_provider.dart';
@@ -216,7 +217,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       'first_name': chat.firstName,
       'last_name': chat.lastName,
       'avatar_url': chat.primaryImageUrl,
-      'last_message': chat.lastMessage?.message ?? '',
+      'last_message': chatMessagePreviewText(
+        message: chat.lastMessage?.message,
+        messageType: chat.lastMessage?.messageType,
+        mediaDuration: chat.lastMessage?.mediaDuration,
+      ),
+      'last_message_type': chat.lastMessage?.messageType,
       'last_message_time': chat.lastMessageAt ?? chat.lastMessage?.createdAt,
       'unread_count': chat.unreadCount,
       'is_online': chat.isOnline,
@@ -477,6 +483,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                                     name: _displayNameFromMap(chat),
                                     avatarUrl: chat['avatar_url'],
                                     lastMessage: chat['last_message'],
+                                    lastMessageType:
+                                        chat['last_message_type']?.toString(),
                                     lastMessageTime: chat['last_message_time'],
                                     unreadCount: chat['unread_count'],
                                     isOnline: chat['is_online'],

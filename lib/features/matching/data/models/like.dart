@@ -213,11 +213,25 @@ class LikeResponse {
   }
 }
 
-/// Response from dislike endpoint. [theyLikedYou] when the other user had liked us (we passed on them).
+/// Response from dislike endpoint.
 class DislikeResponse {
+  /// The other user had liked us before we passed on them.
   final bool theyLikedYou;
 
-  DislikeResponse({this.theyLikedYou = false});
+  /// A mutual match existed and was removed by this dislike.
+  final bool wasMatch;
+
+  DislikeResponse({
+    this.theyLikedYou = false,
+    this.wasMatch = false,
+  });
+
+  factory DislikeResponse.fromJson(Map<String, dynamic> json) {
+    return DislikeResponse(
+      theyLikedYou: json['they_liked_you'] == true || json['they_liked_you'] == 1,
+      wasMatch: json['was_match'] == true || json['was_match'] == 1,
+    );
+  }
 }
 
 /// Response from likes/rewind (undo last like/dislike). Premium only.

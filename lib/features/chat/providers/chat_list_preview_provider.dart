@@ -40,6 +40,7 @@ class ChatListPreviewItem {
     String? name,
     String? avatarUrl,
     String? lastMessage,
+    String? lastMessageType,
     DateTime? lastMessageTime,
     int? unreadCount,
     bool? isOnline,
@@ -52,6 +53,7 @@ class ChatListPreviewItem {
       name: name ?? this.name,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageType: lastMessageType ?? this.lastMessageType,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
       isOnline: isOnline ?? this.isOnline,
@@ -66,6 +68,7 @@ class ChatListPreviewItem {
         'name': name,
         'avatar_url': avatarUrl,
         'last_message': lastMessage,
+        if (lastMessageType != null) 'last_message_type': lastMessageType,
         'last_message_time': lastMessageTime,
         'unread_count': unreadCount,
         'is_online': isOnline,
@@ -79,7 +82,12 @@ class ChatListPreviewItem {
       chatId: chat.id,
       name: chat.displayName,
       avatarUrl: chat.primaryImageUrl,
-      lastMessage: chat.lastMessage?.message ?? '',
+      lastMessage: chatMessagePreviewText(
+        message: chat.lastMessage?.message,
+        messageType: chat.lastMessage?.messageType,
+        mediaDuration: chat.lastMessage?.mediaDuration,
+      ),
+      lastMessageType: chat.lastMessage?.messageType,
       lastMessageTime: chat.lastMessageAt ?? chat.lastMessage?.createdAt,
       unreadCount: chat.unreadCount,
       isOnline: chat.isOnline,
@@ -151,6 +159,7 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
       name: _nameFromMap(map),
       avatarUrl: map['avatar_url']?.toString(),
       lastMessage: map['last_message']?.toString() ?? '',
+      lastMessageType: map['last_message_type']?.toString(),
       lastMessageTime: map['last_message_time'] is DateTime
           ? map['last_message_time'] as DateTime
           : DateTime.tryParse(map['last_message_time']?.toString() ?? ''),
@@ -184,6 +193,7 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
       final existing = state.items[existingIndex];
       updated = existing.copyWith(
         lastMessage: previewText,
+        lastMessageType: message.messageType,
         lastMessageTime: message.createdAt,
         unreadCount: inActiveChat
             ? 0
@@ -197,6 +207,7 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
         chatId: 0,
         name: _nameFromSenderPayload(message),
         lastMessage: previewText,
+        lastMessageType: message.messageType,
         lastMessageTime: message.createdAt,
         unreadCount: inActiveChat || !isIncoming ? 0 : 1,
       );
@@ -221,12 +232,14 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
   void bumpOutgoingMessage({
     required int peerUserId,
     required String previewText,
+    String? lastMessageType,
     required DateTime timestamp,
   }) {
     final index = state.items.indexWhere((item) => item.id == peerUserId);
     if (index < 0) return;
     final updated = state.items[index].copyWith(
       lastMessage: previewText,
+      lastMessageType: lastMessageType,
       lastMessageTime: timestamp,
       unreadCount: 0,
     );
@@ -303,23 +316,11 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
   }
 
   String _previewTextForMessage(Message message) {
-    switch (message.messageType) {
-      case 'sticker':
-        return 'Sticker';
-      case 'image':
-      case 'disappearing_image':
-      case 'self_destruct':
-        return 'Photo';
-      case 'voice':
-        return 'Voice message';
-      case 'profile_link':
-        return 'Shared a profile';
-      case 'video':
-        return 'Video';
-      default:
-        final text = message.message.trim();
-        return text.isNotEmpty ? text : 'Message';
-    }
+    return chatMessagePreviewText(
+      message: message.message,
+      messageType: message.messageType,
+      mediaDuration: message.mediaDuration,
+    );
   }
 }
 

@@ -1133,11 +1133,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
           await ChatUpgradeBottomSheet.show(context);
         } else {
-          ErrorHandlerService.showErrorSnackBar(
-            context,
-            e,
-            onRetry: () => _handleVoiceRecordSend(),
-          );
+          ErrorHandlerService.showErrorSnackBar(context, e);
         }
       }
     } catch (e) {

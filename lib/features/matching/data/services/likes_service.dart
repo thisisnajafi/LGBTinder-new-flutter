@@ -44,10 +44,9 @@ class LikesService {
       }
       final data = response.data;
       if (data != null && data is Map<String, dynamic>) {
-        final theyLikedYou = data['they_liked_you'] == true;
-        return DislikeResponse(theyLikedYou: theyLikedYou);
+        return DislikeResponse.fromJson(data);
       }
-      return DislikeResponse(theyLikedYou: false);
+      return DislikeResponse();
     } catch (e) {
       rethrow;
     }

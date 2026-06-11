@@ -11,6 +11,7 @@ import '../../core/widgets/app_page_header.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../shared/models/user_tier.dart';
 import '../../shared/providers/user_tier_provider.dart';
+import '../../features/chat/utils/chat_message_preview.dart';
 import 'typing_indicator.dart';
 
 /// Single conversation row in the messenger list.
@@ -19,6 +20,7 @@ class ChatListItem extends ConsumerWidget {
   final String name;
   final String? avatarUrl;
   final String? lastMessage;
+  final String? lastMessageType;
   final DateTime? lastMessageTime;
   final int unreadCount;
   final bool isOnline;
@@ -32,6 +34,7 @@ class ChatListItem extends ConsumerWidget {
     required this.name,
     this.avatarUrl,
     this.lastMessage,
+    this.lastMessageType,
     this.lastMessageTime,
     this.unreadCount = 0,
     this.isOnline = false,
@@ -109,6 +112,7 @@ class ChatListItem extends ConsumerWidget {
                       _MessagePreview(
                         isTyping: isTyping,
                         lastMessage: lastMessage,
+                        lastMessageType: lastMessageType,
                         isLocked: isLocked,
                         mutedColor: mutedColor,
                       ),
@@ -178,12 +182,14 @@ class ChatListItem extends ConsumerWidget {
 class _MessagePreview extends StatelessWidget {
   final bool isTyping;
   final String? lastMessage;
+  final String? lastMessageType;
   final bool isLocked;
   final Color mutedColor;
 
   const _MessagePreview({
     required this.isTyping,
     required this.lastMessage,
+    this.lastMessageType,
     required this.isLocked,
     required this.mutedColor,
   });
@@ -198,14 +204,36 @@ class _MessagePreview extends StatelessWidget {
 
     final previewText = lastMessage ?? 'No messages yet';
     final textStyle = theme.textTheme.bodySmall?.copyWith(color: mutedColor);
+    final isVoice = isVoiceMessagePreview(lastMessageType);
+
+    Widget previewContent = isVoice
+        ? Row(
+            children: [
+              AppSvgIcon(
+                assetPath: AppIcons.microphone,
+                size: 14,
+                color: mutedColor,
+              ),
+              const SizedBox(width: AppSpacing.spacingXS),
+              Expanded(
+                child: Text(
+                  previewText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
+                ),
+              ),
+            ],
+          )
+        : Text(
+            previewText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textStyle,
+          );
 
     if (!isLocked) {
-      return Text(
-        previewText,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: textStyle,
-      );
+      return previewContent;
     }
 
     return Stack(
@@ -214,12 +242,7 @@ class _MessagePreview extends StatelessWidget {
         ClipRect(
           child: ImageFiltered(
             imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-            child: Text(
-              previewText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: textStyle,
-            ),
+            child: previewContent,
           ),
         ),
         Positioned(

@@ -58,7 +58,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
 
     _autoDismissTimer = Timer(MatchCelebrationOverlay.autoDismissDuration, () {
       if (!_userInteracted && mounted) {
-        widget.onSendMessage();
+        widget.onKeepSwiping();
       }
     });
   }
@@ -232,10 +232,10 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                 child: Column(
                   children: [
                     Semantics(
-                      label: "It's a Match!",
+                      label: 'New Match',
                       header: true,
                       child: Text(
-                        "It's a Match!",
+                        'New Match!',
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: isDark
@@ -247,7 +247,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                     ),
                     SizedBox(height: AppSpacing.spacingSM),
                     Text(
-                      '${widget.currentUser.firstName} & ${widget.matchedUser.firstName}',
+                      'Congratulations! You and ${widget.matchedUser.firstName} liked each other.',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: isDark
                             ? AppColors.textSecondaryDark
@@ -270,51 +270,45 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
               opacity: ctaProgress.clamp(0.0, 1.0),
               child: Transform.translate(
                 offset: Offset(0, (1.0 - ctaProgress) * 24),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: Semantics(
-                        label: 'Keep Swiping',
-                        button: true,
-                        child: OutlinedButton(
-                          onPressed: () => _onUserAction(widget.onKeepSwiping),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.spacingMD,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            ),
+                    Semantics(
+                      label: 'Start chat',
+                      button: true,
+                      child: ElevatedButton(
+                        onPressed: () => _onUserAction(widget.onSendMessage),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.spacingMD,
                           ),
-                          child: Text(
-                            'Keep Swiping',
-                            style: theme.textTheme.labelLarge,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.radiusMD),
+                          ),
+                        ),
+                        child: Text(
+                          'Start',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(width: AppSpacing.spacingLG),
-                    Expanded(
-                      child: Semantics(
-                        label: 'Send a Message',
-                        button: true,
-                        child: ElevatedButton(
-                          onPressed: () => _onUserAction(widget.onSendMessage),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.spacingMD,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            ),
-                          ),
-                          child: Text(
-                            'Send a Message',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                    SizedBox(height: AppSpacing.spacingMD),
+                    Semantics(
+                      label: 'Keep swiping',
+                      button: true,
+                      child: TextButton(
+                        onPressed: () => _onUserAction(widget.onKeepSwiping),
+                        child: Text(
+                          'Keep Swiping',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
                           ),
                         ),
                       ),

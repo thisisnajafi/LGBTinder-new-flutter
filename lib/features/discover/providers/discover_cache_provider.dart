@@ -250,6 +250,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
   /// Record swipe optimistically: update cache and state, then sync to server in background.
   /// [onMatch] called when like/superlike returns a match. [onLimitError] when 429/limit.
   /// [onTheyLikedYou] called when dislike returns they_liked_you.
+  /// [onLostMatch] called when dislike removes an existing mutual match.
   void recordSwipe(
     int userId,
     String action, {
@@ -257,6 +258,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function(match_models.Match?)? onMatch,
     void Function(dynamic)? onLimitError,
     void Function()? onTheyLikedYou,
+    void Function()? onLostMatch,
     void Function()? onSuperlikeSent,
   }) {
     final idx = state.items.indexWhere((e) => e.profile.id == userId);
@@ -305,6 +307,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         onMatch,
         onLimitError,
         onTheyLikedYou,
+        onLostMatch,
         onSuperlikeSent,
       ),
     );
@@ -319,6 +322,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function(match_models.Match?)? onMatch,
     void Function(dynamic)? onLimitError,
     void Function()? onTheyLikedYou,
+    void Function()? onLostMatch,
     void Function()? onSuperlikeSent,
   ) async {
     try {
@@ -338,8 +342,11 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           final response = await _likesService.dislikeUser(userId);
           _planLimitsService.incrementUsage('swipes');
           _markSynced(userId);
-          if (response.theyLikedYou && onTheyLikedYou != null) {
-            onTheyLikedYou();
+          if (response.wasMatch) {
+            unawaited(_cacheInvalidator.purgeMatchList());
+            onLostMatch?.call();
+          } else if (response.theyLikedYou) {
+            onTheyLikedYou?.call();
           }
           break;
         }

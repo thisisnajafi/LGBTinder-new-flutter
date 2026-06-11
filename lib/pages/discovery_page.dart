@@ -15,6 +15,7 @@ import '../features/discover/providers/discovery_providers.dart';
 import '../features/discover/data/models/discovery_profile.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart';
 import '../features/matching/data/models/match.dart' as match_models;
+import '../features/matching/widgets/lost_match_dialog.dart';
 import '../features/matching/widgets/match_celebration_launcher.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
 import '../widgets/premium/upgrade_dialog.dart';
@@ -444,6 +445,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               backgroundColor: AppColors.accentPurple,
             ),
           );
+        }
+      },
+      onLostMatch: () {
+        if (mounted) {
+          unawaited(LostMatchDialog.show(context));
         }
       },
     );
