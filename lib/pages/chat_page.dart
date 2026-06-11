@@ -39,6 +39,7 @@ import '../features/calls/presentation/widgets/call_history_bubble.dart';
 import '../features/calls/providers/call_providers.dart';
 import '../features/calls/utils/call_log_labels.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
+import '../features/chat/utils/chat_message_preview.dart';
 import '../features/chat/providers/pinned_count_provider.dart';
 import '../features/chat/data/services/chat_service.dart';
 import '../features/chat/data/local/chat_local_repository.dart';
@@ -96,10 +97,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String? _voiceRecordingPath;
   int _voiceRecordingDurationSeconds = 0;
   Timer? _voiceRecordingTimer;
+  late final ChatPusherLifecycleNotifier _pusherLifecycle;
 
   @override
   void initState() {
     super.initState();
+    _pusherLifecycle = ref.read(chatPusherLifecycleProvider.notifier);
     _scrollController.addListener(_onScroll);
     _resolvedUserName = widget.userName;
     _resolvedAvatarUrl = widget.avatarUrl;
@@ -127,7 +130,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _outboundTypingStopTimer?.cancel();
     _voiceRecordingTimer?.cancel();
     unawaited(_voiceRecorder.dispose());
-    unawaited(ref.read(chatPusherLifecycleProvider.notifier).closeConversation());
+    unawaited(_pusherLifecycle.closeConversation());
     _scrollController.dispose();
     super.dispose();
   }
@@ -347,7 +350,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Future<void> _subscribePusherConversation(int conversationId) async {
     _conversationId = conversationId;
-    await ref.read(chatPusherLifecycleProvider.notifier).openConversation(
+    await _pusherLifecycle.openConversation(
           conversationId: conversationId,
           otherUserId: widget.userId,
         );
@@ -800,6 +803,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return MessageDeliveryStatus.sent;
   }
 
+  Map<String, dynamic> _optimisticVoiceMap({
+    required String clientId,
+    required int durationSeconds,
+  }) {
+    return {
+      'id': 0,
+      'client_id': clientId,
+      'text': '',
+      'is_sent': true,
+      'sender_id': _currentUserId,
+      'timestamp': DateTime.now(),
+      'is_read': false,
+      'type': 'voice',
+      'media_duration': durationSeconds,
+      'delivery_status': MessageDeliveryStatus.sending,
+    };
+  }
+
   Map<String, dynamic> _optimisticMap({
     required String clientId,
     required String text,
@@ -1056,15 +1077,37 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         : 1;
     _voiceRecordingDurationSeconds = 0;
 
+    final clientId = 'local_voice_${DateTime.now().millisecondsSinceEpoch}';
+    final sentAt = DateTime.now();
+    if (mounted) {
+      setState(() {
+        _messages.add(_optimisticVoiceMap(
+          clientId: clientId,
+          durationSeconds: duration,
+        ));
+      });
+      _scrollToBottom();
+      ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+            peerUserId: widget.userId,
+            previewText: chatMessagePreviewText(
+              messageType: 'voice',
+              mediaDuration: duration,
+            ),
+            lastMessageType: 'voice',
+            timestamp: sentAt,
+          );
+    }
+
     try {
       final chatService = ref.read(chatServiceProvider);
+      Message sent;
       if (_conversationId != null && _conversationId! > 0) {
         final upload = await chatService.uploadChatVoice(
           _conversationId!,
           File(filePath),
           duration,
         );
-        await chatService.sendMessage(
+        sent = await chatService.sendMessage(
           widget.userId,
           '',
           messageType: 'voice',
@@ -1072,7 +1115,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           mediaDuration: (upload['media_duration'] as num?)?.toInt() ?? duration,
         );
       } else {
-        await chatService.sendMessage(
+        sent = await chatService.sendMessage(
           widget.userId,
           '',
           messageType: 'voice',
@@ -1080,9 +1123,26 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           mediaDuration: duration,
         );
       }
-      await _loadMessages(forceRefresh: true);
+      if (mounted) {
+        _replaceOptimisticMessage(clientId, sent);
+        _scrollToBottom();
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        _markMessageFailed(clientId);
+        if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
+          await ChatUpgradeBottomSheet.show(context);
+        } else {
+          ErrorHandlerService.showErrorSnackBar(
+            context,
+            e,
+            onRetry: () => _handleVoiceRecordSend(),
+          );
+        }
+      }
     } catch (e) {
       if (mounted) {
+        _markMessageFailed(clientId);
         ErrorHandlerService.handleError(
           context,
           e,

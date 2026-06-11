@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/chat.dart';
 import '../data/models/message.dart';
+import '../utils/chat_message_preview.dart';
 import 'chat_local_sync_provider.dart';
 import 'chat_pusher_providers.dart';
 
@@ -14,6 +15,7 @@ class ChatListPreviewItem {
   final String name;
   final String? avatarUrl;
   final String lastMessage;
+  final String? lastMessageType;
   final DateTime? lastMessageTime;
   final int unreadCount;
   final bool isOnline;
@@ -26,6 +28,7 @@ class ChatListPreviewItem {
     required this.name,
     this.avatarUrl,
     this.lastMessage = '',
+    this.lastMessageType,
     this.lastMessageTime,
     this.unreadCount = 0,
     this.isOnline = false,

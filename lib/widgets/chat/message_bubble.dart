@@ -14,6 +14,7 @@ import '../../core/widgets/avatar_widget.dart';
 import '../../routes/app_router.dart';
 import '../../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
 import '../../features/chat/presentation/widgets/voice_message_player.dart';
+import 'voice_sending_placeholder.dart';
 import '../images/optimized_image.dart';
 import '../../features/chat/data/models/message_delivery_status.dart';
 import 'message_status_indicator.dart';
@@ -351,6 +352,13 @@ class MessageBubble extends ConsumerWidget {
                       ),
                     ),
                 ],
+              )
+            else if (messageType == 'voice' &&
+                deliveryStatus == MessageDeliveryStatus.sending &&
+                (mediaUrl == null || mediaUrl!.isEmpty))
+              VoiceSendingPlaceholder(
+                durationSeconds: mediaDuration,
+                isSent: isSent,
               )
             else if (messageType == 'voice' && mediaUrl != null)
               VoiceMessagePlayer(

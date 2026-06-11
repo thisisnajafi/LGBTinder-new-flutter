@@ -234,11 +234,15 @@ class CallService {
       );
 
       if (response.isSuccess && response.data != null) {
-        return CallEligibility.fromJson(response.data!);
-      } else {
-        // Default to not eligible if check fails
-        return CallEligibility(canCall: false, reason: 'Unable to verify eligibility');
+        final raw = response.data!;
+        final Map<String, dynamic> payload = raw is Map<String, dynamic>
+            ? (raw['data'] is Map<String, dynamic>
+                ? Map<String, dynamic>.from(raw['data'] as Map)
+                : raw)
+            : <String, dynamic>{};
+        return CallEligibility.fromJson(payload);
       }
+      return CallEligibility(canCall: false, reason: 'Unable to verify eligibility');
     } catch (e) {
       return CallEligibility(canCall: false, reason: 'Network error');
     }

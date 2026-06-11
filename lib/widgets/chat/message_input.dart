@@ -10,6 +10,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
+import 'voice_waveform_bars.dart';
 
 /// Message input field widget
 /// Text input with send button and media options
@@ -41,7 +42,8 @@ class MessageInput extends ConsumerStatefulWidget {
   ConsumerState<MessageInput> createState() => _MessageInputState();
 }
 
-class _MessageInputState extends ConsumerState<MessageInput> {
+class _MessageInputState extends ConsumerState<MessageInput>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   Timer? _recordingTimer;
@@ -50,10 +52,19 @@ class _MessageInputState extends ConsumerState<MessageInput> {
   bool _didCancelRecordingBySlide = false;
   double _holdStartX = 0;
   static const double _cancelSlideThreshold = 72;
+  late final AnimationController _micPulseController;
+  late final Animation<double> _micPulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _micPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _micPulseAnimation = Tween<double>(begin: 1, end: 1.12).animate(
+      CurvedAnimation(parent: _micPulseController, curve: Curves.easeInOut),
+    );
     // Rebuild send button when text changes (enabled state + gradient).
     _controller.addListener(_onControllerChanged);
   }
@@ -72,6 +83,7 @@ class _MessageInputState extends ConsumerState<MessageInput> {
 
   @override
   void dispose() {
+    _micPulseController.dispose();
     _recordingTimer?.cancel();
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
@@ -90,6 +102,8 @@ class _MessageInputState extends ConsumerState<MessageInput> {
   void _resetRecordingUi() {
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    _micPulseController.stop();
+    _micPulseController.reset();
     if (mounted) {
       setState(() {
         _isHoldingToRecord = false;
@@ -115,6 +129,7 @@ class _MessageInputState extends ConsumerState<MessageInput> {
       _isHoldingToRecord = true;
       _recordingSeconds = 0;
     });
+    _micPulseController.repeat(reverse: true);
     _recordingTimer?.cancel();
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || !_isHoldingToRecord) return;
@@ -195,44 +210,50 @@ class _MessageInputState extends ConsumerState<MessageInput> {
                     width: 1,
                   ),
                 ),
-                child: _isHoldingToRecord
-                    ? Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.spacingLG,
-                          vertical: AppSpacing.spacingMD,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: const BoxDecoration(
-                                color: AppColors.feedbackError,
-                                shape: BoxShape.circle,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  child: _isHoldingToRecord
+                      ? Padding(
+                          key: const ValueKey('recording'),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.spacingLG,
+                            vertical: AppSpacing.spacingMD,
+                          ),
+                          child: Row(
+                            children: [
+                              PulsingRecordDot(color: AppColors.feedbackError),
+                              SizedBox(width: AppSpacing.spacingSM),
+                              Text(
+                                _formatRecordingDuration(_recordingSeconds),
+                                style: AppTypography.body.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            SizedBox(width: AppSpacing.spacingSM),
-                            Text(
-                              _formatRecordingDuration(_recordingSeconds),
-                              style: AppTypography.body.copyWith(
-                                color: textColor,
-                                fontWeight: FontWeight.w700,
+                              SizedBox(width: AppSpacing.spacingMD),
+                              Expanded(
+                                child: VoiceWaveformBars(
+                                  active: true,
+                                  color: AppColors.primaryLight,
+                                  height: 20,
+                                  barCount: 10,
+                                ),
                               ),
-                            ),
-                            SizedBox(width: AppSpacing.spacingLG),
-                            Expanded(
-                              child: Text(
+                              SizedBox(width: AppSpacing.spacingSM),
+                              Text(
                                 '< Slide to cancel',
                                 overflow: TextOverflow.ellipsis,
-                                style: AppTypography.body.copyWith(
+                                style: AppTypography.bodySmall.copyWith(
                                   color: secondaryTextColor,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : TextField(
+                            ],
+                          ),
+                        )
+                      : TextField(
+                        key: const ValueKey('text-input'),
                         controller: _controller,
                         focusNode: _focusNode,
                         enabled: widget.enabled,
@@ -255,6 +276,7 @@ class _MessageInputState extends ConsumerState<MessageInput> {
                           ),
                         ),
                       ),
+                ),
               ),
             ),
             SizedBox(width: AppSpacing.spacingSM),
@@ -280,27 +302,46 @@ class _MessageInputState extends ConsumerState<MessageInput> {
               onLongPressStart: canRecord ? (d) => unawaited(_startRecordingHold(d)) : null,
               onLongPressMoveUpdate: canRecord ? _onRecordingMove : null,
               onLongPressEnd: canRecord ? (_) => unawaited(_sendRecording()) : null,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: (hasText || _isHoldingToRecord) && widget.enabled
-                      ? AppTheme.accentGradient
-                      : null,
-                  color: (!hasText && !_isHoldingToRecord) || !widget.enabled
-                      ? secondaryTextColor.withValues(alpha: 0.3)
-                      : null,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: hasText ? AppIcons.send : AppIcons.microphone,
-                    size: 20,
-                    color: Colors.white,
+              child: ScaleTransition(
+                scale: _isHoldingToRecord
+                    ? _micPulseAnimation
+                    : const AlwaysStoppedAnimation(1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  decoration: BoxDecoration(
+                    gradient: (hasText || _isHoldingToRecord) && widget.enabled
+                        ? AppTheme.accentGradient
+                        : null,
+                    color: (!hasText && !_isHoldingToRecord) || !widget.enabled
+                        ? secondaryTextColor.withValues(alpha: 0.3)
+                        : null,
+                    shape: BoxShape.circle,
+                    boxShadow: _isHoldingToRecord
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primaryLight.withValues(alpha: 0.45),
+                              blurRadius: 14,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
                   ),
-                  onPressed: hasText && widget.enabled ? _handleSend : null,
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
+                  child: IconButton(
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: AppSvgIcon(
+                        key: ValueKey(hasText ? 'send' : 'mic'),
+                        assetPath: hasText ? AppIcons.send : AppIcons.microphone,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ),
+                    onPressed: hasText && widget.enabled ? _handleSend : null,
+                    padding: EdgeInsets.all(AppSpacing.spacingMD),
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
                   ),
                 ),
               ),

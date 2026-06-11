@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/providers/api_providers.dart';
 import '../../../../shared/services/api_service.dart';
-import '../../../../shared/services/retry_service.dart';
 import '../models/user_analytics.dart';
 
 /// Analytics repository - handles analytics data operations
@@ -11,6 +10,25 @@ class AnalyticsRepository {
   final ApiService _apiService;
 
   AnalyticsRepository(this._apiService);
+
+  /// Separate client for funnel events — short timeouts, no interceptors/retries.
+  static Dio? _trackDio;
+
+  static Dio get _trackingClient {
+    return _trackDio ??= Dio(
+      BaseOptions(
+        baseUrl: ApiEndpoints.baseUrl,
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+        sendTimeout: const Duration(seconds: 8),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
+  }
 
   /// Get user analytics data
   Future<UserAnalytics> getUserAnalytics({int days = 30}) async {
@@ -30,34 +48,21 @@ class AnalyticsRepository {
     }
   }
 
-  /// Track user activity
+  /// Track user activity (funnel events). Failures are swallowed — never blocks UX.
   Future<void> trackActivity({
     required String action,
     required Map<String, dynamic> metadata,
   }) async {
     try {
-      final requestData = {
-        'action': action,
-        'metadata': metadata,
-      };
-
-      final response = await _apiService.post<Map<String, dynamic>>(
+      await _trackingClient.post(
         ApiEndpoints.analyticsTrackActivity,
-        data: requestData,
-        options: const Options(
-          connectTimeout: Duration(seconds: 8),
-          sendTimeout: Duration(seconds: 8),
-          receiveTimeout: Duration(seconds: 8),
-        ),
-        queueIfOffline: false,
-        retryConfig: const RetryConfig(maxRetries: 0),
+        data: {
+          'action': action,
+          'metadata': metadata,
+        },
       );
-
-      if (!response.isSuccess) {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
+    } catch (_) {
+      // Intentionally silent — analytics must not affect app flows or logs.
     }
   }
 
