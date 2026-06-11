@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:math' as math;
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -290,7 +289,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   width: 1.5,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusFull),
+                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
                 ),
               ),
               child: Text(
