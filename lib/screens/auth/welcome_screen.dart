@@ -1,10 +1,11 @@
 // Screen: WelcomeScreen
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math' as math;
 import '../../core/constants/animation_constants.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../features/onboarding/widgets/welcome_glass_card.dart';
@@ -25,16 +26,18 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with TickerProviderStateMixin {
-  late AnimationController _logoController;
-  late AnimationController _textController;
-  late AnimationController _buttonController;
-  late AnimationController _floatingController;
-  late Animation<double> _logoAnimation;
-  late Animation<double> _textAnimation;
-  late Animation<double> _buttonAnimation;
-  late Animation<double> _floatingAnimation;
+  late AnimationController _entranceController;
+  late AnimationController _ambientController;
 
-  bool _showFloatingShapes = false;
+  late Animation<double> _mosaicFade;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _textFade;
+  late Animation<Offset> _actionsSlide;
+  late Animation<double> _actionsFade;
+  late Animation<double> _ambientPulse;
+
   bool _minimalFirstFrame = true;
   bool _fullUIScheduled = false;
   bool _precacheScheduled = false;
@@ -46,36 +49,70 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     screenLog('WelcomeScreen', 'initState');
     startupLog('WelcomeScreen: reached WELCOME');
 
-    _logoController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+    _entranceController = AnimationController(
+      duration: const Duration(milliseconds: 1400),
       vsync: this,
     );
-    _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: AppAnimations.curveDefault),
+    _ambientController = AnimationController(
+      duration: const Duration(seconds: 6),
+      vsync: this,
     );
 
-    _textController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+    _mosaicFade = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
     );
 
-    _buttonController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _buttonAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _buttonController, curve: Curves.easeOutCubic),
+    _logoScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 15,
+      ),
+      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 45),
+    ]).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.12, 0.55, curve: Curves.easeOut),
+    ));
+
+    _logoFade = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.12, 0.48, curve: Curves.easeOut),
     );
 
-    _floatingController = AnimationController(
-      duration: const Duration(seconds: 7),
-      vsync: this,
+    _textSlide = Tween<Offset>(
+      begin: const Offset(0, 0.18),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.32, 0.68, curve: Curves.easeOutCubic),
+    ));
+
+    _textFade = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.32, 0.68, curve: Curves.easeOutCubic),
     );
-    _floatingAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
+
+    _actionsSlide = Tween<Offset>(
+      begin: const Offset(0, 0.22),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.48, 0.88, curve: Curves.easeOutCubic),
+    ));
+
+    _actionsFade = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.48, 0.88, curve: Curves.easeOutCubic),
+    );
+
+    _ambientPulse = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _ambientController, curve: Curves.easeInOut),
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -84,78 +121,69 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       setState(() => _minimalFirstFrame = false);
 
       if (!AppAnimations.animationsEnabled(context)) {
-        _logoController.value = 1;
-        _textController.value = 1;
-        _buttonController.value = 1;
+        _entranceController.value = 1;
         return;
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _logoController.forward().then((_) {
-          if (!mounted) return;
-          _textController.forward().then((_) {
-            if (!mounted) return;
-            _buttonController.forward();
-          });
-        });
-        if (!kDebugMode) {
-          Future.delayed(const Duration(milliseconds: 2000), () {
-            if (!mounted) return;
-            _floatingController.repeat(reverse: true);
-            setState(() => _showFloatingShapes = true);
-          });
-        }
-      });
+      _entranceController.forward();
+      _ambientController.repeat(reverse: true);
     });
   }
 
   @override
   void dispose() {
-    _logoController.dispose();
-    _textController.dispose();
-    _buttonController.dispose();
-    _floatingController.dispose();
+    _entranceController.dispose();
+    _ambientController.dispose();
     super.dispose();
   }
 
+  TextStyle _whiteText(BuildContext context, TextStyle? base,
+      {FontWeight? weight, double? size, double alpha = 1.0}) {
+    return (base ?? Theme.of(context).textTheme.bodyLarge!).copyWith(
+      fontFamily: 'Inter',
+      color: Colors.white.withValues(alpha: alpha),
+      fontWeight: weight,
+      fontSize: size,
+    );
+  }
+
   Widget _buildBrandingBlock(BuildContext context, {required bool animated}) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-    final onSurface = theme.colorScheme.onSurface;
-    final titleStyle = textTheme.displayLarge?.copyWith(
-      fontWeight: FontWeight.w900,
-      letterSpacing: 1.5,
-      color: onSurface,
-    );
-    final taglineStyle = textTheme.displaySmall?.copyWith(
-      color: onSurface,
-      fontWeight: FontWeight.w600,
-    );
-    final bodyStyle = textTheme.bodyLarge?.copyWith(
-      color: onSurface.withValues(alpha: 0.75),
-      height: 1.6,
-    );
+    final textTheme = Theme.of(context).textTheme;
 
     final content = Column(
       children: [
         WelcomeGlassCard(
+          onGradient: true,
           child: Text(
             'Find your perfect match',
-            style: taglineStyle,
+            style: _whiteText(
+              context,
+              textTheme.headlineSmall,
+              weight: FontWeight.w700,
+              size: 22,
+            ),
             textAlign: TextAlign.center,
           ),
         ),
         SizedBox(height: AppSpacing.spacingMD),
         Text(
           'Connect with like-minded people in a safe, inclusive community designed for everyone.',
-          style: bodyStyle,
+          style: _whiteText(
+            context,
+            textTheme.bodyLarge,
+            alpha: 0.82,
+          ).copyWith(height: 1.55, letterSpacing: 0.15),
           textAlign: TextAlign.center,
         ),
         SizedBox(height: AppSpacing.spacingLG),
         Text(
           'LGBTFinder',
-          style: titleStyle,
+          style: _whiteText(
+            context,
+            textTheme.displaySmall,
+            weight: FontWeight.w800,
+            size: 34,
+          ).copyWith(letterSpacing: 0.6),
           textAlign: TextAlign.center,
         ),
       ],
@@ -165,67 +193,75 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       return content;
     }
 
-    return AnimatedBuilder(
-      animation: _textAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _textAnimation.value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - _textAnimation.value)),
-            child: child,
+    return SlideTransition(
+      position: _textSlide,
+      child: FadeTransition(opacity: _textFade, child: content),
+    );
+  }
+
+  Widget _buildLogoBadge(double logoSize) {
+    final glowSize = logoSize * 1.15;
+    final circleSize = logoSize;
+    final heartSize = logoSize * 0.52;
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: glowSize,
+          height: glowSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.18),
           ),
-        );
-      },
-      child: content,
+        ),
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Image.asset(
+              LGBTFinderLogo.assetPath,
+              width: heartSize,
+              height: heartSize,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildLogo(BuildContext context, {required bool animated}) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final width = MediaQuery.sizeOf(context).width;
-    final logoSize = (width * 0.28).clamp(104.0, 132.0);
+    final logoSize = (width * 0.26).clamp(100.0, 120.0);
 
     final logo = Semantics(
       label: 'LGBTFinder logo',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.shadow.withValues(
-                alpha: isDark ? 0.22 : 0.06,
-              ),
-              blurRadius: isDark ? 16 : 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: LGBTFinderLogo(size: logoSize),
-      ),
+      child: _buildLogoBadge(logoSize),
     );
 
     if (!animated || _minimalFirstFrame) {
       return logo;
     }
 
-    return AnimatedBuilder(
-      animation: _logoAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _logoAnimation.value,
-          child: Opacity(
-            opacity: _logoAnimation.value,
-            child: child,
-          ),
-        );
-      },
-      child: logo,
+    return FadeTransition(
+      opacity: _logoFade,
+      child: ScaleTransition(scale: _logoScale, child: logo),
     );
   }
 
   Widget _buildActions(BuildContext context, {required bool animated}) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-
     final actions = Column(
       children: [
         Semantics(
@@ -235,34 +271,40 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             text: 'Create Account',
             onPressed: () => context.go(AppRoutes.register),
             usePrideGradient: true,
+            height: 56,
           ),
         ),
-        SizedBox(height: AppSpacing.spacingLG),
+        SizedBox(height: AppSpacing.spacingMD),
         Semantics(
           label: 'Sign in',
           button: true,
           child: SizedBox(
             width: double.infinity,
-            height: 56,
-            child: TextButton(
+            height: 52,
+            child: OutlinedButton(
               onPressed: () => context.go(AppRoutes.login),
-              style: TextButton.styleFrom(
-                foregroundColor: onSurface,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  width: 1.5,
+                ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                  borderRadius: BorderRadius.circular(AppRadius.radiusFull),
                 ),
               ),
               child: Text(
                 'Sign In',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: _whiteText(
+                  context,
+                  Theme.of(context).textTheme.labelLarge,
+                  weight: FontWeight.w600,
+                ),
               ),
             ),
           ),
         ),
-        SizedBox(height: AppSpacing.spacingLG),
+        SizedBox(height: AppSpacing.spacingMD),
       ],
     );
 
@@ -270,18 +312,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       return actions;
     }
 
-    return AnimatedBuilder(
-      animation: _buttonAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _buttonAnimation.value,
-          child: Transform.translate(
-            offset: Offset(0, 30 * (1 - _buttonAnimation.value)),
-            child: child,
-          ),
-        );
-      },
-      child: actions,
+    return SlideTransition(
+      position: _actionsSlide,
+      child: FadeTransition(opacity: _actionsFade, child: actions),
     );
   }
 
@@ -300,113 +333,114 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       });
     }
 
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorScheme = theme.colorScheme;
     final size = MediaQuery.of(context).size;
-    final mosaicHeight = size.height * 0.32;
+    final mosaicHeight = size.height * 0.30;
     final animated = !_minimalFirstFrame;
+    final animationsEnabled = AppAnimations.animationsEnabled(context);
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: Stack(
-        children: [
-          if (isDark)
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Stack(
+          children: [
             const DecoratedBox(
-              decoration: BoxDecoration(gradient: AppColors.brandGradient),
+              decoration: BoxDecoration(gradient: AppTheme.splashGradient),
               child: SizedBox.expand(),
-            )
-          else
-            ColoredBox(color: colorScheme.surface),
-          if (_showFloatingShapes && !kDebugMode && isDark)
-            RepaintBoundary(
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: size.height * 0.12,
-                    left: size.width * 0.08,
-                    child: _FloatingShape(
-                      size: 64,
-                      color: colorScheme.onSurface.withValues(alpha: 0.1),
-                      animation: _floatingAnimation,
-                    ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: size.height * 0.42,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.18),
+                    ],
                   ),
-                  Positioned(
-                    top: size.height * 0.42,
-                    right: size.width * 0.1,
-                    child: _FloatingShape(
-                      size: 48,
-                      color: colorScheme.onSurface.withValues(alpha: 0.08),
-                      animation: _floatingAnimation,
-                      phaseOffset: 2 * math.pi / 3,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.spacingXL,
-                vertical: AppSpacing.spacingLG,
+            if (animationsEnabled)
+              RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _ambientPulse,
+                  builder: (context, child) {
+                    return Stack(
+                      children: [
+                        Positioned(
+                          top: size.height * 0.08,
+                          right: -size.width * 0.12,
+                          child: Transform.scale(
+                            scale: _ambientPulse.value,
+                            child: Container(
+                              width: 180,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: 0.06),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: size.height * 0.22,
+                          left: -size.width * 0.08,
+                          child: Transform.scale(
+                            scale: 2 - _ambientPulse.value,
+                            child: Container(
+                              width: 140,
+                              height: 140,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: 0.05),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
-              child: Column(
-                children: [
-                  WelcomeProfileMosaic(maxHeight: mosaicHeight.clamp(160, 260)),
-                  SizedBox(height: AppSpacing.spacingLG),
-                  _buildLogo(context, animated: animated),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: _buildBrandingBlock(context, animated: animated),
+            SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spacingXL,
+                  vertical: AppSpacing.spacingMD,
+                ),
+                child: Column(
+                  children: [
+                    FadeTransition(
+                      opacity: animated ? _mosaicFade : const AlwaysStoppedAnimation(1),
+                      child: WelcomeProfileMosaic(
+                        maxHeight: mosaicHeight.clamp(150, 240),
+                      ),
                     ),
-                  ),
-                  _buildActions(context, animated: animated),
-                ],
+                    SizedBox(height: AppSpacing.spacingLG),
+                    _buildLogo(context, animated: animated),
+                    SizedBox(height: AppSpacing.spacingMD),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: _buildBrandingBlock(
+                          context,
+                          animated: animated,
+                        ),
+                      ),
+                    ),
+                    _buildActions(context, animated: animated),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-}
-
-class _FloatingShape extends StatelessWidget {
-  final double size;
-  final Color color;
-  final Animation<double> animation;
-  final double phaseOffset;
-
-  const _FloatingShape({
-    required this.size,
-    required this.color,
-    required this.animation,
-    this.phaseOffset = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        final value = animation.value + phaseOffset;
-        return Transform.translate(
-          offset: Offset(
-            math.sin(value) * 10,
-            math.cos(value) * 10,
-          ),
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-        );
-      },
     );
   }
 }
