@@ -2,8 +2,6 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
     }
     dependencies {
         classpath("com.google.gms:google-services:4.4.2")
@@ -33,27 +31,19 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 }
+
+// Legacy Flutter plugins ship their own AGP 7.x buildscript; force the app AGP instead.
 subprojects {
     buildscript {
         repositories {
-            maven {
-                name = "mirrorAliyunGoogle"
-                url = uri("https://maven.aliyun.com/repository/google")
-            }
-            maven {
-                name = "mirrorAliyunPublic"
-                url = uri("https://maven.aliyun.com/repository/public")
-            }
+            google()
+            mavenCentral()
         }
-    }
-    repositories {
-        maven {
-            name = "mirrorAliyunGoogleProj"
-            url = uri("https://maven.aliyun.com/repository/google")
-        }
-        maven {
-            name = "mirrorAliyunPublicProj"
-            url = uri("https://maven.aliyun.com/repository/public")
+        configurations.classpath {
+            resolutionStrategy {
+                force("com.android.tools.build:gradle:8.9.1")
+                force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
+            }
         }
     }
 }

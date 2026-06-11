@@ -9,7 +9,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../core/widgets/cached_content_banner.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
@@ -98,7 +97,6 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
       backgroundColor: backgroundColor,
       body: Column(
         children: [
-          const CachedContentBanner(),
           Expanded(
             child: matchesAsync.when(
               loading: () => SkeletonLoading(),

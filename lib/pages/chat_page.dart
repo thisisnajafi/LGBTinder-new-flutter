@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/chat/chat_header.dart';
@@ -20,14 +21,10 @@ import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/data/models/message.dart';
 import '../features/chat/data/models/message_delivery_status.dart';
-import '../features/chat/data/models/sticker_pack.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
-import '../features/chat/presentation/widgets/share_profile_sheet.dart';
 import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
-import '../features/chat/presentation/widgets/sticker_picker_sheet.dart';
 import '../features/chat/presentation/widgets/self_destruct_viewer.dart';
-import '../features/chat/presentation/widgets/voice_recorder_overlay.dart';
 import '../features/chat/providers/chat_pusher_providers.dart';
 import '../shared/services/pusher_websocket_service.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
@@ -71,7 +68,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   static const int _historyPageSize = 30;
 
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _messageController = TextEditingController();
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMoreMessages = true;
@@ -96,6 +92,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String? _resolvedAvatarUrl;
   bool _conversationMuted = false;
   Timer? _outboundTypingStopTimer;
+  final AudioRecorder _voiceRecorder = AudioRecorder();
+  String? _voiceRecordingPath;
+  int _voiceRecordingDurationSeconds = 0;
+  Timer? _voiceRecordingTimer;
 
   @override
   void initState() {
@@ -125,9 +125,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _messageExpiredSubscription?.cancel();
     _callEventSubscription?.cancel();
     _outboundTypingStopTimer?.cancel();
+    _voiceRecordingTimer?.cancel();
+    unawaited(_voiceRecorder.dispose());
     unawaited(ref.read(chatPusherLifecycleProvider.notifier).closeConversation());
     _scrollController.dispose();
-    _messageController.dispose();
     super.dispose();
   }
 
@@ -931,7 +932,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _repliedToName = null;
         _repliedToMessageType = null;
       });
-      _messageController.clear();
     } else {
       setState(() {
         _messages = _messages.map((msg) {
@@ -991,12 +991,105 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     unawaited(_handleSend(text, existingClientId: clientId));
   }
 
-  void _handleVoiceTap() {
-    VoiceRecorderOverlay.show(
-      context,
-      receiverId: widget.userId,
-      conversationId: _conversationId,
+  Future<void> _handleVoiceRecordStart() async {
+    if (await _voiceRecorder.isRecording()) return;
+
+    final hasPermission = await _voiceRecorder.hasPermission();
+    if (!hasPermission) {
+      throw Exception('Microphone permission required');
+    }
+
+    final dir = await getTemporaryDirectory();
+    _voiceRecordingPath =
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    _voiceRecordingDurationSeconds = 0;
+
+    await _voiceRecorder.start(
+      const RecordConfig(encoder: AudioEncoder.aacLc),
+      path: _voiceRecordingPath!,
     );
+
+    _voiceRecordingTimer?.cancel();
+    _voiceRecordingTimer =
+        Timer.periodic(const Duration(seconds: 1), (_) {
+      _voiceRecordingDurationSeconds++;
+      if (_voiceRecordingDurationSeconds >= 300) {
+        unawaited(_handleVoiceRecordSend());
+      }
+    });
+  }
+
+  Future<void> _handleVoiceRecordCancel() async {
+    _voiceRecordingTimer?.cancel();
+    _voiceRecordingTimer = null;
+    _voiceRecordingDurationSeconds = 0;
+    if (await _voiceRecorder.isRecording()) {
+      await _voiceRecorder.stop();
+    }
+    _voiceRecordingPath = null;
+  }
+
+  Future<void> _handleVoiceRecordSend() async {
+    _voiceRecordingTimer?.cancel();
+    _voiceRecordingTimer = null;
+
+    if (!await _voiceRecorder.isRecording()) {
+      _voiceRecordingPath = null;
+      return;
+    }
+
+    final path = await _voiceRecorder.stop();
+    final filePath = path ?? _voiceRecordingPath;
+    _voiceRecordingPath = null;
+
+    if (filePath == null || !File(filePath).existsSync()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recording failed')),
+        );
+      }
+      return;
+    }
+
+    final duration = _voiceRecordingDurationSeconds > 0
+        ? _voiceRecordingDurationSeconds
+        : 1;
+    _voiceRecordingDurationSeconds = 0;
+
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      if (_conversationId != null && _conversationId! > 0) {
+        final upload = await chatService.uploadChatVoice(
+          _conversationId!,
+          File(filePath),
+          duration,
+        );
+        await chatService.sendMessage(
+          widget.userId,
+          '',
+          messageType: 'voice',
+          mediaPath: upload['media_path']?.toString(),
+          mediaDuration: (upload['media_duration'] as num?)?.toInt() ?? duration,
+        );
+      } else {
+        await chatService.sendMessage(
+          widget.userId,
+          '',
+          messageType: 'voice',
+          mediaFile: File(filePath),
+          mediaDuration: duration,
+        );
+      }
+      await _loadMessages(forceRefresh: true);
+    } catch (e) {
+      if (mounted) {
+        ErrorHandlerService.handleError(
+          context,
+          e,
+          customMessage: 'Failed to send voice message',
+        );
+      }
+    }
   }
 
   void _handleMediaTap() {
@@ -1008,8 +1101,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
+                title: const Text('Take photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAndSendMedia(ImageSource.camera, 'image');
+                },
+              ),
+              ListTile(
                 leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
-                title: const Text('Send photo'),
+                title: const Text('Choose from gallery'),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndSendMedia(ImageSource.gallery, 'image');
@@ -1035,13 +1136,49 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _startSelfDestructPhotoFlow() {
-    SelfDestructDurationSheet.show(
-      context,
-      onSelected: (seconds) {
-        _pickAndSendMedia(
-          ImageSource.gallery,
-          'disappearing_image',
-          expiresInSeconds: seconds,
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
+                title: const Text('Take self-destruct photo'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  SelfDestructDurationSheet.show(
+                    context,
+                    onSelected: (seconds) {
+                      _pickAndSendMedia(
+                        ImageSource.camera,
+                        'disappearing_image',
+                        expiresInSeconds: seconds,
+                      );
+                    },
+                  );
+                },
+              ),
+              ListTile(
+                leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
+                title: const Text('Choose self-destruct photo'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  SelfDestructDurationSheet.show(
+                    context,
+                    onSelected: (seconds) {
+                      _pickAndSendMedia(
+                        ImageSource.gallery,
+                        'disappearing_image',
+                        expiresInSeconds: seconds,
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         );
       },
     );
@@ -1204,128 +1341,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ? () => _pickAndSendMedia(source, type)
             : null,
       );
-    }
-  }
-
-  void _handleShareProfileTap() {
-    ShareProfileSheet.show(
-      context,
-      onProfileSelected: (profileUserId, displayName) {
-        unawaited(_handleProfileLinkSend(profileUserId, displayName));
-      },
-    );
-  }
-
-  Future<void> _handleProfileLinkSend(int profileUserId, String displayName,
-      {String? existingClientId}) async {
-    final clientId =
-        existingClientId ?? 'local_profile_${DateTime.now().millisecondsSinceEpoch}';
-
-    if (existingClientId == null) {
-      setState(() {
-        _messages.add(_optimisticMap(
-          clientId: clientId,
-          text: displayName,
-          type: 'profile_link',
-        ));
-      });
-    }
-    _scrollToBottom();
-
-    try {
-      final sent = await ref.read(chatServiceProvider).sendProfileLink(
-            widget.userId,
-            profileUserId,
-          );
-      if (mounted) {
-        _replaceOptimisticMessage(clientId, sent);
-      }
-    } on ApiError catch (e) {
-      if (!mounted) return;
-      _markMessageFailed(clientId);
-      if (e.upgradeRequired) {
-        await ChatUpgradeBottomSheet.show(context);
-      } else {
-        ErrorHandlerService.showErrorSnackBar(context, e);
-      }
-    } catch (e) {
-      if (mounted) {
-        _markMessageFailed(clientId);
-        ErrorHandlerService.handleError(context, e, customMessage: 'Failed to share profile');
-      }
-    }
-  }
-
-  void _handleEmojiTap() {
-    StickerPickerSheet.show(
-      context,
-      onStickerSelected: (StickerItem sticker) {
-        unawaited(_handleStickerSend(sticker));
-      },
-    );
-  }
-
-  Future<void> _handleStickerSend(StickerItem sticker, {String? existingClientId}) async {
-    final clientId =
-        existingClientId ?? 'local_sticker_${DateTime.now().millisecondsSinceEpoch}';
-
-    if (existingClientId == null) {
-      setState(() {
-        _messages.add(_optimisticMap(
-          clientId: clientId,
-          text: sticker.id.toString(),
-          type: 'sticker',
-          attachmentUrl: sticker.imageUrl,
-        ));
-      });
-    } else {
-      setState(() {
-        _messages = _messages.map((msg) {
-          if (msg['client_id'] == clientId) {
-            return {
-              ...msg,
-              'delivery_status': MessageDeliveryStatus.sending,
-            };
-          }
-          return msg;
-        }).toList();
-      });
-    }
-    _scrollToBottom();
-
-    try {
-      final sentMessage = await ref.read(chatServiceProvider).sendSticker(
-            widget.userId,
-            sticker.id,
-          );
-
-      if (mounted) {
-        _replaceOptimisticMessage(clientId, sentMessage);
-        _scrollToBottom();
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        _markMessageFailed(clientId);
-        if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
-          await ChatUpgradeBottomSheet.show(context);
-        } else {
-          ErrorHandlerService.showErrorSnackBar(
-            context,
-            e,
-            onRetry: () => _handleStickerSend(sticker, existingClientId: clientId),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _markMessageFailed(clientId);
-        ErrorHandlerService.handleError(
-          context,
-          e,
-          customMessage: 'Failed to send sticker',
-          onRetry: () => _handleStickerSend(sticker, existingClientId: clientId),
-        );
-      }
     }
   }
 
@@ -1558,9 +1573,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             onSend: _handleSend,
             onMediaTap: _handleMediaTap,
             onMediaLongPress: _handleMediaLongPress,
-            onVoiceTap: _handleVoiceTap,
-            onEmojiTap: _handleEmojiTap,
-            onShareTap: _handleShareProfileTap,
+            onVoiceRecordStart: _handleVoiceRecordStart,
+            onVoiceRecordSend: _handleVoiceRecordSend,
+            onVoiceRecordCancel: _handleVoiceRecordCancel,
             hintText: 'Type a message...',
             onTextChanged: _onTypingChanged,
           ),

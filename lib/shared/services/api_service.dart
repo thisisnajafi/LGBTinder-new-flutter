@@ -118,10 +118,10 @@ class ApiService {
           return _handleResponse<T>(response, fromJson);
         },
         config: RetryConfig(
-          maxRetries: 3,
+          maxRetries: 2,
           initialDelay: const Duration(seconds: 1),
           backoffMultiplier: 2.0,
-          maxDelay: const Duration(seconds: 30),
+          maxDelay: const Duration(seconds: 15),
           shouldRetry: (error) {
             // Don't retry if it's a client error (4xx except 429)
             // Validation errors (422) should never be retried
@@ -251,10 +251,10 @@ class ApiService {
           return _handleResponse<T>(response, fromJson);
         },
         config: RetryConfig(
-          maxRetries: 3,
+          maxRetries: 2,
           initialDelay: const Duration(seconds: 1),
           backoffMultiplier: 2.0,
-          maxDelay: const Duration(seconds: 30),
+          maxDelay: const Duration(seconds: 15),
           shouldRetry: (error) {
             if (error is ApiError) {
               if (error.code != null) {
@@ -338,10 +338,10 @@ class ApiService {
           return _handleResponse<T>(response, fromJson);
         },
         config: RetryConfig(
-          maxRetries: 3,
+          maxRetries: 2,
           initialDelay: const Duration(seconds: 1),
           backoffMultiplier: 2.0,
-          maxDelay: const Duration(seconds: 30),
+          maxDelay: const Duration(seconds: 15),
           shouldRetry: (error) {
             // Don't retry if it's a client error (4xx except 429)
             // Validation errors (422) should never be retried
@@ -429,10 +429,10 @@ class ApiService {
           return _handleResponse<T>(response, fromJson);
         },
         config: RetryConfig(
-          maxRetries: 3,
+          maxRetries: 2,
           initialDelay: const Duration(seconds: 1),
           backoffMultiplier: 2.0,
-          maxDelay: const Duration(seconds: 30),
+          maxDelay: const Duration(seconds: 15),
           shouldRetry: (error) {
             if (error is ApiError) {
               if (error.code != null &&
@@ -513,10 +513,10 @@ class ApiService {
           return _handleResponse<T>(response, fromJson);
         },
         config: RetryConfig(
-          maxRetries: 3,
+          maxRetries: 2,
           initialDelay: const Duration(seconds: 1),
           backoffMultiplier: 2.0,
-          maxDelay: const Duration(seconds: 30),
+          maxDelay: const Duration(seconds: 15),
           shouldRetry: (error) {
             // Don't retry if it's a client error (4xx except 429)
             // Validation errors (422) should never be retried

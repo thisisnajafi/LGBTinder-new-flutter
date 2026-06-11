@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/api_providers.dart';
 import '../../../core/services/app_logger.dart';
+import '../data/repositories/matching_repository.dart';
 import '../data/models/like.dart';
+import '../domain/services/matching_service.dart';
 import '../data/models/match.dart';
 import '../data/models/superlike.dart';
 import '../data/models/compatibility_score.dart';
@@ -321,31 +324,43 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
   }
 }
 
-// Use case providers
+// Infrastructure + use case providers
+final matchingServiceProvider = Provider<MatchingService>((ref) {
+  final apiService = ref.watch(apiServiceProvider);
+  final dioClient = ref.watch(dioClientProvider);
+  return MatchingService(apiService, dioClient);
+});
+
+final matchingRepositoryProvider = Provider<MatchingRepository>((ref) {
+  return MatchingRepository(ref.watch(matchingServiceProvider));
+});
+
 final likeProfileUseCaseProvider = Provider<LikeProfileUseCase>((ref) {
-  throw UnimplementedError('LikeProfileUseCase must be overridden in the provider scope');
+  return LikeProfileUseCase(ref.watch(matchingRepositoryProvider));
 });
 
 final superlikeProfileUseCaseProvider = Provider<SuperlikeProfileUseCase>((ref) {
-  throw UnimplementedError('SuperlikeProfileUseCase must be overridden in the provider scope');
+  return SuperlikeProfileUseCase(ref.watch(matchingRepositoryProvider));
 });
 
 final getMatchesUseCaseProvider = Provider<GetMatchesUseCase>((ref) {
-  throw UnimplementedError('GetMatchesUseCase must be overridden in the provider scope');
+  return GetMatchesUseCase(ref.watch(matchingRepositoryProvider));
 });
 
-final getCompatibilityScoreUseCaseProvider = Provider<GetCompatibilityScoreUseCase>((ref) {
-  throw UnimplementedError('GetCompatibilityScoreUseCase must be overridden in the provider scope');
+final getCompatibilityScoreUseCaseProvider =
+    Provider<GetCompatibilityScoreUseCase>((ref) {
+  return GetCompatibilityScoreUseCase(ref.watch(matchingRepositoryProvider));
 });
 
 final getPendingLikesUseCaseProvider = Provider<GetPendingLikesUseCase>((ref) {
-  throw UnimplementedError('GetPendingLikesUseCase must be overridden in the provider scope');
+  return GetPendingLikesUseCase(ref.watch(matchingRepositoryProvider));
 });
 
-final getSuperlikeHistoryUseCaseProvider = Provider<GetSuperlikeHistoryUseCase>((ref) {
-  throw UnimplementedError('GetSuperlikeHistoryUseCase must be overridden in the provider scope');
+final getSuperlikeHistoryUseCaseProvider =
+    Provider<GetSuperlikeHistoryUseCase>((ref) {
+  return GetSuperlikeHistoryUseCase(ref.watch(matchingRepositoryProvider));
 });
 
 final checkMatchStatusUseCaseProvider = Provider<CheckMatchStatusUseCase>((ref) {
-  throw UnimplementedError('CheckMatchStatusUseCase must be overridden in the provider scope');
+  return CheckMatchStatusUseCase(ref.watch(matchingRepositoryProvider));
 });

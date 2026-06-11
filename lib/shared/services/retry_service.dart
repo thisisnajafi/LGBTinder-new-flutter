@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 /// Configuration for retry behavior
@@ -20,10 +21,18 @@ class RetryConfig {
 
   /// Default retry config for network errors
   static const RetryConfig network = RetryConfig(
-    maxRetries: 3,
+    maxRetries: 2,
     initialDelay: Duration(seconds: 1),
     backoffMultiplier: 2.0,
-    maxDelay: Duration(seconds: 30),
+    maxDelay: Duration(seconds: 15),
+  );
+
+  /// Timeouts already waited on connect/receive — retry at most once.
+  static const RetryConfig timeout = RetryConfig(
+    maxRetries: 1,
+    initialDelay: Duration(seconds: 2),
+    backoffMultiplier: 1.0,
+    maxDelay: Duration(seconds: 5),
   );
 
   /// Retry config for server errors (5xx)
@@ -54,7 +63,7 @@ class RetryService {
     int attempt = 0;
     Duration delay = config.initialDelay;
 
-    while (attempt <= config.maxRetries) {
+    while (true) {
       try {
         return await operation();
       } catch (error) {
@@ -65,10 +74,13 @@ class RetryService {
           rethrow;
         }
 
+        final effectiveConfig = _mergeRetryConfig(config, getRetryConfig(error));
+        final maxRetries = effectiveConfig.maxRetries;
+
         // Don't retry if we've exceeded max retries
-        if (attempt > config.maxRetries) {
+        if (attempt > maxRetries) {
           if (kDebugMode) {
-            debugPrint('❌ Max retries ($config.maxRetries) exceeded for operation');
+            debugPrint('❌ Max retries ($maxRetries) exceeded for operation');
           }
           rethrow;
         }
@@ -78,15 +90,15 @@ class RetryService {
           milliseconds: Random().nextInt(500),
         );
         final totalDelay = Duration(
-          milliseconds: (delay.inMilliseconds * config.backoffMultiplier).round(),
+          milliseconds: (delay.inMilliseconds * effectiveConfig.backoffMultiplier).round(),
         );
         delay = Duration(
           milliseconds: (totalDelay.inMilliseconds + jitter.inMilliseconds)
-              .clamp(0, config.maxDelay.inMilliseconds),
+              .clamp(0, effectiveConfig.maxDelay.inMilliseconds),
         );
 
         if (kDebugMode) {
-          debugPrint('🔄 Retrying operation (attempt $attempt/${config.maxRetries}) after ${delay.inSeconds}s');
+          debugPrint('🔄 Retrying operation (attempt $attempt/$maxRetries) after ${delay.inSeconds}s');
         }
 
         // Notify about retry
@@ -101,8 +113,38 @@ class RetryService {
     throw Exception('Retry logic error');
   }
 
+  static RetryConfig _mergeRetryConfig(
+    RetryConfig base,
+    RetryConfig resolved,
+  ) {
+    return RetryConfig(
+      maxRetries: resolved.maxRetries < base.maxRetries
+          ? resolved.maxRetries
+          : base.maxRetries,
+      initialDelay: resolved.initialDelay,
+      backoffMultiplier: resolved.backoffMultiplier,
+      maxDelay: resolved.maxDelay,
+      shouldRetry: base.shouldRetry,
+    );
+  }
+
+  static bool _isTimeoutError(dynamic error) {
+    if (error is DioException) {
+      return error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout;
+    }
+    final text = error.toString().toLowerCase();
+    return text.contains('timeout') || text.contains('took longer than');
+  }
+
   /// Check if an error is retryable
   static bool isRetryableError(dynamic error) {
+    if (error is DioException &&
+        error.type == DioExceptionType.connectionError) {
+      return true;
+    }
+
     // Network errors are retryable
     if (error.toString().contains('SocketException') ||
         error.toString().contains('TimeoutException') ||
@@ -139,6 +181,10 @@ class RetryService {
 
   /// Get appropriate retry config based on error type
   static RetryConfig getRetryConfig(dynamic error) {
+    if (_isTimeoutError(error)) {
+      return RetryConfig.timeout;
+    }
+
     final errorString = error.toString().toLowerCase();
 
     // Rate limiting

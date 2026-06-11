@@ -6,7 +6,6 @@ import '../../shared/models/api_error.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../auth/banned_handler.dart';
-import '../auth/banned_handler.dart';
 import '../auth/unauthorized_handler.dart';
 import '../utils/app_logger.dart';
 import 'app_dio_logger.dart';
@@ -43,8 +42,9 @@ bool _looksLikeHtml(String s) {
 
 /// Dio HTTP client with interceptors for authentication and error handling
 class DioClient {
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration connectTimeout = Duration(seconds: 60);
+  static const Duration receiveTimeout = Duration(seconds: 60);
+  static const Duration sendTimeout = Duration(seconds: 60);
 
   late final Dio _dio;
   final TokenStorageService _tokenStorage;
@@ -60,6 +60,7 @@ class DioClient {
         baseUrl: ApiEndpoints.baseUrl,
         connectTimeout: connectTimeout,
         receiveTimeout: receiveTimeout,
+        sendTimeout: sendTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

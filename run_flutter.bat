@@ -1,9 +1,11 @@
 @echo off
-REM Run Flutter via junction path (no spaces) to avoid "F:\8 is not recognized" errors.
-set FLUTTER_BIN=C:\Users\Abolfazl\flutter_sdk_link\flutter\bin\flutter.bat
+REM Run Flutter with China mirrors (pub + Flutter storage).
+set PUB_HOSTED_URL=https://pub.flutter-io.cn
+set FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+set FLUTTER_BIN=F:\flutter_sdk\flutter\bin\flutter.bat
 if not exist "%FLUTTER_BIN%" (
     echo Flutter not found at %FLUTTER_BIN%
-    echo Create junction: mklink /J "C:\Users\Abolfazl\flutter_sdk_link" "F:\8 - flutter sdk"
     exit /b 1
 )
+echo Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn
 "%FLUTTER_BIN%" %*

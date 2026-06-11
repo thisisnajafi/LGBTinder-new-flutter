@@ -32,7 +32,6 @@ import '../features/reference_data/providers/reference_data_providers.dart';
 import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
-import '../core/widgets/cached_content_banner.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../routes/app_router.dart';
 
@@ -968,7 +967,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   action: _buildHeaderActions(context, isDark),
                 ),
                 const DiscoverGreetingWidget(),
-                const CachedContentBanner(),
                 _buildLimitIndicator(),
                 const Spacer(),
                 if (showActionRow)
