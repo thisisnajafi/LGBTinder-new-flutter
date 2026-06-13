@@ -1,4 +1,4 @@
-﻿// Widget: MessageStatusIndicator
+// Widget: MessageStatusIndicator
 // Message read/sent/delivered/sending/failed status
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
