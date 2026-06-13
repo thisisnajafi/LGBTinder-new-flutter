@@ -1,3 +1,5 @@
+import '../../../../core/utils/app_date_time.dart';
+
 /// Message attachment model
 enum AttachmentType {
   image,
@@ -63,9 +65,7 @@ class MessageAttachment {
       metadata: json['metadata'] != null && json['metadata'] is Map
           ? Map<String, dynamic>.from(json['metadata'] as Map)
           : null,
-      createdAt: json['created_at'] != null
-          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
-          : DateTime.now(),
+      createdAt: AppDateTime.parseApi(json['created_at']) ?? DateTime.now(),
     );
   }
 

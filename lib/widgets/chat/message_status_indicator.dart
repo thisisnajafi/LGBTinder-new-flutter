@@ -71,64 +71,94 @@ class MessageStatusIndicator extends ConsumerWidget {
       case MessageReadState.sent:
         return Semantics(
           label: 'Message sent',
-          child: AppSvgIcon(
-            assetPath: AppIcons.tickCircle,
-            size: 14,
+          child: _MessageCheckIcon(
             color: Colors.white70,
+            doubleCheck: false,
           ),
         );
       case MessageReadState.delivered:
-        return _DoubleCheckIcon(
-          color: Colors.white70,
-          semanticLabel: 'Message delivered',
+        return Semantics(
+          label: 'Message delivered',
+          child: _MessageCheckIcon(
+            color: Colors.white70,
+            doubleCheck: true,
+          ),
         );
       case MessageReadState.read:
-        return _DoubleCheckIcon(
-          color: AppColors.accentPurple,
-          semanticLabel: 'Message read',
+        return Semantics(
+          label: 'Message read',
+          child: _MessageCheckIcon(
+            color: AppColors.accentPurple,
+            doubleCheck: true,
+          ),
         );
     }
   }
 }
 
-class _DoubleCheckIcon extends StatelessWidget {
-  final Color color;
-  final String semanticLabel;
-
-  const _DoubleCheckIcon({
+/// WhatsApp-style check marks without circular badges.
+class _MessageCheckIcon extends StatelessWidget {
+  const _MessageCheckIcon({
     required this.color,
-    required this.semanticLabel,
+    required this.doubleCheck,
   });
+
+  final Color color;
+  final bool doubleCheck;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel,
-      child: SizedBox(
-        width: 18,
-        height: 14,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 0,
-              child: AppSvgIcon(
-                assetPath: AppIcons.tickCircle,
-                size: 12,
-                color: color,
-              ),
-            ),
-            Positioned(
-              left: 6,
-              child: AppSvgIcon(
-                assetPath: AppIcons.tickCircle,
-                size: 12,
-                color: color,
-              ),
-            ),
-          ],
+    return SizedBox(
+      width: doubleCheck ? 18 : 14,
+      height: 12,
+      child: CustomPaint(
+        painter: _CheckMarkPainter(
+          color: color,
+          doubleCheck: doubleCheck,
         ),
       ),
     );
+  }
+}
+
+class _CheckMarkPainter extends CustomPainter {
+  _CheckMarkPainter({
+    required this.color,
+    required this.doubleCheck,
+  });
+
+  final Color color;
+  final bool doubleCheck;
+
+  static const double _strokeWidth = 1.6;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = _strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    _drawCheck(canvas, paint, Offset.zero, size);
+
+    if (doubleCheck) {
+      _drawCheck(canvas, paint, const Offset(4, 0), size);
+    }
+  }
+
+  void _drawCheck(Canvas canvas, Paint paint, Offset offset, Size size) {
+    final path = Path()
+      ..moveTo(offset.dx + size.width * 0.05, offset.dy + size.height * 0.55)
+      ..lineTo(offset.dx + size.width * 0.28, offset.dy + size.height * 0.82)
+      ..lineTo(offset.dx + size.width * 0.72, offset.dy + size.height * 0.22);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CheckMarkPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.doubleCheck != doubleCheck;
   }
 }

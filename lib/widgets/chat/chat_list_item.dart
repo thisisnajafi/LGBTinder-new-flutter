@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_date_time.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/app_page_header.dart';
@@ -161,21 +161,18 @@ class ChatListItem extends ConsumerWidget {
   }
 
   String _formatTime(DateTime time) {
+    final local = AppDateTime.toLocal(time);
     final now = DateTime.now();
-    final difference = now.difference(time);
+    final difference = now.difference(local);
 
     if (difference.inDays == 0) {
-      final hour = time.hour;
-      final minute = time.minute.toString().padLeft(2, '0');
-      final period = hour >= 12 ? 'PM' : 'AM';
-      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-      return '$displayHour:$minute $period';
+      return AppDateTime.formatChatTime(local);
     } else if (difference.inDays == 1) {
       return 'Yesterday';
     } else if (difference.inDays < 7) {
       return '${difference.inDays}d ago';
     }
-    return '${time.day}/${time.month}';
+    return '${local.day}/${local.month}';
   }
 }
 

@@ -540,7 +540,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           receiverId: userId,
           message: previewText,
           messageType: 'text',
-          createdAt: DateTime.now(),
+          createdAt: intro.createdAt ?? DateTime.now(),
           isRead: true,
         );
         try {

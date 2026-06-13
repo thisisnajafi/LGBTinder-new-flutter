@@ -6,6 +6,7 @@ import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
+import '../../../../core/utils/app_date_time.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../data/models/message.dart';
 import '../../data/models/message_delivery_status.dart';
@@ -328,17 +329,18 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
   }
 
   String _formatMessageTime(DateTime dateTime) {
+    final local = AppDateTime.toLocal(dateTime);
     final now = DateTime.now();
-    final difference = now.difference(dateTime);
+    final difference = now.difference(local);
 
     if (difference.inDays == 0) {
-      return DateFormat('HH:mm').format(dateTime);
+      return AppDateTime.formatChatTime(local);
     } else if (difference.inDays == 1) {
       return 'Yesterday';
     } else if (difference.inDays < 7) {
-      return DateFormat('EEEE').format(dateTime);
+      return DateFormat('EEEE').format(local);
     } else {
-      return DateFormat('MMM d').format(dateTime);
+      return DateFormat('MMM d').format(local);
     }
   }
 }

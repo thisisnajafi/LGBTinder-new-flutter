@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_date_time.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/avatar_widget.dart';
 import '../../routes/app_router.dart';
@@ -427,13 +428,7 @@ class MessageBubble extends ConsumerWidget {
     );
   }
 
-  String _formatTime(DateTime time) {
-    final hour = time.hour;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$displayHour:$minute $period';
-  }
+  String _formatTime(DateTime time) => AppDateTime.formatChatTime(time);
 
   String _formatDuration(int seconds) {
     final minutes = seconds ~/ 60;
@@ -523,13 +518,7 @@ class _StickerBubbleState extends State<_StickerBubble>
     );
   }
 
-  String _formatTime(DateTime time) {
-    final hour = time.hour;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$displayHour:$minute $period';
-  }
+  String _formatTime(DateTime time) => AppDateTime.formatChatTime(time);
 
   @override
   Widget build(BuildContext context) {
@@ -754,13 +743,7 @@ class _ProfileLinkBubble extends StatelessWidget {
     );
   }
 
-  String _formatProfileTime(DateTime time) {
-    final hour = time.hour;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$displayHour:$minute $period';
-  }
+  String _formatProfileTime(DateTime time) => AppDateTime.formatChatTime(time);
 }
 
 class _SelfDestructPreviewBubble extends StatelessWidget {

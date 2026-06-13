@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/app_date_time.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/chat/chat_header.dart';
 import 'chat_conversation_info_page.dart';
@@ -769,7 +770,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'text': message.message,
       'is_sent': isSent,
       'sender_id': message.senderId,
-      'timestamp': message.createdAt,
+      'timestamp': AppDateTime.toLocal(message.createdAt),
       'is_read': message.isRead,
       'type': message.messageType,
       'attachment_url': message.attachmentUrl ?? message.mediaThumbnailUrl,

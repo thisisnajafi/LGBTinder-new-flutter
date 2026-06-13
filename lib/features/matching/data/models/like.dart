@@ -1,3 +1,4 @@
+import '../../../../core/utils/app_date_time.dart';
 import 'match.dart' as match_models;
 
 /// Like model
@@ -144,12 +145,14 @@ class SuperlikeIntroMessage {
   final bool sent;
   final int? messageId;
   final int? conversationId;
+  final DateTime? createdAt;
 
   const SuperlikeIntroMessage({
     required this.text,
     this.sent = false,
     this.messageId,
     this.conversationId,
+    this.createdAt,
   });
 
   factory SuperlikeIntroMessage.fromJson(Map<String, dynamic>? json) {
@@ -165,6 +168,7 @@ class SuperlikeIntroMessage {
       conversationId: json['conversation_id'] != null
           ? int.tryParse(json['conversation_id'].toString())
           : null,
+      createdAt: AppDateTime.parseApi(json['created_at']),
     );
   }
 }

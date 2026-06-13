@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/utils/app_date_time.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
@@ -21,9 +22,7 @@ class ChatHistoryCursor {
       beforeId: json['before_id'] is int
           ? json['before_id'] as int
           : int.tryParse(json['before_id']?.toString() ?? '') ?? 0,
-      beforeCreatedAt: json['before_created_at'] != null
-          ? DateTime.tryParse(json['before_created_at'].toString())
-          : null,
+      beforeCreatedAt: AppDateTime.parseApi(json['before_created_at']),
     );
   }
 }

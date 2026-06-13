@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/app_date_time.dart';
 import '../../features/chat/data/models/message_delivery_status.dart';
 import 'message_bubble.dart';
 
@@ -29,7 +30,10 @@ class ChatMessageListTile extends StatelessWidget {
         ),
         message: message['text'] ?? '',
         isSent: message['is_sent'] ?? false,
-        timestamp: message['timestamp'],
+        timestamp: AppDateTime.parseApi(message['timestamp']) ??
+            (message['timestamp'] is DateTime
+                ? AppDateTime.toLocal(message['timestamp'] as DateTime)
+                : null),
         isRead: message['is_read'] ?? false,
         deliveryStatus: deliveryStatus ?? MessageDeliveryStatus.sent,
         onRetry: onRetry,

@@ -1,3 +1,4 @@
+import '../../../../core/utils/app_date_time.dart';
 import 'message_delivery_status.dart';
 
 /// Safe integer parsing helper
@@ -18,11 +19,13 @@ bool _safeParseBool(dynamic value, {bool defaultValue = false}) {
   return defaultValue;
 }
 
-/// Safe DateTime parsing helper
+/// Safe DateTime parsing helper — API timestamps are UTC and shown in local time.
 DateTime? _safeParseDateTime(dynamic value) {
   if (value == null) return null;
-  if (value is DateTime) return value;
-  if (value is String) return DateTime.tryParse(value);
+  if (value is DateTime) return value.toLocal();
+  if (value is String) {
+    return AppDateTime.parseApi(value);
+  }
   return null;
 }
 
