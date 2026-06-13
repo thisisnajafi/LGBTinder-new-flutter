@@ -18,7 +18,9 @@ class AvatarUpload extends ConsumerStatefulWidget {
   final double size;
   final Function()? onUpload;
   final Function()? onEdit;
+  final Function()? onSetPrimary;
   final bool showEditButton;
+  final bool showPrimaryBadge;
 
   const AvatarUpload({
     Key? key,
@@ -27,7 +29,9 @@ class AvatarUpload extends ConsumerStatefulWidget {
     this.size = 120.0,
     this.onUpload,
     this.onEdit,
+    this.onSetPrimary,
     this.showEditButton = true,
+    this.showPrimaryBadge = false,
   }) : super(key: key);
 
   @override
@@ -108,6 +112,46 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
                   ),
           ),
         ),
+        if (widget.showPrimaryBadge &&
+            widget.imageUrl != null &&
+            widget.imageUrl!.isNotEmpty)
+          Positioned(
+            top: 0,
+            left: 0,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingSM,
+                vertical: AppSpacing.spacingXS,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.accentPurple,
+                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+              ),
+              child: const Text(
+                'Primary',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        if (widget.onSetPrimary != null &&
+            widget.imageUrl != null &&
+            widget.imageUrl!.isNotEmpty)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            child: IconButtonCircle(
+              svgIcon: AppIcons.star,
+              onTap: widget.onSetPrimary,
+              size: 32.0,
+              backgroundColor: AppColors.accentPurple,
+              iconColor: Colors.white,
+              semanticLabel: 'Set as primary photo',
+            ),
+          ),
         if (widget.showEditButton)
           Positioned(
             bottom: 0,
@@ -122,6 +166,9 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
               size: 32.0,
               backgroundColor: AppColors.accentPurple,
               iconColor: Colors.white,
+              semanticLabel: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
+                  ? 'Change primary photo'
+                  : 'Add primary photo',
             ),
           ),
       ],

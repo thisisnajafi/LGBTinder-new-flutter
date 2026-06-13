@@ -81,7 +81,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             }
           }
           _avatarUrl = primaryImage?.imageUrl;
-          _images = profile.images ?? [];
+          _images = List<UserImage>.from(profile.images ?? [])
+            ..sort((a, b) => a.order.compareTo(b.order));
           _interestsIds = profile.interests ?? [];
           _height = profile.height;
           _weight = profile.weight;
@@ -108,12 +109,30 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     }
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  int get _primaryImageIndex {
+    final idx = _images.indexWhere((img) => img.isPrimary);
+    return idx >= 0 ? idx : 0;
+  }
+
+  bool get _canPromoteAvatarToPrimary {
+    if (_avatarUrl == null || _avatarUrl!.isEmpty || _images.isEmpty) {
+      return false;
+    }
+    final idx = _images.indexWhere((img) => img.imageUrl == _avatarUrl);
+    if (idx < 0) return false;
+    return !_images[idx].isPrimary;
+  }
+
+  Future<void> _pickImage(ImageSource source, {required bool setAsPrimary}) async {
     try {
       final XFile? image = await _imagePicker.pickImage(source: source);
       if (image != null) {
         final file = File(image.path);
-        await _uploadImage(file);
+        if (setAsPrimary) {
+          await _uploadImageAsPrimary(file);
+        } else {
+          await _uploadImage(file);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -168,6 +187,54 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     }
   }
 
+  Future<void> _uploadImageAsPrimary(File imageFile) async {
+    try {
+      final imageService = ref.read(imageServiceProvider);
+      final uploadedImage = await imageService.uploadImage(imageFile);
+      await imageService.setPrimaryImage(uploadedImage.id);
+
+      if (mounted) {
+        setState(() {
+          _images = [
+            ..._images.map((img) => img.copyWith(isPrimary: false)),
+            uploadedImage.copyWith(isPrimary: true),
+          ]..sort((a, b) {
+              if (a.isPrimary != b.isPrimary) {
+                return a.isPrimary ? -1 : 1;
+              }
+              return a.order.compareTo(b.order);
+            });
+          _avatarUrl = uploadedImage.imageUrl;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Primary photo updated'),
+            backgroundColor: AppColors.onlineGreen,
+          ),
+        );
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload primary photo: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload primary photo: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteImage(int imageId, int index) async {
     try {
       final imageService = ref.read(imageServiceProvider);
@@ -175,11 +242,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       
       if (mounted) {
         setState(() {
-          _images.removeAt(index);
-          if (_images.isNotEmpty) {
-            _avatarUrl = _images.first.imageUrl;
-          } else {
+          final removed = _images.removeAt(index);
+          if (_images.isEmpty) {
             _avatarUrl = null;
+          } else if (removed.isPrimary) {
+            final nextPrimary = _images.firstWhere(
+              (img) => img.isPrimary,
+              orElse: () => _images.first,
+            );
+            _avatarUrl = nextPrimary.imageUrl;
           }
         });
         
@@ -218,30 +289,13 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       
       if (mounted) {
         setState(() {
-          // Update primary flags
-          for (var i = 0; i < _images.length; i++) {
-            _images[i] = UserImage(
-              id: _images[i].id,
-              userId: _images[i].userId,
-              path: _images[i].path,
-              type: _images[i].type,
-              isPrimary: i == index,
-              order: _images[i].order,
-              sizes: _images[i].sizes,
-            );
-          }
-          // Move to first position
           final image = _images.removeAt(index);
-          _images.insert(0, UserImage(
-            id: image.id,
-            userId: image.userId,
-            path: image.path,
-            type: image.type,
-            isPrimary: true,
-            order: 0,
-            sizes: image.sizes,
-          ));
-          _avatarUrl = image.imageUrl;
+          _images.insert(0, image);
+          _images = [
+            for (var i = 0; i < _images.length; i++)
+              _images[i].copyWith(isPrimary: i == 0, order: i + 1),
+          ];
+          _avatarUrl = _images.first.imageUrl;
         });
         
         ScaffoldMessenger.of(context).showSnackBar(
@@ -269,6 +323,54 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _reorderImages(int oldIndex, int newIndex) async {
+    if (oldIndex == newIndex) return;
+
+    final previous = List<UserImage>.from(_images);
+    final updated = List<UserImage>.from(_images);
+    final item = updated.removeAt(oldIndex);
+    updated.insert(newIndex, item);
+
+    setState(() {
+      _images = [
+        for (var i = 0; i < updated.length; i++)
+          updated[i].copyWith(order: i + 1),
+      ];
+    });
+
+    try {
+      final imageService = ref.read(imageServiceProvider);
+      await imageService.reorderImages(_images.map((img) => img.id).toList());
+    } on ApiError catch (e) {
+      if (mounted) {
+        setState(() => _images = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reorder photos: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _images = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reorder photos: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _setPrimaryFromAvatar() {
+    final idx = _images.indexWhere((img) => img.imageUrl == _avatarUrl);
+    if (idx >= 0) {
+      _setPrimaryImage(_images[idx].id, idx);
     }
   }
 
@@ -336,7 +438,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     }
   }
 
-  void _showImageSourceDialog() {
+  void _showImageSourceDialog({required bool setAsPrimary}) {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -348,7 +450,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               title: const Text('Choose from Gallery'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
+                _pickImage(ImageSource.gallery, setAsPrimary: setAsPrimary);
               },
             ),
             ListTile(
@@ -356,7 +458,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               title: const Text('Take a Photo'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.camera);
+                _pickImage(ImageSource.camera, setAsPrimary: setAsPrimary);
               },
             ),
           ],
@@ -364,6 +466,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       ),
     );
   }
+
+  void _showAvatarImageSourceDialog() =>
+      _showImageSourceDialog(setAsPrimary: true);
+
+  void _showGalleryImageSourceDialog() =>
+      _showImageSourceDialog(setAsPrimary: false);
 
   String _displayName() {
     final name = _name.trim();
@@ -426,8 +534,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       imageUrl: _avatarUrl,
                       name: _name,
                       size: 120.0,
-                      onUpload: _showImageSourceDialog,
-                      onEdit: _showImageSourceDialog,
+                      showPrimaryBadge: _avatarUrl != null && _avatarUrl!.isNotEmpty,
+                      onUpload: _showAvatarImageSourceDialog,
+                      onEdit: _showAvatarImageSourceDialog,
+                      onSetPrimary:
+                          _canPromoteAvatarToPrimary ? _setPrimaryFromAvatar : null,
                     ),
                   ),
                 ),
@@ -440,12 +551,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 AppSettingsInset(
                   child: ProfileImageEditor(
                     imageUrls: _images.map((img) => img.imageUrl).toList(),
-                    onImageAdd: (_) => _showImageSourceDialog(),
+                    primaryIndex: _primaryImageIndex,
+                    onImageAdd: (_) => _showGalleryImageSourceDialog(),
                     onImageDelete: (index) {
                       if (index < _images.length) {
                         _deleteImage(_images[index].id, index);
                       }
                     },
+                    onImageReorder: _reorderImages,
                     onImageSetPrimary: (index) {
                       if (index < _images.length) {
                         _setPrimaryImage(_images[index].id, index);

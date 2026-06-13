@@ -5,15 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
-import '../../profile/avatar_upload.dart';
 import '../../images/optimized_image.dart';
 import '../../buttons/icon_button_circle.dart';
 import '../../../core/utils/app_icons.dart';
 
 /// Profile image editor widget
-/// Allows editing and reordering profile images
+/// Allows editing, reordering, and setting the primary profile image.
 class ProfileImageEditor extends ConsumerStatefulWidget {
   final List<String> imageUrls;
+  final int primaryIndex;
   final Function(String)? onImageAdd;
   final Function(int)? onImageDelete;
   final Function(int, int)? onImageReorder;
@@ -22,6 +22,7 @@ class ProfileImageEditor extends ConsumerStatefulWidget {
   const ProfileImageEditor({
     Key? key,
     required this.imageUrls,
+    this.primaryIndex = 0,
     this.onImageAdd,
     this.onImageDelete,
     this.onImageReorder,
@@ -33,12 +34,16 @@ class ProfileImageEditor extends ConsumerStatefulWidget {
 }
 
 class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
+  int? _draggingIndex;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
@@ -47,12 +52,17 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
         children: [
           Text(
             'Profile Images',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
           ),
+          if (widget.imageUrls.length > 1) ...[
+            SizedBox(height: AppSpacing.spacingXS),
+            Text(
+              'Hold and drag to reorder. Tap a photo to set it as primary.',
+              style: theme.textTheme.bodySmall?.copyWith(color: secondaryTextColor),
+            ),
+          ],
           SizedBox(height: AppSpacing.spacingMD),
           GridView.builder(
             shrinkWrap: true,
@@ -68,7 +78,7 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
               if (index == widget.imageUrls.length) {
                 return _buildAddImageButton(context, isDark, surfaceColor, borderColor);
               }
-              return _buildImageItem(context, index, widget.imageUrls[index], isDark);
+              return _buildDraggableImageItem(context, index, isDark, borderColor);
             },
           ),
         ],
@@ -76,58 +86,168 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
     );
   }
 
-  Widget _buildImageItem(
+  Widget _buildDraggableImageItem(
     BuildContext context,
     int index,
-    String imageUrl,
     bool isDark,
+    Color borderColor,
   ) {
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          child: OptimizedImage(
+    final imageUrl = widget.imageUrls[index];
+    final isPrimary = index == widget.primaryIndex;
+    final canReorder = widget.onImageReorder != null && widget.imageUrls.length > 1;
+
+    Widget tile = _buildImageTile(
+      context: context,
+      index: index,
+      imageUrl: imageUrl,
+      isPrimary: isPrimary,
+      isDragging: _draggingIndex == index,
+      borderColor: borderColor,
+    );
+
+    if (!canReorder) {
+      return tile;
+    }
+
+    return LongPressDraggable<int>(
+      data: index,
+      delay: const Duration(milliseconds: 150),
+      onDragStarted: () => setState(() => _draggingIndex = index),
+      onDragEnd: (_) => setState(() => _draggingIndex = null),
+      feedback: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: 100,
+          height: 133,
+          child: _buildImageTile(
+            context: context,
+            index: index,
             imageUrl: imageUrl,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
+            isPrimary: isPrimary,
+            isDragging: false,
+            borderColor: borderColor,
+            elevated: true,
           ),
         ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: IconButtonCircle(
-            icon: Icons.close,
-            onTap: () => widget.onImageDelete?.call(index),
-            size: 32.0,
-            backgroundColor: Colors.black54,
-            iconColor: Colors.white,
-          ),
-        ),
-        if (index == 0)
-          Positioned(
-            bottom: 4,
-            left: 4,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.spacingSM,
-                vertical: AppSpacing.spacingXS,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.accentPurple,
-                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-              ),
-              child: Text(
-                'Primary',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
+      ),
+      childWhenDragging: Opacity(opacity: 0.35, child: tile),
+      child: DragTarget<int>(
+        onWillAcceptWithDetails: (details) => details.data != index,
+        onAcceptWithDetails: (details) {
+          widget.onImageReorder?.call(details.data, index);
+        },
+        builder: (context, candidateData, rejectedData) {
+          final isDropTarget = candidateData.isNotEmpty;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+              border: isDropTarget
+                  ? Border.all(color: AppColors.accentPurple, width: 2)
+                  : null,
+            ),
+            child: tile,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildImageTile({
+    required BuildContext context,
+    required int index,
+    required String imageUrl,
+    required bool isPrimary,
+    required bool isDragging,
+    required Color borderColor,
+    bool elevated = false,
+  }) {
+    return Semantics(
+      label: isPrimary ? 'Primary profile photo' : 'Profile photo ${index + 1}',
+      button: !isPrimary && widget.onImageSetPrimary != null,
+      child: GestureDetector(
+        onTap: !isPrimary ? () => widget.onImageSetPrimary?.call(index) : null,
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: isPrimary
+                        ? AppColors.accentPurple
+                        : (isDragging ? AppColors.accentPurple : borderColor),
+                    width: isPrimary ? 2 : 1,
+                  ),
+                  boxShadow: elevated
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: OptimizedImage(
+                  imageUrl: imageUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-          ),
-      ],
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButtonCircle(
+                icon: Icons.close,
+                onTap: () => widget.onImageDelete?.call(index),
+                size: 32.0,
+                backgroundColor: Colors.black54,
+                iconColor: Colors.white,
+                semanticLabel: 'Remove photo',
+              ),
+            ),
+            if (isPrimary)
+              Positioned(
+                bottom: 4,
+                left: 4,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingSM,
+                    vertical: AppSpacing.spacingXS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentPurple,
+                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                  ),
+                  child: const Text(
+                    'Primary',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              )
+            else if (widget.onImageSetPrimary != null)
+              Positioned(
+                bottom: 4,
+                left: 4,
+                child: IconButtonCircle(
+                  svgIcon: AppIcons.star,
+                  onTap: () => widget.onImageSetPrimary?.call(index),
+                  size: 28.0,
+                  backgroundColor: Colors.black54,
+                  iconColor: Colors.white,
+                  semanticLabel: 'Set as primary photo',
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -154,7 +274,7 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
               color: AppColors.accentPurple,
             ),
             SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            const Text(
               'Add Photo',
               style: TextStyle(
                 color: AppColors.accentPurple,
