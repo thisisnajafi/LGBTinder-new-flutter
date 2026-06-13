@@ -27,6 +27,7 @@ import 'features/auth/providers/auth_provider.dart';
 import 'core/cache/cache_lifecycle_listener.dart';
 import 'core/widgets/startup_cache_listener.dart';
 import 'core/providers/session_services_provider.dart';
+import 'features/payments/providers/payment_providers.dart';
 import 'core/utils/app_logger.dart' show startupLog, authLog;
 
 // Background message handler (must be top-level function)
@@ -224,6 +225,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         if (!mounted || _servicesWired) return;
         _servicesWired = true;
         DeepLinkingService().initialize(router);
+        PushNotificationService().setPremiumAccessChangeHandler(() async {
+          await ref
+              .read(subscriptionSyncProvider)
+              .onSubscriptionChangeNotification();
+        });
         BannedHandler.setCallback(() {
           authLog('403 Banned: redirecting to banned screen');
           router.go(AppRoutes.accountBanned);

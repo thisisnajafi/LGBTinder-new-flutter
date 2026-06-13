@@ -1,5 +1,7 @@
 // Screen: SubscriptionPlansScreen
 // Plan purchase UI aligned with backend PlanSeeder (Basic, Premium, Golden)
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -169,6 +171,11 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
             'plan_id': _selectedPlanId,
             'sub_plan_id': _selectedSubPlanId,
           });
+          unawaited(
+            ref
+                .read(subscriptionSyncProvider)
+                .onSubscriptionChangeNotification(),
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Subscription successful!'),

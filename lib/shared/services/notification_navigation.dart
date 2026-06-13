@@ -141,6 +141,11 @@ class NotificationNavigation {
         return AppRoutes.chat;
       case 'notification':
         return '${AppRoutes.home}/notifications';
+      case 'plan_purchased':
+      case 'plan_granted':
+      case 'plan_upgraded':
+      case 'subscription_renewed':
+        return AppRoutes.subscriptionManagement;
       case 'profile':
       case 'profile_view':
         if (userId != null && userId > 0) {
