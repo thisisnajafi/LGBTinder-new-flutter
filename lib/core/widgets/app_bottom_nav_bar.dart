@@ -13,16 +13,20 @@ import 'profile_image_widget.dart';
 class AppBottomNavBar extends ConsumerWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final int? messengerUnreadCount;
   final int? notificationCount;
 
   const AppBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.messengerUnreadCount,
     this.notificationCount,
   });
 
   static const int itemCount = 5;
+  static const int messengerTabIndex = 1;
+  static const int notificationsTabIndex = 2;
   static const int profileTabIndex = 3;
   static const double barHeight = 64.0;
   static const double floatingHorizontalMargin = 16.0;
@@ -87,14 +91,11 @@ class AppBottomNavBar extends ConsumerWidget {
                           isOnline: profileIsOnline,
                         )
                       : null,
-                  badge: index == 1 &&
-                          notificationCount != null &&
-                          notificationCount! > 0
-                      ? NotificationBadge(
-                          count: notificationCount!,
-                          size: 16,
-                        )
-                      : null,
+                  badge: _badgeForTab(
+                    index: index,
+                    messengerUnreadCount: messengerUnreadCount,
+                    notificationCount: notificationCount,
+                  ),
                   onTap: () => onTap(index),
                 ),
               );
@@ -103,6 +104,24 @@ class AppBottomNavBar extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static Widget? _badgeForTab({
+    required int index,
+    required int? messengerUnreadCount,
+    required int? notificationCount,
+  }) {
+    if (index == messengerTabIndex &&
+        messengerUnreadCount != null &&
+        messengerUnreadCount > 0) {
+      return NotificationBadge(count: messengerUnreadCount, size: 16);
+    }
+    if (index == notificationsTabIndex &&
+        notificationCount != null &&
+        notificationCount > 0) {
+      return NotificationBadge(count: notificationCount, size: 16);
+    }
+    return null;
   }
 }
 

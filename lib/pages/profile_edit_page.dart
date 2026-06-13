@@ -149,7 +149,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   Future<void> _uploadImage(File imageFile) async {
     try {
       final imageService = ref.read(imageServiceProvider);
-      final uploadedImage = await imageService.uploadImage(imageFile);
+      final uploadedImage =
+          await imageService.uploadImage(imageFile, type: 'gallery');
       
       if (mounted) {
         setState(() {
@@ -190,8 +191,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   Future<void> _uploadImageAsPrimary(File imageFile) async {
     try {
       final imageService = ref.read(imageServiceProvider);
-      final uploadedImage = await imageService.uploadImage(imageFile);
-      await imageService.setPrimaryImage(uploadedImage.id);
+      final uploadedImage =
+          await imageService.uploadImage(imageFile, type: 'primary');
+      await imageService.setPrimaryImage(
+        uploadedImage.id,
+        isProfilePicture: true,
+      );
 
       if (mounted) {
         setState(() {
@@ -285,7 +290,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   Future<void> _setPrimaryImage(int imageId, int index) async {
     try {
       final imageService = ref.read(imageServiceProvider);
-      await imageService.setPrimaryImage(imageId);
+      final image = _images[index];
+      await imageService.setPrimaryImage(
+        imageId,
+        isProfilePicture: image.type == 'profile',
+      );
       
       if (mounted) {
         setState(() {

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:lgbtindernew/core/constants/api_endpoints.dart';
 import 'package:lgbtindernew/shared/services/api_service.dart';
 import 'package:lgbtindernew/shared/services/token_storage_service.dart';
@@ -130,25 +132,30 @@ class ProfileService {
     }
   }
 
-  /// Upload profile image
+  /// Upload profile image (uses profile-pictures API so discover/matching checks pass).
   Future<UserImage> uploadImage(String imagePath) async {
     try {
-      // Create multipart form data
-      final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
-          imagePath,
-          filename: imagePath.split('/').last,
-        ),
-      });
-
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.imagesUpload,
-        data: formData,
+      final response = await _apiService.uploadFile<Map<String, dynamic>>(
+        ApiEndpoints.profilePicturesUpload,
+        File(imagePath),
+        fieldName: 'image',
+        fields: {'is_primary': '1'},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (response.isSuccess && response.data != null) {
-        return UserImage.fromJson(response.data!);
+        final imageData = response.data!['image'] as Map<String, dynamic>;
+        final sizes = imageData['sizes'] as Map<String, dynamic>?;
+        final imageUrl = sizes?['full'] ?? sizes?['250x250'] ?? '';
+        return UserImage(
+          id: imageData['id'] as int,
+          userId: 0,
+          path: imageUrl is String ? imageUrl : '',
+          type: 'profile',
+          order: 0,
+          isPrimary: true,
+          sizes: sizes,
+        );
       } else {
         throw Exception(response.message);
       }
@@ -177,7 +184,7 @@ class ProfileService {
   Future<void> setPrimaryImage(int imageId) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.imagesSetPrimary(imageId),
+        ApiEndpoints.profilePicturesSetPrimary(imageId),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

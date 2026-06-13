@@ -9,6 +9,7 @@ import '../pages/profile_page.dart';
 import '../features/settings/pages/settings_page.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/notifications/providers/notification_providers.dart';
+import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../core/utils/app_logger.dart';
 import '../routes/home_tab_routes.dart';
 
@@ -162,6 +163,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: AppBottomNavBar(
               currentIndex: currentIndex,
               onTap: _onTabTapped,
+              messengerUnreadCount: ref.watch(unreadChatCountProvider),
               notificationCount: ref.watch(unreadNotificationCountProvider).when(
                     data: (count) => count,
                     loading: () => null,

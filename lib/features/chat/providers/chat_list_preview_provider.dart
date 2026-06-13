@@ -7,6 +7,16 @@ import '../data/models/message.dart';
 import '../utils/chat_message_preview.dart';
 import 'chat_local_sync_provider.dart';
 import 'chat_pusher_providers.dart';
+import 'chat_providers.dart';
+
+/// Total unread chat messages for bottom-nav badge (live from list, API fallback).
+final unreadChatCountProvider = Provider<int>((ref) {
+  final preview = ref.watch(chatListPreviewProvider);
+  if (preview.isSeeded) {
+    return preview.items.fold<int>(0, (sum, item) => sum + item.unreadCount);
+  }
+  return ref.watch(unreadChatCountAsyncProvider).valueOrNull ?? 0;
+});
 
 /// Row shown on the chat list (matches [ChatListPage] map shape).
 class ChatListPreviewItem {

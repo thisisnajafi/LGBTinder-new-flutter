@@ -58,3 +58,8 @@ final getChatsUseCaseProvider = Provider<GetChatsUseCase>((ref) {
   return GetChatsUseCase(ref.watch(chatRepositoryProvider));
 });
 
+/// Unread chat messages for the bottom-nav Messenger badge.
+final unreadChatCountAsyncProvider = FutureProvider<int>((ref) async {
+  return ref.watch(chatServiceProvider).getUnreadCount();
+});
+
