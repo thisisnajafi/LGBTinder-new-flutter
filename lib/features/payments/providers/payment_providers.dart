@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/cache/session_cache_providers.dart';
 import '../../../core/providers/api_providers.dart';
+import '../../../shared/models/user_tier.dart';
+import '../../notifications/providers/notifications_cache_provider.dart';
 import '../data/services/payment_service.dart';
 import '../data/services/plan_limits_service.dart';
 import '../data/services/superlike_pack_service.dart';
@@ -168,9 +171,34 @@ class SubscriptionSyncService {
   /// 
   /// Call this when receiving a push notification about subscription changes
   Future<void> onSubscriptionChangeNotification() async {
-    await refreshStatus();
-    // Also refresh plan limits as subscription may affect limits
-    _ref.invalidate(planLimitsServiceProvider);
+    _ref.read(planLimitsServiceProvider).clearCache();
+    await _ref.read(planLimitsProvider.notifier).refresh();
+
+    final status = await refreshStatus();
+    if (status != null) {
+      final sessionCache = _ref.read(sessionDataCacheServiceProvider);
+      await sessionCache.setSubscriptionStatus(status);
+      final tier = status.tier ??
+          userTierFromPlan(planId: status.planId, planName: status.planName).key;
+      await sessionCache.setUserTier(tier);
+      await _ref.read(cachedUserTierProvider.notifier).setTier(tier);
+
+      final limits = _ref.read(planLimitsServiceProvider).getCachedLimits();
+      if (limits != null) {
+        await sessionCache.setSuperlikesRemaining(
+          limits.effectiveSuperlikeInfo.totalRemaining,
+        );
+        await _ref
+            .read(superlikesRemainingProvider.notifier)
+            .setCount(limits.effectiveSuperlikeInfo.totalRemaining);
+      }
+    }
+
+    try {
+      await _ref.read(notificationsCacheProvider.notifier).refresh();
+    } catch (_) {
+      // Non-fatal: premium access still refreshed above.
+    }
   }
 }
 

@@ -102,6 +102,10 @@ class DeepLinkingService {
       'profile',
       'profile_view',
       'notification',
+      'plan_purchased',
+      'plan_granted',
+      'plan_upgraded',
+      'subscription_renewed',
     ]) {
       registerHandler(type, (data) async {
         _navigateFromPayload(data);

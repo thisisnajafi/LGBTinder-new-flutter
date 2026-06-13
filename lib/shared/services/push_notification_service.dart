@@ -37,6 +37,14 @@ class PushNotificationService {
   void Function()? _navigateToMatch;
   void Function(String)? _navigateToChat;
   void Function()? _navigateToNotifications;
+  Future<void> Function()? _onPremiumAccessChanged;
+
+  static const Set<String> _premiumAccessTypes = {
+    'plan_purchased',
+    'plan_granted',
+    'plan_upgraded',
+    'subscription_renewed',
+  };
 
   /// Set API service for backend communication
   void setApiService(ApiService apiService) {
@@ -54,6 +62,27 @@ class PushNotificationService {
     _navigateToMatch = navigateToMatch;
     _navigateToChat = navigateToChat;
     _navigateToNotifications = navigateToNotifications;
+  }
+
+  /// Refresh cached subscription/tier state when premium access changes.
+  void setPremiumAccessChangeHandler(Future<void> Function()? handler) {
+    _onPremiumAccessChanged = handler;
+  }
+
+  bool _isPremiumAccessType(String type) =>
+      _premiumAccessTypes.contains(type);
+
+  Future<void> _handlePremiumAccessNotification(
+    Map<String, dynamic> data,
+  ) async {
+    final type = data['type']?.toString() ?? '';
+    if (!_isPremiumAccessType(type)) return;
+
+    try {
+      await _onPremiumAccessChanged?.call();
+    } catch (e) {
+      AppLogger.debug('Premium access refresh failed: $e');
+    }
   }
 
   /// Send FCM token to backend
@@ -169,6 +198,7 @@ class PushNotificationService {
         _handleIncomingCall(message.data);
         return;
       }
+      unawaited(_handlePremiumAccessNotification(message.data));
       unawaited(_playPayloadSound(message.data));
       _showLocalNotification(message);
     });
@@ -199,13 +229,19 @@ class PushNotificationService {
   /// FEATURE ENHANCEMENT (Task 9.1.2): Added notification grouping
   Future<void> _showLocalNotification(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) return;
-
     final data = message.data;
     if (_isIncomingCallPayload(data)) {
       _handleIncomingCall(data);
       return;
     }
+
+    final title = notification?.title ??
+        data['title']?.toString() ??
+        data['headings']?.toString();
+    final body = notification?.body ??
+        data['body']?.toString() ??
+        data['message']?.toString();
+    if (title == null || body == null) return;
 
     final type = data['type']?.toString() ?? 'general';
 
@@ -268,8 +304,8 @@ class PushNotificationService {
 
     await _localNotifications.show(
       notificationId,
-      notification.title,
-      notification.body,
+      title,
+      body,
       details,
       payload: jsonEncode(message.data),
     );
@@ -293,6 +329,8 @@ class PushNotificationService {
     final data = NotificationNavigation.normalizePayload(
       Map<String, dynamic>.from(message.data),
     );
+
+    unawaited(_handlePremiumAccessNotification(data));
 
     final type = data['type']?.toString() ?? '';
     if (_isIncomingCallPayload(data)) {
@@ -342,6 +380,12 @@ class PushNotificationService {
       case 'notification':
         _navigateToNotifications?.call();
         break;
+      case 'plan_purchased':
+      case 'plan_granted':
+      case 'plan_upgraded':
+      case 'subscription_renewed':
+        _navigateToNotifications?.call();
+        break;
       default:
         break;
     }
@@ -380,6 +424,8 @@ class PushNotificationService {
       _handleIncomingCall(payload);
       return;
     }
+
+    unawaited(_handlePremiumAccessNotification(payload));
 
     try {
       DeepLinkingService().handleDeepLink(payload);
