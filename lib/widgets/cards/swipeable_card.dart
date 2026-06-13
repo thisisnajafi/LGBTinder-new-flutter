@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cache/cache_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/match_percentage_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
 
@@ -196,7 +197,16 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
     return list;
   }
 
-  Border? _cardBorder(BuildContext context) {
+  Border? _cardBorder(BuildContext context, int? matchPct) {
+    if (!widget.isBackgroundPreview &&
+        matchPct != null &&
+        matchPct > 0) {
+      return Border.all(
+        color: MatchPercentageColors.colorFor(matchPct),
+        width: 2.5,
+      );
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Border.all(
       color: widget.isBackgroundPreview
@@ -238,7 +248,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
-              border: _cardBorder(context),
+              border: _cardBorder(context, matchPct),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
@@ -438,12 +448,17 @@ class _MatchPercentageBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = MatchPercentageColors.colorFor(percentage);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: color.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: color.withValues(alpha: 0.65),
+          width: 1,
+        ),
       ),
       child: Text(
         'Match $percentage%',
