@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
@@ -28,41 +29,89 @@ class VoiceSendingPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = foregroundColor ??
         (isSent ? Colors.white : Theme.of(context).colorScheme.primary);
+    final chipFill = color.withValues(alpha: isSent ? 0.16 : 0.1);
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: color.withValues(alpha: 0.9),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.spacingSM),
-        VoiceWaveformBars(
-          active: true,
-          color: color,
-          height: 20,
-          barCount: 10,
-        ),
-        const SizedBox(width: AppSpacing.spacingSM),
-        if (durationSeconds != null)
-          Text(
-            _formatDuration(durationSeconds!),
-            style: AppTypography.body.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 236, maxWidth: 280),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: color.withValues(alpha: 0.9),
+                ),
+              ),
             ),
           ),
-        const SizedBox(width: AppSpacing.spacingXS),
-        AppSvgIcon(
-          assetPath: AppIcons.microphone,
-          size: 16,
-          color: color.withValues(alpha: 0.8),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.spacingMD),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                VoiceWaveformBars(
+                  active: true,
+                  color: color,
+                  height: 28,
+                  barCount: 24,
+                ),
+                const SizedBox(height: AppSpacing.spacingSM),
+                Row(
+                  children: [
+                    if (durationSeconds != null)
+                      Expanded(
+                        child: Text(
+                          _formatDuration(durationSeconds!),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: color.withValues(alpha: 0.72),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingSM + 2,
+                        vertical: AppSpacing.spacingXS + 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: chipFill,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppSvgIcon(
+                            assetPath: AppIcons.microphone,
+                            size: 12,
+                            color: color.withValues(alpha: 0.85),
+                          ),
+                          const SizedBox(width: AppSpacing.spacingXS),
+                          Text(
+                            'Sending',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: color.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

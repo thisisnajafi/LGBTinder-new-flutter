@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/cache/cache_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
@@ -317,7 +318,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
   }
 }
 
-class _PhotoLayer extends StatelessWidget {
+class _PhotoLayer extends ConsumerWidget {
   const _PhotoLayer({
     required this.currentImage,
     required this.images,
@@ -331,8 +332,14 @@ class _PhotoLayer extends StatelessWidget {
   final bool isBackgroundPreview;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final cacheManager = ref.watch(imageCacheServiceProvider);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final memCacheWidth = isBackgroundPreview
+        ? 280
+        : (screenWidth * dpr).round().clamp(560, 1400);
 
     return Stack(
       fit: StackFit.expand,
@@ -352,9 +359,36 @@ class _PhotoLayer extends StatelessWidget {
               ? CachedNetworkImage(
                   key: ValueKey<String>(currentImage!),
                   imageUrl: currentImage!,
+                  cacheManager: cacheManager,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
+                  memCacheWidth: memCacheWidth,
+                  fadeInDuration: const Duration(milliseconds: 180),
+                  fadeOutDuration: const Duration(milliseconds: 120),
+                  placeholder: (context, url) => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Center(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    child: Center(
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.userOutline,
+                        size: 72,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+                      ),
+                    ),
+                  ),
                 )
               : ColoredBox(
                   key: const ValueKey<String>('fallback'),

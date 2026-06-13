@@ -157,7 +157,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 _tile(
                   iconPath: AppIcons.user,
-                  label: 'Account details',
+                  label: 'Account Details',
                   subtitle: 'Phone, email, and password',
                   onTap: () => _push(const AccountDetailsScreen()),
                 ),
@@ -168,22 +168,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 _tile(
                   iconPath: AppIcons.shieldTick,
-                  label: 'Privacy & safety',
+                  label: 'Privacy & Safety',
                   onTap: () => _push(const PrivacySettingsScreen()),
                 ),
                 _tile(
                   iconPath: AppIcons.block,
-                  label: 'Blocked users',
+                  label: 'Blocked Users',
                   onTap: () => context.pushNamed('blocked-users'),
                 ),
                 _tile(
                   iconPath: AppIcons.getIconPath('monitor'),
-                  label: 'Active sessions',
+                  label: 'Active Sessions',
                   onTap: () => _push(const ActiveSessionsScreen()),
                 ),
                 _tile(
                   iconPath: AppIcons.lockOutline,
-                  label: 'Two-factor authentication',
+                  label: 'Two-Factor Authentication',
                   onTap: () => _push(const TwoFactorAuthScreen()),
                   showDivider: false,
                 ),
@@ -195,12 +195,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               children: [
                 _tile(
                   iconPath: AppIcons.getIconPath('volume-high'),
-                  label: 'Sounds & notifications',
+                  label: 'Sounds & Notifications',
                   onTap: () => _push(const SoundPreferencesScreen()),
                 ),
                 _tile(
                   iconPath: AppIcons.getIconPath('translate'),
-                  label: 'Language / locale',
+                  label: 'Language / Locale',
                   onTap: () {
                     // TODO: locale picker screen
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -218,22 +218,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
             AppGroupedListSection(
-              title: 'Legal & support',
+              title: 'Legal & Support',
               padding: _sectionPadding,
               children: [
                 _tile(
                   iconPath: AppIcons.help,
-                  label: 'Help & support',
+                  label: 'Help & Support',
                   onTap: () => context.pushNamed('help-support'),
                 ),
                 _tile(
                   iconPath: AppIcons.shield,
-                  label: 'Privacy policy',
+                  label: 'Privacy Policy',
                   onTap: () => context.pushNamed('privacy-policy'),
                 ),
                 _tile(
                   iconPath: AppIcons.document,
-                  label: 'Terms of service',
+                  label: 'Terms Of Service',
                   onTap: () => context.pushNamed('terms-of-service'),
                 ),
                 _tile(
@@ -254,17 +254,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
             AppGroupedListSection(
-              title: 'Danger zone',
+              title: 'Danger Zone',
               padding: _sectionPadding,
               children: [
                 _tile(
                   iconPath: AppIcons.logout,
-                  label: 'Log out',
+                  label: 'Log Out',
                   onTap: _confirmLogout,
                 ),
                 _tile(
                   iconPath: AppIcons.delete,
-                  label: 'Delete account',
+                  label: 'Delete Account',
                   onTap: _confirmDeleteAccount,
                   showDivider: false,
                 ),

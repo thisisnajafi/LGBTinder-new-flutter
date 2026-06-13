@@ -9,10 +9,10 @@ import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/services/landing_service.dart';
+import '../core/widgets/app_grouped_list_card.dart';
+import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
-import '../widgets/common/section_header.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../widgets/modals/bottom_sheet_custom.dart';
 import '../routes/app_router.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
 
@@ -76,646 +76,488 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
         theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
 
     return AppSettingsDetailScaffold(
-      title: 'Help & support',
+      title: 'Help & Support',
       body: AppSettingsDetailList(
         children: [
-          // About (from GET landing/settings)
-          SectionHeader(
-            compactLayout: true,
+          AppGroupedListSection(
             title: 'About',
-            icon: Icons.info_outline,
+            padding: AppSettingsLayout.firstSectionPadding,
+            children: [
+              AppSettingsInset(
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final settingsAsync = ref.watch(_landingSettingsProvider);
+                    return settingsAsync.when(
+                      data: (LandingSettings? settings) {
+                        if (settings == null) {
+                          return _buildAboutPlaceholder(
+                            textColor: textColor,
+                            secondaryTextColor: secondaryTextColor,
+                          );
+                        }
+                        return _buildAboutContent(
+                          settings: settings,
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                        );
+                      },
+                      loading: () => _buildAboutPlaceholder(
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                      ),
+                      error: (_, __) => _buildAboutPlaceholder(
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Consumer(
-            builder: (context, ref, _) {
-              final settingsAsync = ref.watch(_landingSettingsProvider);
-              return settingsAsync.when(
-                data: (LandingSettings? settings) {
-                  if (settings == null) {
-                    return _buildAboutPlaceholder(textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor);
-                  }
-                  return _buildAboutSection(settings: settings, textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor);
-                },
-                loading: () => _buildAboutPlaceholder(textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor),
-                error: (_, __) => _buildAboutPlaceholder(textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor),
-              );
-            },
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
           Consumer(
             builder: (context, ref, _) {
               final statsAsync = ref.watch(_landingStatsProvider);
               return statsAsync.when(
                 data: (List<LandingStatItem> stats) {
-                  if (stats.isEmpty) return SizedBox.shrink();
-                  return _buildStatsRow(stats: stats, textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor);
+                  if (stats.isEmpty) return const SizedBox.shrink();
+                  return AppGroupedListSection(
+                    title: 'Community',
+                    padding: AppSettingsLayout.sectionPadding,
+                    children: [
+                      AppSettingsInset(
+                        child: _buildStatsContent(
+                          stats: stats,
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                        ),
+                      ),
+                    ],
+                  );
                 },
-                loading: () => SizedBox.shrink(),
-                error: (_, __) => SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               );
             },
           ),
-          SizedBox(height: AppSpacing.spacingMD),
           Consumer(
             builder: (context, ref, _) {
               final testimonialsAsync = ref.watch(_landingTestimonialsProvider);
               return testimonialsAsync.when(
                 data: (List<LandingTestimonialItem> list) {
-                  if (list.isEmpty) return SizedBox.shrink();
-                  return _buildTestimonialsSection(list: list, textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor);
+                  if (list.isEmpty) return const SizedBox.shrink();
+                  return AppGroupedListSection(
+                    title: 'What People Say',
+                    padding: AppSettingsLayout.sectionPadding,
+                    children: [
+                      AppSettingsInset(
+                        child: _buildTestimonialsContent(
+                          list: list,
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                        ),
+                      ),
+                    ],
+                  );
                 },
-                loading: () => SizedBox.shrink(),
-                error: (_, __) => SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               );
             },
           ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Tips & Blog (from GET landing/blogs)
-          SectionHeader(
-            compactLayout: true,
+          AppGroupedListSection(
             title: 'Tips & Blog',
-            icon: Icons.article_outlined,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Consumer(
-            builder: (context, ref, _) {
-              final blogsAsync = ref.watch(_landingBlogsProvider);
-              return blogsAsync.when(
-                data: (List<LandingBlogItem> blogs) {
-                  if (blogs.isEmpty) {
-                    return _buildBlogPlaceholder(textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor);
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: blogs.map((blog) => _buildBlogTile(
-                      blog: blog,
-                      textColor: textColor,
-                      secondaryTextColor: secondaryTextColor,
-                      surfaceColor: surfaceColor,
-                      borderColor: borderColor,
-                      onTap: () => _showBlogDetail(context, ref, blog, isDark, textColor, secondaryTextColor, surfaceColor, borderColor),
-                    )).toList(),
+            padding: AppSettingsLayout.sectionPadding,
+            children: [
+              Consumer(
+                builder: (context, ref, _) {
+                  final blogsAsync = ref.watch(_landingBlogsProvider);
+                  return blogsAsync.when(
+                    data: (List<LandingBlogItem> blogs) {
+                      if (blogs.isEmpty) {
+                        return AppSettingsInset(
+                          child: _buildBlogPlaceholder(
+                            secondaryTextColor: secondaryTextColor,
+                          ),
+                        );
+                      }
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var i = 0; i < blogs.length; i++) ...[
+                            AppGroupedListTile(
+                              iconPath: AppIcons.documentText,
+                              label: blogs[i].title ?? 'Untitled',
+                              subtitle: blogs[i].excerpt,
+                              onTap: () => _showBlogDetail(
+                                context,
+                                ref,
+                                blogs[i],
+                                isDark,
+                                textColor,
+                                secondaryTextColor,
+                                surfaceColor,
+                                borderColor,
+                              ),
+                              showDivider: i < blogs.length - 1,
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                    loading: () => AppSettingsInset(
+                      child: _buildBlogPlaceholder(
+                        secondaryTextColor: secondaryTextColor,
+                      ),
+                    ),
+                    error: (_, __) => AppSettingsInset(
+                      child: _buildBlogPlaceholder(
+                        secondaryTextColor: secondaryTextColor,
+                      ),
+                    ),
                   );
                 },
-                loading: () => _buildBlogPlaceholder(textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor),
-                error: (_, __) => _buildBlogPlaceholder(textColor: textColor, secondaryTextColor: secondaryTextColor, surfaceColor: surfaceColor, borderColor: borderColor),
-              );
-            },
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Contact support
-          SectionHeader(
-            compactLayout: true,
+          AppGroupedListSection(
             title: 'Contact Support',
-            icon: Icons.support_agent,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSupportCard(
-            icon: Icons.send,
-            title: 'Send a message',
-            subtitle: 'We\'ll get back to you soon',
-            onTap: () => _showContactFormBottomSheet(context, ref, isDark, textColor, secondaryTextColor, surfaceColor, borderColor),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSupportCard(
-            icon: Icons.confirmation_number_outlined,
-            title: 'My tickets',
-            subtitle: 'View and create support tickets',
-            onTap: () {
-              context.push(AppRoutes.supportTickets);
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSupportCard(
-            icon: Icons.email,
-            title: 'Email Support',
-            subtitle: 'support@lgbtfinder.com',
-            onTap: () async {
-              final Uri emailUri = Uri(
-                scheme: 'mailto',
-                path: 'support@lgbtfinder.com',
-                queryParameters: {
-                  'subject': 'LGBTFinder Support Request',
-                  'body': 'Please describe your issue or question here...',
-                },
-              );
+            padding: AppSettingsLayout.sectionPadding,
+            children: [
+              AppGroupedListTile(
+                iconPath: AppIcons.send,
+                label: 'Send A Message',
+                subtitle: 'We\'ll get back to you soon',
+                onTap: () => _showContactFormBottomSheet(
+                  context,
+                  ref,
+                  isDark,
+                  textColor,
+                  secondaryTextColor,
+                  surfaceColor,
+                  borderColor,
+                ),
+              ),
+              AppGroupedListTile(
+                iconPath: AppIcons.document,
+                label: 'My Tickets',
+                subtitle: 'View and create support tickets',
+                onTap: () => context.push(AppRoutes.supportTickets),
+              ),
+              AppGroupedListTile(
+                iconPath: AppIcons.message,
+                label: 'Email Support',
+                subtitle: 'support@lgbtfinder.com',
+                onTap: () async {
+                  final Uri emailUri = Uri(
+                    scheme: 'mailto',
+                    path: 'support@lgbtfinder.com',
+                    queryParameters: {
+                      'subject': 'LGBTFinder Support Request',
+                      'body': 'Please describe your issue or question here...',
+                    },
+                  );
 
-              try {
-                if (await canLaunchUrl(emailUri)) {
-                  await launchUrl(emailUri);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Unable to open email app. You can create a support ticket instead.'),
-                      action: SnackBarAction(
-                        label: 'Create ticket',
-                        onPressed: () => context.push(AppRoutes.supportTickets),
+                  try {
+                    if (await canLaunchUrl(emailUri)) {
+                      await launchUrl(emailUri);
+                    } else {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'Unable to open email app. You can create a support ticket instead.',
+                          ),
+                          action: SnackBarAction(
+                            label: 'Create ticket',
+                            onPressed: () => context.push(AppRoutes.supportTickets),
+                          ),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text(
+                          'Unable to open email app. You can create a support ticket instead.',
+                        ),
+                        action: SnackBarAction(
+                          label: 'Create ticket',
+                          onPressed: () => context.push(AppRoutes.supportTickets),
+                        ),
                       ),
+                    );
+                  }
+                },
+              ),
+              AppGroupedListTile(
+                iconPath: AppIcons.messageCircle,
+                label: 'Live Chat',
+                subtitle: 'Available 24/7',
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: Text(
+                        'Live Chat Support',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      content: Text(
+                        'Our live chat support is currently under development. For immediate assistance, please use email support or check our FAQ section.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('OK'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            context.push(AppRoutes.supportTickets);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryLight,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Create Ticket'),
+                        ),
+                      ],
                     ),
                   );
-                }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Unable to open email app. You can create a support ticket instead.'),
-                    action: SnackBarAction(
-                      label: 'Create ticket',
-                      onPressed: () => context.push(AppRoutes.supportTickets),
-                    ),
-                  ),
-                );
-              }
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
+                },
+                showDivider: false,
+              ),
+            ],
           ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSupportCard(
-            icon: Icons.chat_bubble,
-            title: 'Live Chat',
-            subtitle: 'Available 24/7',
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Text(
-                    'Live Chat Support',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  content: Text(
-                    'Our live chat support is currently under development. For immediate assistance, please use email support or check our FAQ section.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('OK'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        context.push(AppRoutes.supportTickets);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text('Create ticket'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // FAQ
-          SectionHeader(
-            compactLayout: true,
+          AppGroupedListSection(
             title: 'Frequently Asked Questions',
-            icon: Icons.help_outline,
+            padding: AppSettingsLayout.sectionPadding,
+            children: [
+              for (var i = 0; i < _faqItems.length; i++)
+                _buildGroupedFAQItem(
+                  question: _faqItems[i]['question'] as String,
+                  answer: _faqItems[i]['answer'] as String,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  showDivider: i < _faqItems.length - 1,
+                ),
+            ],
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          ..._faqItems.map((faq) {
-            return _buildFAQItem(
-              question: faq['question'],
-              answer: faq['answer'],
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            );
-          }),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Legal
-          SectionHeader(
-            compactLayout: true,
+          AppGroupedListSection(
             title: 'Legal',
-            icon: Icons.gavel,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          ListTile(
-            leading: Icon(Icons.description, color: AppColors.accentPurple),
-            title: Text(
-              'Terms of Service',
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
+            padding: AppSettingsLayout.sectionPadding,
+            children: [
+              AppGroupedListTile(
+                iconPath: AppIcons.documentText,
+                label: 'Terms Of Service',
+                onTap: () => context.push(AppRoutes.termsOfService),
               ),
-            ),
-            trailing: Icon(Icons.chevron_right, color: secondaryTextColor),
-            onTap: () {
-              context.push(AppRoutes.termsOfService);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.privacy_tip, color: AppColors.accentPurple),
-            title: Text(
-              'Privacy Policy',
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
+              AppGroupedListTile(
+                iconPath: AppIcons.shield,
+                label: 'Privacy Policy',
+                onTap: () => context.push(AppRoutes.privacyPolicy),
+                showDivider: false,
               ),
-            ),
-            trailing: Icon(Icons.chevron_right, color: secondaryTextColor),
-            onTap: () {
-              context.push(AppRoutes.privacyPolicy);
-            },
+            ],
           ),
-          SizedBox(height: AppSpacing.spacingXXL),
+          const SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
     );
   }
 
-  Widget _buildSupportCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          border: Border.all(color: borderColor),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.accentPurple.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-              ),
-              child: Icon(
-                icon,
-                color: AppColors.accentPurple,
-                size: 24,
-              ),
-            ),
-            SizedBox(width: AppSpacing.spacingMD),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTypography.h3.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: secondaryTextColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFAQItem({
+  Widget _buildGroupedFAQItem({
     required String question,
     required String answer,
     required Color textColor,
     required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
+    bool showDivider = true,
   }) {
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: ExpansionTile(
-        title: Text(
-          question,
-          style: AppTypography.body.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        iconColor: AppColors.accentPurple,
-        collapsedIconColor: secondaryTextColor,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Text(
-              answer,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingMD,
+            ),
+            childrenPadding: const EdgeInsets.fromLTRB(
+              AppSpacing.spacingMD,
+              0,
+              AppSpacing.spacingMD,
+              AppSpacing.spacingMD,
+            ),
+            title: Text(
+              question,
               style: AppTypography.body.copyWith(
-                color: secondaryTextColor,
+                color: textColor,
+                fontWeight: FontWeight.w600,
               ),
             ),
+            iconColor: AppColors.accentPurple,
+            collapsedIconColor: secondaryTextColor,
+            children: [
+              Text(
+                answer,
+                style: AppTypography.body.copyWith(
+                  color: secondaryTextColor,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (showDivider) const AppGroupedRowSeparator(),
+      ],
     );
   }
 
-  Widget _buildAboutSection({
+  Widget _buildAboutContent({
     required LandingSettings settings,
     required Color textColor,
     required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
   }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (settings.siteName != null && settings.siteName!.isNotEmpty)
-            Text(
-              settings.siteName!,
-              style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (settings.siteName != null && settings.siteName!.isNotEmpty)
+          Text(
+            settings.siteName!,
+            style: AppTypography.h3.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.bold,
             ),
-          if (settings.tagline != null && settings.tagline!.isNotEmpty) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              settings.tagline!,
-              style: AppTypography.body.copyWith(color: AppColors.accentPurple, fontWeight: FontWeight.w600),
+          ),
+        if (settings.tagline != null && settings.tagline!.isNotEmpty) ...[
+          SizedBox(height: AppSpacing.spacingXS),
+          Text(
+            settings.tagline!,
+            style: AppTypography.body.copyWith(
+              color: AppColors.accentPurple,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-          if (settings.description != null && settings.description!.isNotEmpty) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            Text(
-              settings.description!,
-              style: AppTypography.body.copyWith(color: secondaryTextColor),
-            ),
-          ],
-          if ((settings.appStoreUrl != null && settings.appStoreUrl!.isNotEmpty) ||
-              (settings.googlePlayUrl != null && settings.googlePlayUrl!.isNotEmpty)) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            Row(
-              children: [
-                if (settings.appStoreUrl != null && settings.appStoreUrl!.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(right: AppSpacing.spacingSM),
-                    child: OutlinedButton.icon(
-                      onPressed: () => launchUrl(Uri.parse(settings.appStoreUrl!)),
-                      icon: Icon(Icons.apple, size: 20, color: textColor),
-                      label: Text('App Store', style: AppTypography.labelMedium.copyWith(color: textColor)),
-                    ),
-                  ),
-                if (settings.googlePlayUrl != null && settings.googlePlayUrl!.isNotEmpty)
-                  OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse(settings.googlePlayUrl!)),
-                    icon: Icon(Icons.android, size: 20, color: textColor),
-                    label: Text('Google Play', style: AppTypography.labelMedium.copyWith(color: textColor)),
-                  ),
-              ],
-            ),
-          ],
+          ),
         ],
-      ),
+        if (settings.description != null && settings.description!.isNotEmpty) ...[
+          SizedBox(height: AppSpacing.spacingMD),
+          Text(
+            settings.description!,
+            style: AppTypography.body.copyWith(color: secondaryTextColor),
+          ),
+        ],
+        if ((settings.appStoreUrl != null && settings.appStoreUrl!.isNotEmpty) ||
+            (settings.googlePlayUrl != null && settings.googlePlayUrl!.isNotEmpty)) ...[
+          SizedBox(height: AppSpacing.spacingMD),
+          Wrap(
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
+            children: [
+              if (settings.appStoreUrl != null && settings.appStoreUrl!.isNotEmpty)
+                OutlinedButton(
+                  onPressed: () => launchUrl(Uri.parse(settings.appStoreUrl!)),
+                  child: Text(
+                    'App Store',
+                    style: AppTypography.labelMedium.copyWith(color: textColor),
+                  ),
+                ),
+              if (settings.googlePlayUrl != null && settings.googlePlayUrl!.isNotEmpty)
+                OutlinedButton(
+                  onPressed: () => launchUrl(Uri.parse(settings.googlePlayUrl!)),
+                  child: Text(
+                    'Google Play',
+                    style: AppTypography.labelMedium.copyWith(color: textColor),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
   Widget _buildAboutPlaceholder({
     required Color textColor,
     required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
   }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: secondaryTextColor, size: 24),
-          SizedBox(width: AppSpacing.spacingMD),
-          Expanded(
-            child: Text(
-              'LGBTFinder — Find your match. Be yourself.',
-              style: AppTypography.body.copyWith(color: secondaryTextColor),
-            ),
-          ),
-        ],
-      ),
+    return Text(
+      'LGBTFinder — Find your match. Be yourself.',
+      style: AppTypography.body.copyWith(color: secondaryTextColor),
     );
   }
 
-  Widget _buildStatsRow({
+  Widget _buildStatsContent({
     required List<LandingStatItem> stats,
     required Color textColor,
     required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
   }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: stats.take(4).map((s) {
-          IconData icon = Icons.people;
-          if (s.icon == 'heart') icon = Icons.favorite;
-          else if (s.icon == 'star') icon = Icons.star;
-          else if (s.icon == 'users') icon = Icons.people;
-          return Expanded(
-            child: Column(
-              children: [
-                Icon(icon, size: 24, color: AppColors.accentPurple),
-                SizedBox(height: AppSpacing.spacingXS),
-                Text(
-                  s.value ?? '—',
-                  style: AppTypography.h4.copyWith(color: textColor, fontWeight: FontWeight.bold),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: stats.take(4).map((s) {
+        return Expanded(
+          child: Column(
+            children: [
+              Text(
+                s.value ?? '—',
+                style: AppTypography.h4.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
                 ),
-                Text(
-                  s.label ?? '',
-                  style: AppTypography.caption.copyWith(color: secondaryTextColor),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+              ),
+              Text(
+                s.label ?? '',
+                style: AppTypography.caption.copyWith(color: secondaryTextColor),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildTestimonialsSection({
+  Widget _buildTestimonialsContent({
     required List<LandingTestimonialItem> list,
     required Color textColor,
     required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'What people say',
-          style: AppTypography.h4.copyWith(color: textColor, fontWeight: FontWeight.w600),
-        ),
-        SizedBox(height: AppSpacing.spacingSM),
-        ...list.take(3).map((t) => Padding(
-          padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-          child: Container(
-            padding: EdgeInsets.all(AppSpacing.spacingMD),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(color: borderColor),
+        for (final t in list.take(3)) ...[
+          if (t.quote != null && t.quote!.isNotEmpty)
+            Text(
+              '"${t.quote}"',
+              style: AppTypography.body.copyWith(
+                color: textColor,
+                fontStyle: FontStyle.italic,
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (t.quote != null && t.quote!.isNotEmpty)
-                  Text(
-                    '"${t.quote}"',
-                    style: AppTypography.body.copyWith(color: textColor, fontStyle: FontStyle.italic),
-                  ),
-                if (t.author != null || t.location != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    [if (t.author != null) t.author, if (t.location != null) t.location].join(' · '),
-                    style: AppTypography.caption.copyWith(color: secondaryTextColor),
-                  ),
-                ],
-              ],
+          if (t.author != null || t.location != null) ...[
+            SizedBox(height: AppSpacing.spacingXS),
+            Text(
+              [if (t.author != null) t.author, if (t.location != null) t.location]
+                  .join(' · '),
+              style: AppTypography.caption.copyWith(color: secondaryTextColor),
             ),
-          ),
-        )),
+          ],
+          if (t != list.take(3).last) SizedBox(height: AppSpacing.spacingMD),
+        ],
       ],
     );
   }
 
   Widget _buildBlogPlaceholder({
-    required Color textColor,
     required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
   }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.article_outlined, color: secondaryTextColor, size: 24),
-          SizedBox(width: AppSpacing.spacingMD),
-          Expanded(
-            child: Text(
-              'Tips and blog posts will appear here.',
-              style: AppTypography.body.copyWith(color: secondaryTextColor),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBlogTile({
-    required LandingBlogItem blog,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-      child: Material(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          child: Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (blog.category != null && blog.category!.isNotEmpty)
-                  Text(
-                    blog.category!,
-                    style: AppTypography.caption.copyWith(color: AppColors.accentPurple),
-                  ),
-                if (blog.title != null && blog.title!.isNotEmpty) ...[
-                  if (blog.category != null && blog.category!.isNotEmpty) SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    blog.title!,
-                    style: AppTypography.body.copyWith(color: textColor, fontWeight: FontWeight.w600),
-                  ),
-                ],
-                if (blog.excerpt != null && blog.excerpt!.isNotEmpty) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    blog.excerpt!,
-                    style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+    return Text(
+      'Tips and blog posts will appear here.',
+      style: AppTypography.body.copyWith(color: secondaryTextColor),
     );
   }
 

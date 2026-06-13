@@ -1,5 +1,7 @@
 // Widget: CardStackManager
 // Card stack manager with horizontal swipe gestures
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
@@ -8,6 +10,7 @@ import '../../core/constants/animation_constants.dart';
 import '../../shared/models/match_reason.dart';
 import 'swipeable_card.dart';
 import '../../features/discover/widgets/discover_empty_state.dart';
+import '../../features/discover/utils/discovery_image_prefetch.dart';
 import '../../core/widgets/loading_indicator.dart';
 
 /// Card stack manager widget
@@ -62,6 +65,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   late Animation<double> _revealOpacity;
   late Animation<Offset> _revealSlide;
   Object? _lastTopCardId;
+  int _prefetchGeneration = 0;
+  bool _frontImagesReady = true;
 
   @override
   void initState() {
@@ -98,10 +103,31 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     ).animate(revealCurve);
     if (widget.cards.isNotEmpty) {
       _lastTopCardId = widget.cards.first['id'];
+      _frontImagesReady = false;
+      _revealController.value = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _playRevealAnimation();
+        if (mounted) unawaited(_prepareFrontCards());
       });
     }
+  }
+
+  Future<void> _prepareFrontCards() async {
+    if (widget.cards.isEmpty || widget.isLoading) return;
+
+    final generation = ++_prefetchGeneration;
+    if (mounted) {
+      setState(() {
+        _frontImagesReady = false;
+      });
+      _revealController.value = 0;
+    }
+
+    await DiscoveryImagePrefetch.prefetchCardStack(widget.cards);
+
+    if (!mounted || generation != _prefetchGeneration) return;
+
+    setState(() => _frontImagesReady = true);
+    _playRevealAnimation();
   }
 
   void _playRevealAnimation() {
@@ -122,13 +148,18 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     if (oldTopId != newTopId && widget.isSheetOpen) {
       widget.onSheetOpenChanged?.call(false);
     }
+    if (oldWidget.cards.isEmpty && widget.cards.isNotEmpty) {
+      _lastTopCardId = widget.cards.first['id'];
+      unawaited(_prepareFrontCards());
+    }
     if (newTopId != null && newTopId != _lastTopCardId) {
       _lastTopCardId = newTopId;
-      _playRevealAnimation();
+      unawaited(_prepareFrontCards());
     }
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
       _dragOffset = Offset.zero;
       _lastTopCardId = null;
+      _frontImagesReady = true;
     }
   }
 
@@ -268,6 +299,26 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   }
 
   Widget _buildInteractiveTopCard(Map<String, dynamic> cardData) {
+    if (!_frontImagesReady) {
+      return Positioned.fill(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: AspectRatio(
+            aspectRatio: SwipeableCard.cardAspectRatio,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+              child: Center(
+                child: LoadingIndicator(size: 36),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final width = MediaQuery.sizeOf(context).width;
     final rotation = widget.isSheetOpen
         ? 0.0

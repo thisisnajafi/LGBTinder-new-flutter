@@ -265,4 +265,9 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
     await loadFromCache();
     unawaited(refresh());
   }
+
+  /// Clears in-memory profile state without fetching (logout / account switch).
+  void resetSession() {
+    state = const AsyncValue.loading();
+  }
 }

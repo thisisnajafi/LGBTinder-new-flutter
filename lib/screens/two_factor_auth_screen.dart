@@ -236,109 +236,82 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
     final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
 
     return AppSettingsDetailScaffold(
-      title: 'Two-factor authentication',
+      title: 'Two-Factor Authentication',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : AppSettingsDetailList(
               children: [
-                // Status card
-                Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingLG),
-                  decoration: BoxDecoration(
-                    color: _isEnabled
-                        ? AppColors.onlineGreen.withOpacity(0.2)
-                        : AppColors.warningYellow.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    border: Border.all(
-                      color: _isEnabled
-                          ? AppColors.onlineGreen
-                          : AppColors.warningYellow,
+                AppGroupedListSection(
+                  title: 'Status',
+                  padding: AppSettingsLayout.firstSectionPadding,
+                  children: [
+                    AppGroupedInfoTile(
+                      label: 'Two-factor authentication',
+                      value: _isEnabled ? 'Enabled' : 'Disabled',
+                      badge: _isEnabled ? 'Active' : null,
+                      showDivider: _isEnabled && _backupCodesCount > 0,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _isEnabled ? Icons.verified : Icons.warning_amber,
-                        color: _isEnabled
-                            ? AppColors.onlineGreen
-                            : AppColors.warningYellow,
-                        size: 32,
+                    if (_isEnabled && _backupCodesCount > 0)
+                      AppGroupedInfoTile(
+                        label: 'Backup codes remaining',
+                        value: '$_backupCodesCount',
+                        showDivider: false,
                       ),
-                      SizedBox(width: AppSpacing.spacingMD),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _isEnabled ? '2FA Enabled' : '2FA Disabled',
-                              style: AppTypography.h2.copyWith(
-                                color: textColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: AppSpacing.spacingXS),
-                            Text(
-                              _isEnabled
-                                  ? 'Your account is protected with two-factor authentication'
-                                  : 'Enable 2FA to add an extra layer of security',
-                              style: AppTypography.body.copyWith(
-                                color: secondaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-                SizedBox(height: AppSpacing.spacingXXL),
+                AppSettingsSectionFootnote(
+                  text: _isEnabled
+                      ? 'Your account is protected with two-factor authentication.'
+                      : 'Enable 2FA to add an extra layer of security to your account.',
+                ),
 
                 if (!_isEnabled) ...[
                   AppGroupedListSection(
-                    title: 'How it works',
+                    title: 'How It Works',
                     padding: AppSettingsLayout.sectionPadding,
                     children: [
                       _buildInstructionStep(
-                    number: '1',
-                    title: 'Scan QR Code',
-                    description: 'Use an authenticator app to scan the QR code',
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                    showDivider: true,
-                  ),
+                        number: '1',
+                        title: 'Scan QR Code',
+                        description:
+                            'Use an authenticator app to scan the QR code',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        showDivider: true,
+                      ),
                       _buildInstructionStep(
-                    number: '2',
-                    title: 'Enter Code',
-                    description: 'Enter the 6-digit code from your authenticator app',
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                    showDivider: true,
-                  ),
+                        number: '2',
+                        title: 'Enter Code',
+                        description:
+                            'Enter the 6-digit code from your authenticator app',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        showDivider: true,
+                      ),
                       _buildInstructionStep(
-                    number: '3',
-                    title: 'Save Backup Codes',
-                    description: 'Keep your backup codes in a safe place',
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                    showDivider: false,
-                  ),
+                        number: '3',
+                        title: 'Save Backup Codes',
+                        description: 'Keep your backup codes in a safe place',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        showDivider: false,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.spacingXL),
                   Padding(
                     padding: AppSettingsLayout.sectionPadding,
                     child: GradientButton(
-                    text: 'Enable 2FA',
-                    onPressed: _enable2FA,
-                    isFullWidth: true,
-                    icon: Icons.security,
+                      text: 'Enable 2FA',
+                      onPressed: _enable2FA,
+                      isFullWidth: true,
+                      icon: Icons.security,
                     ),
                   ),
                 ] else ...[
                   // QR Code
                   if (_qrCodeUrl != null) ...[
                     AppGroupedListSection(
-                      title: 'QR code',
+                      title: 'QR Code',
                       padding: AppSettingsLayout.sectionPadding,
                       children: [
                         AppSettingsInset(
@@ -370,7 +343,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
 
                   if (_showVerificationStep) ...[
                     AppGroupedListSection(
-                      title: 'Verify setup',
+                      title: 'Verify Setup',
                       padding: AppSettingsLayout.sectionPadding,
                       children: [
                         AppSettingsInset(
@@ -407,7 +380,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
 
                   if (_backupCodes.isNotEmpty) ...[
                     AppGroupedListSection(
-                      title: 'Backup codes',
+                      title: 'Backup Codes',
                       padding: AppSettingsLayout.sectionPadding,
                       children: [
                         AppSettingsInset(

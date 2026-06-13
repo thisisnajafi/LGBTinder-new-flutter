@@ -4,14 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../widgets/profile/avatar_upload.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/theme/spacing_constants.dart';
 import '../widgets/profile/edit/profile_image_editor.dart';
 import '../widgets/profile/edit/profile_field_editor.dart';
-import '../widgets/profile/edit/profile_section_editor.dart';
+import '../core/widgets/app_grouped_list_card.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../widgets/profile/avatar_upload.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
@@ -34,11 +33,17 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   bool _isSaving = false;
   
   // Profile data
+  UserProfile? _profile;
   String _name = '';
   String _bio = '';
   String? _avatarUrl;
   List<UserImage> _images = [];
   List<int> _interestsIds = [];
+  int? _height;
+  int? _weight;
+  bool _smoke = false;
+  bool _drink = false;
+  bool _gym = false;
   
   @override
   void initState() {
@@ -57,7 +62,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       
       if (mounted) {
         setState(() {
-          _name = '${profile.firstName ?? ''} ${profile.lastName ?? ''}'.trim();
+          _profile = profile;
+          _name = '${profile.firstName} ${profile.lastName}'.trim();
           _bio = profile.profileBio ?? '';
           UserImage? primaryImage;
           if (profile.images != null && profile.images!.isNotEmpty) {
@@ -70,6 +76,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           _avatarUrl = primaryImage?.imageUrl;
           _images = profile.images ?? [];
           _interestsIds = profile.interests ?? [];
+          _height = profile.height;
+          _weight = profile.weight;
+          _smoke = profile.smoke ?? false;
+          _drink = profile.drink ?? false;
+          _gym = profile.gym ?? false;
         });
       }
     } catch (e) {
@@ -268,6 +279,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       
       final request = UpdateProfileRequest(
         profileBio: _bio.isNotEmpty ? _bio : null,
+        height: _height,
+        weight: _weight,
+        smoke: _smoke,
+        drink: _drink,
+        gym: _gym,
         interests: _interestsIds.isNotEmpty ? _interestsIds : null,
       );
 
@@ -341,141 +357,254 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     );
   }
 
+  String _displayName() {
+    final name = _name.trim();
+    return name.isEmpty ? 'Not set' : name;
+  }
+
+  String _displayLocation() {
+    final parts = [_profile?.city, _profile?.country]
+        .whereType<String>()
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? 'Not set' : parts.join(', ');
+  }
+
+  String _displayAge() {
+    final birthDate = _profile?.birthDate;
+    if (birthDate == null || birthDate.isEmpty) return 'Not set';
+    try {
+      final date = DateTime.parse(birthDate);
+      final now = DateTime.now();
+      var age = now.year - date.year;
+      if (now.month < date.month ||
+          (now.month == date.month && now.day < date.day)) {
+        age--;
+      }
+      return '$age years old';
+    } catch (_) {
+      return birthDate;
+    }
+  }
+
+  String _displayList(List<String>? titles, List<int>? ids) {
+    if (titles != null && titles.isNotEmpty) return titles.join(', ');
+    if (ids != null && ids.isNotEmpty) return '${ids.length} selected';
+    return 'Not set';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
     if (_isLoading) {
-      return AppPageScaffold(
+      return AppSettingsDetailScaffold(
         title: 'Edit Profile',
-        showBackButton: true,
-        backgroundColor: backgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    return AppPageScaffold(
+    return AppSettingsDetailScaffold(
       title: 'Edit Profile',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
       body: Form(
         key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar section
-              SectionHeader(
-                title: 'Profile Photo',
-                icon: Icons.person,
-              ),
-              Center(
-                child: AvatarUpload(
-                  imageUrl: _avatarUrl,
-                  name: _name,
-                  size: 120.0,
-                  onUpload: () => _showImageSourceDialog(),
-                  onEdit: () => _showImageSourceDialog(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              DividerCustom(),
-              
-              // Images section
-              SectionHeader(
-                title: 'Photos',
-                icon: Icons.photo_library,
-              ),
-              ProfileImageEditor(
-                imageUrls: _images.map((img) => img.imageUrl).toList(),
-                onImageAdd: (_) => _showImageSourceDialog(),
-                onImageDelete: (index) {
-                  if (index < _images.length) {
-                    _deleteImage(_images[index].id, index);
-                  }
-                },
-                onImageSetPrimary: (index) {
-                  if (index < _images.length) {
-                    _setPrimaryImage(_images[index].id, index);
-                  }
-                },
-              ),
-              DividerCustom(),
-
-              // Basic info section
-              SectionHeader(
-                title: 'Basic Information',
-                icon: Icons.info,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    // Note: Name, Age, Location are typically not editable via Update Profile API
-                    // They are set during registration and may require separate endpoints
-                    const SizedBox(height: 16),
-                    ProfileFieldEditor(
-                      label: 'Bio',
-                      initialValue: _bio,
-                      maxLines: 5,
-                      maxLength: 500,
-                      onSave: (value) {
-                        setState(() {
-                          _bio = value;
-                        });
-                      },
+        child: AppSettingsDetailList(
+          children: [
+            AppGroupedListSection(
+              title: 'Profile Photo',
+              padding: AppSettingsLayout.firstSectionPadding,
+              children: [
+                AppSettingsInset(
+                  child: Center(
+                    child: AvatarUpload(
+                      imageUrl: _avatarUrl,
+                      name: _name,
+                      size: 120.0,
+                      onUpload: _showImageSourceDialog,
+                      onEdit: _showImageSourceDialog,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              DividerCustom(),
-
-              // Interests section
-              SectionHeader(
-                title: 'Interests',
-                icon: Icons.favorite,
-                actionLabel: 'Edit',
-                onAction: () {
-                  // Open interests editor with reference data - implementation needed
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Interests editor with reference data will be implemented'),
+              ],
+            ),
+            AppGroupedListSection(
+              title: 'Photos',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                AppSettingsInset(
+                  child: ProfileImageEditor(
+                    imageUrls: _images.map((img) => img.imageUrl).toList(),
+                    onImageAdd: (_) => _showImageSourceDialog(),
+                    onImageDelete: (index) {
+                      if (index < _images.length) {
+                        _deleteImage(_images[index].id, index);
+                      }
+                    },
+                    onImageSetPrimary: (index) {
+                      if (index < _images.length) {
+                        _setPrimaryImage(_images[index].id, index);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            AppGroupedListSection(
+              title: 'About Me',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                AppSettingsInset(
+                  child: ProfileFieldEditor(
+                    label: 'Bio',
+                    initialValue: _bio,
+                    maxLines: 5,
+                    maxLength: 500,
+                    onSave: (value) {
+                      setState(() {
+                        _bio = value;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            AppGroupedListSection(
+              title: 'Personal Details',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                AppSettingsInset(
+                  child: TextFormField(
+                    initialValue: _height?.toString() ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Height (cm)',
+                      hintText: 'Enter your height',
                     ),
-                  );
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _interestsIds.isEmpty
-                    ? Text(
-                        'No interests selected',
-                        style: TextStyle(color: Colors.grey),
-                      )
-                    : Text(
-                        '${_interestsIds.length} interests selected',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-              ),
-              const SizedBox(height: 20),
-              DividerCustom(),
-
-              // Save button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: GradientButton(
-                  text: 'Save Changes',
-                  onPressed: _isSaving ? null : _saveProfile,
-                  isLoading: _isSaving,
-                  isFullWidth: true,
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      _height = int.tryParse(value.trim());
+                    },
+                  ),
                 ),
+                const AppGroupedRowSeparator(),
+                AppSettingsInset(
+                  child: TextFormField(
+                    initialValue: _weight?.toString() ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Weight (kg)',
+                      hintText: 'Enter your weight',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      _weight = int.tryParse(value.trim());
+                    },
+                  ),
+                ),
+                AppGroupedSwitchTile(
+                  label: 'Smoking',
+                  subtitle: 'Do you smoke?',
+                  value: _smoke,
+                  onChanged: (value) => setState(() => _smoke = value),
+                ),
+                AppGroupedSwitchTile(
+                  label: 'Drinking',
+                  subtitle: 'Do you drink alcohol?',
+                  value: _drink,
+                  onChanged: (value) => setState(() => _drink = value),
+                ),
+                AppGroupedSwitchTile(
+                  label: 'Gym',
+                  subtitle: 'Do you work out regularly?',
+                  value: _gym,
+                  onChanged: (value) => setState(() => _gym = value),
+                  showDivider: false,
+                ),
+              ],
+            ),
+            AppGroupedListSection(
+              title: 'Profile Info',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                AppGroupedInfoTile(
+                  label: 'Name',
+                  value: _displayName(),
+                ),
+                AppGroupedInfoTile(
+                  label: 'Email',
+                  value: _profile?.email.isNotEmpty == true
+                      ? _profile!.email
+                      : 'Not set',
+                  badge: _profile?.isEmailVerified == true ? 'Verified' : null,
+                ),
+                AppGroupedInfoTile(
+                  label: 'Gender',
+                  value: (_profile?.gender?.isNotEmpty == true)
+                      ? _profile!.gender!
+                      : 'Not set',
+                ),
+                AppGroupedInfoTile(
+                  label: 'Age',
+                  value: _displayAge(),
+                ),
+                AppGroupedInfoTile(
+                  label: 'Location',
+                  value: _displayLocation(),
+                  showDivider: false,
+                ),
+              ],
+            ),
+            const AppSettingsSectionFootnote(
+              text:
+                  'Name, email, gender, and location are managed in account settings.',
+            ),
+            AppGroupedListSection(
+              title: 'Work & Education',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                AppGroupedInfoTile(
+                  label: 'Occupation',
+                  value: _displayList(_profile?.jobTitles, _profile?.jobs),
+                ),
+                AppGroupedInfoTile(
+                  label: 'Education',
+                  value: _displayList(
+                    _profile?.educationTitles,
+                    _profile?.educations,
+                  ),
+                  showDivider: false,
+                ),
+              ],
+            ),
+            AppGroupedListSection(
+              title: 'Interests & Languages',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                AppGroupedInfoTile(
+                  label: 'Interests',
+                  value: _displayList(
+                    _profile?.interestTitles,
+                    _interestsIds,
+                  ),
+                ),
+                AppGroupedInfoTile(
+                  label: 'Languages',
+                  value: _displayList(null, _profile?.languages),
+                  showDivider: false,
+                ),
+              ],
+            ),
+            const AppSettingsSectionFootnote(
+              text:
+                  'Update interests and matching preferences from discovery settings.',
+            ),
+            Padding(
+              padding: AppSettingsLayout.sectionPadding,
+              child: GradientButton(
+                text: 'Save Changes',
+                onPressed: _isSaving ? null : _saveProfile,
+                isLoading: _isSaving,
+                isFullWidth: true,
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.spacingXXL),
+          ],
         ),
       ),
     );

@@ -24,6 +24,7 @@ import '../features/payments/presentation/screens/google_play_billing_test_scree
 import '../features/payments/presentation/screens/subscription_plans_screen.dart' as payments;
 import '../screens/billing_history_screen.dart';
 import '../core/providers/api_providers.dart';
+import '../core/providers/startup_flow_provider.dart';
 import '../shared/services/token_storage_service.dart';
 import '../core/utils/app_logger.dart';
 import 'route_redirector.dart';
@@ -112,12 +113,6 @@ Page<void> noTransitionPage(GoRouterState state, Widget child) {
 
 // Note: Route guards are implemented as redirect functions in individual routes
 // This allows access to Riverpod providers through the ref parameter
-
-/// Set to true once we've left splash (redirected to welcome or home). Prevents redirect loop:
-/// any later navigation to / (e.g. back button, recreated router) redirects to welcome.
-bool _hasLeftStartupFlow = false;
-void markStartupFlowLeft() => _hasLeftStartupFlow = true;
-final RouteRedirector _redirector = RouteRedirector();
 
 const Set<String> _publicRoutes = {
   AppRoutes.splash,
@@ -218,7 +213,7 @@ _GuardDecision evaluateGuardDecision({
 
   if (authStage == AuthStage.unauthenticated && isProtectedRoute) {
     return const _GuardDecision(
-      redirectTo: AppRoutes.login,
+      redirectTo: AppRoutes.welcome,
       storePending: true,
     );
   }
@@ -236,6 +231,8 @@ _GuardDecision evaluateGuardDecision({
   return const _GuardDecision();
 }
 
+final RouteRedirector _redirector = RouteRedirector();
+
 /// App Router Configuration
 /// Redirect loop prevention: only SplashPage navigates from / to welcome or home.
 /// Route-level redirects return null when already at target (see billing-history).
@@ -249,7 +246,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) async {
       final loc = state.matchedLocation;
       // Splash owns auth/bootstrap; skip secure-storage reads here to avoid main-thread churn.
-      if (loc == AppRoutes.splash && !_hasLeftStartupFlow) {
+      if (loc == AppRoutes.splash && !hasLeftStartupFlow) {
         return null;
       }
       final legacyResolved = _redirector.resolveLegacyRoute(state.uri);
@@ -262,7 +259,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final pending = _redirector.pendingProtectedRoute;
       final decision = evaluateGuardDecision(
         location: loc,
-        hasLeftStartupFlow: _hasLeftStartupFlow,
+        hasLeftStartupFlow: hasLeftStartupFlow,
         authStage: authStage,
         isPublicRoute: _publicRoutes.contains(loc),
         isAuthEntryRoute: _authEntryRoutes.contains(loc),
@@ -272,7 +269,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (decision.storePending) {
         _redirector.setPendingIfEmpty(state.uri.toString());
-        routeLog('redirect: protected $loc without auth → ${AppRoutes.login}');
+        routeLog('redirect: protected $loc without auth → ${AppRoutes.welcome}');
       }
 
       if (decision.consumePending && pending != null) {
@@ -284,8 +281,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (decision.redirectTo != null) {
         if (decision.redirectTo == AppRoutes.profileWizard) {
           routeLog('redirect: profile-completion user from $loc → ${AppRoutes.profileWizard}');
-        } else if (decision.redirectTo == AppRoutes.login && loc != AppRoutes.login) {
-          routeLog('redirect: unauthenticated protected route $loc → ${AppRoutes.login}');
+        } else if (decision.redirectTo == AppRoutes.welcome &&
+            _isProtectedRoute(loc) &&
+            loc != AppRoutes.welcome) {
+          routeLog('redirect: unauthenticated protected route $loc → ${AppRoutes.welcome}');
         } else if (decision.redirectTo == AppRoutes.welcome && loc == AppRoutes.splash) {
           routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
         } else if (decision.redirectTo == AppRoutes.home && _authEntryRoutes.contains(loc)) {

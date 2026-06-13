@@ -1,6 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/chat/providers/chat_list_preview_provider.dart';
+import '../../features/chat/providers/chat_provider.dart';
+import '../../features/chat/providers/chat_providers.dart';
+import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/discover/providers/discover_cache_provider.dart';
+import '../../features/notifications/providers/notifications_cache_provider.dart';
+import '../../features/profile/providers/profile_page_cache_provider.dart';
+import '../../features/user/providers/user_providers.dart';
 import '../../shared/services/cache_service.dart';
 import '../providers/api_providers.dart';
 import 'cache_providers.dart';
@@ -18,8 +25,28 @@ class CacheInvalidator {
   UserCacheService get _userCache => _ref.read(userCacheServiceProvider);
   CacheService get _legacyCache => _ref.read(cacheServiceProvider);
 
-  /// Full purge on logout.
+  /// Full purge on logout or before a new login session.
   Future<void> purgeAll() async {
+    try {
+      await _ref.read(chatLocalRepositoryProvider).clearAllSessionData();
+    } catch (e) {
+      AppLogger.warning(
+        'Chat local purge failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      await _ref.read(chatOutboundQueueServiceProvider).clear();
+    } catch (e) {
+      AppLogger.warning(
+        'Chat outbox purge failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
     await _userCache.invalidateAll();
     await _legacyCache.clearAllCache();
     try {
@@ -31,9 +58,92 @@ class CacheInvalidator {
         error: e,
       );
     }
+
     try {
       await LgbtfinderImageCacheManager().emptyCache();
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'cache_invalidator', error: e); }
+    } catch (e) {
+      AppLogger.warning(
+        'Silently caught exception',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    _resetInMemorySessionState();
+
+    AppLogger.info('Private session cache purged', tag: 'cache_invalidator');
+  }
+
+  void _resetInMemorySessionState() {
+    try {
+      _ref.read(chatProvider.notifier).reset();
+    } catch (e) {
+      AppLogger.warning(
+        'Chat provider reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(chatListPreviewProvider.notifier).clearSeed();
+    } catch (e) {
+      AppLogger.warning(
+        'Chat preview reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(conversationMuteCacheProvider.notifier).clearAll();
+    } catch (e) {
+      AppLogger.warning(
+        'Conversation mute reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(notificationsCacheProvider.notifier).clearAllLocal();
+    } catch (e) {
+      AppLogger.warning(
+        'Notifications cache reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(discoverCacheProvider.notifier).resetSession();
+    } catch (e) {
+      AppLogger.warning(
+        'Discover cache reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(profilePageCacheProvider.notifier).resetSession();
+    } catch (e) {
+      AppLogger.warning(
+        'Profile page cache reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(cachedCurrentUserProvider.notifier).invalidate();
+    } catch (e) {
+      AppLogger.warning(
+        'Current user cache reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
   }
 
   /// Own or other user profile updated / blocked / reported.

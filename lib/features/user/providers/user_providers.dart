@@ -1,8 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../shared/services/cache_service.dart';
+import '../../../shared/services/token_storage_service.dart';
 import '../data/services/user_service.dart';
 import '../data/models/user_info.dart';
+
+/// Guest placeholder when no session exists (id 0 — never connects Pusher).
+final UserInfo kGuestUserInfo = UserInfo(
+  id: 0,
+  firstName: '',
+  lastName: '',
+  email: '',
+);
 
 /// User Service Provider
 final userServiceProvider = Provider<UserService>((ref) {
@@ -23,20 +32,31 @@ final cachedCurrentUserProvider =
   return CachedCurrentUserNotifier(
     ref.read(userServiceProvider),
     ref.read(cacheServiceProvider),
+    ref.read(tokenStorageServiceProvider),
   );
 });
 
 class CachedCurrentUserNotifier extends StateNotifier<AsyncValue<UserInfo>> {
-  CachedCurrentUserNotifier(this._userService, this._cacheService)
-      : super(const AsyncValue.loading()) {
+  CachedCurrentUserNotifier(
+    this._userService,
+    this._cacheService,
+    this._tokenStorage,
+  ) : super(const AsyncValue.loading()) {
     load();
   }
 
   final UserService _userService;
   final CacheService _cacheService;
+  final TokenStorageService _tokenStorage;
 
   /// Load current user: show from cache immediately, then fetch from API and update if different.
   Future<void> load() async {
+    final isAuthenticated = await _tokenStorage.isAuthenticated();
+    if (!isAuthenticated) {
+      state = AsyncData(kGuestUserInfo);
+      return;
+    }
+
     // 1) Load from cache so UI can show immediately when switching to discover
     final cached = await _cacheService.getCached<UserInfo>(
       CacheKeys.currentUser,

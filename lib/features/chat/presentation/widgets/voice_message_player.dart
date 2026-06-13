@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
+import '../../../../core/utils/app_haptics.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/chat/voice_waveform_bars.dart';
 
@@ -64,6 +67,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   }
 
   Future<void> _togglePlay() async {
+    AppHaptics.light();
+
     if (_isPlaying) {
       await _player.pause();
       setState(() => _isPlaying = false);
@@ -76,6 +81,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   }
 
   Future<void> _cycleSpeed() async {
+    AppHaptics.selection();
+
     setState(() {
       if (_speed == 1.0) {
         _speed = 1.5;
@@ -102,77 +109,108 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     return (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
   }
 
+  String _speedLabel(double speed) {
+    if (speed == speed.roundToDouble()) {
+      return '${speed.toInt()}x';
+    }
+    return '${speed}x';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final iconColor = widget.isSent ? Colors.white : AppColors.accentPurple;
-    final textColor = widget.isSent ? Colors.white : AppColors.textPrimaryDark;
-    final displayDuration =
-        _duration.inMilliseconds > 0 ? _duration : Duration(seconds: widget.durationSeconds ?? 0);
-    final timeLabel = _isPlaying
-        ? _formatDuration(_position)
-        : _formatDuration(displayDuration);
+    final accent = widget.isSent ? Colors.white : AppColors.accentPurple;
+    final mutedAccent = accent.withValues(alpha: 0.72);
+    final playButtonFill = widget.isSent
+        ? Colors.white.withValues(alpha: 0.22)
+        : AppColors.accentPurple.withValues(alpha: 0.14);
+    final speedChipFill = widget.isSent
+        ? Colors.white.withValues(alpha: 0.16)
+        : AppColors.accentPurple.withValues(alpha: 0.1);
 
-    return SizedBox(
-      width: 220,
+    final displayDuration = _duration.inMilliseconds > 0
+        ? _duration
+        : Duration(seconds: widget.durationSeconds ?? 0);
+    final totalLabel = _formatDuration(displayDuration);
+    final timeLabel = _isPlaying
+        ? '${_formatDuration(_position)} / $totalLabel'
+        : totalLabel;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 236, maxWidth: 280),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Semantics(
             label: _isPlaying ? 'Pause voice message' : 'Play voice message',
             button: true,
             child: Material(
-              color: iconColor.withValues(alpha: 0.15),
+              color: playButtonFill,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
+                splashColor: accent.withValues(alpha: 0.12),
+                highlightColor: accent.withValues(alpha: 0.08),
                 onTap: _togglePlay,
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    child: AppSvgIcon(
-                      key: ValueKey(_isPlaying),
-                      assetPath: _isPlaying ? AppIcons.pause : AppIcons.play,
-                      size: 20,
-                      color: iconColor,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: AppAnimations.feedbackShort,
+                      switchInCurve: AppAnimations.curveDefault,
+                      switchOutCurve: AppAnimations.curveDefault,
+                      transitionBuilder: (child, animation) {
+                        return ScaleTransition(
+                          scale: animation,
+                          child: child,
+                        );
+                      },
+                      child: AppSvgIcon(
+                        key: ValueKey(_isPlaying),
+                        assetPath: _isPlaying ? AppIcons.pause : AppIcons.play,
+                        size: 22,
+                        color: accent,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.spacingSM),
+          const SizedBox(width: AppSpacing.spacingMD),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 VoiceWaveformBars(
                   active: _isPlaying,
-                  color: iconColor,
-                  height: 22,
-                  barCount: 14,
+                  color: accent,
+                  height: 28,
+                  barCount: 24,
                   progress: _progress,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.spacingSM),
                 Row(
                   children: [
-                    Text(
-                      timeLabel,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: textColor.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        timeLabel,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: mutedAccent,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.15,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: _cycleSpeed,
-                      style: TextButton.styleFrom(
-                        foregroundColor: textColor,
-                        minimumSize: const Size(36, 28),
-                        padding: EdgeInsets.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text('${_speed}x'),
+                    const SizedBox(width: AppSpacing.spacingSM),
+                    _PlaybackSpeedChip(
+                      label: _speedLabel(_speed),
+                      foreground: accent,
+                      background: speedChipFill,
+                      onTap: _cycleSpeed,
                     ),
                   ],
                 ),
@@ -180,6 +218,51 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlaybackSpeedChip extends StatelessWidget {
+  final String label;
+  final Color foreground;
+  final Color background;
+  final VoidCallback onTap;
+
+  const _PlaybackSpeedChip({
+    required this.label,
+    required this.foreground,
+    required this.background,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Playback speed $label. Tap to change.',
+      button: true,
+      child: Material(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          splashColor: foreground.withValues(alpha: 0.1),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingSM + 2,
+              vertical: AppSpacing.spacingXS + 1,
+            ),
+            child: Text(
+              label,
+              style: AppTypography.labelSmall.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -260,19 +260,23 @@ class ApiError {
     return false;
   }
 
-  /// Only true for expired/invalid auth — never for premium/plan 403 responses.
+  /// Only true for expired/invalid auth — never for premium/plan 403 responses
+  /// or anonymous requests that never sent a Bearer token.
   static bool shouldForceLogout({
     int? statusCode,
     Map<String, dynamic>? body,
     String? requestPath,
+    bool hadAuthTokenOnRequest = false,
   }) {
     if (statusCode == 403) return false;
     if (isFeatureForbiddenResponse(statusCode: statusCode, body: body)) {
       return false;
     }
     if (statusCode != 401) return false;
+    if (!hadAuthTokenOnRequest) return false;
 
     final path = requestPath ?? '';
+    if (path.contains('/auth/check-token')) return false;
     if (path.contains('/auth/login') ||
         path.contains('login-password') ||
         path.contains('/auth/register')) {

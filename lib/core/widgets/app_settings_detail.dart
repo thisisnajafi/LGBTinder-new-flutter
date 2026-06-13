@@ -5,6 +5,24 @@ import 'app_grouped_list_card.dart';
 import 'app_page_header.dart';
 import 'app_page_scaffold.dart';
 
+/// Title Case for settings page headings (every word capitalized).
+String formatSettingsTitle(String title) {
+  if (title.trim().isEmpty) return title;
+  return title.split(RegExp(r'\s+')).map((segment) {
+    if (segment == '&') return segment;
+    if (segment.contains('-')) {
+      return segment.split('-').map(_titleCaseWord).join('-');
+    }
+    return _titleCaseWord(segment);
+  }).join(' ');
+}
+
+String _titleCaseWord(String word) {
+  if (word.isEmpty) return word;
+  if (word.length <= 4 && word == word.toUpperCase()) return word;
+  return word[0].toUpperCase() + word.substring(1).toLowerCase();
+}
+
 /// Shared layout tokens for settings hub detail screens.
 class AppSettingsLayout {
   AppSettingsLayout._();
@@ -44,7 +62,7 @@ class AppSettingsDetailScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppPageScaffold(
-      title: title,
+      title: formatSettingsTitle(title),
       showBackButton: true,
       action: action,
       onBack: onBack,

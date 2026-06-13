@@ -26,13 +26,7 @@ import 'core/providers/theme_mode_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'core/cache/cache_lifecycle_listener.dart';
 import 'core/widgets/startup_cache_listener.dart';
-import 'core/cache/match_realtime_sync.dart';
-import 'features/chat/providers/chat_pusher_providers.dart';
-import 'features/chat/providers/chat_typing_providers.dart';
-import 'features/chat/providers/chat_outbound_sync_provider.dart';
-import 'features/chat/providers/conversation_mute_cache_provider.dart';
-import 'features/chat/providers/chat_local_sync_provider.dart';
-import 'features/settings/providers/sound_preferences_provider.dart';
+import 'core/providers/session_services_provider.dart';
 import 'core/utils/app_logger.dart' show startupLog, authLog;
 
 // Background message handler (must be top-level function)
@@ -223,15 +217,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     startupLog('MyApp.build()');
     final router = ref.watch(appRouterProvider);
-    ref.watch(matchRealtimeSyncProvider);
-    ref.watch(chatPusherLifecycleProvider);
-    ref.watch(chatTypingSyncProvider);
-    ref.watch(incomingCallListenerProvider);
-    ref.watch(messageSoundListenerProvider);
-    ref.watch(soundPreferencesProvider);
-    ref.watch(chatOutboundSyncProvider);
-    ref.watch(conversationMuteCacheProvider);
-    ref.watch(chatLocalSyncProvider);
+    ref.watch(sessionServicesProvider);
 
     if (!_servicesWired) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -243,9 +229,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
           router.go(AppRoutes.accountBanned);
         });
         UnauthorizedHandler.setCallback(() {
-          authLog('401 Unauthorized: redirecting to login');
+          authLog('401 Unauthorized: redirecting to welcome');
           try {
-            router.go(AppRoutes.login);
+            router.go(AppRoutes.welcome);
             Future.microtask(() async {
               try {
                 await ref.read(authProvider.notifier).logout(silent: true);

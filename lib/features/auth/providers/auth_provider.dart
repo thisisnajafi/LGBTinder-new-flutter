@@ -115,6 +115,9 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
+      // Clear any prior user's chat and private cached data before starting a new session.
+      await _onLogoutCachePurge();
+
       // Update state with login response
       state = state.copyWith(
         isAuthenticated: true,

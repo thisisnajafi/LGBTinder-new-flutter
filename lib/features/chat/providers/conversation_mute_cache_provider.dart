@@ -41,4 +41,8 @@ class ConversationMuteCacheNotifier extends Notifier<Set<int>> {
   }
 
   bool isMuted(int userId) => state.contains(userId);
+
+  void clearAll() {
+    state = {};
+  }
 }

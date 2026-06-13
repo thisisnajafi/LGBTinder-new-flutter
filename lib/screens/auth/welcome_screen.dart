@@ -413,11 +413,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
                 child: Column(
                   children: [
+                    SizedBox(height: AppSpacing.spacingLG),
                     FadeTransition(
                       opacity: animated ? _mosaicFade : const AlwaysStoppedAnimation(1),
                       child: const WelcomeValueProps(),
                     ),
-                    SizedBox(height: AppSpacing.spacingMD),
+                    SizedBox(height: AppSpacing.spacingXL),
                     _buildLogo(context, animated: animated),
                     SizedBox(height: AppSpacing.spacingMD),
                     Expanded(

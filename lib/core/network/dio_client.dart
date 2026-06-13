@@ -85,6 +85,7 @@ class DioClient {
           final token = await _tokenStorage.getAuthToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
+            options.extra['had_auth_token'] = true;
           }
 
           // Log request: full URI, body (summarized)
@@ -134,10 +135,13 @@ class DioClient {
             final body = response.data is Map<String, dynamic>
                 ? response.data as Map<String, dynamic>
                 : null;
+            final hadAuthToken =
+                response.requestOptions.extra['had_auth_token'] == true;
             if (ApiError.shouldForceLogout(
               statusCode: response.statusCode,
               body: body,
               requestPath: response.requestOptions.path,
+              hadAuthTokenOnRequest: hadAuthToken,
             )) {
               clearAuthToken();
               _notifyUnauthorized();
@@ -192,10 +196,12 @@ class DioClient {
             }
 
             // Plan/feature denial mislabeled as 401 — keep session
+            final hadAuthToken = requestOptions.extra['had_auth_token'] == true;
             if (!ApiError.shouldForceLogout(
               statusCode: 401,
               body: body,
               requestPath: path,
+              hadAuthTokenOnRequest: hadAuthToken,
             )) {
               return handler.next(error);
             }
@@ -259,7 +265,9 @@ class DioClient {
 
   /// Notify app that user is unauthenticated (401). Schedules on UI thread.
   void _notifyUnauthorized() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final token = await _tokenStorage.getAuthToken();
+      if (token == null || token.isEmpty) return;
       UnauthorizedHandler.invoke();
     });
   }

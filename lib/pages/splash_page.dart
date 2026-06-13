@@ -13,6 +13,8 @@ import '../core/providers/api_providers.dart';
 import '../shared/services/token_storage_service.dart';
 import '../shared/services/onboarding_service.dart';
 import '../widgets/navbar/lgbtfinder_logo.dart';
+import '../core/providers/startup_flow_provider.dart';
+import '../features/auth/providers/auth_provider.dart';
 import '../routes/app_router.dart';
 import '../core/utils/app_logger.dart';
 
@@ -135,7 +137,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     _absoluteEscapeTimer = Timer(_absoluteMaxOnSplash, () {
       if (_redirected || !mounted) return;
       authLog('Splash: absolute timeout → welcome');
-      _goToWelcome(ref.read(tokenStorageServiceProvider));
+      unawaited(_goToWelcome(ref.read(tokenStorageServiceProvider)));
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -174,29 +176,31 @@ class _SplashPageState extends ConsumerState<SplashPage>
     super.dispose();
   }
 
-  void _goToOnboarding() {
+  Future<void> _finishStartup(Future<void> Function() navigate) async {
     if (_redirected || !mounted) return;
     _redirected = true;
     _absoluteEscapeTimer?.cancel();
-    markStartupFlowLeft();
-    startupLog('Splash: first launch → intro onboarding');
-    routeLog('go(${AppRoutes.onboarding})');
-    context.go(AppRoutes.onboarding);
+    markStartupFlowLeft(ref);
+    await navigate();
   }
 
-  void _goToWelcome(
+  Future<void> _goToOnboarding() async {
+    await _finishStartup(() async {
+      startupLog('Splash: first launch → intro onboarding');
+      routeLog('go(${AppRoutes.onboarding})');
+      await ref.read(authProvider.notifier).checkAuthStatus();
+      if (!mounted) return;
+      context.go(AppRoutes.onboarding);
+    });
+  }
+
+  Future<void> _goToWelcome(
     TokenStorageService tokenStorage, {
     bool clearTokens = true,
-  }) {
-    if (_redirected || !mounted) return;
-    _redirected = true;
-    _absoluteEscapeTimer?.cancel();
-    markStartupFlowLeft();
-    authLog('Splash: no valid session → welcome (clearTokens=$clearTokens)');
-    routeLog('go(${AppRoutes.welcome})');
-    context.go(AppRoutes.welcome);
-    if (clearTokens) {
-      Future.microtask(() async {
+  }) async {
+    await _finishStartup(() async {
+      authLog('Splash: no valid session → welcome (clearTokens=$clearTokens)');
+      if (clearTokens) {
         try {
           await tokenStorage.clearAllTokens();
         } catch (e) {
@@ -206,18 +210,73 @@ class _SplashPageState extends ConsumerState<SplashPage>
             error: e,
           );
         }
-      });
-    }
+      }
+      await ref.read(authProvider.notifier).checkAuthStatus();
+      if (!mounted) return;
+      routeLog('go(${AppRoutes.welcome})');
+      context.go(AppRoutes.welcome);
+    });
   }
 
-  void _goToHome() {
-    if (_redirected || !mounted) return;
-    _redirected = true;
-    _absoluteEscapeTimer?.cancel();
-    markStartupFlowLeft();
-    authLog('Splash: valid session → home');
-    routeLog('go(${AppRoutes.home})');
-    context.go(AppRoutes.home);
+  Future<void> _goToHome() async {
+    await _finishStartup(() async {
+      authLog('Splash: valid session → home');
+      await ref.read(authProvider.notifier).checkAuthStatus();
+      if (!mounted) return;
+      routeLog('go(${AppRoutes.home})');
+      context.go(AppRoutes.home);
+    });
+  }
+
+  Future<void> _goToEmailVerification(String email) async {
+    await _finishStartup(() async {
+      authLog('Splash: valid session → email verification');
+      await ref.read(authProvider.notifier).checkAuthStatus();
+      if (!mounted) return;
+      final target = Uri(
+        path: AppRoutes.emailVerification,
+        queryParameters: {
+          'email': email,
+          'isNewUser': 'false',
+        },
+      ).toString();
+      routeLog('go($target)');
+      context.go(target);
+    });
+  }
+
+  Future<void> _goToProfileWizard({String? firstName}) async {
+    await _finishStartup(() async {
+      authLog('Splash: valid session → profile wizard');
+      await ref.read(authProvider.notifier).checkAuthStatus();
+      if (!mounted) return;
+      final target = firstName != null && firstName.isNotEmpty
+          ? Uri(
+              path: AppRoutes.profileWizard,
+              queryParameters: {'firstName': firstName},
+            ).toString()
+          : AppRoutes.profileWizard;
+      routeLog('go($target)');
+      context.go(target);
+    });
+  }
+
+  Future<void> _goToAuthenticatedApp(TokenStorageService tokenStorage) async {
+    final session = await tokenStorage.getUserSession();
+
+    if (session?.userState == 'email_verification_required') {
+      await _goToEmailVerification(session!.user.email);
+      return;
+    }
+
+    if (session != null &&
+        (!session.profileCompleted ||
+            session.userState == 'profile_completion_required')) {
+      await _goToProfileWizard(firstName: session.user.firstName);
+      return;
+    }
+
+    await _goToHome();
   }
 
   Future<void> _checkAuthAndNavigate() async {
@@ -233,7 +292,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       );
       if (!mounted || _redirected) return;
       if (!hasSeenIntro) {
-        _goToOnboarding();
+        await _goToOnboarding();
         return;
       }
 
@@ -248,8 +307,15 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
       if (!mounted || _redirected) return;
       if (!hasToken) {
+        final profileToken = await tokenStorage.getProfileCompletionToken();
+        if (profileToken != null && profileToken.isNotEmpty) {
+          authLog('Splash: profile completion token → profile wizard');
+          await _goToProfileWizard();
+          return;
+        }
+
         apiLog('Splash: no token, skipping GET ${ApiEndpoints.checkToken}');
-        _goToWelcome(tokenStorage);
+        await _goToWelcome(tokenStorage);
         return;
       }
 
@@ -270,38 +336,39 @@ class _SplashPageState extends ConsumerState<SplashPage>
         final code = response.statusCode ?? 0;
         authLog('Splash: check-token status=$code');
         if (code >= 200 && code < 300) {
-          _goToHome();
+          await _goToAuthenticatedApp(tokenStorage);
           return;
         }
         if (code == 401) {
-          _goToWelcome(tokenStorage);
+          authLog('Splash: check-token 401 → welcome');
+          await _goToWelcome(tokenStorage);
           return;
         }
         authLog('Splash: check-token status=$code with token → home');
-        _goToHome();
+        await _goToAuthenticatedApp(tokenStorage);
       } on DioException catch (e) {
         final status = e.response?.statusCode;
         if (!mounted || _redirected) return;
         if (status == 401) {
           authLog('Splash: check-token 401 → welcome');
-          _goToWelcome(tokenStorage);
+          await _goToWelcome(tokenStorage);
           return;
         }
         authLog('Splash: check-token error status=$status with token → home');
-        _goToHome();
+        await _goToAuthenticatedApp(tokenStorage);
       } on TimeoutException catch (_) {
         authLog('Splash: check-token timeout with token → home');
         if (!mounted || _redirected) return;
-        _goToHome();
+        await _goToAuthenticatedApp(tokenStorage);
       } catch (e) {
         authLog('Splash: check-token exception $e with token → home');
         if (!mounted || _redirected) return;
-        _goToHome();
+        await _goToAuthenticatedApp(tokenStorage);
       }
     } catch (_) {
       startupLog('SplashPage: bootstrap failed');
       if (mounted && !_redirected) {
-        _goToWelcome(ref.read(tokenStorageServiceProvider));
+        await _goToWelcome(ref.read(tokenStorageServiceProvider));
       }
     }
   }

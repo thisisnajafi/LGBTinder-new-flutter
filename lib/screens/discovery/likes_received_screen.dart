@@ -179,7 +179,10 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProfileDetailScreen(userId: userId),
+        builder: (context) => ProfileDetailScreen(
+          userId: userId,
+          showInteractionActions: true,
+        ),
       ),
     );
   }

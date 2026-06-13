@@ -26,6 +26,7 @@ import '../../payments/data/services/plan_limits_service.dart';
 import '../data/models/cached_discover_item.dart';
 import '../data/models/discovery_profile.dart';
 import '../data/services/discovery_service.dart';
+import '../utils/discovery_image_prefetch.dart';
 import 'discovery_providers.dart';
 
 /// State for the discover feed cache. UI renders only from [stack].
@@ -100,6 +101,11 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     Future.microtask(loadFromCache);
   }
 
+  /// Clears in-memory discover stack (logout / account switch).
+  void resetSession() {
+    state = const DiscoverCacheState();
+  }
+
   /// Load feed from cache only. No network. UI can render immediately.
   Future<void> loadFromCache() async {
     try {
@@ -130,6 +136,9 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
             items: list,
             initialLoadComplete: state.initialLoadComplete,
             nextPage: state.nextPage,
+          );
+          unawaited(
+            DiscoveryImagePrefetch.prefetchProfiles(state.stack),
           );
         }
       }
@@ -164,6 +173,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
       nextPage: nextPage ?? state.nextPage,
     );
     _persist(merged);
+    unawaited(DiscoveryImagePrefetch.prefetchProfiles(state.stack));
   }
 
   Future<void> _persist(List<CachedDiscoverItem> list) async {

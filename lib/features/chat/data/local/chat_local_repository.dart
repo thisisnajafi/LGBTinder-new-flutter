@@ -104,6 +104,30 @@ class ChatLocalRepository {
     await _db.delete(_db.outboxEntries).go();
   }
 
+  /// Wipes all local chat data for the current session (logout / account switch).
+  Future<void> clearAllSessionData() async {
+    await _db.transaction(() async {
+      await _db.delete(_db.localConversations).go();
+      await _db.delete(_db.localMessages).go();
+      await _db.delete(_db.outboxEntries).go();
+      await _db.delete(_db.mediaCacheMeta).go();
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final historyKeys = prefs
+        .getKeys()
+        .where((key) => key.startsWith('chat_local_history_meta_'));
+    for (final key in historyKeys) {
+      await prefs.remove(key);
+    }
+    await prefs.remove(chatOutboundLegacyStorageKey);
+
+    AppLogger.info(
+      'Chat local session data cleared',
+      tag: 'ChatLocalRepository',
+    );
+  }
+
   /// One-time migration from SharedPreferences queue (legacy).
   Future<void> migrateLegacyOutboxIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/providers/api_providers.dart';
+import '../../../shared/services/token_storage_service.dart';
 import '../../chat/providers/chat_pusher_providers.dart';
 import '../../chat/providers/conversation_mute_cache_provider.dart';
 import '../../../shared/services/pusher_websocket_service.dart';
@@ -177,6 +178,13 @@ class SoundPreferencesNotifier extends AsyncNotifier<SoundPreferences> {
   Future<SoundPreferences> build() async {
     final prefs = ref.watch(sharedPreferencesProvider);
     await SoundService.instance.initialize(prefs: prefs);
+
+    final tokenStorage = ref.watch(tokenStorageServiceProvider);
+    final isAuthenticated = await tokenStorage.isAuthenticated();
+    if (!isAuthenticated) {
+      return SoundService.instance.preferences;
+    }
+
     final service = ref.watch(soundPreferencesServiceProvider);
 
     try {
@@ -198,6 +206,12 @@ class SoundPreferencesNotifier extends AsyncNotifier<SoundPreferences> {
   }
 
   Future<void> refresh() async {
+    final tokenStorage = ref.read(tokenStorageServiceProvider);
+    if (!await tokenStorage.isAuthenticated()) {
+      state = AsyncData(SoundService.instance.preferences);
+      return;
+    }
+
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final service = ref.read(soundPreferencesServiceProvider);
