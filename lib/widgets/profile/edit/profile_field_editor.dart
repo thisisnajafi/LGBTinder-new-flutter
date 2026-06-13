@@ -18,7 +18,9 @@ class ProfileFieldEditor extends ConsumerStatefulWidget {
   final int? maxLines;
   final int? maxLength;
   final Function(String)? onSave;
+  final ValueChanged<String>? onChanged;
   final VoidCallback? onCancel;
+  final bool showSaveButton;
 
   const ProfileFieldEditor({
     Key? key,
@@ -29,7 +31,9 @@ class ProfileFieldEditor extends ConsumerStatefulWidget {
     this.maxLines = 1,
     this.maxLength,
     this.onSave,
+    this.onChanged,
     this.onCancel,
+    this.showSaveButton = true,
   }) : super(key: key);
 
   @override
@@ -76,6 +80,7 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
             keyboardType: widget.keyboardType,
             maxLines: widget.maxLines,
             maxLength: widget.maxLength,
+            onChanged: widget.onChanged,
             style: AppTypography.body.copyWith(color: textColor),
             decoration: InputDecoration(
               hintText: widget.hintText,
@@ -99,29 +104,31 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
               contentPadding: EdgeInsets.all(AppSpacing.spacingMD),
             ),
           ),
-          SizedBox(height: AppSpacing.spacingLG),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (widget.onCancel != null)
-                TextButton(
-                  onPressed: widget.onCancel,
-                  child: Text(
-                    'Cancel',
-                    style: AppTypography.button.copyWith(
-                      color: secondaryTextColor,
+          if (widget.showSaveButton) ...[
+            SizedBox(height: AppSpacing.spacingLG),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.onCancel != null)
+                  TextButton(
+                    onPressed: widget.onCancel,
+                    child: Text(
+                      'Cancel',
+                      style: AppTypography.button.copyWith(
+                        color: secondaryTextColor,
+                      ),
                     ),
                   ),
+                SizedBox(width: AppSpacing.spacingMD),
+                GradientButton(
+                  text: 'Save',
+                  onPressed: () => widget.onSave?.call(_controller.text),
+                  isFullWidth: false,
+                  height: 40,
                 ),
-              SizedBox(width: AppSpacing.spacingMD),
-              GradientButton(
-                text: 'Save',
-                onPressed: () => widget.onSave?.call(_controller.text),
-                isFullWidth: false,
-                height: 40,
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

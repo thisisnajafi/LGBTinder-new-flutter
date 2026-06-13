@@ -9,11 +9,13 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
 import '../../features/chat/providers/chat_providers.dart';
+import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/profile/data/models/user_profile.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../../features/safety/presentation/screens/report_user_screen.dart';
 import '../../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../../routes/app_router.dart';
+import '../../shared/models/api_error.dart';
 
 /// Slide-down peer info panel shown below the chat header.
 class ChatUserInfoPanel extends ConsumerStatefulWidget {
@@ -87,6 +89,7 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
           : await chatService.muteConversation(widget.userId);
 
       if (!mounted) return;
+      ref.read(conversationMuteCacheProvider.notifier).setMuted(widget.userId, muted);
       setState(() {
         _isMuted = muted;
         _isMuting = false;
@@ -96,6 +99,12 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
         SnackBar(
           content: Text(_isMuted ? 'Conversation muted' : 'Conversation unmuted'),
         ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() => _isMuting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
       );
     } catch (e) {
       if (!mounted) return;

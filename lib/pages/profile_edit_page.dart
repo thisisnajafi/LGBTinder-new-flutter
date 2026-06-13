@@ -7,7 +7,6 @@ import '../core/theme/app_colors.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/theme/spacing_constants.dart';
 import '../widgets/profile/edit/profile_image_editor.dart';
-import '../widgets/profile/edit/profile_field_editor.dart';
 import '../core/widgets/app_grouped_list_card.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/profile/avatar_upload.dart';
@@ -28,6 +27,7 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _imagePicker = ImagePicker();
+  final TextEditingController _bioController = TextEditingController();
   
   bool _isLoading = false;
   bool _isSaving = false;
@@ -45,6 +45,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   bool _drink = false;
   bool _gym = false;
   
+  @override
+  void dispose() {
+    _bioController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,7 +70,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         setState(() {
           _profile = profile;
           _name = '${profile.firstName} ${profile.lastName}'.trim();
-          _bio = profile.profileBio ?? '';
+          _bioController.text = profile.profileBio ?? '';
+          _bio = _bioController.text;
           UserImage? primaryImage;
           if (profile.images != null && profile.images!.isNotEmpty) {
             try {
@@ -277,8 +284,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     try {
       final profileService = ref.read(profileServiceProvider);
       
+      final bio = _bioController.text.trim();
       final request = UpdateProfileRequest(
-        profileBio: _bio.isNotEmpty ? _bio : null,
+        profileBio: bio.isNotEmpty ? bio : null,
         height: _height,
         weight: _weight,
         smoke: _smoke,
@@ -452,16 +460,16 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               padding: AppSettingsLayout.sectionPadding,
               children: [
                 AppSettingsInset(
-                  child: ProfileFieldEditor(
-                    label: 'Bio',
-                    initialValue: _bio,
+                  child: TextFormField(
+                    controller: _bioController,
+                    decoration: const InputDecoration(
+                      labelText: 'Bio',
+                      hintText: 'Tell others about yourself',
+                      alignLabelWithHint: true,
+                    ),
                     maxLines: 5,
                     maxLength: 500,
-                    onSave: (value) {
-                      setState(() {
-                        _bio = value;
-                      });
-                    },
+                    onChanged: (value) => _bio = value,
                   ),
                 ),
               ],

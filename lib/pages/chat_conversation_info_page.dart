@@ -14,11 +14,13 @@ import '../core/utils/app_icons.dart';
 import '../features/chat/data/models/message.dart';
 import '../features/chat/data/services/chat_service.dart';
 import '../features/chat/providers/chat_providers.dart';
+import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../features/safety/presentation/screens/report_user_screen.dart';
 import '../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../routes/app_router.dart';
+import '../shared/models/api_error.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 
 /// Full-screen chat peer details: profile summary, shared media, view profile.
@@ -247,6 +249,7 @@ class _ChatConversationInfoPageState
           : await chatService.muteConversation(widget.userId);
 
       if (!mounted) return;
+      ref.read(conversationMuteCacheProvider.notifier).setMuted(widget.userId, muted);
       setState(() {
         _isMuted = muted;
         _isMuting = false;
@@ -255,6 +258,12 @@ class _ChatConversationInfoPageState
         SnackBar(
           content: Text(_isMuted ? 'Conversation muted' : 'Conversation unmuted'),
         ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() => _isMuting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
       );
     } catch (e) {
       if (!mounted) return;

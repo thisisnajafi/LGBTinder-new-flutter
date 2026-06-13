@@ -427,11 +427,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       initialValue: _bio,
                       maxLines: 5,
                       maxLength: 500,
-                      onSave: (value) {
-                        setState(() {
-                          _bio = value;
-                        });
-                      },
+                      showSaveButton: false,
+                      onChanged: (value) => _bio = value,
                     ),
                   ],
                 ),
