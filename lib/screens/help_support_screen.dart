@@ -11,7 +11,7 @@ import '../core/providers/api_providers.dart';
 import '../shared/services/landing_service.dart';
 import '../core/widgets/app_grouped_list_card.dart';
 import '../core/utils/app_icons.dart';
-import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../routes/app_router.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
@@ -581,38 +581,30 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLG)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: EdgeInsets.all(AppSpacing.spacingLG),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (detail!.category != null && detail.category!.isNotEmpty)
-                Text(detail.category!, style: AppTypography.labelMedium.copyWith(color: AppColors.accentPurple)),
-              if (detail.title != null && detail.title!.isNotEmpty) ...[
-                if (detail.category != null) SizedBox(height: AppSpacing.spacingXS),
-                Text(detail.title!, style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AppBottomSheetShell(
+        showCancel: true,
+        body: AppBottomSheetListBody(
+          title: detail!.title?.isNotEmpty == true ? detail.title! : 'Blog',
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.spacingLG),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (detail.category != null && detail.category!.isNotEmpty)
+                  Text(detail.category!, style: AppTypography.labelMedium.copyWith(color: AppColors.accentPurple)),
+                if (detail.date != null && detail.date!.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: AppSpacing.spacingXS),
+                    child: Text(detail.date!, style: AppTypography.bodySmall.copyWith(color: secondaryTextColor)),
+                  ),
+                SizedBox(height: AppSpacing.spacingMD),
+                if (detail.body != null && detail.body!.isNotEmpty)
+                  Text(detail.body!, style: AppTypography.body.copyWith(color: textColor))
+                else if (detail.excerpt != null && detail.excerpt!.isNotEmpty)
+                  Text(detail.excerpt!, style: AppTypography.body.copyWith(color: textColor)),
               ],
-              if (detail.date != null && detail.date!.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: AppSpacing.spacingXS),
-                  child: Text(detail.date!, style: AppTypography.bodySmall.copyWith(color: secondaryTextColor)),
-                ),
-              SizedBox(height: AppSpacing.spacingMD),
-              if (detail.body != null && detail.body!.isNotEmpty)
-                Text(detail.body!, style: AppTypography.body.copyWith(color: textColor))
-              else if (detail.excerpt != null && detail.excerpt!.isNotEmpty)
-                Text(detail.excerpt!, style: AppTypography.body.copyWith(color: textColor)),
-            ],
+            ),
           ),
         ),
       ),
@@ -636,22 +628,20 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLG)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.spacingLG),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Contact us',
-                style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
-              ),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AppBottomSheetShell(
+        showCancel: true,
+        body: AppBottomSheetCard(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.spacingLG),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Contact us',
+                  style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
+                ),
               SizedBox(height: AppSpacing.spacingMD),
               TextField(
                 controller: nameController,
@@ -741,6 +731,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

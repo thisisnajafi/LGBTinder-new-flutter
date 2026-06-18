@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/animation_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/border_radius_constants.dart';
+import '../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
 import '../data/models/profile_completion.dart';
@@ -62,14 +62,11 @@ class _ProfileCompletenessIndicatorState
 
   void _showTips(BuildContext context) {
     final missing = widget.completion?.missingFields ?? [];
-    showModalBottomSheet<void>(
+    AppActionBottomSheet.show<void>(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLG)),
-      ),
-      builder: (context) {
-        final textTheme = Theme.of(context).textTheme;
-        return Padding(
+      showCancel: true,
+      body: AppBottomSheetCard(
+        child: Padding(
           padding: EdgeInsets.all(AppSpacing.spacingXL),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -77,13 +74,16 @@ class _ProfileCompletenessIndicatorState
             children: [
               Text(
                 'Profile strength',
-                style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               SizedBox(height: AppSpacing.spacingMD),
               if (missing.isEmpty)
                 Text(
                   'Your profile looks great!',
-                  style: textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium,
                 )
               else
                 ...missing.map(
@@ -100,7 +100,7 @@ class _ProfileCompletenessIndicatorState
                         Expanded(
                           child: Text(
                             'Add ${field.replaceAll('_', ' ')}',
-                            style: textTheme.bodyMedium,
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
                       ],
@@ -109,8 +109,8 @@ class _ProfileCompletenessIndicatorState
                 ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

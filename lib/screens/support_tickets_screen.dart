@@ -8,6 +8,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
 import '../core/widgets/app_page_scaffold.dart';
 import '../core/widgets/app_page_header.dart';
+import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../shared/services/error_handler_service.dart';
 import '../shared/models/api_error.dart';
@@ -118,22 +119,20 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLG)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.spacingLG),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'New support ticket',
-                style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
-              ),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AppBottomSheetShell(
+        showCancel: true,
+        body: AppBottomSheetCard(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.spacingLG),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'New support ticket',
+                  style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
+                ),
               SizedBox(height: AppSpacing.spacingMD),
               TextField(
                 controller: subjectController,
@@ -191,15 +190,17 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.radiusLG)),
-      ),
-      builder: (ctx) => _TicketDetailSheet(
-        ticket: detail,
-        textColor: textColor,
-        secondaryTextColor: secondaryTextColor,
-        borderColor: borderColor,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AppBottomSheetShell(
+        showCancel: true,
+        body: AppBottomSheetCard(
+          child: _TicketDetailSheet(
+            ticket: detail,
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+            borderColor: borderColor,
+          ),
+        ),
       ),
     );
   }

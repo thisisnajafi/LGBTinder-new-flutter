@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -26,7 +26,10 @@ class ShareProfileSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ShareProfileSheet(onProfileSelected: onProfileSelected),
+      builder: (context) => AppBottomSheetShell(
+        showCancel: true,
+        body: ShareProfileSheet(onProfileSelected: onProfileSelected),
+      ),
     );
   }
 
@@ -50,49 +53,38 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.55,
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.radiusXL)),
+    return AppBottomSheetListBody(
+      title: 'Share a profile',
+      maxHeightFactor: 0.55,
+      header: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.spacingMD,
+          0,
+          AppSpacing.spacingMD,
+          AppSpacing.spacingMD,
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search matches...',
+            prefixIcon: AppSvgIcon(
+              assetPath: AppIcons.search,
+              size: 20,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(
+                AppBottomSheetStyle.cornerRadius,
+              ),
+            ),
+          ),
+          onChanged: (value) =>
+              setState(() => _query = value.trim().toLowerCase()),
+        ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.spacingLG),
-              child: Text(
-                'Share a profile',
-                style: AppTypography.h4.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search matches...',
-                  prefixIcon: AppSvgIcon(
-                    assetPath: AppIcons.search,
-                    size: 20,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  ),
-                ),
-                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spacingMD),
-            Expanded(
-              child: FutureBuilder<List<Chat>>(
+      child: FutureBuilder<List<Chat>>(
                 future: ref.read(chatServiceProvider).getChatUsers(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -130,9 +122,12 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingMD,
+                    ),
                     itemCount: chats.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.spacingSM),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.spacingSM),
                     itemBuilder: (context, index) {
                       final chat = chats[index];
                       return Semantics(
@@ -151,11 +146,16 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
                             color: AppColors.primaryLight,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                            borderRadius: BorderRadius.circular(
+                              AppBottomSheetStyle.cornerRadius,
+                            ),
                           ),
                           onTap: () {
                             Navigator.of(context).pop();
-                            widget.onProfileSelected(chat.userId, chat.firstName);
+                            widget.onProfileSelected(
+                              chat.userId,
+                              chat.firstName,
+                            );
                           },
                         ),
                       );
@@ -163,10 +163,6 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
                   );
                 },
               ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

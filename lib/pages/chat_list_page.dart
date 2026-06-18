@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../widgets/common/selection_bottom_sheet.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/chat/chat_matches_row.dart';
@@ -263,61 +264,21 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         .toList();
   }
 
-  void _openFilterSheet() {
-    showModalBottomSheet<void>(
+  Future<void> _openFilterSheet() async {
+    final selected = await SelectionBottomSheet.showSingleSelect<_ChatFilter>(
       context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('All chats'),
-                trailing: _activeFilter == _ChatFilter.all
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.check,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () {
-                  setState(() => _activeFilter = _ChatFilter.all);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Unread only'),
-                trailing: _activeFilter == _ChatFilter.unread
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.check,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () {
-                  setState(() => _activeFilter = _ChatFilter.unread);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('Online only'),
-                trailing: _activeFilter == _ChatFilter.online
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.check,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () {
-                  setState(() => _activeFilter = _ChatFilter.online);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
+      title: 'Filter chats',
+      items: _ChatFilter.values,
+      getTitle: (filter) => switch (filter) {
+        _ChatFilter.all => 'All chats',
+        _ChatFilter.unread => 'Unread only',
+        _ChatFilter.online => 'Online only',
       },
+      selectedItem: _activeFilter,
     );
+    if (selected != null) {
+      setState(() => _activeFilter = selected);
+    }
   }
 
   void _handleChatTap(Map<String, dynamic> chat) {

@@ -5,7 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/utils/screenshot_protection.dart';import '../../../../features/chat/providers/chat_providers.dart';
+import '../../../../core/utils/screenshot_protection.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
+import '../../../../features/chat/providers/chat_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_view/photo_view.dart';
 
@@ -227,9 +229,22 @@ class SelfDestructDurationSheet extends StatelessWidget {
     BuildContext context, {
     required void Function(int seconds) onSelected,
   }) {
-    return showModalBottomSheet<void>(
+    return AppActionBottomSheet.show<void>(
       context: context,
-      builder: (context) => SelfDestructDurationSheet(onSelected: onSelected),
+      title: 'Self-destruct photo',
+      actions: _options
+          .map(
+            (seconds) => AppActionSheetItem(
+              iconPath: AppIcons.timer,
+              label: '$seconds seconds',
+              iconColor: AppColors.accentPurple,
+              onTap: () {
+                Navigator.pop(context);
+                onSelected(seconds);
+              },
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -237,61 +252,21 @@ class SelfDestructDurationSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.spacingLG),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AppSvgIcon(
-                  assetPath: AppIcons.timer,
-                  size: 22,
-                  color: AppColors.primaryLight,
-                ),
-                const SizedBox(width: AppSpacing.spacingSM),
-                Text(
-                  'Self-destruct photo',
-                  style: AppTypography.h3.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-              ],
+    return AppBottomSheetShell(
+      title: 'Self-destruct photo',
+      actions: _options
+          .map(
+            (seconds) => AppActionSheetItem(
+              iconPath: AppIcons.timer,
+              label: '$seconds seconds',
+              iconColor: AppColors.accentPurple,
+              onTap: () {
+                Navigator.pop(context);
+                onSelected(seconds);
+              },
             ),
-            const SizedBox(height: AppSpacing.spacingSM),
-            Text(
-              'Choose how long the photo stays visible after opening.',
-              style: AppTypography.bodySmall.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spacingMD),
-            ..._options.map(
-              (seconds) => ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.timer,
-                  size: 20,
-                  color: AppColors.accentPurple,
-                ),
-                title: Text('$seconds seconds'),
-                onTap: () {
-                  Navigator.pop(context);
-                  onSelected(seconds);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+          )
+          .toList(),
     );
   }
 }

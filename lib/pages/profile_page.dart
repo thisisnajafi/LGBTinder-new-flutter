@@ -45,6 +45,8 @@ import '../shared/services/error_handler_service.dart';
 import '../pages/profile_edit_page.dart';
 import '../routes/app_router.dart';
 import '../core/utils/app_icons.dart';
+import '../features/profile/presentation/widgets/other_user_profile/profile_more_options_sheet.dart';
+import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../core/utils/app_logger.dart';
 import '../features/safety/data/models/favorite.dart';
 import '../features/safety/presentation/screens/report_user_screen.dart';
@@ -304,80 +306,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   void _showMoreOptions(BuildContext context) {
     if (widget.userId == null) return;
-    
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.block,
-                  color: AppColors.accentRed,
-                  size: 24,
-                ),
-                title: const Text('Block User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showBlockConfirmation(context);
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.flag,
-                  color: AppColors.warningYellow,
-                  size: 24,
-                ),
-                title: const Text('Report User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showReportDialog(context);
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.favoriteBorder,
-                  color: AppColors.accentPurple,
-                  size: 24,
-                ),
-                title: const Text('Add to Favorites'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _addToFavorites();
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.bellSlash,
-                  color: AppColors.textSecondaryLight,
-                  size: 24,
-                ),
-                title: const Text('Mute User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _muteUser();
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.close,
-                  size: 24,
-                ),
-                title: const Text('Cancel'),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
-      ),
+
+    ProfileMoreOptionsSheet.show(
+      context,
+      userName: _getFullName(),
+      onBlock: () => _showBlockConfirmation(context),
+      onReport: () => _showReportDialog(context),
+      onAddFavorite: _addToFavorites,
+      onMute: _muteUser,
     );
   }
 
@@ -899,79 +835,35 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _openImagePicker() async {
-    final ImagePicker picker = ImagePicker();
-
-    // Show bottom sheet with options
-    await showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.camera, size: 24),
-                title: const Text('Take Photo'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  try {
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.camera,
-                      maxWidth: 1920,
-                      maxHeight: 1080,
-                      imageQuality: 85,
-                    );
-                    if (image != null) {
-                      await _handlePickedImage(File(image.path));
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error taking photo: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
+    await ProfilePhotoSourceSheet.show(
+      context,
+      title: 'Add photo',
+      onSourceSelected: (source) async {
+        final picker = ImagePicker();
+        try {
+          final image = await picker.pickImage(
+            source: source,
+            maxWidth: 1920,
+            maxHeight: 1080,
+            imageQuality: 85,
+          );
+          if (image != null) {
+            await _handlePickedImage(File(image.path));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  source == ImageSource.camera
+                      ? 'Error taking photo: $e'
+                      : 'Error selecting image: $e',
+                ),
+                backgroundColor: Colors.red,
               ),
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 24),
-                title: const Text('Choose from Gallery'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  try {
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.gallery,
-                      maxWidth: 1920,
-                      maxHeight: 1080,
-                      imageQuality: 85,
-                    );
-                    if (image != null) {
-                      await _handlePickedImage(File(image.path));
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error selecting image: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.close, size: 24),
-                title: const Text('Cancel'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
+            );
+          }
+        }
       },
     );
   }

@@ -8,6 +8,7 @@ import 'package:record/record.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/chat_providers.dart';
@@ -32,11 +33,10 @@ class VoiceRecorderOverlay extends ConsumerStatefulWidget {
     required int receiverId,
     int? conversationId,
   }) {
-    return showModalBottomSheet<void>(
+    return AppActionBottomSheet.show<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => VoiceRecorderOverlay(
+      showCancel: false,
+      body: VoiceRecorderOverlay(
         receiverId: receiverId,
         conversationId: conversationId,
         onClose: () => Navigator.pop(context),
@@ -165,14 +165,9 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        top: false,
+    return AppBottomSheetCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.spacingLG),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

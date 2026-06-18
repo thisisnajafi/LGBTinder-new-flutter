@@ -9,6 +9,7 @@ class ProfileMoreOptionsSheet extends StatelessWidget {
   final VoidCallback onBlock;
   final VoidCallback onReport;
   final VoidCallback onAddFavorite;
+  final VoidCallback? onMute;
   final String? userName;
 
   const ProfileMoreOptionsSheet({
@@ -16,6 +17,7 @@ class ProfileMoreOptionsSheet extends StatelessWidget {
     required this.onBlock,
     required this.onReport,
     required this.onAddFavorite,
+    this.onMute,
     this.userName,
   });
 
@@ -24,12 +26,19 @@ class ProfileMoreOptionsSheet extends StatelessWidget {
     required VoidCallback onBlock,
     required VoidCallback onReport,
     required VoidCallback onAddFavorite,
+    VoidCallback? onMute,
     String? userName,
   }) {
     return AppActionBottomSheet.show(
       context: context,
       title: userName?.trim().isNotEmpty == true ? userName!.trim() : null,
-      actions: _items(context, onBlock: onBlock, onReport: onReport, onAddFavorite: onAddFavorite),
+      actions: _items(
+        context,
+        onBlock: onBlock,
+        onReport: onReport,
+        onAddFavorite: onAddFavorite,
+        onMute: onMute,
+      ),
     );
   }
 
@@ -38,6 +47,7 @@ class ProfileMoreOptionsSheet extends StatelessWidget {
     required VoidCallback onBlock,
     required VoidCallback onReport,
     required VoidCallback onAddFavorite,
+    VoidCallback? onMute,
   }) {
     final theme = Theme.of(context);
     return [
@@ -68,6 +78,16 @@ class ProfileMoreOptionsSheet extends StatelessWidget {
           onAddFavorite();
         },
       ),
+      if (onMute != null)
+        AppActionSheetItem(
+          iconPath: AppIcons.bellSlash,
+          label: 'Mute user',
+          iconColor: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          onTap: () {
+            Navigator.pop(context);
+            onMute!();
+          },
+        ),
     ];
   }
 
@@ -80,6 +100,7 @@ class ProfileMoreOptionsSheet extends StatelessWidget {
         onBlock: onBlock,
         onReport: onReport,
         onAddFavorite: onAddFavorite,
+        onMute: onMute,
       ),
     );
   }

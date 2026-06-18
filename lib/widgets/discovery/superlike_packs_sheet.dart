@@ -7,7 +7,7 @@ import '../../core/cache/session_cache_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../core/services/startup_cache_service.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/border_radius_constants.dart';
+import '../../core/widgets/app_action_bottom_sheet.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
@@ -29,9 +29,12 @@ Future<void> showSuperlikePacksSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => SuperlikePacksSheet(
-      headerMessage: headerMessage,
-      fetchCountInBackground: fetchCountInBackground,
+    builder: (sheetContext) => AppBottomSheetShell(
+      showCancel: true,
+      body: SuperlikePacksSheet(
+        headerMessage: headerMessage,
+        fetchCountInBackground: fetchCountInBackground,
+      ),
     ),
   );
 }
@@ -168,74 +171,43 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
     final isLoadingPacks =
         packs.isEmpty && remotePacksAsync.isLoading && !_isLoadingCount;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
+    return AppBottomSheetCard(
+      child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxHeight: MediaQuery.of(context).size.height * 0.72,
         ),
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.radiusXL),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingMD,
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingSM,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: borderColor,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusRound),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.spacingLG,
+                AppSpacing.spacingMD,
+                AppSpacing.spacingLG,
+                AppSpacing.spacingSM,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      AppSvgIcon(
+                        assetPath: AppIcons.star,
+                        size: 24,
+                        color: theme.colorScheme.primary,
+                      ),
+                      SizedBox(width: AppSpacing.spacingSM),
+                      Expanded(
+                        child: Text(
+                          'Get Superlikes',
+                          style: AppTypography.titleLarge.copyWith(
+                            color: textPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Row(
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.star,
-                          size: 24,
-                          color: theme.colorScheme.primary,
-                        ),
-                        SizedBox(width: AppSpacing.spacingSM),
-                        Expanded(
-                          child: Text(
-                            'Get Superlikes',
-                            style: AppTypography.titleLarge.copyWith(
-                              color: textPrimary,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: AppSvgIcon(
-                            assetPath: AppIcons.close,
-                            size: 20,
-                            color: textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
+                  ),
                     if (widget.headerMessage != null) ...[
                       SizedBox(height: AppSpacing.spacingSM),
                       Container(
@@ -392,7 +364,6 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
             ],
           ),
         ),
-      ),
     );
   }
 }

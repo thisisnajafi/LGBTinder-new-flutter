@@ -6,6 +6,7 @@ import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -30,7 +31,10 @@ class StickerPickerSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StickerPickerSheet(onStickerSelected: onStickerSelected),
+      builder: (context) => AppBottomSheetShell(
+        showCancel: false,
+        body: StickerPickerSheet(onStickerSelected: onStickerSelected),
+      ),
     );
   }
 
@@ -111,16 +115,9 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
 
     return SlideTransition(
       position: _slideAnimation,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.45,
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.radiusXL),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
+      child: AppBottomSheetCard(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.45,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

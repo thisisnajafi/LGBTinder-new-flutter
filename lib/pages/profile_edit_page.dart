@@ -11,6 +11,7 @@ import '../widgets/profile/edit/profile_image_editor.dart';
 import '../core/widgets/app_grouped_list_card.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/profile/avatar_upload.dart';
+import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
@@ -449,31 +450,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   }
 
   void _showImageSourceDialog({required bool setAsPrimary}) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery, setAsPrimary: setAsPrimary);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Take a Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera, setAsPrimary: setAsPrimary);
-              },
-            ),
-          ],
-        ),
-      ),
+    ProfilePhotoSourceSheet.show(
+      context,
+      title: setAsPrimary ? 'Profile photo' : 'Add photo',
+      onSourceSelected: (source) =>
+          _pickImage(source, setAsPrimary: setAsPrimary),
     );
   }
 

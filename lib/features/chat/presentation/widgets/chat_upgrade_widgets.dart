@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:photo_view/photo_view.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../routes/app_router.dart';
 
 /// Full-screen chat image viewer with pinch-to-zoom.
@@ -52,10 +54,10 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
   const ChatUpgradeBottomSheet({super.key});
 
   static Future<void> show(BuildContext context) {
-    return showModalBottomSheet<void>(
+    return AppActionBottomSheet.show<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const ChatUpgradeBottomSheet(),
+      showCancel: false,
+      body: const ChatUpgradeBottomSheet(),
     );
   }
 
@@ -64,14 +66,9 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        top: false,
+    return AppBottomSheetCard(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.spacingXL),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -80,13 +77,13 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
               size: 48,
               color: AppColors.primaryLight,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.spacingMD),
             Text(
               'Daily message limit reached',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.spacingSM),
             Text(
               'Upgrade to silder or golden to send unlimited messages in this chat.',
               textAlign: TextAlign.center,
@@ -96,22 +93,28 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
                     : AppColors.textSecondaryLight,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.spacingLG),
             Semantics(
               label: 'View subscription plans',
               button: true,
-              child: FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.push(AppRoutes.subscriptionPlans);
-                },
-                child: const Text('View plans'),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    context.push(AppRoutes.subscriptionPlans);
+                  },
+                  child: const Text('View plans'),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Not now'),
+            const SizedBox(height: AppSpacing.spacingSM),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Not now'),
+              ),
             ),
           ],
         ),

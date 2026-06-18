@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
-import '../utils/app_icons.dart';
+import '../utils/app_icons.dart' show AppIcons, AppSvgIcon;
 
 /// Shared visual tokens — capsule and icon boxes use the same corner radius.
 abstract final class AppBottomSheetStyle {

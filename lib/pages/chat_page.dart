@@ -9,6 +9,7 @@ import 'package:record/record.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/app_date_time.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/chat/chat_header.dart';
 import 'chat_conversation_info_page.dart';
 import '../widgets/chat/message_input.dart';
@@ -884,43 +885,32 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         );
         return;
       }
-      showModalBottomSheet<void>(
+      AppActionBottomSheet.show<void>(
         context: context,
-        builder: (context) {
-          return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const ListTile(
-                  title: Text('Pinned messages'),
+        showCancel: true,
+        body: AppBottomSheetListBody(
+          title: 'Pinned messages',
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: pinned.length,
+            separatorBuilder: (_, __) => const AppBottomSheetDivider(),
+            itemBuilder: (context, index) {
+              final msg = pinned[index];
+              return ListTile(
+                title: Text(
+                  msg.message,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const Divider(height: 1),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: pinned.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final msg = pinned[index];
-                      return ListTile(
-                        title: Text(
-                          msg.message,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          msg.createdAt.toLocal().toString(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    },
-                  ),
+                subtitle: Text(
+                  msg.createdAt.toLocal().toString(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
@@ -1151,41 +1141,39 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _handleMediaTap() {
-    showModalBottomSheet<void>(
+    final theme = Theme.of(context);
+    AppActionBottomSheet.show<void>(
       context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
-                title: const Text('Take photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAndSendMedia(ImageSource.camera, 'image');
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
-                title: const Text('Choose from gallery'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickAndSendMedia(ImageSource.gallery, 'image');
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.timer, size: 22),
-                title: const Text('Self-destruct photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _startSelfDestructPhotoFlow();
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      title: 'Send media',
+      actions: [
+        AppActionSheetItem(
+          iconPath: AppIcons.camera,
+          label: 'Take photo',
+          iconColor: theme.colorScheme.primary,
+          onTap: () {
+            Navigator.pop(context);
+            _pickAndSendMedia(ImageSource.camera, 'image');
+          },
+        ),
+        AppActionSheetItem(
+          iconPath: AppIcons.gallery,
+          label: 'Choose from gallery',
+          iconColor: theme.colorScheme.secondary,
+          onTap: () {
+            Navigator.pop(context);
+            _pickAndSendMedia(ImageSource.gallery, 'image');
+          },
+        ),
+        AppActionSheetItem(
+          iconPath: AppIcons.timer,
+          label: 'Self-destruct photo',
+          iconColor: AppColors.feedbackWarning,
+          onTap: () {
+            Navigator.pop(context);
+            _startSelfDestructPhotoFlow();
+          },
+        ),
+      ],
     );
   }
 
@@ -1194,51 +1182,48 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _startSelfDestructPhotoFlow() {
-    showModalBottomSheet<void>(
+    final theme = Theme.of(context);
+    AppActionBottomSheet.show<void>(
       context: context,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
-                title: const Text('Take self-destruct photo'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  SelfDestructDurationSheet.show(
-                    context,
-                    onSelected: (seconds) {
-                      _pickAndSendMedia(
-                        ImageSource.camera,
-                        'disappearing_image',
-                        expiresInSeconds: seconds,
-                      );
-                    },
-                  );
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
-                title: const Text('Choose self-destruct photo'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  SelfDestructDurationSheet.show(
-                    context,
-                    onSelected: (seconds) {
-                      _pickAndSendMedia(
-                        ImageSource.gallery,
-                        'disappearing_image',
-                        expiresInSeconds: seconds,
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      title: 'Self-destruct photo',
+      actions: [
+        AppActionSheetItem(
+          iconPath: AppIcons.camera,
+          label: 'Take self-destruct photo',
+          iconColor: theme.colorScheme.primary,
+          onTap: () {
+            Navigator.pop(context);
+            SelfDestructDurationSheet.show(
+              context,
+              onSelected: (seconds) {
+                _pickAndSendMedia(
+                  ImageSource.camera,
+                  'disappearing_image',
+                  expiresInSeconds: seconds,
+                );
+              },
+            );
+          },
+        ),
+        AppActionSheetItem(
+          iconPath: AppIcons.gallery,
+          label: 'Choose self-destruct photo',
+          iconColor: theme.colorScheme.secondary,
+          onTap: () {
+            Navigator.pop(context);
+            SelfDestructDurationSheet.show(
+              context,
+              onSelected: (seconds) {
+                _pickAndSendMedia(
+                  ImageSource.gallery,
+                  'disappearing_image',
+                  expiresInSeconds: seconds,
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 

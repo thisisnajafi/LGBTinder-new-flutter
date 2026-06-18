@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/widgets/app_action_bottom_sheet.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
@@ -29,8 +30,11 @@ Future<SuperlikeSheetResult?> showSuperlikeMessageSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     isDismissible: true,
-    builder: (sheetContext) => _SuperlikeMessageSheetBody(
-      superlikeInfo: superlikeInfo,
+    builder: (sheetContext) => AppBottomSheetShell(
+      showCancel: false,
+      body: _SuperlikeMessageSheetBody(
+        superlikeInfo: superlikeInfo,
+      ),
     ),
   ).whenComplete(() {
     pageMessenger?.clearSnackBars();
@@ -75,49 +79,19 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
     final message = _controller.text.trim();
     final canSend = canSuperlike && message.isNotEmpty;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.radiusXL),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.45 : 0.12),
-              blurRadius: 24,
-              offset: const Offset(0, -4),
-            ),
-          ],
+    return AppBottomSheetCard(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.spacingLG,
+          AppSpacing.spacingMD,
+          AppSpacing.spacingLG,
+          AppSpacing.spacingLG,
         ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.spacingLG,
-              AppSpacing.spacingMD,
-              AppSpacing.spacingLG,
-              AppSpacing.spacingLG,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: textSecondary.withOpacity(0.35),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                Container(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
                   padding: EdgeInsets.all(AppSpacing.spacingLG),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -387,7 +361,6 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
             ),
           ),
         ),
-      ),
     );
   }
 }
