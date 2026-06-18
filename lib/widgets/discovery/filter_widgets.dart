@@ -274,3 +274,149 @@ class FilterValuePill extends StatelessWidget {
     );
   }
 }
+
+/// Small PRO badge for premium-only filter rows.
+class FilterProBadge extends StatelessWidget {
+  const FilterProBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.spacingSM,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        gradient: AppColors.brandGradient,
+        borderRadius: BorderRadius.circular(AppRadius.radiusXS),
+      ),
+      child: Text(
+        'PRO',
+        style: AppTypography.caption.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+      ),
+    );
+  }
+}
+
+/// Wraps premium-only sections with lock overlay for free users.
+class FilterPremiumGate extends StatelessWidget {
+  final bool isPremium;
+  final VoidCallback onUpgrade;
+  final Widget child;
+
+  const FilterPremiumGate({
+    super.key,
+    required this.isPremium,
+    required this.onUpgrade,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isPremium) return child;
+
+    return Stack(
+      children: [
+        Opacity(opacity: 0.42, child: AbsorbPointer(child: child)),
+        Positioned.fill(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onUpgrade,
+              child: Center(
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingMD,
+                    vertical: AppSpacing.spacingSM,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentPurple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                    border: Border.all(color: AppColors.accentPurple),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppSvgIcon(
+                        assetPath: AppIcons.crown,
+                        size: 18,
+                        color: AppColors.accentPurple,
+                      ),
+                      SizedBox(width: AppSpacing.spacingSM),
+                      Text(
+                        'Upgrade to unlock',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.accentPurple,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Multi-select chips for reference-data filters.
+class FilterMultiSelectSection extends StatelessWidget {
+  final String title;
+  final String iconPath;
+  final List<({int id, String label})> options;
+  final List<int> selectedIds;
+  final ValueChanged<List<int>> onChanged;
+  final bool enabled;
+
+  const FilterMultiSelectSection({
+    super.key,
+    required this.title,
+    required this.iconPath,
+    required this.options,
+    required this.selectedIds,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (options.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FilterSectionHeader(iconPath: iconPath, title: title),
+        SizedBox(height: AppSpacing.spacingMD),
+        Wrap(
+          spacing: AppSpacing.spacingSM,
+          runSpacing: AppSpacing.spacingSM,
+          children: options.map((option) {
+            final isSelected = selectedIds.contains(option.id);
+            return FilterGenderChip(
+              label: option.label,
+              isSelected: isSelected,
+              onTap: enabled
+                  ? () {
+                      final next = List<int>.from(selectedIds);
+                      if (isSelected) {
+                        next.remove(option.id);
+                      } else {
+                        next.add(option.id);
+                      }
+                      onChanged(next);
+                    }
+                  : () {},
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}

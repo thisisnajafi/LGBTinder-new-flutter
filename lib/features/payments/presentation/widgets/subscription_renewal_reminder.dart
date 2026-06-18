@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_grouped_list_card.dart';
+import '../../../../core/widgets/app_settings_detail.dart';
 import '../../data/models/subscription_plan.dart';
 
-/// Widget to display subscription renewal reminders
-/// Shows reminders when subscription is expiring soon (7, 3, 1 days)
+/// Renewal notice shown inside a settings-style grouped section.
 class SubscriptionRenewalReminder extends StatelessWidget {
   final SubscriptionStatus subscriptionStatus;
   final VoidCallback? onManageSubscription;
@@ -15,12 +16,12 @@ class SubscriptionRenewalReminder extends StatelessWidget {
   final VoidCallback? onChangePlan;
 
   const SubscriptionRenewalReminder({
-    Key? key,
+    super.key,
     required this.subscriptionStatus,
     this.onManageSubscription,
     this.onCancelAutoRenewal,
     this.onChangePlan,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,103 +40,99 @@ class SubscriptionRenewalReminder extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final message = reminderLevel.getMessage(
+      daysRemaining,
+      subscriptionStatus.endDate!,
+    );
 
-    return Container(
-      margin: EdgeInsets.all(AppSpacing.spacingMD),
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: reminderLevel.color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-        border: Border.all(
-          color: reminderLevel.color.withOpacity(0.3),
-          width: 2,
+    final actionEntries = <({String icon, String label, String? subtitle, VoidCallback onTap})>[];
+    if (onChangePlan != null) {
+      actionEntries.add((
+        icon: AppIcons.crown,
+        label: 'Change plan',
+        subtitle: 'Compare plans and billing options',
+        onTap: onChangePlan!,
+      ));
+    }
+    if (onCancelAutoRenewal != null && subscriptionStatus.autoRenew) {
+      actionEntries.add((
+        icon: AppIcons.close,
+        label: 'Cancel auto-renew',
+        subtitle: 'Keep access until the end of your billing period',
+        onTap: onCancelAutoRenewal!,
+      ));
+    }
+    if (onManageSubscription != null) {
+      actionEntries.add((
+        icon: AppIcons.setting,
+        label: 'Manage subscription',
+        subtitle: null,
+        onTap: onManageSubscription!,
+      ));
+    }
+
+    final tiles = <Widget>[
+      Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.spacingMD,
+          AppSpacing.spacingMD,
+          AppSpacing.spacingMD,
+          actionEntries.isEmpty ? AppSpacing.spacingMD : AppSpacing.spacingSM,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Icon(
-                reminderLevel.icon,
-                color: reminderLevel.color,
-                size: 24,
-              ),
-              SizedBox(width: AppSpacing.spacingSM),
-              Expanded(
-                child: Text(
-                  reminderLevel.title,
-                  style: AppTypography.h3.copyWith(
-                    color: reminderLevel.color,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: AppSpacing.spacingMD),
-
-          // Message
-          Text(
-            reminderLevel.getMessage(daysRemaining, subscriptionStatus.endDate!),
-            style: AppTypography.body.copyWith(
-              color: textColor,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSvgIcon(
+              assetPath: reminderLevel.iconPath,
+              size: 20,
+              color: reminderLevel.color,
             ),
-          ),
-
-          if (subscriptionStatus.nextBillingDate != null) ...[
-            SizedBox(height: AppSpacing.spacingSM),
-            Text(
-              'Next billing: ${DateFormat('MMM d, y').format(subscriptionStatus.nextBillingDate!)}',
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
+            const SizedBox(width: AppSpacing.spacingSM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                      height: 1.4,
+                    ),
+                  ),
+                  if (subscriptionStatus.nextBillingDate != null) ...[
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      'Next billing: ${DateFormat('MMM d, y').format(subscriptionStatus.nextBillingDate!)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
-
-          SizedBox(height: AppSpacing.spacingMD),
-
-          // Actions
-          Wrap(
-            spacing: AppSpacing.spacingSM,
-            runSpacing: AppSpacing.spacingSM,
-            children: [
-              if (onManageSubscription != null)
-                OutlinedButton(
-                  onPressed: onManageSubscription,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: reminderLevel.color,
-                    side: BorderSide(color: reminderLevel.color),
-                  ),
-                  child: const Text('Manage'),
-                ),
-              if (onCancelAutoRenewal != null && subscriptionStatus.autoRenew)
-                OutlinedButton(
-                  onPressed: onCancelAutoRenewal,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.accentRed,
-                    side: BorderSide(color: AppColors.accentRed),
-                  ),
-                  child: const Text('Cancel Auto-Renew'),
-                ),
-              if (onChangePlan != null)
-                OutlinedButton(
-                  onPressed: onChangePlan,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.accentPurple,
-                    side: BorderSide(color: AppColors.accentPurple),
-                  ),
-                  child: const Text('Change Plan'),
-                ),
-            ],
-          ),
-        ],
+        ),
       ),
+    ];
+
+    for (var i = 0; i < actionEntries.length; i++) {
+      final entry = actionEntries[i];
+      tiles.add(
+        AppGroupedListTile(
+          iconPath: entry.icon,
+          label: entry.label,
+          subtitle: entry.subtitle,
+          onTap: entry.onTap,
+          showDivider: i < actionEntries.length - 1,
+        ),
+      );
+    }
+
+    return AppGroupedListSection(
+      title: reminderLevel.title,
+      padding: AppSettingsLayout.sectionPadding,
+      children: tiles,
     );
   }
 
@@ -159,48 +156,46 @@ class SubscriptionRenewalReminder extends StatelessWidget {
   }
 }
 
-/// Reminder level configuration
 class ReminderLevel {
   final String title;
   final Color color;
-  final IconData icon;
+  final String iconPath;
   final String Function(int days, DateTime endDate) getMessage;
 
   const ReminderLevel._({
     required this.title,
     required this.color,
-    required this.icon,
+    required this.iconPath,
     required this.getMessage,
   });
 
   static ReminderLevel get critical => ReminderLevel._(
-    title: 'Subscription Expiring Soon!',
-    color: AppColors.accentRed,
-    icon: Icons.warning,
-    getMessage: (days, endDate) {
-      if (days == 0) {
-        return 'Your subscription expires today. Renew now to continue enjoying premium features.';
-      } else {
-        return 'Your subscription expires in $days day${days == 1 ? '' : 's'}. Renew now to avoid interruption.';
-      }
-    },
-  );
+        title: 'Expiring Soon',
+        color: AppColors.feedbackError,
+        iconPath: AppIcons.warning,
+        getMessage: (days, endDate) {
+          if (days == 0) {
+            return 'Your subscription expires today. Renew now to continue enjoying premium features.';
+          }
+          return 'Your subscription expires in $days day${days == 1 ? '' : 's'}. Renew now to avoid interruption.';
+        },
+      );
 
   static ReminderLevel get warning => ReminderLevel._(
-    title: 'Subscription Expiring in 3 Days',
-    color: Colors.orange,
-    icon: Icons.schedule,
-    getMessage: (days, endDate) {
-      return 'Your subscription will expire in $days days (${DateFormat('MMM d, y').format(endDate)}). Consider renewing to maintain access.';
-    },
-  );
+        title: 'Expiring In 3 Days',
+        color: AppColors.feedbackWarning,
+        iconPath: AppIcons.timerStart,
+        getMessage: (days, endDate) {
+          return 'Your subscription will expire in $days days (${DateFormat('MMM d, y').format(endDate)}). Consider renewing to maintain access.';
+        },
+      );
 
   static ReminderLevel get info => ReminderLevel._(
-    title: 'Subscription Renewal Reminder',
-    color: AppColors.accentYellow,
-    icon: Icons.info_outline,
-    getMessage: (days, endDate) {
-      return 'Your subscription will renew in $days days (${DateFormat('MMM d, y').format(endDate)}).';
-    },
-  );
+        title: 'Renewal Reminder',
+        color: AppColors.feedbackWarning,
+        iconPath: AppIcons.infoCircle,
+        getMessage: (days, endDate) {
+          return 'Your subscription will renew in $days days (${DateFormat('MMM d, y').format(endDate)}).';
+        },
+      );
 }

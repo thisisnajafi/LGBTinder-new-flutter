@@ -1,17 +1,14 @@
 // Screen: SubscriptionManagementScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
-import '../../../../widgets/buttons/gradient_button.dart';
+import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_grouped_list_card.dart';
+import '../../../../core/widgets/app_settings_detail.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
-import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../providers/payment_providers.dart';
 import '../../data/models/subscription_plan.dart';
 import '../../../../shared/models/api_error.dart';
@@ -20,29 +17,29 @@ import '../widgets/subscription_renewal_reminder.dart';
 import '../widgets/offline_purchase_queue_indicator.dart';
 import 'subscription_plans_screen.dart';
 
-/// Subscription management screen - View and manage current subscription
+/// Subscription management screen — view and manage the current subscription.
 class SubscriptionManagementScreen extends ConsumerStatefulWidget {
-  const SubscriptionManagementScreen({Key? key}) : super(key: key);
+  const SubscriptionManagementScreen({super.key});
 
   @override
-  ConsumerState<SubscriptionManagementScreen> createState() => _SubscriptionManagementScreenState();
+  ConsumerState<SubscriptionManagementScreen> createState() =>
+      _SubscriptionManagementScreenState();
 }
 
-class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManagementScreen> {
+class _SubscriptionManagementScreenState
+    extends ConsumerState<SubscriptionManagementScreen> {
   bool _isLoading = false;
   bool _hasError = false;
   String? _errorMessage;
   SubscriptionStatus? _subscriptionStatus;
   bool _isCancelling = false;
+  List<Map<String, dynamic>>? _googlePlaySubscriptions;
 
   @override
   void initState() {
     super.initState();
     _loadSubscriptionStatus();
   }
-
-  List<Map<String, dynamic>>? _googlePlaySubscriptions;
-  bool _isLoadingGooglePlay = false;
 
   Future<void> _loadSubscriptionStatus() async {
     setState(() {
@@ -54,8 +51,6 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
     try {
       final paymentService = ref.read(paymentServiceProvider);
       final status = await paymentService.getSubscriptionStatus();
-
-      // Also load Google Play subscriptions
       _loadGooglePlaySubscriptions();
 
       if (mounted) {
@@ -84,27 +79,26 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
   }
 
   Future<void> _loadGooglePlaySubscriptions() async {
-    setState(() {
-      _isLoadingGooglePlay = true;
-    });
-
     try {
       final paymentService = ref.read(paymentServiceProvider);
-      final subscriptions = await paymentService.getGooglePlayActiveSubscriptions();
+      final subscriptions =
+          await paymentService.getGooglePlayActiveSubscriptions();
 
       if (mounted) {
-        setState(() {
-          _googlePlaySubscriptions = subscriptions;
-          _isLoadingGooglePlay = false;
-        });
+        setState(() => _googlePlaySubscriptions = subscriptions);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingGooglePlay = false;
-        });
-      }
+    } catch (_) {
+      // Google Play subscriptions are optional; ignore load failures.
     }
+  }
+
+  void _openPlans() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const SubscriptionPlansScreen(),
+      ),
+    );
   }
 
   Future<void> _cancelSubscription({int? googlePlaySubscriptionId}) async {
@@ -112,11 +106,10 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
       await _cancelGooglePlaySubscription(googlePlaySubscriptionId);
       return;
     }
-    // Stripe cancel removed; only Google Play subscriptions can be cancelled from this screen
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No active subscription to cancel'),
-        backgroundColor: AppColors.accentRed,
+      SnackBar(
+        content: const Text('No active subscription to cancel'),
+        backgroundColor: AppColors.feedbackError,
       ),
     );
   }
@@ -125,21 +118,22 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancel Subscription'),
+        title: const Text('Cancel subscription?'),
         content: const Text(
-          'Are you sure you want to cancel your Google Play subscription? '
-          'You will lose access to premium features at the end of your billing period. '
-          'You can manage your subscription in Google Play Store.',
+          'Your Google Play subscription will remain active until the end of the '
+          'current billing period. You can also manage it in the Play Store.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep Subscription'),
+            child: const Text('Keep subscription'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentRed),
-            child: const Text('Cancel Subscription'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.feedbackError,
+            ),
+            child: const Text('Cancel subscription'),
           ),
         ],
       ),
@@ -147,9 +141,7 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
 
     if (confirmed != true) return;
 
-    setState(() {
-      _isCancelling = true;
-    });
+    setState(() => _isCancelling = true);
 
     try {
       final paymentService = ref.read(paymentServiceProvider);
@@ -157,19 +149,16 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Subscription cancelled successfully'),
-            backgroundColor: AppColors.onlineGreen,
+          SnackBar(
+            content: const Text('Subscription cancelled successfully'),
+            backgroundColor: AppColors.feedbackSuccess,
           ),
         );
-        // Reload status
         _loadSubscriptionStatus();
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isCancelling = false;
-        });
+        setState(() => _isCancelling = false);
         ErrorHandlerService.handleError(
           context,
           e,
@@ -179,435 +168,8 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
     }
   }
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'N/A';
-    return DateFormat('MMM d, y').format(date);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    return AppPageScaffold(
-      title: 'Subscription',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      action: IconButton(
-        icon: Icon(
-          Icons.refresh,
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-        ),
-        onPressed: _loadSubscriptionStatus,
-      ),
-      body: _isLoading
-          ? SkeletonLoading()
-          : _hasError && _subscriptionStatus == null
-              ? ErrorDisplayWidget(
-                  errorMessage: _errorMessage ?? 'Failed to load subscription status',
-                  onRetry: _loadSubscriptionStatus,
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadSubscriptionStatus,
-                  child: ListView(
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
-                    children: [
-                      // Subscription status card
-                      Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingLG),
-                        decoration: BoxDecoration(
-                          color: _subscriptionStatus?.isActive == true
-                              ? AppColors.accentPurple.withOpacity(0.1)
-                              : surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                          border: Border.all(
-                            color: _subscriptionStatus?.isActive == true
-                                ? AppColors.accentPurple
-                                : borderColor,
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  _subscriptionStatus?.isActive == true
-                                      ? Icons.check_circle
-                                      : Icons.cancel,
-                                  color: _subscriptionStatus?.isActive == true
-                                      ? AppColors.onlineGreen
-                                      : AppColors.accentRed,
-                                  size: 32,
-                                ),
-                                SizedBox(width: AppSpacing.spacingMD),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _subscriptionStatus?.isActive == true
-                                            ? 'Active Subscription'
-                                            : 'No Active Subscription',
-                                        style: AppTypography.h2.copyWith(
-                                          color: textColor,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (_subscriptionStatus?.planName != null) ...[
-                                        SizedBox(height: AppSpacing.spacingXS),
-                                        Text(
-                                          _subscriptionStatus!.planName!,
-                                          style: AppTypography.body.copyWith(
-                                            color: secondaryTextColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (_subscriptionStatus?.status != null) ...[
-                              SizedBox(height: AppSpacing.spacingMD),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.spacingSM,
-                                  vertical: AppSpacing.spacingXS,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _subscriptionStatus!.status == 'active'
-                                      ? AppColors.onlineGreen.withOpacity(0.2)
-                                      : surfaceColor,
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                ),
-                                child: Text(
-                                  _subscriptionStatus!.status!.toUpperCase(),
-                                  style: AppTypography.caption.copyWith(
-                                    color: _subscriptionStatus!.status == 'active'
-                                        ? AppColors.onlineGreen
-                                        : secondaryTextColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: AppSpacing.spacingLG),
-
-                      // Subscription Renewal Reminder
-                      if (_subscriptionStatus?.isActive == true && _subscriptionStatus?.endDate != null)
-                        SubscriptionRenewalReminder(
-                          subscriptionStatus: _subscriptionStatus!,
-                          onManageSubscription: () {
-                            // Already on management screen
-                          },
-                          onCancelAutoRenewal: () {
-                            if (_googlePlaySubscriptions != null && _googlePlaySubscriptions!.isNotEmpty) {
-                              final sub = _googlePlaySubscriptions!.first;
-                              final subscriptionId = sub['id'] is int
-                                  ? sub['id'] as int
-                                  : int.tryParse(sub['id'].toString());
-                              if (subscriptionId != null) {
-                                _cancelSubscription(googlePlaySubscriptionId: subscriptionId);
-                              }
-                            }
-                          },
-                          onChangePlan: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SubscriptionPlansScreen(),
-                              ),
-                            );
-                          },
-                        ),
-
-                      // Offline Purchase Queue Indicator
-                      OfflinePurchaseQueueIndicator(
-                        onRetry: () {
-                          // Retry processing pending purchases
-                          _loadSubscriptionStatus();
-                        },
-                      ),
-
-                      SizedBox(height: AppSpacing.spacingLG),
-
-                      // Subscription details
-                      if (_subscriptionStatus != null) ...[
-                        Text(
-                          'Subscription Details',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        SizedBox(height: AppSpacing.spacingMD),
-                        _buildDetailRow(
-                          'Start Date',
-                          _formatDate(_subscriptionStatus!.startDate),
-                          textColor,
-                          secondaryTextColor,
-                        ),
-                        _buildDetailRow(
-                          'End Date',
-                          _formatDate(_subscriptionStatus!.endDate),
-                          textColor,
-                          secondaryTextColor,
-                        ),
-                        if (_subscriptionStatus!.nextBillingDate != null)
-                          _buildDetailRow(
-                            'Next Billing',
-                            _formatDate(_subscriptionStatus!.nextBillingDate),
-                            textColor,
-                            secondaryTextColor,
-                          ),
-                        _buildDetailRow(
-                          'Auto Renew',
-                          _subscriptionStatus!.autoRenew ? 'Yes' : 'No',
-                          textColor,
-                          secondaryTextColor,
-                        ),
-                        SizedBox(height: AppSpacing.spacingLG),
-                      ],
-
-                      // Google Play Subscriptions
-                      if (_googlePlaySubscriptions != null && _googlePlaySubscriptions!.isNotEmpty) ...[
-                        Text(
-                          'Google Play Subscriptions',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        SizedBox(height: AppSpacing.spacingMD),
-                        ..._googlePlaySubscriptions!.map((sub) => _buildGooglePlaySubscriptionCard(
-                          sub,
-                          textColor,
-                          secondaryTextColor,
-                          surfaceColor,
-                          borderColor,
-                        )),
-                        SizedBox(height: AppSpacing.spacingLG),
-                      ],
-
-                      // Actions
-                      if (_subscriptionStatus?.isActive == true || (_googlePlaySubscriptions != null && _googlePlaySubscriptions!.isNotEmpty)) ...[
-                        GradientButton(
-                          text: 'Upgrade Plan',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SubscriptionPlansScreen(),
-                              ),
-                            );
-                          },
-                          isFullWidth: true,
-                        ),
-                        SizedBox(height: AppSpacing.spacingMD),
-                        // Restore Purchases Button
-                        SizedBox(height: AppSpacing.spacingMD),
-                        OutlinedButton.icon(
-                          onPressed: _isLoading ? null : _restorePurchases,
-                          icon: Icon(Icons.restore),
-                          label: Text('Restore Purchases'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.accentPurple,
-                            side: BorderSide(color: AppColors.accentPurple),
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                        ),
-                      ] else ...[
-                        GradientButton(
-                          text: 'Subscribe Now',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SubscriptionPlansScreen(),
-                              ),
-                            );
-                          },
-                          isFullWidth: true,
-                        ),
-                        SizedBox(height: AppSpacing.spacingMD),
-                        OutlinedButton.icon(
-                          onPressed: _isLoading ? null : _restorePurchases,
-                          icon: Icon(Icons.restore),
-                          label: Text('Restore Purchases'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.accentPurple,
-                            side: BorderSide(color: AppColors.accentPurple),
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, Color textColor, Color secondaryTextColor) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: AppTypography.body.copyWith(
-              color: secondaryTextColor,
-            ),
-          ),
-          Text(
-            value,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGooglePlaySubscriptionCard(
-    Map<String, dynamic> subscription,
-    Color textColor,
-    Color secondaryTextColor,
-    Color surfaceColor,
-    Color borderColor,
-  ) {
-    final planName = subscription['plan']?['title']?.toString() ?? 'Unknown Plan';
-    final status = subscription['status']?.toString() ?? 'unknown';
-    final billingCycle = subscription['billing_cycle']?.toString() ?? 'monthly';
-    final startDate = subscription['start_date'] != null
-        ? DateTime.tryParse(subscription['start_date'].toString())
-        : null;
-    final endDate = subscription['end_date'] != null
-        ? DateTime.tryParse(subscription['end_date'].toString())
-        : null;
-    final subscriptionId = subscription['id'] is int
-        ? subscription['id'] as int
-        : int.tryParse(subscription['id'].toString());
-
-    int? daysRemaining;
-    if (endDate != null) {
-      final now = DateTime.now();
-      if (endDate.isAfter(now)) {
-        daysRemaining = endDate.difference(now).inDays;
-      }
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.android,
-                color: AppColors.onlineGreen,
-                size: 24,
-              ),
-              SizedBox(width: AppSpacing.spacingSM),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      planName,
-                      style: AppTypography.h3.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Google Play Subscription',
-                      style: AppTypography.caption.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingSM,
-                  vertical: AppSpacing.spacingXS,
-                ),
-                decoration: BoxDecoration(
-                  color: status == 'active'
-                      ? AppColors.onlineGreen.withOpacity(0.2)
-                      : AppColors.accentRed.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                ),
-                child: Text(
-                  status.toUpperCase(),
-                  style: AppTypography.caption.copyWith(
-                    color: status == 'active'
-                        ? AppColors.onlineGreen
-                        : AppColors.accentRed,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildDetailRow('Billing Cycle', billingCycle.toUpperCase(), textColor, secondaryTextColor),
-          if (startDate != null)
-            _buildDetailRow('Start Date', _formatDate(startDate), textColor, secondaryTextColor),
-          if (endDate != null)
-            _buildDetailRow('End Date', _formatDate(endDate), textColor, secondaryTextColor),
-          if (daysRemaining != null)
-            _buildDetailRow(
-              'Days Remaining',
-              daysRemaining > 0 ? '$daysRemaining days' : 'Expired',
-              textColor,
-              secondaryTextColor,
-            ),
-          if (subscriptionId != null && status == 'active') ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            OutlinedButton(
-              onPressed: _isCancelling
-                  ? null
-                  : () => _cancelSubscription(googlePlaySubscriptionId: subscriptionId),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.accentRed,
-                side: BorderSide(color: AppColors.accentRed),
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: _isCancelling
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Cancel Subscription'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Future<void> _restorePurchases() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final paymentService = ref.read(paymentServiceProvider);
@@ -621,27 +183,308 @@ class _SubscriptionManagementScreenState extends ConsumerState<SubscriptionManag
                   ? 'Purchases restored successfully'
                   : 'No purchases found to restore',
             ),
-            backgroundColor: restored ? AppColors.onlineGreen : Colors.orange,
+            backgroundColor:
+                restored ? AppColors.feedbackSuccess : AppColors.feedbackWarning,
           ),
         );
-        // Reload status
         _loadSubscriptionStatus();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to restore purchases: ${e.toString()}'),
-            backgroundColor: AppColors.accentRed,
+            content: Text('Failed to restore purchases: $e'),
+            backgroundColor: AppColors.feedbackError,
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Not available';
+    return DateFormat('MMM d, y').format(date);
+  }
+
+  void _cancelFirstGooglePlaySubscription() {
+    if (_googlePlaySubscriptions == null || _googlePlaySubscriptions!.isEmpty) {
+      return;
+    }
+    final sub = _googlePlaySubscriptions!.first;
+    final subscriptionId = sub['id'] is int
+        ? sub['id'] as int
+        : int.tryParse(sub['id'].toString());
+    if (subscriptionId != null) {
+      _cancelSubscription(googlePlaySubscriptionId: subscriptionId);
+    }
+  }
+
+  bool get _hasActiveSubscription =>
+      _subscriptionStatus?.isActive == true ||
+      (_googlePlaySubscriptions != null && _googlePlaySubscriptions!.isNotEmpty);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppSettingsDetailScaffold(
+      title: 'Subscription',
+      action: IconButton(
+        tooltip: 'Refresh',
+        onPressed: _isLoading ? null : _loadSubscriptionStatus,
+        icon: AppSvgIcon(
+          assetPath: AppIcons.refreshCircle,
+          size: 22,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading && _subscriptionStatus == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_hasError && _subscriptionStatus == null) {
+      return ErrorDisplayWidget(
+        errorMessage: _errorMessage ?? 'Failed to load subscription status',
+        onRetry: _loadSubscriptionStatus,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadSubscriptionStatus,
+      child: AppSettingsDetailList(
+        children: [
+          _buildCurrentPlanSection(context),
+          if (_subscriptionStatus?.isActive == true &&
+              _subscriptionStatus?.endDate != null)
+            SubscriptionRenewalReminder(
+              subscriptionStatus: _subscriptionStatus!,
+              onCancelAutoRenewal: _cancelFirstGooglePlaySubscription,
+              onChangePlan: _openPlans,
+            ),
+          OfflinePurchaseQueueIndicator(onRetry: _loadSubscriptionStatus),
+          if (_subscriptionStatus != null) _buildDetailsSection(context),
+          ..._buildGooglePlaySections(context),
+          _buildManageSection(context),
+          if (!_hasActiveSubscription)
+            const AppSettingsSectionFootnote(
+              text:
+                  'Subscribe to unlock premium features like unlimited likes, '
+                  'see who liked you, and more.',
+            ),
+          const SizedBox(height: AppSpacing.spacingMD),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentPlanSection(BuildContext context) {
+    final isActive = _subscriptionStatus?.isActive == true;
+    final planName = _subscriptionStatus?.planName?.trim();
+    final statusLabel = _subscriptionStatus?.status?.toUpperCase();
+
+    return AppGroupedListSection(
+      title: 'Current Plan',
+      padding: AppSettingsLayout.firstSectionPadding,
+      children: [
+        AppGroupedInfoTile(
+          label: 'Status',
+          value: isActive ? 'Active subscription' : 'No active subscription',
+          badge: isActive && statusLabel != null ? statusLabel : null,
+        ),
+        if (planName != null && planName.isNotEmpty)
+          AppGroupedInfoTile(
+            label: 'Plan',
+            value: planName,
+            showDivider: false,
+          )
+        else if (!isActive)
+          AppGroupedInfoTile(
+            label: 'Plan',
+            value: 'Free',
+            showDivider: false,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection(BuildContext context) {
+    final status = _subscriptionStatus!;
+    final entries = <({String label, String value})>[
+      (label: 'Start date', value: _formatDate(status.startDate)),
+      (label: 'End date', value: _formatDate(status.endDate)),
+      if (status.nextBillingDate != null)
+        (
+          label: 'Next billing',
+          value: _formatDate(status.nextBillingDate),
+        ),
+      (label: 'Auto renew', value: status.autoRenew ? 'Yes' : 'No'),
+    ];
+
+    return AppGroupedListSection(
+      title: 'Subscription Details',
+      padding: AppSettingsLayout.sectionPadding,
+      children: [
+        for (var i = 0; i < entries.length; i++)
+          AppGroupedInfoTile(
+            label: entries[i].label,
+            value: entries[i].value,
+            showDivider: i < entries.length - 1,
+          ),
+      ],
+    );
+  }
+
+  List<Widget> _buildGooglePlaySections(BuildContext context) {
+    if (_googlePlaySubscriptions == null || _googlePlaySubscriptions!.isEmpty) {
+      return const [];
+    }
+
+    return _googlePlaySubscriptions!
+        .map((sub) => _buildGooglePlaySection(context, sub))
+        .toList();
+  }
+
+  Widget _buildGooglePlaySection(
+    BuildContext context,
+    Map<String, dynamic> subscription,
+  ) {
+    final planName =
+        subscription['plan']?['title']?.toString() ?? 'Unknown plan';
+    final status = subscription['status']?.toString() ?? 'unknown';
+    final billingCycle =
+        subscription['billing_cycle']?.toString() ?? 'monthly';
+    final startDate = subscription['start_date'] != null
+        ? DateTime.tryParse(subscription['start_date'].toString())
+        : null;
+    final endDate = subscription['end_date'] != null
+        ? DateTime.tryParse(subscription['end_date'].toString())
+        : null;
+    final subscriptionId = subscription['id'] is int
+        ? subscription['id'] as int
+        : int.tryParse(subscription['id'].toString());
+
+    int? daysRemaining;
+    if (endDate != null && endDate.isAfter(DateTime.now())) {
+      daysRemaining = endDate.difference(DateTime.now()).inDays;
+    }
+
+    final entries = <({String label, String value, String? badge})>[
+      (
+        label: 'Billing cycle',
+        value: billingCycle.toUpperCase(),
+        badge: status.toUpperCase(),
+      ),
+      if (startDate != null)
+        (label: 'Start date', value: _formatDate(startDate), badge: null),
+      if (endDate != null)
+        (label: 'End date', value: _formatDate(endDate), badge: null),
+      if (daysRemaining != null)
+        (
+          label: 'Days remaining',
+          value: daysRemaining > 0 ? '$daysRemaining days' : 'Expired',
+          badge: null,
+        ),
+    ];
+
+    final hasCancelAction = subscriptionId != null && status == 'active';
+
+    final children = <Widget>[
+      for (var i = 0; i < entries.length; i++)
+        AppGroupedInfoTile(
+          label: entries[i].label,
+          value: entries[i].value,
+          badge: entries[i].badge,
+          showDivider: hasCancelAction || i < entries.length - 1,
+        ),
+    ];
+
+    if (hasCancelAction) {
+      children.add(
+        AppGroupedListTile(
+          iconPath: AppIcons.close,
+          label: 'Cancel subscription',
+          subtitle: 'Managed through Google Play',
+          onTap: _isCancelling
+              ? () {}
+              : () => _cancelSubscription(
+                    googlePlaySubscriptionId: subscriptionId,
+                  ),
+          showDivider: false,
+          trailing: _isCancelling
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                )
+              : null,
+        ),
+      );
+    }
+
+    return AppGroupedListSection(
+      title: 'Google Play · $planName',
+      padding: AppSettingsLayout.sectionPadding,
+      children: children,
+    );
+  }
+
+  Widget _buildManageSection(BuildContext context) {
+    final tiles = <Widget>[];
+
+    if (_hasActiveSubscription) {
+      tiles.add(
+        AppGroupedListTile(
+          iconPath: AppIcons.crown,
+          label: 'Upgrade plan',
+          subtitle: 'Compare plans and billing options',
+          onTap: _openPlans,
+        ),
+      );
+    } else {
+      tiles.add(
+        AppGroupedListTile(
+          iconPath: AppIcons.crown,
+          label: 'Subscribe now',
+          subtitle: 'Unlock premium features',
+          onTap: _openPlans,
+        ),
+      );
+    }
+
+    tiles.add(
+      AppGroupedListTile(
+        iconPath: AppIcons.refreshCircle,
+        label: 'Restore purchases',
+        subtitle: 'Sync purchases from Google Play',
+        onTap: _isLoading ? () {} : _restorePurchases,
+        showDivider: false,
+        trailing: _isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              )
+            : null,
+      ),
+    );
+
+    return AppGroupedListSection(
+      title: 'Manage',
+      padding: AppSettingsLayout.sectionPadding,
+      children: tiles,
+    );
   }
 }

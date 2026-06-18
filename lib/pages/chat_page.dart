@@ -131,7 +131,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _outboundTypingStopTimer?.cancel();
     _voiceRecordingTimer?.cancel();
     unawaited(_voiceRecorder.dispose());
-    unawaited(_pusherLifecycle.closeConversation());
+    // Defer until after unmount — Riverpod forbids notifier updates during dispose.
+    Future(_pusherLifecycle.closeConversation);
     _scrollController.dispose();
     super.dispose();
   }

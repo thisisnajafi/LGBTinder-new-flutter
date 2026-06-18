@@ -7,6 +7,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../core/utils/app_icons.dart';
+import '../profile/profile_wizard_layout.dart';
 import 'selection_bottom_sheet.dart';
 
 /// Field widget that opens a bottom sheet for selecting reference data
@@ -19,6 +20,9 @@ class ReferenceBottomSheetField extends StatelessWidget {
   final bool required;
   final bool enabled;
   final bool searchable;
+  /// When true, renders as a grouped settings row (for wizard / profile edit cards).
+  final bool groupedStyle;
+  final bool showDivider;
 
   const ReferenceBottomSheetField({
     Key? key,
@@ -30,6 +34,8 @@ class ReferenceBottomSheetField extends StatelessWidget {
     this.required = false,
     this.enabled = true,
     this.searchable = true,
+    this.groupedStyle = false,
+    this.showDivider = true,
   }) : super(key: key);
 
   @override
@@ -45,6 +51,33 @@ class ReferenceBottomSheetField extends StatelessWidget {
       (item) => item.id == selectedId,
       orElse: () => ReferenceItem(id: -1, title: ''),
     );
+
+    Future<void> openPicker() async {
+      FocusScope.of(context).unfocus();
+      final selected = await SelectionBottomSheet.showSingleSelect<ReferenceItem>(
+        context: context,
+        title: 'Select $label',
+        items: items,
+        getTitle: (item) => item.title,
+        selectedItem: selectedItem.id != -1 ? selectedItem : null,
+        searchable: searchable,
+      );
+      if (selected != null) {
+        onChanged?.call(selected.id);
+      }
+    }
+
+    if (groupedStyle) {
+      return ProfileWizardLayout.pickerTile(
+        context: context,
+        label: label,
+        value: selectedItem.id != -1 ? selectedItem.title : null,
+        hint: hint ?? 'Select $label',
+        onTap: enabled ? openPicker : () {},
+        showDivider: showDivider,
+        required: required,
+      );
+    }
 
     return Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
@@ -67,23 +100,7 @@ class ReferenceBottomSheetField extends StatelessWidget {
           ),
           SizedBox(height: AppSpacing.spacingMD),
           InkWell(
-            onTap: enabled ? () async {
-              // Dismiss keyboard and unfocus any text fields
-              FocusScope.of(context).unfocus();
-              
-              final selected = await SelectionBottomSheet.showSingleSelect<ReferenceItem>(
-                context: context,
-                title: 'Select $label',
-                items: items,
-                getTitle: (item) => item.title,
-                selectedItem: selectedItem.id != -1 ? selectedItem : null,
-                searchable: searchable,
-              );
-              
-              if (selected != null) {
-                onChanged?.call(selected.id);
-              }
-            } : null,
+            onTap: enabled ? openPicker : null,
             child: Container(
               padding: EdgeInsets.all(AppSpacing.spacingMD),
               decoration: BoxDecoration(

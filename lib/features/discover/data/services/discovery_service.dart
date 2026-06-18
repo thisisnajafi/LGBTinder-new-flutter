@@ -4,6 +4,7 @@ import '../../../../shared/services/api_service.dart';
 import '../../../../shared/services/cache_service.dart';
 import '../../../payments/data/services/plan_limits_service.dart';
 import '../models/discovery_profile.dart';
+import '../models/discovery_filter_mapper.dart';
 import '../models/discovery_filters.dart';
 import '../../../matching/data/models/compatibility_score.dart';
 
@@ -54,27 +55,39 @@ class DiscoveryService {
         fromCache = _applyLimit(fromCache, cap);
       }
 
-      final queryParams = <String, dynamic>{};
-      queryParams['page'] = pageNum;
-      queryParams['limit'] = limitNum;
+      final queryParams = <String, dynamic>{
+        'page': pageNum,
+        'limit': limitNum,
+        ...DiscoveryFilterMapper.toQueryParameters(filters),
+      };
+
+      // Legacy UI-shaped filter maps (ageRange / camelCase keys)
       if (filters != null) {
-        if (filters['ageRange'] != null) {
+        if (filters['ageRange'] != null && !queryParams.containsKey('min_age')) {
           final ageRange = filters['ageRange'] as RangeValues;
           queryParams['min_age'] = ageRange.start.toInt();
           queryParams['max_age'] = ageRange.end.toInt();
         }
-        if (filters['maxDistance'] != null) {
+        if (filters['maxDistance'] != null && !queryParams.containsKey('max_distance')) {
           queryParams['max_distance'] = filters['maxDistance'];
         }
-        if (filters['genders'] != null) {
+        if (filters['genders'] != null &&
+            filters['genders'] is List<String> &&
+            !queryParams.containsKey('gender_ids')) {
           final genders = filters['genders'] as List<String>;
           if (!genders.contains('All')) {
             queryParams['gender_ids'] = genders.join(',');
           }
         }
-        if (filters['verifiedOnly'] == true) queryParams['verified_only'] = '1';
-        if (filters['onlineOnly'] == true) queryParams['online_only'] = '1';
-        if (filters['premiumOnly'] == true) queryParams['premium_only'] = '1';
+        if (filters['verifiedOnly'] == true && !queryParams.containsKey('verified_only')) {
+          queryParams['verified_only'] = '1';
+        }
+        if (filters['onlineOnly'] == true && !queryParams.containsKey('online_only')) {
+          queryParams['online_only'] = '1';
+        }
+        if (filters['premiumOnly'] == true && !queryParams.containsKey('premium_only')) {
+          queryParams['premium_only'] = '1';
+        }
       }
 
       // Always hit the API (no ApiService-level cache) so discover/refresh always calls nearby-suggestions
@@ -124,25 +137,37 @@ class DiscoveryService {
     } catch (_) {
       cap = null;
     }
-    final queryParams = <String, dynamic>{'page': page, 'limit': limit};
+    final queryParams = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      ...DiscoveryFilterMapper.toQueryParameters(filters),
+    };
     if (filters != null) {
-      if (filters['ageRange'] != null) {
+      if (filters['ageRange'] != null && !queryParams.containsKey('min_age')) {
         final ageRange = filters['ageRange'] as RangeValues;
         queryParams['min_age'] = ageRange.start.toInt();
         queryParams['max_age'] = ageRange.end.toInt();
       }
-      if (filters['maxDistance'] != null) {
+      if (filters['maxDistance'] != null && !queryParams.containsKey('max_distance')) {
         queryParams['max_distance'] = filters['maxDistance'];
       }
-      if (filters['genders'] != null) {
+      if (filters['genders'] != null &&
+          filters['genders'] is List<String> &&
+          !queryParams.containsKey('gender_ids')) {
         final genders = filters['genders'] as List<String>;
         if (!genders.contains('All')) {
           queryParams['gender_ids'] = genders.join(',');
         }
       }
-      if (filters['verifiedOnly'] == true) queryParams['verified_only'] = '1';
-      if (filters['onlineOnly'] == true) queryParams['online_only'] = '1';
-      if (filters['premiumOnly'] == true) queryParams['premium_only'] = '1';
+      if (filters['verifiedOnly'] == true && !queryParams.containsKey('verified_only')) {
+        queryParams['verified_only'] = '1';
+      }
+      if (filters['onlineOnly'] == true && !queryParams.containsKey('online_only')) {
+        queryParams['online_only'] = '1';
+      }
+      if (filters['premiumOnly'] == true && !queryParams.containsKey('premium_only')) {
+        queryParams['premium_only'] = '1';
+      }
     }
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.matchingNearbySuggestions,

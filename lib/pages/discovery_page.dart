@@ -29,7 +29,7 @@ import '../widgets/discovery/superlike_message_sheet.dart';
 import '../widgets/discovery/superlike_packs_sheet.dart';
 import '../core/cache/session_cache_providers.dart';
 import '../features/notifications/providers/notification_providers.dart';
-import '../features/reference_data/providers/reference_data_providers.dart';
+import '../features/discover/data/models/discovery_filter_mapper.dart';
 import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
@@ -604,25 +604,30 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Future<void> _openFilters() async {
-    final result = await Navigator.push(
+    final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (context) => const FilterScreen(),
+        builder: (context) => FilterScreen(initialFilters: _activeFilters),
       ),
     );
-    if (result != null && result is Map<String, dynamic>) {
-      final filters = await _convertFiltersToApiFormat(ref, result);
+    if (result != null) {
+      final isPremium =
+          ref.read(planLimitsProvider).valueOrNull?.features.advancedFilters ??
+              false;
+      final filters = isPremium
+          ? result
+          : DiscoveryFilterMapper.stripPremiumKeys(result);
       setState(() {
-        _activeFilters = filters;
+        _activeFilters = filters.isEmpty ? null : filters;
       });
       ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
-      ref.read(discoverCacheProvider.notifier).refresh(filters: filters);
+      ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
     }
   }
 
   void _expandRadiusAndRetry() {
     final nextFilters = <String, dynamic>{...?_activeFilters};
-    final current = (nextFilters['max_distance'] as num?)?.toInt() ?? 25;
+    final current = (nextFilters['max_distance'] as num?)?.toInt() ?? 50;
     final expanded = (current + 25).clamp(25, 200);
     nextFilters['max_distance'] = expanded;
     setState(() {
@@ -781,61 +786,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
-  }
-
-  /// Convert filter UI data to API format
-  Future<Map<String, dynamic>> _convertFiltersToApiFormat(WidgetRef ref, Map<String, dynamic> filterData) async {
-    final apiFilters = <String, dynamic>{};
-    
-    // Age range
-    if (filterData['ageRange'] != null) {
-      final ageRange = filterData['ageRange'] as RangeValues;
-      apiFilters['min_age'] = ageRange.start.round();
-      apiFilters['max_age'] = ageRange.end.round();
-    }
-    
-    // Distance (if supported by API)
-    if (filterData['maxDistance'] != null) {
-      final maxDistance = filterData['maxDistance'] as double;
-      apiFilters['max_distance'] = maxDistance.round();
-    }
-    
-    // Gender preferences
-    if (filterData['genders'] != null) {
-      final genders = filterData['genders'] as List<String>;
-      // Remove 'All' if present and convert to gender IDs
-      if (!genders.contains('All') && genders.isNotEmpty) {
-        try {
-          // Fetch reference data to map gender names to IDs
-          final gendersRef = await ref.read(gendersProvider.future);
-          final genderIds = genders.map((genderName) {
-            final genderItem = gendersRef.firstWhere(
-              (item) => item.title.toLowerCase() == genderName.toLowerCase(),
-              orElse: () => throw Exception('Gender not found: $genderName'),
-            );
-            return genderItem.id.toString();
-          }).toList();
-
-          apiFilters['genders'] = genderIds.join(',');
-        } catch (e) {
-          // Fallback to passing names if reference data fails
-          apiFilters['genders'] = genders.join(',');
-        }
-      }
-    }
-    
-    // Additional filters (if supported by API)
-    if (filterData['verifiedOnly'] == true) {
-      apiFilters['verified_only'] = true;
-    }
-    if (filterData['onlineOnly'] == true) {
-      apiFilters['online_only'] = true;
-    }
-    if (filterData['premiumOnly'] == true) {
-      apiFilters['premium_only'] = true;
-    }
-    
-    return apiFilters;
   }
 
   Widget _buildHeaderActions(BuildContext context, bool isDark) {

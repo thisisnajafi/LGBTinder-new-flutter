@@ -136,7 +136,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final pages = _buildPages(currentIndex, profileUserId);
 
-    return Scaffold(
+    return PopScope(
+      canPop: currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && currentIndex != 0) {
+          _onTabTapped(0);
+        }
+      },
+      child: Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         fit: StackFit.expand,
@@ -173,6 +180,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ],
       ),
+    ),
     );
   }
 }

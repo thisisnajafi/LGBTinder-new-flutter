@@ -1,6 +1,5 @@
 // Screen: ProfileWizardPage
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -12,28 +11,22 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/theme/app_theme.dart';
 import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/app_grouped_list_card.dart';
+import '../widgets/profile/profile_wizard_layout.dart';
 import '../widgets/profile/avatar_upload.dart';
-import '../widgets/profile/edit/profile_field_editor.dart';
 import '../features/profile/data/models/user_image.dart';
 import '../widgets/profile/edit/profile_section_editor.dart';
-import '../widgets/common/section_header.dart';
 import '../core/utils/app_icons.dart';
-import '../widgets/common/divider_custom.dart';
-import '../widgets/common/reference_dropdown.dart';
 import '../widgets/common/selection_bottom_sheet.dart';
 import '../widgets/common/reference_bottom_sheet_field.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../features/auth/providers/auth_service_provider.dart';
 import '../features/auth/data/models/complete_registration_request.dart';
 import '../features/profile/providers/profile_providers.dart';
-import '../features/profile/data/models/user_image.dart';
-import '../features/profile/data/models/user_profile.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
-import 'package:go_router/go_router.dart';
 import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
 import '../features/onboarding/widgets/onboarding_celebration_screen.dart';
 import '../core/utils/app_haptics.dart';
@@ -791,22 +784,20 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return AppPageScaffold(
-      title: 'Setup Profile',
+      title: formatSettingsTitle('Setup Profile'),
       showBackButton: _currentStep > 0,
-      backgroundColor: backgroundColor,
       body: Column(
         children: [
           // Progress indicator
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.spacingLG,
+            padding: const EdgeInsets.fromLTRB(
+              AppSettingsLayout.horizontalPadding,
               AppSpacing.spacingMD,
-              AppSpacing.spacingLG,
+              AppSettingsLayout.horizontalPadding,
               0,
             ),
             child: OnboardingProgressIndicator(
@@ -840,10 +831,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           Container(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              color: theme.colorScheme.surface,
               border: Border(
                 top: BorderSide(
-                  color: isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight,
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
                 ),
               ),
             ),
@@ -888,65 +879,60 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   Widget _buildStep1(Color textColor, Color secondaryTextColor, bool isDark) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        children: [
-          SectionHeader(
-            title: 'Profile Photo',
-            iconPath: AppIcons.userOutline,
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          AvatarUpload(
-            imageUrl: _avatarUrl,
-            name: _name.isNotEmpty ? _name : 'User',
-            size: 150.0,
-            onUpload: () => _showImageSourceDialog(isPrimary: true),
-            onEdit: () => _showImageSourceDialog(isPrimary: true),
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          Text(
-            'Add a profile photo',
-            style: AppTypography.h3.copyWith(color: textColor),
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          Text(
-            'Choose a clear photo that shows your face',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-            textAlign: TextAlign.center,
-          ),
-          if (_primaryImageFile != null) ...[
-            SizedBox(height: AppSpacing.spacingLG),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: AppColors.onlineGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(
-                  color: AppColors.onlineGreen.withOpacity(0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  AppSvgIcon(
-                    assetPath: AppIcons.checkCircle,
-                    size: 20,
-                    color: AppColors.onlineGreen,
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.section(
+        'Profile Photo',
+        [
+          ProfileWizardLayout.inset(
+            child: Column(
+              children: [
+                Center(
+                  child: AvatarUpload(
+                    imageUrl: _avatarUrl,
+                    name: _name.isNotEmpty ? _name : 'User',
+                    size: 120,
+                    onUpload: () => _showImageSourceDialog(isPrimary: true),
+                    onEdit: () => _showImageSourceDialog(isPrimary: true),
                   ),
-                  SizedBox(width: AppSpacing.spacingSM),
-                  Expanded(
-                    child: Text(
-                      'Profile photo selected',
-                      style: AppTypography.body.copyWith(color: textColor),
-                    ),
+                ),
+                SizedBox(height: AppSpacing.spacingMD),
+                Text(
+                  'Add a profile photo',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                SizedBox(height: AppSpacing.spacingXS),
+                Text(
+                  'Choose a clear photo that shows your face',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                ),
+                if (_primaryImageFile != null) ...[
+                  SizedBox(height: AppSpacing.spacingMD),
+                  AppGroupedInfoTile(
+                    label: 'Status',
+                    value: 'Profile photo selected',
+                    badge: 'Ready',
+                    showDivider: false,
                   ),
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
         ],
+        first: true,
       ),
-    );
+      ProfileWizardLayout.footnote(
+        text: 'Your primary photo is shown on discovery and in chat.',
+      ),
+    ]);
   }
 
   void _showImageSourceDialog({required bool isPrimary}) {
@@ -1002,232 +988,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     );
   }
 
-  // Helper method to show country/city bottom sheet
-  Future<void> _showCountryBottomSheet(List<ReferenceItem> countries) async {
-    // Dismiss keyboard and unfocus any text fields
-    FocusScope.of(context).unfocus();
-    
-    final selected = await SelectionBottomSheet.showSingleSelect<ReferenceItem>(
-      context: context,
-      title: 'Select Country',
-      items: countries,
-      getTitle: (item) => item.title,
-      selectedItem: countries.firstWhere(
-        (c) => c.id == _countryId,
-        orElse: () => ReferenceItem(id: -1, title: ''),
-      ),
-      searchable: true,
-    );
-    
-    if (selected != null && selected.id != -1) {
-      setState(() {
-        _countryId = selected.id;
-        _cityId = null; // Reset city when country changes
-      });
-    }
-  }
-
-  // Helper method to show city bottom sheet
-  Future<void> _showCityBottomSheet(List<ReferenceItem> cities) async {
-    // Dismiss keyboard and unfocus any text fields
-    FocusScope.of(context).unfocus();
-    
-    final selected = await SelectionBottomSheet.showSingleSelect<ReferenceItem>(
-      context: context,
-      title: 'Select City',
-      items: cities,
-      getTitle: (item) => item.title,
-      selectedItem: cities.firstWhere(
-        (c) => c.id == _cityId,
-        orElse: () => ReferenceItem(id: -1, title: ''),
-      ),
-      searchable: true,
-    );
-    
-    if (selected != null && selected.id != -1) {
-      setState(() {
-        _cityId = selected.id;
-      });
-    }
-  }
-
-  // Helper method to show gender bottom sheet with images
-  Future<void> _showGenderBottomSheet(List<ReferenceItem> genders) async {
-    // Dismiss keyboard and unfocus any text fields
-    FocusScope.of(context).unfocus();
-    
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    await showModalBottomSheet<ReferenceItem>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.radiusXL),
-            topRight: Radius.circular(AppRadius.radiusXL),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: EdgeInsets.only(top: AppSpacing.spacingMD),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: secondaryTextColor.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Header
-            Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Select Gender',
-                    style: AppTypography.h2.copyWith(color: textColor),
-                  ),
-                  IconButton(
-                    icon: AppSvgIcon(
-                      assetPath: AppIcons.close,
-                      size: 24,
-                      color: secondaryTextColor,
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            // Gender list with images
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: genders.length,
-                itemBuilder: (context, index) {
-                  final gender = genders[index];
-                  final isSelected = gender.id == _genderId;
-
-                  return InkWell(
-                    onTap: () => Navigator.of(context).pop(gender),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingLG,
-                        vertical: AppSpacing.spacingMD,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accentPurple.withOpacity(0.1)
-                            : Colors.transparent,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: borderColor.withOpacity(0.3),
-                            width: 0.5,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Gender image
-                          if (gender.imageUrl != null)
-                            Container(
-                              width: 48,
-                              height: 48,
-                              margin: EdgeInsets.only(right: AppSpacing.spacingMD),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors.accentPurple
-                                      : borderColor,
-                                  width: isSelected ? 2 : 1,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                                child: CachedNetworkImage(
-                                  imageUrl: gender.imageUrl!,
-                                  cacheManager: ref.watch(imageCacheServiceProvider),
-                                  fadeInDuration: const Duration(milliseconds: 200),
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: surfaceColor,
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            AppColors.accentPurple,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, error) => Container(
-                                    color: surfaceColor,
-                                    child: AppSvgIcon(
-                                      assetPath: AppIcons.userOutline,
-                                      size: 24,
-                                      color: secondaryTextColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          Expanded(
-                            child: Text(
-                              gender.title,
-                              style: AppTypography.body.copyWith(
-                                color: isSelected
-                                    ? AppColors.accentPurple
-                                    : textColor,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            AppSvgIcon(
-                              assetPath: AppIcons.checkCircle,
-                              size: 24,
-                              color: AppColors.accentPurple,
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).then((selected) {
-      if (selected != null) {
-        setState(() {
-          _genderId = selected.id;
-        });
-      }
-    });
-  }
-
   Widget _buildStep2(Color textColor, Color secondaryTextColor, bool isDark) {
     // Load reference data
     final countriesAsync = ref.watch(countriesProvider);
@@ -1235,71 +995,37 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final citiesAsync = _countryId != null
         ? ref.watch(citiesProvider(_countryId!))
         : const AsyncValue<List<ReferenceItem>>.data([]);
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: 'Basic Information & Contact',
-            iconPath: AppIcons.info,
-          ),
-          SizedBox(height: AppSpacing.spacingLG),
-          // Name Field (auto-save, no save button)
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.section(
+        'Basic Information & Contact',
+        [
+          ProfileWizardLayout.inset(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Name',
-                  style: AppTypography.h3.copyWith(color: textColor),
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
                 TextFormField(
                   controller: _nameController,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
                     hintText: 'Enter your name',
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    contentPadding: EdgeInsets.all(AppSpacing.spacingMD),
                   ),
                   onChanged: (value) {
                     setState(() {
-                      _name = value; // Auto-save on change
+                      _name = value;
                     });
                   },
                 ),
               ],
             ),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Country Bottom Sheet Field (above phone)
           countriesAsync.when(
             data: (countries) => ReferenceBottomSheetField(
               label: 'Country',
               hint: 'Select your country',
               selectedId: _countryId,
               items: countries,
+              groupedStyle: true,
               onChanged: (value) {
                 setState(() {
                   _countryId = value;
@@ -1316,80 +1042,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               required: true,
               searchable: true,
             ),
-            loading: () => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Country *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceElevatedDark
-                          : AppColors.surfaceElevatedLight,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.borderMediumDark
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.accentPurple,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.spacingMD),
-                        Text(
-                          'Loading countries...',
-                          style: AppTypography.body.copyWith(color: secondaryTextColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            error: (error, stack) => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Country *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(color: Colors.red),
-                    ),
-                    child: Text(
-                      'Failed to load countries: ${error.toString()}',
-                      style: AppTypography.body.copyWith(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            loading: () => _buildLoadingField('Country', textColor, secondaryTextColor, isDark),
+            error: (error, stack) => _buildErrorField('Country', error, textColor, secondaryTextColor, isDark),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // City Bottom Sheet Field (depends on country)
           if (_countryId != null)
             citiesAsync.when(
               data: (cities) => ReferenceBottomSheetField(
@@ -1397,6 +1052,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 hint: 'Select your city',
                 selectedId: _cityId,
                 items: cities,
+                groupedStyle: true,
                 onChanged: (value) {
                   setState(() {
                     _cityId = value;
@@ -1406,561 +1062,150 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 enabled: cities.isNotEmpty,
                 searchable: true,
               ),
-              loading: () => Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'City *',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(
-                          color: isDark
-                              ? AppColors.borderMediumDark
-                              : AppColors.borderMediumLight,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.accentPurple,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.spacingMD),
-                          Text(
-                            'Loading cities...',
-                            style: AppTypography.body.copyWith(color: secondaryTextColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              error: (error, stack) => Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'City *',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(color: Colors.red),
-                      ),
-                      child: Text(
-                        'Failed to load cities: ${error.toString()}',
-                        style: AppTypography.body.copyWith(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              loading: () => _buildLoadingField('City', textColor, secondaryTextColor, isDark),
+              error: (error, stack) => _buildErrorField('City', error, textColor, secondaryTextColor, isDark),
             ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Phone Number Field
           countriesAsync.when(
             data: (countries) {
               final selectedCountry = countries.firstWhere(
                 (c) => c.id == _countryId,
                 orElse: () => ReferenceItem(id: -1, title: ''),
               );
-      final defaultCountryCode = selectedCountry.phoneCode ?? '+1';
-      final effectiveCountryCode = _countryCode?.isNotEmpty == true
-          ? _countryCode!
-          : defaultCountryCode;
+              final defaultCountryCode = selectedCountry.phoneCode ?? '+1';
+              final effectiveCountryCode = _countryCode?.isNotEmpty == true
+                  ? _countryCode!
+                  : defaultCountryCode;
 
-      if (_countryCode == null || _countryCode!.isEmpty) {
-        _countryCode = effectiveCountryCode;
-      }
-      if (_countryCodeController.text != effectiveCountryCode) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _countryCodeController.text = effectiveCountryCode;
-          }
-        });
-      }
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Phone Number',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Form(
-                      key: _phoneFormKey,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
+              if (_countryCode == null || _countryCode!.isEmpty) {
+                _countryCode = effectiveCountryCode;
+              }
+              if (_countryCodeController.text != effectiveCountryCode) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _countryCodeController.text = effectiveCountryCode;
+                  }
+                });
+              }
+
+              return ProfileWizardLayout.inset(
+                child: Form(
+                  key: _phoneFormKey,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 96,
+                        child: TextFormField(
+                          controller: _countryCodeController,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: 'Code',
+                            hintText: defaultCountryCode,
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 90,
-                              child: TextFormField(
-                                controller: _countryCodeController,
-                                keyboardType: TextInputType.phone,
-                                textAlign: TextAlign.center,
-                                style: AppTypography.body.copyWith(color: textColor),
-                                decoration: InputDecoration(
-                                  hintText: defaultCountryCode,
-                                  hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    vertical: AppSpacing.spacingMD,
-                                  ),
-                                  errorStyle: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                validator: _validateCountryCode,
-                                onChanged: (value) {
-                                  var normalized = value.trim();
-                                  if (normalized.isNotEmpty && !normalized.startsWith('+')) {
-                                    normalized = '+$normalized';
-                                  }
-                                  setState(() {
-                                    _countryCode = normalized.isNotEmpty ? normalized : defaultCountryCode;
-                                  });
-                                },
-                              ),
-                            ),
-                            Container(
-                              width: 1,
-                              height: 24,
-                              color: isDark
-                                  ? AppColors.borderMediumDark
-                                  : AppColors.borderMediumLight,
-                            ),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _phoneNumberController,
-                                keyboardType: TextInputType.phone,
-                                style: AppTypography.body.copyWith(color: textColor),
-                                decoration: InputDecoration(
-                                  hintText: 'Enter phone number',
-                                  hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.all(AppSpacing.spacingMD),
-                                  errorStyle: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                validator: _validatePhoneNumber,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _phoneNumber = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
+                          validator: _validateCountryCode,
+                          onChanged: (value) {
+                            var normalized = value.trim();
+                            if (normalized.isNotEmpty && !normalized.startsWith('+')) {
+                              normalized = '+$normalized';
+                            }
+                            setState(() {
+                              _countryCode = normalized.isNotEmpty
+                                  ? normalized
+                                  : defaultCountryCode;
+                            });
+                          },
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(width: AppSpacing.spacingSM),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _phoneNumberController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone Number',
+                            hintText: 'Enter phone number',
+                          ),
+                          validator: _validatePhoneNumber,
+                          onChanged: (value) {
+                            setState(() {
+                              _phoneNumber = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
-            loading: () => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Phone Number *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceElevatedDark
-                          : AppColors.surfaceElevatedLight,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.borderMediumDark
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.accentPurple,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.spacingMD),
-                        Text(
-                          'Loading...',
-                          style: AppTypography.body.copyWith(color: secondaryTextColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            error: (error, stack) => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Phone Number *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(color: Colors.red),
-                    ),
-                    child: Text(
-                      'Failed to load countries: ${error.toString()}',
-                      style: AppTypography.body.copyWith(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            loading: () => _buildLoadingField('Phone Number', textColor, secondaryTextColor, isDark),
+            error: (error, stack) => _buildErrorField('Phone Number', error, textColor, secondaryTextColor, isDark),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Gender Bottom Sheet Field
           gendersAsync.when(
-            data: (genders) {
-              // Find selected gender
-              final selectedGender = genders.firstWhere(
-                (g) => g.id == _genderId,
-                orElse: () => ReferenceItem(id: -1, title: ''),
-              );
-
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Gender',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showGenderBottomSheet(genders),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            // Gender image if selected
-                            if (selectedGender.id != -1 && selectedGender.imageUrl != null)
-                              Container(
-                                width: 32,
-                                height: 32,
-                                margin: EdgeInsets.only(right: AppSpacing.spacingMD),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? AppColors.borderMediumDark
-                                        : AppColors.borderMediumLight,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                  child: CachedNetworkImage(
-                                    imageUrl: selectedGender.imageUrl!,
-                                    cacheManager: ref.watch(imageCacheServiceProvider),
-                                    fadeInDuration: const Duration(milliseconds: 200),
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(
-                                      color: isDark
-                                          ? AppColors.surfaceDark
-                                          : AppColors.surfaceLight,
-                                    ),
-                                    errorWidget: (context, url, error) => Container(
-                                      color: isDark
-                                          ? AppColors.surfaceDark
-                                          : AppColors.surfaceLight,
-                                      child: AppSvgIcon(
-                                        assetPath: AppIcons.userOutline,
-                                        size: 16,
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            Expanded(
-                              child: Text(
-                                selectedGender.id != -1
-                                    ? selectedGender.title
-                                    : 'Select your gender',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedGender.id != -1
-                                      ? textColor
-                                      : secondaryTextColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
+            data: (genders) => ReferenceBottomSheetField(
+              label: 'Gender',
+              hint: 'Select your gender',
+              selectedId: _genderId,
+              items: genders,
+              groupedStyle: true,
+              onChanged: (value) {
+                setState(() {
+                  _genderId = value;
+                });
+              },
+              required: true,
+              searchable: true,
+            ),
+            loading: () => _buildLoadingField('Gender', textColor, secondaryTextColor, isDark),
+            error: (error, stack) => _buildErrorField('Gender', error, textColor, secondaryTextColor, isDark),
+          ),
+          ProfileWizardLayout.pickerTile(
+            context: context,
+            label: 'Birth Date',
+            value: _birthDate != null
+                ? '${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}'
+                : null,
+            hint: 'Select your birth date',
+            required: true,
+            showDivider: false,
+            onTap: () async {
+              final DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: _birthDate ??
+                    DateTime.now().subtract(const Duration(days: 365 * 25)),
+                firstDate: DateTime(1950),
+                lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: ColorScheme.light(
+                        primary: AppColors.accentPurple,
+                        onPrimary: Colors.white,
+                        surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                        onSurface: textColor,
                       ),
                     ),
-                  ],
-                ),
+                    child: child!,
+                  );
+                },
               );
+              if (picked != null) {
+                setState(() {
+                  _birthDate = picked;
+                  final today = DateTime.now();
+                  _age = today.year - picked.year;
+                  if (today.month < picked.month ||
+                      (today.month == picked.month && today.day < picked.day)) {
+                    _age = _age! - 1;
+                  }
+                });
+              }
             },
-            loading: () => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gender *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceElevatedDark
-                          : AppColors.surfaceElevatedLight,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.borderMediumDark
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.accentPurple,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.spacingMD),
-                        Text(
-                          'Loading genders...',
-                          style: AppTypography.body.copyWith(color: secondaryTextColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            error: (error, stack) => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gender *',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(color: Colors.red),
-                    ),
-                    child: Text(
-                      'Failed to load genders: ${error.toString()}',
-                      style: AppTypography.body.copyWith(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Birth Date Picker
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Birth Date',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    Text(
-                      ' *',
-                      style: AppTypography.h3.copyWith(color: Colors.red),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                InkWell(
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: _birthDate ?? DateTime.now().subtract(const Duration(days: 365 * 25)),
-                      firstDate: DateTime(1950),
-                      lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Must be 18+
-                      builder: (context, child) {
-                        return Theme(
-                          data: Theme.of(context).copyWith(
-                            colorScheme: ColorScheme.light(
-                              primary: AppColors.accentPurple,
-                              onPrimary: Colors.white,
-                              surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                              onSurface: textColor,
-                            ),
-                          ),
-                          child: child!,
-                        );
-                      },
-                    );
-                    if (picked != null) {
-                      setState(() {
-                        _birthDate = picked;
-                        // Calculate age from birth date
-                        final today = DateTime.now();
-                        _age = today.year - picked.year;
-                        if (today.month < picked.month ||
-                            (today.month == picked.month && today.day < picked.day)) {
-                          _age = _age! - 1;
-                        }
-                      });
-                    }
-                  },
-                  child: Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceElevatedDark
-                          : AppColors.surfaceElevatedLight,
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.borderMediumDark
-                            : AppColors.borderMediumLight,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.calendar,
-                          size: 20,
-                          color: secondaryTextColor,
-                        ),
-                        SizedBox(width: AppSpacing.spacingMD),
-                        Expanded(
-                          child: Text(
-                            _birthDate != null
-                                ? '${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}'
-                                : 'Select your birth date',
-                            style: AppTypography.body.copyWith(
-                              color: _birthDate != null ? textColor : secondaryTextColor,
-                            ),
-                          ),
-                        ),
-                        AppSvgIcon(
-                          assetPath: AppIcons.arrowDown,
-                          size: 20,
-                          color: secondaryTextColor,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
         ],
+        first: true,
       ),
-    );
+    ]);
   }
 
   // Helper method to show multi-select bottom sheet
@@ -2668,156 +1913,83 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final educationLevelsAsync = ref.watch(educationLevelsProvider);
     final jobsAsync = ref.watch(jobsProvider);
     final languagesAsync = ref.watch(languagesProvider);
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: 'About You',
-            iconPath: AppIcons.userOutline,
-          ),
-          SizedBox(height: AppSpacing.spacingLG),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bio',
-                style: AppTypography.h3.copyWith(color: textColor),
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.section(
+        'About Me',
+        [
+          ProfileWizardLayout.inset(
+            child: TextFormField(
+              initialValue: _bio,
+              maxLines: 5,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                labelText: 'Bio',
+                hintText: 'Tell us about yourself...',
+                alignLabelWithHint: true,
               ),
-              SizedBox(height: AppSpacing.spacingMD),
-              TextFormField(
-            initialValue: _bio,
-            maxLines: 5,
-            maxLength: 500,
-                style: AppTypography.body.copyWith(color: textColor),
-                decoration: InputDecoration(
-            hintText: 'Tell us about yourself...',
-                  hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.surfaceElevatedDark
-                      : AppColors.surfaceElevatedLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                  ),
-                  contentPadding: EdgeInsets.all(AppSpacing.spacingMD),
-                ),
-                onChanged: (value) {
-              setState(() {
-                _bio = value;
-              });
-            },
-                validator: (value) {
-                  if (value != null && value.length > 500) {
-                    return 'Bio must be 500 characters or less';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Height Slider
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Height',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    Text(
-                      ' *',
-                      style: AppTypography.h3.copyWith(color: Colors.red),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Text(
-                  '${_height} cm',
-                  style: AppTypography.h2.copyWith(color: AppColors.accentPurple),
-                ),
-                SizedBox(height: AppSpacing.spacingSM),
-                Slider(
-                  value: _height.toDouble(),
-                  min: 100,
-                  max: 250,
-                  divisions: 150,
-                  label: '${_height} cm',
-                  activeColor: AppColors.accentPurple,
-                  onChanged: (value) {
-                    setState(() {
-                      _height = value.round();
-                    });
-                  },
-                ),
-              ],
+              onChanged: (value) {
+                setState(() {
+                  _bio = value;
+                });
+              },
+              validator: (value) {
+                if (value != null && value.length > 500) {
+                  return 'Bio must be 500 characters or less';
+                }
+                return null;
+              },
             ),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Weight Slider
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Weight',
-                      style: AppTypography.h3.copyWith(color: textColor),
-                    ),
-                    Text(
-                      ' *',
-                      style: AppTypography.h3.copyWith(color: Colors.red),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Text(
-                  '${_weight} kg',
-                  style: AppTypography.h2.copyWith(color: AppColors.accentPurple),
-                ),
-                SizedBox(height: AppSpacing.spacingSM),
-                Slider(
-                  value: _weight.toDouble(),
-                  min: 30,
-                  max: 200,
-                  divisions: 170,
-                  label: '${_weight} kg',
-                  activeColor: AppColors.accentPurple,
-                  onChanged: (value) {
-                    setState(() {
-                      _weight = value.round();
-                    });
-                  },
-                ),
-              ],
+        ],
+        first: true,
+      ),
+      ProfileWizardLayout.section(
+        'Personal Details',
+        [
+          ProfileWizardLayout.inset(
+            child: TextFormField(
+              initialValue: _height.toString(),
+              decoration: const InputDecoration(
+                labelText: 'Height (cm)',
+                hintText: 'Enter your height',
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                setState(() {
+                  _height = int.tryParse(value.trim()) ?? _height;
+                });
+              },
             ),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Education (single select)
+          const AppGroupedRowSeparator(),
+          ProfileWizardLayout.inset(
+            child: TextFormField(
+              initialValue: _weight.toString(),
+              decoration: const InputDecoration(
+                labelText: 'Weight (kg)',
+                hintText: 'Enter your weight',
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (value) {
+                setState(() {
+                  _weight = int.tryParse(value.trim()) ?? _weight;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+      ProfileWizardLayout.section(
+        'Background',
+        [
           educationLevelsAsync.when(
             data: (educations) => ReferenceBottomSheetField(
               label: 'Education',
               hint: 'Select your education level',
               selectedId: _educations.isNotEmpty ? _educations.first : null,
               items: educations,
+              groupedStyle: true,
               onChanged: (value) {
                 setState(() {
                   _educations = value != null ? [value] : [];
@@ -2829,14 +2001,13 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             loading: () => _buildLoadingField('Education', textColor, secondaryTextColor, isDark),
             error: (error, stack) => _buildErrorField('Education', error, textColor, secondaryTextColor, isDark),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Job (single select)
           jobsAsync.when(
             data: (jobs) => ReferenceBottomSheetField(
               label: 'Job',
               hint: 'Select your job',
               selectedId: _jobs.isNotEmpty ? _jobs.first : null,
               items: jobs,
+              groupedStyle: true,
               onChanged: (value) {
                 setState(() {
                   _jobs = value != null ? [value] : [];
@@ -2848,97 +2019,20 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             loading: () => _buildLoadingField('Job', textColor, secondaryTextColor, isDark),
             error: (error, stack) => _buildErrorField('Job', error, textColor, secondaryTextColor, isDark),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Languages Multi-Select
           languagesAsync.when(
             data: (languages) {
-              final selectedLanguageItems = languages
+              final selectedLanguageTitles = languages
                   .where((l) => _languages.contains(l.id))
+                  .map((l) => l.title)
                   .toList();
-              final selectedLanguageTitles = selectedLanguageItems.map((l) => l.title).toList();
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Languages',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showLanguagesBottomSheet(languages),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                selectedLanguageTitles.isEmpty
-                                    ? 'Select languages'
-                                    : '${selectedLanguageTitles.length} selected',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedLanguageTitles.isEmpty
-                                      ? secondaryTextColor
-                                      : textColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (selectedLanguageItems.isNotEmpty) ...[
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
-                        children: selectedLanguageItems.map((item) {
-                          return InputChip(
-                            label: Text(item.title),
-                            onDeleted: () {
-                              setState(() {
-                                _languages.remove(item.id);
-                              });
-                            },
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            backgroundColor: isDark
-                                ? AppColors.surfaceElevatedDark
-                                : AppColors.surfaceElevatedLight,
-                            labelStyle: AppTypography.caption.copyWith(
-                              color: textColor,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
+
+              return _buildGroupedMultiSelectPicker(
+                label: 'Languages',
+                hint: 'Select languages',
+                selectedTitles: selectedLanguageTitles,
+                onTap: () => _showLanguagesBottomSheet(languages),
+                required: true,
+                showDivider: false,
               );
             },
             loading: () => _buildLoadingField('Languages', textColor, secondaryTextColor, isDark),
@@ -2946,6 +2040,27 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           ),
         ],
       ),
+    ]);
+  }
+
+  Widget _buildGroupedMultiSelectPicker({
+    required String label,
+    required String hint,
+    required List<String> selectedTitles,
+    required VoidCallback onTap,
+    bool required = false,
+    bool showDivider = true,
+  }) {
+    final value =
+        selectedTitles.isEmpty ? null : selectedTitles.join(', ');
+    return ProfileWizardLayout.pickerTile(
+      context: context,
+      label: label,
+      value: value,
+      hint: hint,
+      onTap: onTap,
+      required: required,
+      showDivider: showDivider,
     );
   }
 
@@ -3031,19 +2146,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final preferredGendersAsync = ref.watch(preferredGendersProvider);
     final relationGoalsAsync = ref.watch(relationshipGoalsProvider);
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: 'Preferences & Lifestyle',
-            iconPath: AppIcons.heartOutline,
-          ),
-          SizedBox(height: AppSpacing.spacingLG),
-          // Age Preferences
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.section(
+        'Preferences & Lifestyle',
+        [
+          ProfileWizardLayout.inset(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -3051,15 +2158,19 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                   children: [
                     Text(
                       'Age Preference',
-                      style: AppTypography.h3.copyWith(color: textColor),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                     Text(
                       ' *',
-                      style: AppTypography.h3.copyWith(color: Colors.red),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                     ),
                   ],
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
+                ),
+                SizedBox(height: AppSpacing.spacingMD),
                 Column(
                   children: [
                     Row(
@@ -3130,339 +2241,85 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               ],
             ),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Preferred Genders Multi-Select
+          const AppGroupedRowSeparator(),
           preferredGendersAsync.when(
             data: (genders) {
-              final selectedGenderItems = genders
+              final selectedGenderTitles = genders
                   .where((g) => _preferredGenders.contains(g.id))
+                  .map((g) => g.title)
                   .toList();
-              final selectedGenderTitles = selectedGenderItems.map((g) => g.title).toList();
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Preferred Genders',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showPreferredGendersBottomSheet(genders),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                selectedGenderTitles.isEmpty
-                                    ? 'Select preferred genders'
-                                    : '${selectedGenderTitles.length} selected',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedGenderTitles.isEmpty
-                                      ? secondaryTextColor
-                                      : textColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (selectedGenderItems.isNotEmpty) ...[
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
-                        children: selectedGenderItems.map((item) {
-                          return InputChip(
-                            label: Text(item.title),
-                            onDeleted: () {
-                              setState(() {
-                                _preferredGenders.remove(item.id);
-                              });
-                            },
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            backgroundColor: isDark
-                                ? AppColors.surfaceElevatedDark
-                                : AppColors.surfaceElevatedLight,
-                            labelStyle: AppTypography.caption.copyWith(
-                              color: textColor,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
+
+              return _buildGroupedMultiSelectPicker(
+                label: 'Preferred Genders',
+                hint: 'Select preferred genders',
+                selectedTitles: selectedGenderTitles,
+                onTap: () => _showPreferredGendersBottomSheet(genders),
+                required: true,
               );
             },
             loading: () => _buildLoadingField('Preferred Genders', textColor, secondaryTextColor, isDark),
             error: (error, stack) => _buildErrorField('Preferred Genders', error, textColor, secondaryTextColor, isDark),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Relation Goals Multi-Select
           relationGoalsAsync.when(
             data: (goals) {
-              final selectedGoalItems = goals
+              final selectedGoalTitles = goals
                   .where((g) => _relationGoals.contains(g.id))
+                  .map((g) => g.title)
                   .toList();
-              final selectedGoalTitles = selectedGoalItems.map((g) => g.title).toList();
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Relationship Goals',
-                          style: AppTypography.h3.copyWith(color: textColor),
-                        ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showMultiSelectBottomSheet(
-                        title: 'Select Relationship Goals',
-                        items: goals,
-                        selectedIds: _relationGoals,
-                        onSelected: (ids) {
-                          setState(() {
-                            _relationGoals = ids;
-                          });
-                        },
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                selectedGoalTitles.isEmpty
-                                    ? 'Select relationship goals'
-                                    : '${selectedGoalTitles.length} selected',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedGoalTitles.isEmpty
-                                      ? secondaryTextColor
-                                      : textColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (selectedGoalItems.isNotEmpty) ...[
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
-                        children: selectedGoalItems.map((item) {
-                          return InputChip(
-                            label: Text(item.title),
-                            onDeleted: () {
-                              setState(() {
-                                _relationGoals.remove(item.id);
-                              });
-                            },
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            backgroundColor: isDark
-                                ? AppColors.surfaceElevatedDark
-                                : AppColors.surfaceElevatedLight,
-                            labelStyle: AppTypography.caption.copyWith(
-                              color: textColor,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
+
+              return _buildGroupedMultiSelectPicker(
+                label: 'Relationship Goals',
+                hint: 'Select relationship goals',
+                selectedTitles: selectedGoalTitles,
+                onTap: () => _showMultiSelectBottomSheet(
+                  title: 'Select Relationship Goals',
+                  items: goals,
+                  selectedIds: _relationGoals,
+                  onSelected: (ids) {
+                    setState(() {
+                      _relationGoals = ids;
+                    });
+                  },
                 ),
+                required: true,
               );
             },
             loading: () => _buildLoadingField('Relationship Goals', textColor, secondaryTextColor, isDark),
             error: (error, stack) => _buildErrorField('Relationship Goals', error, textColor, secondaryTextColor, isDark),
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Lifestyle Choices
-          _buildLifestyleChoice('Smoke', _smoke, (value) {
-            setState(() {
-              _smoke = value;
-            });
-          }, textColor, secondaryTextColor, isDark),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildLifestyleChoice('Drink', _drink, (value) {
-            setState(() {
-              _drink = value;
-            });
-          }, textColor, secondaryTextColor, isDark),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildLifestyleChoice('Gym', _gym, (value) {
-            setState(() {
-              _gym = value;
-            });
-          }, textColor, secondaryTextColor, isDark),
+          AppGroupedSwitchTile(
+            label: 'Smoking',
+            subtitle: 'Do you smoke?',
+            value: _smoke,
+            onChanged: (value) => setState(() => _smoke = value),
+          ),
+          AppGroupedSwitchTile(
+            label: 'Drinking',
+            subtitle: 'Do you drink alcohol?',
+            value: _drink,
+            onChanged: (value) => setState(() => _drink = value),
+          ),
+          AppGroupedSwitchTile(
+            label: 'Gym',
+            subtitle: 'Do you work out regularly?',
+            value: _gym,
+            onChanged: (value) => setState(() => _gym = value),
+            showDivider: false,
+          ),
         ],
       ),
-    );
+    ]);
   }
 
-  Widget _buildLifestyleChoice(String label, bool value, Function(bool) onChanged, Color textColor, Color secondaryTextColor, bool isDark) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                label,
-                style: AppTypography.h3.copyWith(color: textColor),
-              ),
-              Text(
-                ' *',
-                style: AppTypography.h3.copyWith(color: Colors.red),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () => onChanged(true),
-                  child: Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: value
-                          ? AppColors.accentPurple
-                          : (isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: value
-                            ? AppColors.accentPurple
-                            : (isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Yes',
-                        style: AppTypography.body.copyWith(
-                          color: value ? Colors.white : textColor,
-                          fontWeight: value ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: AppSpacing.spacingMD),
-              Expanded(
-                child: InkWell(
-                  onTap: () => onChanged(false),
-                  child: Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: !value
-                          ? AppColors.accentPurple
-                          : (isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      border: Border.all(
-                        color: !value
-                            ? AppColors.accentPurple
-                            : (isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight),
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'No',
-                        style: AppTypography.body.copyWith(
-                          color: !value ? Colors.white : textColor,
-                          fontWeight: !value ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
   Widget _buildStep5(Color textColor, Color secondaryTextColor, bool isDark) {
     // Load reference data
     final interestsAsync = ref.watch(interestsProvider);
     final musicGenresAsync = ref.watch(musicGenresProvider);
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            title: 'Interests & Music',
-            iconPath: AppIcons.heartOutline,
-          ),
-          SizedBox(height: AppSpacing.spacingLG),
-          // Interests
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.section(
+        'Interests & Music',
+        [
           interestsAsync.when(
             data: (interests) {
               final filteredInterests = interests.where((item) {
@@ -3473,381 +2330,275 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               }).toList();
               final interestTitles =
                   filteredInterests.map((item) => item.title).toList();
-              
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _interestSearchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search interests',
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: AppSvgIcon(
-                          assetPath: AppIcons.search,
-                          size: 16,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      prefixIconConstraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.surfaceDark
-                          : AppColors.surfaceLight,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.borderMediumDark
-                              : AppColors.borderMediumLight,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.borderMediumDark
-                              : AppColors.borderMediumLight,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        borderSide: const BorderSide(
-                          color: AppColors.accentPurple,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    style: AppTypography.body.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-                  if (interestTitles.isEmpty)
-                    Text(
-                      'No interests found',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
-                    )
-                  else
-                    ProfileSectionEditor(
-                sectionTitle: 'Interests',
-                availableOptions: interestTitles,
-                selectedOptions: _selectedInterests,
-                      showSearch: false,
-                      autoSave: true,
-                      minSelections: 1,
-                      maxSelections: 10,
-                onSave: (selected) {
-                  setState(() {
-                    _selectedInterests = selected;
-                    _interests = selected;
-                    _interestsIds = selected
-                        .map((title) {
-                          final interest = interests.firstWhere(
-                            (item) => item.title == title,
-                            orElse: () => ReferenceItem(id: -1, title: ''),
-                          );
-                          return interest.id != -1 ? interest.id : null;
-                        })
-                        .where((id) => id != null)
-                        .cast<int>()
-                        .toList();
-                  });
-                },
-                    ),
-                ],
-              );
-            },
-            loading: () => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingXXL),
-              child: Center(
-                child: Column(
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.accentPurple,
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Text(
-                      'Loading interests...',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            error: (error, stack) => Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                children: [
-                  AppSvgIcon(
-                    assetPath: AppIcons.errorOutline,
-                    size: 48,
-                    color: Colors.red,
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Text(
-                    'Failed to load interests',
-                    style: AppTypography.h3.copyWith(color: textColor),
-                  ),
-                  SizedBox(height: AppSpacing.spacingSM),
-                  Text(
-                    error.toString(),
-                    style: AppTypography.body.copyWith(color: secondaryTextColor),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-                  OutlinedButton(
-                    onPressed: () {
-                      ref.invalidate(interestsProvider);
-                    },
-                    child: Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          // Music Genres
-          musicGenresAsync.when(
-            data: (genres) {
-              final selectedGenreItems = genres
-                  .where((g) => _musicGenres.contains(g.id))
-                  .toList();
-              final selectedGenreTitles = selectedGenreItems.map((g) => g.title).toList();
-              
-              return Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
+
+              return ProfileWizardLayout.inset(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Music Genres',
-                          style: AppTypography.h3.copyWith(color: textColor),
+                    TextField(
+                      controller: _interestSearchController,
+                      decoration: InputDecoration(
+                        labelText: 'Search interests',
+                        hintText: 'Search interests',
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: AppSvgIcon(
+                            assetPath: AppIcons.search,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
                         ),
-                        Text(
-                          ' *',
-                          style: AppTypography.h3.copyWith(color: Colors.red),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
                         ),
-                      ],
+                      ),
+                      onChanged: (_) => setState(() {}),
                     ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    InkWell(
-                      onTap: () => _showMultiSelectBottomSheet(
-                        title: 'Select Music Genres',
-                        items: genres,
-                        selectedIds: _musicGenres,
-                        onSelected: (ids) {
+                    SizedBox(height: AppSpacing.spacingLG),
+                    if (interestTitles.isEmpty)
+                      Text(
+                        'No interests found',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.55),
+                            ),
+                      )
+                    else
+                      ProfileSectionEditor(
+                        sectionTitle: 'Interests',
+                        availableOptions: interestTitles,
+                        selectedOptions: _selectedInterests,
+                        showSearch: false,
+                        autoSave: true,
+                        minSelections: 1,
+                        maxSelections: 10,
+                        onSave: (selected) {
                           setState(() {
-                            _musicGenres = ids;
+                            _selectedInterests = selected;
+                            _interests = selected;
+                            _interestsIds = selected
+                                .map((title) {
+                                  final interest = interests.firstWhere(
+                                    (item) => item.title == title,
+                                    orElse: () =>
+                                        ReferenceItem(id: -1, title: ''),
+                                  );
+                                  return interest.id != -1 ? interest.id : null;
+                                })
+                                .where((id) => id != null)
+                                .cast<int>()
+                                .toList();
                           });
                         },
                       ),
-                      child: Container(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.borderMediumDark
-                                : AppColors.borderMediumLight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                selectedGenreTitles.isEmpty
-                                    ? 'Select music genres'
-                                    : '${selectedGenreTitles.length} selected',
-                                style: AppTypography.body.copyWith(
-                                  color: selectedGenreTitles.isEmpty
-                                      ? secondaryTextColor
-                                      : textColor,
-                                ),
-                              ),
-                            ),
-                            AppSvgIcon(
-                              assetPath: AppIcons.arrowDown,
-                              size: 20,
-                              color: secondaryTextColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (selectedGenreItems.isNotEmpty) ...[
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
-                        children: selectedGenreItems.map((item) {
-                          return InputChip(
-                            label: Text(item.title),
-                            onDeleted: () {
-                              setState(() {
-                                _musicGenres.remove(item.id);
-                              });
-                            },
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            backgroundColor: isDark
-                                ? AppColors.surfaceElevatedDark
-                                : AppColors.surfaceElevatedLight,
-                            labelStyle: AppTypography.caption.copyWith(
-                              color: textColor,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
                   ],
                 ),
               );
             },
-            loading: () => _buildLoadingField('Music Genres', textColor, secondaryTextColor, isDark),
-            error: (error, stack) => _buildErrorField('Music Genres', error, textColor, secondaryTextColor, isDark),
+            loading: () => _buildLoadingField(
+              'Interests',
+              textColor,
+              secondaryTextColor,
+              isDark,
+            ),
+            error: (error, stack) => _buildErrorField(
+              'Interests',
+              error,
+              textColor,
+              secondaryTextColor,
+              isDark,
+            ),
+          ),
+          const AppGroupedRowSeparator(),
+          musicGenresAsync.when(
+            data: (genres) {
+              final selectedGenreTitles = genres
+                  .where((g) => _musicGenres.contains(g.id))
+                  .map((g) => g.title)
+                  .toList();
+
+              return _buildGroupedMultiSelectPicker(
+                label: 'Music Genres',
+                hint: 'Select music genres',
+                selectedTitles: selectedGenreTitles,
+                onTap: () => _showMultiSelectBottomSheet(
+                  title: 'Select Music Genres',
+                  items: genres,
+                  selectedIds: _musicGenres,
+                  onSelected: (ids) {
+                    setState(() {
+                      _musicGenres = ids;
+                    });
+                  },
+                ),
+                required: true,
+                showDivider: false,
+              );
+            },
+            loading: () => _buildLoadingField(
+              'Music Genres',
+              textColor,
+              secondaryTextColor,
+              isDark,
+            ),
+            error: (error, stack) => _buildErrorField(
+              'Music Genres',
+              error,
+              textColor,
+              secondaryTextColor,
+              isDark,
+            ),
           ),
         ],
+        first: true,
       ),
-    );
+      ProfileWizardLayout.footnote(
+        text: 'Pick at least one interest and your favorite music genres.',
+      ),
+    ]);
   }
 
   Widget _buildStep6(Color textColor, Color secondaryTextColor, bool isDark) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        children: [
-          SectionHeader(
-            title: 'Additional Photos',
-            iconPath: AppIcons.gallery,
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          Text(
-            'Add more photos to your profile',
-            style: AppTypography.h3.copyWith(color: textColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          Text(
-            'You can add up to 6 photos. More photos help others get to know you better!',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          // Photo grid
-          if (_additionalImageFiles.isEmpty)
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingXXL),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(
-                  color: isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight,
-                ),
-              ),
-              child: Column(
-                children: [
-                  AppSvgIcon(
-                    assetPath: AppIcons.galleryAdd,
-                    size: 60,
-                    color: secondaryTextColor,
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Text(
-                    'No additional photos yet',
-                    style: AppTypography.body.copyWith(color: secondaryTextColor),
-                  ),
-                ],
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.0,
-              ),
-              itemCount: _additionalImageFiles.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  ),
-                  child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      child: Image.file(
-                        _additionalImageFiles[index],
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.section(
+        'Additional Photos',
+        [
+          ProfileWizardLayout.inset(
+            child: Column(
+              children: [
+                Text(
+                  'Add more photos to your profile',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                Text(
+                  'You can add up to 6 photos. More photos help others get to know you better!',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.55),
+                      ),
+                ),
+                SizedBox(height: AppSpacing.spacingXL),
+                if (_additionalImageFiles.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(AppSpacing.spacingXXL),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.radiusMD),
                     ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                        child: GestureDetector(
-                          onTap: () {
-                          setState(() {
-                            _additionalImageFiles.removeAt(index);
-                          });
-                        },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.6),
-                              shape: BoxShape.circle,
-                            ),
-                            child: AppSvgIcon(
-                              assetPath: AppIcons.close,
-                              size: 16,
-                              color: Colors.white,
+                    child: Column(
+                      children: [
+                        AppSvgIcon(
+                          assetPath: AppIcons.galleryAdd,
+                          size: 60,
+                          color: secondaryTextColor,
+                        ),
+                        SizedBox(height: AppSpacing.spacingMD),
+                        Text(
+                          'No additional photos yet',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.55),
+                              ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: _additionalImageFiles.length,
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.radiusMD),
+                            child: Image.file(
+                              _additionalImageFiles[index],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
                             ),
                           ),
-                      ),
-                    ),
-                  ],
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _additionalImageFiles.removeAt(index);
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: AppSvgIcon(
+                                  assetPath: AppIcons.close,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          SizedBox(height: AppSpacing.spacingLG),
-          OutlinedButton.icon(
-            onPressed: _additionalImageFiles.length >= 6
-                ? null
-                : () => _showImageSourceDialog(isPrimary: false),
-            icon: AppSvgIcon(
-              assetPath: AppIcons.galleryAdd,
-              size: 20,
-              color: AppColors.accentPurple,
-            ),
-            label: Text(
-              _additionalImageFiles.length >= 6
-                  ? 'Maximum 6 photos'
-                  : 'Add Photo (${_additionalImageFiles.length}/6)',
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(
-                vertical: AppSpacing.spacingMD,
-                horizontal: AppSpacing.spacingLG,
-              ),
-              side: BorderSide(color: AppColors.accentPurple),
+                SizedBox(height: AppSpacing.spacingLG),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _additionalImageFiles.length >= 6
+                        ? null
+                        : () => _showImageSourceDialog(isPrimary: false),
+                    icon: AppSvgIcon(
+                      assetPath: AppIcons.galleryAdd,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    label: Text(
+                      _additionalImageFiles.length >= 6
+                          ? 'Maximum 6 photos'
+                          : 'Add Photo (${_additionalImageFiles.length}/6)',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+        first: true,
       ),
-    );
+      ProfileWizardLayout.footnote(
+        text: 'Additional photos appear on your profile after setup.',
+      ),
+    ]);
   }
 
   Widget _buildStep7(Color textColor, Color secondaryTextColor, bool isDark) {
@@ -3906,292 +2657,216 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       birthDateStr = '${_birthDate!.day}/${_birthDate!.month}/${_birthDate!.year}';
     }
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        children: [
-          AppSvgIcon(
-            assetPath: AppIcons.checkCircle,
-            size: 80,
-            color: AppColors.onlineGreen,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          Text(
-            'You\'re All Set!',
-            style: AppTypography.h1.copyWith(color: textColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Text(
-            'Your profile is ready. Let\'s learn about the app!',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          // Step 1: Profile Photo
-          _buildSummaryCard(
-            'Profile Photo',
-            [
-              if (_primaryImageFile != null)
-                _buildSummaryItem('Profile Photo', 'Uploaded', Colors.white70),
-              if (_additionalImageFiles.isNotEmpty)
-                _buildSummaryItem('Additional Photos', '${_additionalImageFiles.length} photos', Colors.white70),
-            ],
-            isDark,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Step 2: Basic Information & Contact
-          _buildSummaryCard(
-            'Basic Information & Contact',
-            [
-              if (_name.isNotEmpty)
-                _buildSummaryItem('Name', _name, Colors.white70),
-              if (_phoneNumber.isNotEmpty)
-                _buildSummaryItem('Phone', _phoneNumber, Colors.white70),
-              if (countryName.isNotEmpty)
-                _buildSummaryItem('Country', countryName, Colors.white70),
-              if (cityName.isNotEmpty)
-                _buildSummaryItem('City', cityName, Colors.white70),
-              if (genderName.isNotEmpty)
-                _buildSummaryItem('Gender', genderName, Colors.white70),
-              if (_birthDate != null)
-                _buildSummaryItem('Birth Date', birthDateStr, Colors.white70),
-              if (_age != null)
-                _buildSummaryItem('Age', '${_age} years', Colors.white70),
-            ],
-            isDark,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Step 3: About You
-          _buildSummaryCard(
-            'About You',
-            [
-              if (_bio.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXS),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Bio',
-                        style: AppTypography.body.copyWith(color: Colors.white70),
-                      ),
-                      SizedBox(height: AppSpacing.spacingXS),
-                      Text(
-                        _bio,
-                        style: AppTypography.body.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              _buildSummaryItem('Height', '${_height} cm', Colors.white70),
-              _buildSummaryItem('Weight', '${_weight} kg', Colors.white70),
-              educationLevelsAsync.maybeWhen(
-                data: (educations) {
-                  final selected = educations.where((e) => _educations.contains(e.id)).map((e) => e.title).join(', ');
-                  return _buildSummaryItem('Education', selected.isEmpty ? 'Not selected' : selected, Colors.white70, isMultiLine: true);
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-              jobsAsync.maybeWhen(
-                data: (jobs) {
-                  final selected = jobs.where((j) => _jobs.contains(j.id)).map((j) => j.title).join(', ');
-                  return _buildSummaryItem('Jobs', selected.isEmpty ? 'Not selected' : selected, Colors.white70, isMultiLine: true);
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-              languagesAsync.maybeWhen(
-                data: (languages) {
-                  final selected = languages.where((l) => _languages.contains(l.id)).map((l) => l.title).join(', ');
-                  return _buildSummaryItem('Languages', selected.isEmpty ? 'Not selected' : selected, Colors.white70, isMultiLine: true);
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-            ],
-            isDark,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Step 4: Preferences & Lifestyle
-          _buildSummaryCard(
-            'Preferences & Lifestyle',
-            [
-              _buildSummaryItem('Age Preference', '${_minAgePreference}-${_maxAgePreference} years', Colors.white70),
-              preferredGendersAsync.maybeWhen(
-                data: (genders) {
-                  final selected = genders.where((g) => _preferredGenders.contains(g.id)).map((g) => g.title).join(', ');
-                  return _buildSummaryItem('Preferred Genders', selected.isEmpty ? 'Not selected' : selected, Colors.white70, isMultiLine: true);
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-              relationGoalsAsync.maybeWhen(
-                data: (goals) {
-                  final selected = goals.where((g) => _relationGoals.contains(g.id)).map((g) => g.title).join(', ');
-                  return _buildSummaryItem('Relationship Goals', selected.isEmpty ? 'Not selected' : selected, Colors.white70, isMultiLine: true);
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-              _buildSummaryItem('Smoke', _smoke ? 'Yes' : 'No', Colors.white70),
-              _buildSummaryItem('Drink', _drink ? 'Yes' : 'No', Colors.white70),
-              _buildSummaryItem('Gym', _gym ? 'Yes' : 'No', Colors.white70),
-            ],
-            isDark,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          // Step 5: Interests & Music
-          _buildSummaryCard(
-            'Interests & Music',
-            [
-              ref.watch(interestsProvider).maybeWhen(
-                data: (interests) {
-                  final selectedTitles = interests
-                      .where((i) => _interestsIds.contains(i.id))
-                      .map((i) => i.title)
-                      .toList();
-                  if (selectedTitles.isEmpty) {
-                    return _buildSummaryItem('Interests', 'Not selected', Colors.white70);
-                  }
-                  return Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXS),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Interests',
-                          style: AppTypography.body.copyWith(color: Colors.white70),
-                        ),
-                        SizedBox(height: AppSpacing.spacingXS),
-                        Wrap(
-                          spacing: AppSpacing.spacingXS,
-                          runSpacing: AppSpacing.spacingXS,
-                          children: selectedTitles.map((title) {
-                            return Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.spacingSM,
-                                vertical: AppSpacing.spacingXS,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                              ),
-                              child: Text(
-                                title,
-                                style: AppTypography.caption.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                orElse: () => _buildSummaryItem('Interests', 'Not selected', Colors.white70),
-              ),
-              musicGenresAsync.maybeWhen(
-                data: (genres) {
-                  final selected = genres.where((g) => _musicGenres.contains(g.id)).map((g) => g.title).join(', ');
-                  return _buildSummaryItem('Music Genres', selected.isEmpty ? 'Not selected' : selected, Colors.white70, isMultiLine: true);
-                },
-                orElse: () => const SizedBox.shrink(),
-              ),
-            ],
-            isDark,
-          ),
-        ],
-      ),
+    final educationSummary = educationLevelsAsync.maybeWhen(
+      data: (educations) => educations
+          .where((e) => _educations.contains(e.id))
+          .map((e) => e.title)
+          .join(', '),
+      orElse: () => '',
     );
-  }
-
-  Widget _buildSummaryCard(String title, List<Widget> children, bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        gradient: AppTheme.accentGradient,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTypography.h3.copyWith(color: Colors.white),
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          ...children,
-        ],
-      ),
+    final jobsSummary = jobsAsync.maybeWhen(
+      data: (jobs) =>
+          jobs.where((j) => _jobs.contains(j.id)).map((j) => j.title).join(', '),
+      orElse: () => '',
     );
-  }
+    final languagesSummary = languagesAsync.maybeWhen(
+      data: (languages) => languages
+          .where((l) => _languages.contains(l.id))
+          .map((l) => l.title)
+          .join(', '),
+      orElse: () => '',
+    );
+    final preferredGendersSummary = preferredGendersAsync.maybeWhen(
+      data: (genders) => genders
+          .where((g) => _preferredGenders.contains(g.id))
+          .map((g) => g.title)
+          .join(', '),
+      orElse: () => '',
+    );
+    final relationGoalsSummary = relationGoalsAsync.maybeWhen(
+      data: (goals) => goals
+          .where((g) => _relationGoals.contains(g.id))
+          .map((g) => g.title)
+          .join(', '),
+      orElse: () => '',
+    );
+    final interestsSummary = ref.watch(interestsProvider).maybeWhen(
+          data: (interests) => interests
+              .where((i) => _interestsIds.contains(i.id))
+              .map((i) => i.title)
+              .join(', '),
+          orElse: () => '',
+        );
+    final musicGenresSummary = musicGenresAsync.maybeWhen(
+      data: (genres) => genres
+          .where((g) => _musicGenres.contains(g.id))
+          .map((g) => g.title)
+          .join(', '),
+      orElse: () => '',
+    );
 
-  Widget _buildSummaryItem(String label, String value, Color color, {bool isMultiLine = false}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXS),
-      child: isMultiLine
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$label : ',
-            style: AppTypography.body.copyWith(color: color),
-          ),
-                SizedBox(height: AppSpacing.spacingXS),
-                Wrap(
-                  spacing: AppSpacing.spacingXS,
-                  runSpacing: AppSpacing.spacingXS,
-                  children: value.split(', ').map((item) {
-                    return Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingSM,
-                        vertical: AppSpacing.spacingXS,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                      ),
-                      child: Text(
-                        item.trim(),
-                        style: AppTypography.caption.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  flex: 2,
-                  child: Text(
-                    '$label : ',
-                    style: AppTypography.body.copyWith(color: color),
-                  ),
-                ),
-                Flexible(
-                  flex: 3,
-                  child: Text(
-            value,
-            style: AppTypography.body.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.end,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+    return ProfileWizardLayout.stepList(children: [
+      ProfileWizardLayout.inset(
+        child: Column(
+          children: [
+            AppSvgIcon(
+              assetPath: AppIcons.checkCircle,
+              size: 72,
+              color: AppColors.onlineGreen,
             ),
+            SizedBox(height: AppSpacing.spacingLG),
+            Text(
+              'You\'re All Set!',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            SizedBox(height: AppSpacing.spacingSM),
+            Text(
+              'Review your profile before continuing.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.55),
+                  ),
+            ),
+          ],
+        ),
+      ),
+      ProfileWizardLayout.section(
+        'Profile Photo',
+        [
+          AppGroupedInfoTile(
+            label: 'Profile Photo',
+            value: _primaryImageFile != null ? 'Uploaded' : 'Not set',
+            badge: _primaryImageFile != null ? 'Ready' : null,
+          ),
+          AppGroupedInfoTile(
+            label: 'Additional Photos',
+            value: _additionalImageFiles.isEmpty
+                ? 'None added'
+                : '${_additionalImageFiles.length} photos',
+            showDivider: false,
+          ),
+        ],
+        first: true,
+      ),
+      ProfileWizardLayout.section(
+        'Basic Information & Contact',
+        [
+          AppGroupedInfoTile(
+            label: 'Name',
+            value: _name.isNotEmpty ? _name : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'Phone',
+            value: _phoneNumber.isNotEmpty ? _phoneNumber : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'Country',
+            value: countryName.isNotEmpty ? countryName : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'City',
+            value: cityName.isNotEmpty ? cityName : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'Gender',
+            value: genderName.isNotEmpty ? genderName : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'Birth Date',
+            value: birthDateStr.isNotEmpty ? birthDateStr : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'Age',
+            value: _age != null ? '$_age years' : 'Not set',
+            showDivider: false,
           ),
         ],
       ),
-    );
+      ProfileWizardLayout.section(
+        'About You',
+        [
+          AppGroupedInfoTile(
+            label: 'Bio',
+            value: _bio.isNotEmpty ? _bio : 'Not set',
+          ),
+          AppGroupedInfoTile(
+            label: 'Height',
+            value: '$_height cm',
+          ),
+          AppGroupedInfoTile(
+            label: 'Weight',
+            value: '$_weight kg',
+          ),
+          AppGroupedInfoTile(
+            label: 'Education',
+            value: educationSummary.isEmpty ? 'Not set' : educationSummary,
+          ),
+          AppGroupedInfoTile(
+            label: 'Job',
+            value: jobsSummary.isEmpty ? 'Not set' : jobsSummary,
+          ),
+          AppGroupedInfoTile(
+            label: 'Languages',
+            value: languagesSummary.isEmpty ? 'Not set' : languagesSummary,
+            showDivider: false,
+          ),
+        ],
+      ),
+      ProfileWizardLayout.section(
+        'Preferences & Lifestyle',
+        [
+          AppGroupedInfoTile(
+            label: 'Age Preference',
+            value: '$_minAgePreference-$_maxAgePreference years',
+          ),
+          AppGroupedInfoTile(
+            label: 'Preferred Genders',
+            value:
+                preferredGendersSummary.isEmpty ? 'Not set' : preferredGendersSummary,
+          ),
+          AppGroupedInfoTile(
+            label: 'Relationship Goals',
+            value: relationGoalsSummary.isEmpty ? 'Not set' : relationGoalsSummary,
+          ),
+          AppGroupedInfoTile(
+            label: 'Smoking',
+            value: _smoke ? 'Yes' : 'No',
+          ),
+          AppGroupedInfoTile(
+            label: 'Drinking',
+            value: _drink ? 'Yes' : 'No',
+          ),
+          AppGroupedInfoTile(
+            label: 'Gym',
+            value: _gym ? 'Yes' : 'No',
+            showDivider: false,
+          ),
+        ],
+      ),
+      ProfileWizardLayout.section(
+        'Interests & Music',
+        [
+          AppGroupedInfoTile(
+            label: 'Interests',
+            value: interestsSummary.isEmpty ? 'Not set' : interestsSummary,
+          ),
+          AppGroupedInfoTile(
+            label: 'Music Genres',
+            value: musicGenresSummary.isEmpty ? 'Not set' : musicGenresSummary,
+            showDivider: false,
+          ),
+        ],
+      ),
+      ProfileWizardLayout.footnote(
+        text: 'You can update any of these details later in profile settings.',
+      ),
+    ]);
   }
 
   @visibleForTesting
