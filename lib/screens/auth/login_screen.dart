@@ -126,6 +126,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             },
           ).toString();
           context.go(target);
+        } else if (response.userState == 'ready_for_app' ||
+            response.profileCompleted) {
+          ref.read(appEventTrackerProvider).track('auth_success', meta: {'screen': 'login'});
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Login successful'),
+              backgroundColor: AppColors.onlineGreen,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          context.go(AppRoutes.home);
         } else if (response.userState == 'profile_completion_required' || 
                    response.needsProfileCompletion || 
                    !response.profileCompleted) {
@@ -155,17 +166,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           } else {
             context.go(AppRoutes.profileWizard);
           }
-        } else {
-          ref.read(appEventTrackerProvider).track('auth_success', meta: {'screen': 'login'});
-          // Everything is complete, go to home
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Login successful'),
-              backgroundColor: AppColors.onlineGreen,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          context.go(AppRoutes.home);
         }
       }
     } on EmailVerificationRequiredException catch (e) {

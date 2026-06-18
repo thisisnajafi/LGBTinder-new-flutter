@@ -10,6 +10,9 @@ import '../core/constants/animation_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
+import '../shared/models/api_error.dart';
+import '../features/auth/data/models/check_token_response.dart';
+import '../features/auth/providers/auth_service_provider.dart';
 import '../shared/services/token_storage_service.dart';
 import '../shared/services/onboarding_service.dart';
 import '../widgets/navbar/lgbtfinder_logo.dart';
@@ -261,6 +264,30 @@ class _SplashPageState extends ConsumerState<SplashPage>
     });
   }
 
+  Future<void> _routeFromBootstrapState(CheckTokenResponse state) async {
+    final authService = ref.read(authServiceProvider);
+    await authService.syncBootstrapSession(state);
+    await ref.read(authProvider.notifier).checkAuthStatus();
+    if (!mounted) return;
+
+    if (state.userState == 'email_verification_required') {
+      final email = state.user?.email ?? '';
+      if (email.isNotEmpty) {
+        await _goToEmailVerification(email);
+      } else {
+        await _goToWelcome(ref.read(tokenStorageServiceProvider));
+      }
+      return;
+    }
+
+    if (!state.isComplete) {
+      await _goToProfileWizard(firstName: state.user?.firstName);
+      return;
+    }
+
+    await _goToHome();
+  }
+
   Future<void> _goToAuthenticatedApp(TokenStorageService tokenStorage) async {
     final session = await tokenStorage.getUserSession();
 
@@ -321,30 +348,23 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
       apiLog('Splash: calling GET ${ApiEndpoints.checkToken}');
       try {
-        final dioClient = ref.read(dioClientProvider);
-        final response = await dioClient.dio
-            .get(
-              ApiEndpoints.checkToken,
-              options: Options(
-                sendTimeout: _tokenCheckTimeout,
-                receiveTimeout: _tokenCheckTimeout,
-              ),
-            )
-            .timeout(_tokenCheckTimeout);
+        final authService = ref.read(authServiceProvider);
+        final bootstrap = await authService.checkToken().timeout(_tokenCheckTimeout);
 
         if (!mounted || _redirected) return;
-        final code = response.statusCode ?? 0;
-        authLog('Splash: check-token status=$code');
-        if (code >= 200 && code < 300) {
-          await _goToAuthenticatedApp(tokenStorage);
-          return;
-        }
-        if (code == 401) {
+        authLog(
+          'Splash: check-token ok user_state=${bootstrap.userState} '
+          'isComplete=${bootstrap.isComplete}',
+        );
+        await _routeFromBootstrapState(bootstrap);
+      } on ApiError catch (e) {
+        if (!mounted || _redirected) return;
+        if (e.code == 401) {
           authLog('Splash: check-token 401 → welcome');
           await _goToWelcome(tokenStorage);
           return;
         }
-        authLog('Splash: check-token status=$code with token → home');
+        authLog('Splash: check-token ApiError ${e.code} → fallback session route');
         await _goToAuthenticatedApp(tokenStorage);
       } on DioException catch (e) {
         final status = e.response?.statusCode;
@@ -354,14 +374,14 @@ class _SplashPageState extends ConsumerState<SplashPage>
           await _goToWelcome(tokenStorage);
           return;
         }
-        authLog('Splash: check-token error status=$status with token → home');
+        authLog('Splash: check-token error status=$status → fallback session route');
         await _goToAuthenticatedApp(tokenStorage);
       } on TimeoutException catch (_) {
-        authLog('Splash: check-token timeout with token → home');
+        authLog('Splash: check-token timeout → fallback session route');
         if (!mounted || _redirected) return;
         await _goToAuthenticatedApp(tokenStorage);
       } catch (e) {
-        authLog('Splash: check-token exception $e with token → home');
+        authLog('Splash: check-token exception $e → fallback session route');
         if (!mounted || _redirected) return;
         await _goToAuthenticatedApp(tokenStorage);
       }

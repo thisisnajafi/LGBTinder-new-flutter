@@ -25,9 +25,12 @@ import '../widgets/common/reference_bottom_sheet_field.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../features/auth/providers/auth_service_provider.dart';
 import '../features/auth/data/models/complete_registration_request.dart';
+import '../features/auth/data/models/check_token_response.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
+import '../routes/app_router.dart';
+import 'package:go_router/go_router.dart';
 import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
 import '../features/onboarding/widgets/onboarding_celebration_screen.dart';
 import '../core/utils/app_haptics.dart';
@@ -120,6 +123,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadRegisteredNameFromSession();
       _loadUserProfile();
+      _verifyProfileNotAlreadyComplete();
     });
     _interestSearchController.addListener(_onInterestSearchChanged);
   }
@@ -166,6 +170,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       ..removeListener(_onInterestSearchChanged)
       ..dispose();
     super.dispose();
+  }
+
+  Future<void> _verifyProfileNotAlreadyComplete() async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      final state = await authService.checkToken();
+      await authService.syncBootstrapSession(state);
+      if (!mounted || !state.isComplete) return;
+      context.go(AppRoutes.home);
+    } catch (_) {
+      // Non-fatal — user can continue the wizard if the check fails offline.
+    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -816,6 +832,19 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
       final response = await authService.completeRegistration(request);
 
+      if (response.profileCompleted && mounted) {
+        await authService.syncBootstrapSession(
+          CheckTokenResponse(
+            isComplete: true,
+            needsProfileCompletion: false,
+            userState: response.userState ?? 'ready_for_app',
+            user: response.user,
+          ),
+        );
+        context.go(AppRoutes.home);
+        return;
+      }
+
       if (mounted) {
         await Navigator.of(context).push<void>(
           MaterialPageRoute(
@@ -833,6 +862,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         );
       }
     } on ApiError catch (e) {
+      if (mounted &&
+          e.message.toLowerCase().contains('profile completion ability')) {
+        try {
+          final state = await ref.read(authServiceProvider).checkToken();
+          await ref.read(authServiceProvider).syncBootstrapSession(state);
+          if (state.isComplete && mounted) {
+            context.go(AppRoutes.home);
+            return;
+          }
+        } catch (_) {}
+      }
       if (mounted) {
         ErrorHandlerService.showErrorSnackBar(
           context,

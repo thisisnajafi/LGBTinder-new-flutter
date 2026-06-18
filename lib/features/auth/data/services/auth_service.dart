@@ -13,7 +13,7 @@ import '../models/verify_email_request.dart';
 import '../models/verify_email_response.dart';
 import '../models/complete_registration_request.dart';
 import '../models/complete_registration_response.dart';
-import '../models/email_verification_required_exception.dart';
+import '../models/check_token_response.dart';
 import '../models/otp_request.dart';
 import '../models/otp_response.dart';
 import '../models/social_auth_request.dart';
@@ -426,6 +426,41 @@ class AuthService {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// GET /auth/check-token — validate session and read profile completion state.
+  Future<CheckTokenResponse> checkToken() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.checkToken,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw ApiError(
+        message: response.message.isNotEmpty
+            ? response.message
+            : 'Invalid session',
+        code: 401,
+      );
+    }
+
+    return CheckTokenResponse.fromJson(response.data!);
+  }
+
+  /// Persist bootstrap routing state from [checkToken].
+  Future<void> syncBootstrapSession(CheckTokenResponse state) async {
+    final user = state.user;
+    if (user == null) return;
+
+    await _tokenStorage.saveUserSession(
+      user: user,
+      profileCompleted: state.isComplete,
+      userState: state.userState,
+    );
+
+    if (state.isComplete) {
+      await _tokenStorage.clearProfileCompletionToken();
     }
   }
 

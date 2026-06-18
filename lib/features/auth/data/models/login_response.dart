@@ -33,23 +33,25 @@ class LoginResponse {
       needsProfileCompletion = !profileCompleted;
     } else {
       // Fallback to direct fields
-      final profileCompletedValue = json['profile_completed'];
-      if (profileCompletedValue is bool) {
-        profileCompleted = profileCompletedValue;
-      } else if (profileCompletedValue is int) {
-        profileCompleted = profileCompletedValue == 1;
+      if (json['is_complete'] == true || json['is_complete'] == 1) {
+        profileCompleted = true;
+        needsProfileCompletion = false;
+      } else {
+        final profileCompletedValue = json['profile_completed'];
+        if (profileCompletedValue is bool) {
+          profileCompleted = profileCompletedValue;
+        } else if (profileCompletedValue is int) {
+          profileCompleted = profileCompletedValue == 1;
+        }
+        needsProfileCompletion = json['needs_profile_completion'] as bool? ??
+            json['user_state'] == 'profile_completion_required' ||
+                !profileCompleted;
       }
-      needsProfileCompletion = json['needs_profile_completion'] as bool? ?? 
-                                json['user_state'] == 'profile_completion_required' ||
-                                !profileCompleted;
     }
     
     // Determine user state
-    final userState = json['user_state'] as String?;
-    if (userState == null && needsProfileCompletion) {
-      // Infer user state from profile completion status
-      needsProfileCompletion = true;
-    }
+    final userState = json['user_state'] as String? ??
+        (profileCompleted ? 'ready_for_app' : 'profile_completion_required');
 
     return LoginResponse(
       user: json['user'] != null ? UserData.fromJson(json['user'] as Map<String, dynamic>) : null,

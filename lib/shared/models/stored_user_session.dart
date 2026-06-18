@@ -19,7 +19,8 @@ class StoredUserSession {
     }
     return StoredUserSession(
       user: UserData.fromJson(userJson),
-      profileCompleted: json['profile_completed'] == true,
+      profileCompleted: json['profile_completed'] == true ||
+          json['profile_completed'] == 1,
       userState: json['user_state'] as String?,
     );
   }
