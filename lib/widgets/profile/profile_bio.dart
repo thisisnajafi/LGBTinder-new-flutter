@@ -37,7 +37,7 @@ class _ProfileBioState extends ConsumerState<ProfileBio> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    if (widget.bio == null || widget.bio!.isEmpty) {
+    if (widget.bio == null || widget.bio!.trim().isEmpty) {
       if (!widget.isEditable) return const SizedBox.shrink();
       return Container(
         margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
@@ -73,7 +73,7 @@ class _ProfileBioState extends ConsumerState<ProfileBio> {
       );
     }
 
-    final bio = widget.bio!;
+    final bio = widget.bio!.trim();
     final needsCollapse = bio.length > 120;
 
     return Container(

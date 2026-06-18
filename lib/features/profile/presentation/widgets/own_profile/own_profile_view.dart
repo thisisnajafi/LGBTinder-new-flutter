@@ -231,17 +231,22 @@ class OwnProfileView extends ConsumerWidget {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
 
+    const avatarSize = 92.0;
+    const cameraTapSize = 44.0;
+    const verifiedBadgeSize = 22.0;
+    const ageBadgeHalfHeight = 10.0;
+
     return Column(
       children: [
         SizedBox(
-          width: 92,
-          height: 92,
+          width: avatarSize,
+          height: avatarSize + ageBadgeHalfHeight,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
-                width: 92,
-                height: 92,
+                width: avatarSize,
+                height: avatarSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: primary, width: 2.5),
@@ -249,8 +254,8 @@ class OwnProfileView extends ConsumerWidget {
                 child: ClipOval(
                   child: ProfileImageWidget(
                     imageUrl: avatarUrl,
-                    width: 92,
-                    height: 92,
+                    width: avatarSize,
+                    height: avatarSize,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -259,7 +264,7 @@ class OwnProfileView extends ConsumerWidget {
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: 0,
+                  top: avatarSize - ageBadgeHalfHeight,
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -279,11 +284,11 @@ class OwnProfileView extends ConsumerWidget {
                 ),
               if (isVerified)
                 Positioned(
-                  right: 0,
-                  bottom: 0,
+                  right: -verifiedBadgeSize / 2,
+                  bottom: -verifiedBadgeSize / 2,
                   child: Container(
-                    width: 22,
-                    height: 22,
+                    width: verifiedBadgeSize,
+                    height: verifiedBadgeSize,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
                       shape: BoxShape.circle,
@@ -299,8 +304,8 @@ class OwnProfileView extends ConsumerWidget {
                   ),
                 ),
               Positioned(
-                top: 0,
-                right: 0,
+                top: -cameraTapSize / 2,
+                right: -cameraTapSize / 2,
                 child: Semantics(
                   label: 'Change profile photo',
                   button: true,
@@ -310,8 +315,8 @@ class OwnProfileView extends ConsumerWidget {
                       onTap: onEditPhoto,
                       customBorder: const CircleBorder(),
                       child: const SizedBox(
-                        width: 48,
-                        height: 48,
+                        width: cameraTapSize,
+                        height: cameraTapSize,
                         child: Center(
                           child: _CameraOverlayButton(),
                         ),

@@ -4,13 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
-import '../../core/widgets/app_page_scaffold.dart';
 import '../../features/profile/data/models/user_profile.dart';
+import '../../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
 import '../../features/profile/providers/profile_providers.dart';
-import '../../features/profile/widgets/profile_photo_carousel.dart';
-import '../../features/profile/widgets/tier_badge.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../features/safety/presentation/screens/report_user_screen.dart';
 import '../../features/safety/providers/user_actions_providers.dart';
@@ -18,11 +15,8 @@ import '../../features/safety/data/models/block.dart';
 import '../../features/safety/data/models/favorite.dart';
 import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
-import '../../shared/providers/user_tier_provider.dart';
 import '../../shared/services/error_handler_service.dart';
 import '../../widgets/error_handling/error_display_widget.dart';
-import '../../widgets/profile/profile_bio.dart';
-import '../../widgets/profile/profile_info_sections.dart';
 import '../../widgets/profile/profile_action_buttons.dart';
 import '../../core/cache/cache_manager.dart' show notifyNewMatch;
 import '../../features/matching/providers/likes_providers.dart';
@@ -44,7 +38,8 @@ class ProfileDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ProfileDetailScreen> createState() => _ProfileDetailScreenState();
+  ConsumerState<ProfileDetailScreen> createState() =>
+      _ProfileDetailScreenState();
 }
 
 class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
@@ -172,41 +167,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     );
   }
 
-  List<String>? _labelsFromProfile(
-    List<String>? apiTitles,
-    List<int>? ids,
-    List<dynamic> refs,
-  ) {
-    if (apiTitles != null && apiTitles.isNotEmpty) return apiTitles;
-    if (ids == null || ids.isEmpty) return null;
-    final byId = <int, String>{};
-    for (final item in refs) {
-      final id = item.id as int?;
-      final title = item.title as String?;
-      if (id != null && title != null && title.isNotEmpty) {
-        byId[id] = title;
-      }
-    }
-    final values = ids
-        .map((id) => byId[id])
-        .whereType<String>()
-        .where((t) => t.isNotEmpty)
-        .toSet()
-        .toList(growable: false);
-    return values.isEmpty ? null : values;
-  }
-
-  String? _genderLabel(UserProfile profile, List<dynamic> gendersRef) {
-    if (profile.gender != null && profile.gender!.trim().isNotEmpty) {
-      return profile.gender;
-    }
-    if (profile.genderId == null) return null;
-    for (final item in gendersRef) {
-      if (item.id == profile.genderId) return item.title as String?;
-    }
-    return null;
-  }
-
   void _showMatchDialog(match_models.Match? match) {
     if (match == null) return;
     showDialog(
@@ -224,40 +184,8 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     );
   }
 
-  int? _calculateAge(UserProfile profile) {
-    if (profile.birthDate == null) return null;
-    try {
-      final birthDate = DateTime.parse(profile.birthDate!);
-      final now = DateTime.now();
-      var age = now.year - birthDate.year;
-      if (now.month < birthDate.month ||
-          (now.month == birthDate.month && now.day < birthDate.day)) {
-        age--;
-      }
-      return age;
-    } catch (_) {
-      return null;
-    }
-  }
-
   String _fullName(UserProfile profile) {
     return '${profile.firstName} ${profile.lastName}'.trim();
-  }
-
-  String _getLocation(UserProfile profile) {
-    final parts = <String>[];
-    if (profile.city != null && profile.city!.isNotEmpty) {
-      parts.add(profile.city!);
-    }
-    if (profile.country != null && profile.country!.isNotEmpty) {
-      parts.add(profile.country!);
-    }
-    return parts.isEmpty ? 'Location not set' : parts.join(', ');
-  }
-
-  List<String> _getImageUrls(UserProfile profile) {
-    if (profile.images == null || profile.images!.isEmpty) return [];
-    return profile.images!.map((img) => img.imageUrl).toList();
   }
 
   void _showMoreOptions() {
@@ -276,10 +204,10 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               ListTile(
                 leading: AppSvgIcon(
                   assetPath: AppIcons.block,
-                  color: AppColors.accentRed,
+                  color: AppColors.feedbackError,
                   size: 24,
                 ),
-                title: const Text('Block User'),
+                title: const Text('Block user'),
                 onTap: () {
                   Navigator.pop(context);
                   _showBlockConfirmation();
@@ -288,10 +216,10 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               ListTile(
                 leading: AppSvgIcon(
                   assetPath: AppIcons.flag,
-                  color: AppColors.warningYellow,
+                  color: AppColors.feedbackWarning,
                   size: 24,
                 ),
-                title: const Text('Report User'),
+                title: const Text('Report user'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push<void>(
@@ -305,10 +233,10 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               ListTile(
                 leading: AppSvgIcon(
                   assetPath: AppIcons.favoriteBorder,
-                  color: AppColors.accentPurple,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 24,
                 ),
-                title: const Text('Add to Favorites'),
+                title: const Text('Add to favorites'),
                 onTap: () {
                   Navigator.pop(context);
                   _addToFavorites();
@@ -334,7 +262,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Block User'),
+        title: const Text('Block user'),
         content: Text(
           'Are you sure you want to block ${_fullName(profile)}? '
           'You won\'t see each other anymore.',
@@ -346,7 +274,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentRed),
+            style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
             child: const Text('Block'),
           ),
         ],
@@ -361,9 +289,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('User blocked successfully'),
-          backgroundColor: AppColors.onlineGreen,
+        SnackBar(
+          content: const Text('User blocked successfully'),
+          backgroundColor: AppColors.feedbackSuccess,
         ),
       );
       Navigator.pop(context);
@@ -391,9 +319,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Added to favorites'),
-          backgroundColor: AppColors.onlineGreen,
+        SnackBar(
+          content: const Text('Added to favorites'),
+          backgroundColor: AppColors.feedbackSuccess,
         ),
       );
     } on ApiError catch (e) {
@@ -413,7 +341,36 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     }
   }
 
-  Widget _buildProfileContent(UserProfile profile) {
+  @override
+  Widget build(BuildContext context) {
+    final profile = _profile;
+    final showActions = widget.showInteractionActions &&
+        profile != null &&
+        !_isLoading &&
+        !_hasError;
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_hasError) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: () => Navigator.maybePop(context)),
+        ),
+        body: ErrorDisplayWidget(
+          errorMessage: _errorMessage ?? 'Failed to load profile',
+          onRetry: _loadProfile,
+        ),
+      );
+    }
+
+    if (profile == null) {
+      return const SizedBox.shrink();
+    }
+
     final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
     final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
     final educationsRef = ref.watch(educationLevelsProvider).valueOrNull ?? const [];
@@ -424,87 +381,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
         ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
     final musicRef = ref.watch(musicGenresProvider).valueOrNull ?? const [];
     final gendersRef = ref.watch(gendersProvider).valueOrNull ?? const [];
-    final tier = profile.isPremium == true ? null : ref.watch(userTierProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_getImageUrls(profile).isNotEmpty)
-          RepaintBoundary(
-            child: ProfilePhotoCarousel(
-              imageUrls: _getImageUrls(profile),
-              overlayHeader: ProfileOverlayHeader(
-                name: _fullName(profile),
-                age: _calculateAge(profile),
-                isVerified: profile.isVerified ?? false,
-                tier: tier,
-                isPremiumFallback: profile.isPremium ?? false,
-                location: _getLocation(profile),
-              ),
-            ),
-          )
-        else
-          const ProfilePhotoEmptyState(),
-        ProfileBio(bio: profile.profileBio),
-        ProfileInfoSections(
-          interests: _labelsFromProfile(
-            profile.interestTitles,
-            profile.interests,
-            interestsRef,
-          ),
-          jobs: _labelsFromProfile(profile.jobTitles, profile.jobs, jobsRef),
-          educations: _labelsFromProfile(
-            profile.educationTitles,
-            profile.educations,
-            educationsRef,
-          ),
-          languages: _labelsFromProfile(null, profile.languages, languagesRef),
-          musicGenres: _labelsFromProfile(null, profile.musicGenres, musicRef),
-          relationGoals:
-              _labelsFromProfile(null, profile.relationGoals, relationGoalsRef),
-          gender: _genderLabel(profile, gendersRef),
-          preferredGenders: _labelsFromProfile(
-            null,
-            profile.preferredGenders,
-            preferredGendersRef,
-          ),
-          height: profile.height,
-          weight: profile.weight,
-          smoke: profile.smoke,
-          drink: profile.drink,
-          gym: profile.gym,
-          location: _getLocation(profile),
-        ),
-        SizedBox(height: AppSpacing.spacingXXL),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final profile = _profile;
-    final showActions = widget.showInteractionActions &&
-        profile != null &&
-        !_isLoading &&
-        !_hasError;
-
-    return AppPageScaffold(
-      title: 'Profile',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      action: !widget.showInteractionActions && profile != null
-          ? IconButton(
-              icon: AppSvgIcon(
-                assetPath: AppIcons.more,
-                size: 24,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              onPressed: _showMoreOptions,
-            )
-          : null,
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       bottomNavigationBar: showActions
           ? ProfileActionButtons(
               onLike: _handleLike,
@@ -514,22 +393,47 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
               isMatched: _isMatched,
             )
           : null,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _hasError
-              ? ErrorDisplayWidget(
-                  errorMessage: _errorMessage ?? 'Failed to load profile',
-                  onRetry: _loadProfile,
-                )
-              : profile == null
-                  ? const SizedBox.shrink()
-                  : RefreshIndicator(
-                      onRefresh: _loadProfile,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: _buildProfileContent(profile),
-                      ),
-                    ),
+      body: OtherUserProfileView(
+          profile: profile,
+          showInteractionActions: widget.showInteractionActions,
+          isMatched: _isMatched,
+          onMessage: _handleMessage,
+          onMoreOptions: _showMoreOptions,
+          onRefresh: _loadProfile,
+          locationLabel: profileLocationLabel(profile),
+          genderLabel: profileGenderLabel(profile, gendersRef),
+          interestLabels: profileLabelsFromRefs(
+            apiTitles: profile.interestTitles,
+            ids: profile.interests,
+            refs: interestsRef,
+          ),
+          jobLabels: profileLabelsFromRefs(
+            apiTitles: profile.jobTitles,
+            ids: profile.jobs,
+            refs: jobsRef,
+          ),
+          educationLabels: profileLabelsFromRefs(
+            apiTitles: profile.educationTitles,
+            ids: profile.educations,
+            refs: educationsRef,
+          ),
+          languageLabels: profileLabelsFromRefs(
+            ids: profile.languages,
+            refs: languagesRef,
+          ),
+          musicLabels: profileLabelsFromRefs(
+            ids: profile.musicGenres,
+            refs: musicRef,
+          ),
+          relationGoalLabels: profileLabelsFromRefs(
+            ids: profile.relationGoals,
+            refs: relationGoalsRef,
+          ),
+          preferredGenderLabels: profileLabelsFromRefs(
+            ids: profile.preferredGenders,
+            refs: preferredGendersRef,
+          ),
+        ),
     );
   }
 }

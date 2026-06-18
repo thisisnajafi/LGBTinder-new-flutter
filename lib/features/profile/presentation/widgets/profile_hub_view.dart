@@ -124,54 +124,63 @@ class _ProfileHeroBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const avatarSize = 88.0;
+    const ageBadgeHalfHeight = 10.0;
 
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.bottomCenter,
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: theme.colorScheme.primary,
-                  width: 2.5,
-                ),
-              ),
-              child: ClipOval(
-                child: ProfileImageWidget(
-                  imageUrl: avatarUrl,
-                  width: 88,
-                  height: 88,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            if (age != null)
-              Positioned(
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingSM,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
+        SizedBox(
+          width: avatarSize,
+          height: avatarSize + ageBadgeHalfHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: avatarSize,
+                height: avatarSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
                     color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                    width: 2.5,
                   ),
-                  child: Text(
-                    '$age',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onPrimary,
-                      fontWeight: FontWeight.w600,
+                ),
+                child: ClipOval(
+                  child: ProfileImageWidget(
+                    imageUrl: avatarUrl,
+                    width: avatarSize,
+                    height: avatarSize,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              if (age != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: avatarSize - ageBadgeHalfHeight,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingSM,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                      ),
+                      child: Text(
+                        '$age',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.spacingMD),
         Row(
