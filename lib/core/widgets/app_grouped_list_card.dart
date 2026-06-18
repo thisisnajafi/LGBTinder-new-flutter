@@ -10,12 +10,14 @@ class AppGroupedListSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
   final EdgeInsetsGeometry? padding;
+  final bool showTitle;
 
   const AppGroupedListSection({
     super.key,
     required this.title,
     required this.children,
     this.padding,
+    this.showTitle = true,
   });
 
   @override
@@ -33,20 +35,21 @@ class AppGroupedListSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: AppSpacing.spacingXS,
-              top: AppSpacing.spacingXS,
-              bottom: AppSpacing.spacingMD,
-            ),
-            child: Text(
-              title,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.60),
-                fontWeight: FontWeight.w500,
+          if (showTitle)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.spacingXS,
+                top: AppSpacing.spacingXS,
+                bottom: AppSpacing.spacingMD,
+              ),
+              child: Text(
+                title,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.60),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
           Material(
             color: theme.colorScheme.surface,
             elevation: 0,

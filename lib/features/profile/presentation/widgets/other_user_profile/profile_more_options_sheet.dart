@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/app_icons.dart';
-import '../../../core/widgets/app_action_bottom_sheet.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/utils/app_icons.dart';
+import '../../../../../core/widgets/app_action_bottom_sheet.dart';
 
 /// Settings-style bottom sheet for profile actions (block, report, favorites).
 class ProfileMoreOptionsSheet extends StatelessWidget {

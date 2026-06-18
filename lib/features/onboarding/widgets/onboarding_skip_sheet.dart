@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/widgets/app_action_bottom_sheet.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 
 /// Bottom sheet confirmation before skipping onboarding.
 Future<bool?> showOnboardingSkipSheet(BuildContext context) {

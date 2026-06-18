@@ -213,9 +213,10 @@ class ErrorHandlerService {
     VoidCallback? onRetry,
     Duration duration = const Duration(seconds: 4),
   }) {
-    final message = customMessage != null 
-        ? '$customMessage: ${getUserFriendlyMessage(error)}'
-        : getUserFriendlyMessage(error);
+    final friendly = getUserFriendlyMessage(error);
+    final message = customMessage != null && customMessage != friendly
+        ? '$customMessage: $friendly'
+        : (customMessage ?? friendly);
     final color = getErrorColor(error);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -324,9 +325,9 @@ class ErrorHandlerService {
         showErrorSnackBar(context, error, customMessage: customMessage, onRetry: onRetry);
       }
     } else if (error is Exception) {
-      // Convert generic exception to ApiError
+      final detail = error.toString().replaceFirst('Exception: ', '');
       final apiError = ApiError(
-        message: customMessage ?? error.toString(),
+        message: detail.isNotEmpty ? detail : 'An unexpected error occurred',
       );
       if (showAsDialog) {
         showErrorDialog(context, apiError, onRetry: onRetry);

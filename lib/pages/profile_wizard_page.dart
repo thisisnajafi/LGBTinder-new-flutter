@@ -283,6 +283,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               orElse: () => profile.images!.first,
             );
             _avatarUrl = primaryImage.imageUrl;
+            if (!_uploadedImages.any((img) => img.id == primaryImage.id)) {
+              _uploadedImages.add(primaryImage);
+            }
           }
         });
       }
@@ -292,11 +295,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
+  bool get _hasProfilePhoto =>
+      _primaryImageFile != null ||
+      (_avatarUrl != null && _avatarUrl!.trim().isNotEmpty);
+
   // Validation methods — phone validation handled by [CountryPhoneInput] / [CountryPhoneUtils].
 
   void _nextStep() {
     // Validate step before proceeding
-    if (_currentStep == 0 && _primaryImageFile == null) {
+    if (_currentStep == 0 && !_hasProfilePhoto) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please upload a profile photo'),
@@ -552,7 +559,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   Future<void> _uploadAllImages() async {
-    if (_primaryImageFile == null) return;
+    final hasNewPrimary = _primaryImageFile != null;
+    final hasNewGallery = _additionalImageFiles.isNotEmpty;
+    if (!hasNewPrimary && !hasNewGallery) return;
 
     setState(() {
       _isUploadingImage = true;
@@ -561,12 +570,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     try {
       final imageService = ref.read(imageServiceProvider);
       
-      // Upload primary image
-      final primaryImage = await imageService.uploadImage(_primaryImageFile!, type: 'primary');
-      _uploadedImages.add(primaryImage);
-      
-      // Set as primary (already set during upload, but ensure it's marked)
-      // Profile pictures are automatically set as primary on upload if is_primary is true
+      if (hasNewPrimary) {
+        final primaryImage =
+            await imageService.uploadImage(_primaryImageFile!, type: 'primary');
+        _uploadedImages.add(primaryImage);
+      }
       
       // Upload additional images
       for (var imageFile in _additionalImageFiles) {
@@ -665,7 +673,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     String? errorMessage;
     
     // Check profile photo
-    if (_primaryImageFile == null && _avatarUrl == null) {
+    if (!_hasProfilePhoto) {
       errorMessage = 'Please upload a profile photo';
     }
     
@@ -959,8 +967,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   Widget _buildStep1(Color textColor, Color secondaryTextColor, bool isDark) {
     final theme = Theme.of(context);
-    final hasPhoto = _primaryImageFile != null ||
-        (_avatarUrl != null && _avatarUrl!.isNotEmpty);
+    final hasPhoto = _hasProfilePhoto;
 
     return ProfileWizardLayout.stepList(children: [
       ProfileWizardLayout.section(
@@ -1607,6 +1614,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             showDivider: false,
           ),
         ],
+        first: true,
       ),
     ]);
   }
@@ -2054,8 +2062,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         [
           AppGroupedInfoTile(
             label: 'Profile Photo',
-            value: _primaryImageFile != null ? 'Uploaded' : 'Not set',
-            badge: _primaryImageFile != null ? 'Ready' : null,
+            value: _hasProfilePhoto ? 'Uploaded' : 'Not set',
+            badge: _hasProfilePhoto ? 'Ready' : null,
           ),
           AppGroupedInfoTile(
             label: 'Additional Photos',
@@ -2066,6 +2074,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           ),
         ],
         first: true,
+        showTitle: true,
       ),
       ProfileWizardLayout.section(
         'Basic Information & Contact',

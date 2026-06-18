@@ -87,6 +87,33 @@ class AuthService {
     );
   }
 
+  Future<void> _saveAuthTokensForLogin({
+    required String token,
+    required bool profileCompleted,
+    String? userState,
+  }) async {
+    await _tokenStorage.saveAuthToken(token);
+    if (!profileCompleted || userState == 'profile_completion_required') {
+      await _tokenStorage.saveProfileCompletionToken(token);
+    }
+    await _dioClient.updateAuthToken(token);
+  }
+
+  Future<String?> _resolveProfileCompletionToken() async {
+    final profileToken = await _tokenStorage.getProfileCompletionToken();
+    if (profileToken != null && profileToken.isNotEmpty) {
+      return profileToken;
+    }
+
+    // Magic-link, social auth, and token refresh may only persist auth_token.
+    final authToken = await _tokenStorage.getAuthToken();
+    if (authToken != null && authToken.isNotEmpty) {
+      return authToken;
+    }
+
+    return null;
+  }
+
   /// Register a new user
   Future<RegisterResponse> register(RegisterRequest request) async {
     try {
@@ -284,8 +311,11 @@ class AuthService {
     }
     final loginResponse = LoginResponse.fromJson(response.data!);
     if (loginResponse.token != null) {
-      await _tokenStorage.saveAuthToken(loginResponse.token!);
-      await _dioClient.updateAuthToken(loginResponse.token);
+      await _saveAuthTokensForLogin(
+        token: loginResponse.token!,
+        profileCompleted: loginResponse.profileCompleted,
+        userState: loginResponse.userState,
+      );
     }
     final refreshToken = response.data!['refresh_token'] as String?;
     if (refreshToken != null && refreshToken.isNotEmpty) {
@@ -404,10 +434,12 @@ class AuthService {
     CompleteRegistrationRequest request,
   ) async {
     try {
-      // Get profile completion token
-      final profileToken = await _tokenStorage.getProfileCompletionToken();
+      final profileToken = await _resolveProfileCompletionToken();
       if (profileToken == null || profileToken.isEmpty) {
-        throw Exception('Profile completion token not found. Please verify your email first.');
+        throw ApiError(
+          message: 'Profile completion token not found. Please verify your email first.',
+          code: 401,
+        );
       }
 
       final response = await _apiService.post<Map<String, dynamic>>(
@@ -536,10 +568,12 @@ class AuthService {
       if (response.data != null) {
         final socialResponse = SocialAuthResponse.fromJson(response.data!);
 
-        // Save auth token if provided
         if (socialResponse.token != null) {
-          await _tokenStorage.saveAuthToken(socialResponse.token!);
-          await _dioClient.updateAuthToken(socialResponse.token);
+          await _saveAuthTokensForLogin(
+            token: socialResponse.token!,
+            profileCompleted: socialResponse.profileCompleted,
+            userState: socialResponse.userState,
+          );
         }
         await _persistSocialResponse(socialResponse);
 

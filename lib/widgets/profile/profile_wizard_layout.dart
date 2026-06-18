@@ -20,9 +20,11 @@ class ProfileWizardLayout {
     String title,
     List<Widget> children, {
     bool first = false,
+    bool? showTitle,
   }) {
     return AppGroupedListSection(
       title: title,
+      showTitle: showTitle ?? !first,
       padding: first
           ? AppSettingsLayout.firstSectionPadding
           : AppSettingsLayout.sectionPadding,

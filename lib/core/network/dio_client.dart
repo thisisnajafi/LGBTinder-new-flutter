@@ -81,11 +81,16 @@ class DioClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Add auth token if available
-          final token = await _tokenStorage.getAuthToken();
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
+          // Respect per-request Authorization (e.g. profile completion token).
+          final existingAuth = options.headers['Authorization']?.toString();
+          if (existingAuth != null && existingAuth.isNotEmpty) {
             options.extra['had_auth_token'] = true;
+          } else {
+            final token = await _tokenStorage.getAuthToken();
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+              options.extra['had_auth_token'] = true;
+            }
           }
 
           // Log request: full URI, body (summarized)
