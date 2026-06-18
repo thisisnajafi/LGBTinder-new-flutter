@@ -51,8 +51,6 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-
     return AppBottomSheetListBody(
       title: 'Share a profile',
       maxHeightFactor: 0.55,

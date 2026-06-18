@@ -12,7 +12,8 @@ import 'package:path/path.dart' as path;
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/cache/image_cache_service.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/widgets/common/app_svg_icon.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../models/message_attachment.dart';
 
@@ -409,7 +410,14 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
       // Show playback controls
       showModalBottomSheet(
         context: context,
-        builder: (context) => _VoicePlaybackControls(player: player),
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => AppBottomSheetShell(
+          showCancel: true,
+          body: AppBottomSheetCard(
+            child: _VoicePlaybackControls(player: player),
+          ),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -529,12 +537,8 @@ class _VoicePlaybackControlsState extends State<_VoicePlaybackControls> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.spacingXL),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

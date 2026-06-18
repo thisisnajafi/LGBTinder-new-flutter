@@ -174,6 +174,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

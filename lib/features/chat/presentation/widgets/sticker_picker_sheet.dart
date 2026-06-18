@@ -109,9 +109,7 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final packsAsync = ref.watch(stickerPacksProvider);
+    final isDark = theme.brightness == Brightness.dark;    final packsAsync = ref.watch(stickerPacksProvider);
 
     return SlideTransition(
       position: _slideAnimation,

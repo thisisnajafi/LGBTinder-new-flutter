@@ -15,6 +15,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../routes/app_router.dart';
+import '../../../widgets/buttons/gradient_button.dart';
 import 'onboarding_profile_preview_card.dart';
 
 /// Full-screen celebration after profile wizard completion.
@@ -243,9 +244,10 @@ class _OnboardingCelebrationScreenState
                           Semantics(
                             label: 'Start discovering matches',
                             button: true,
-                            child: _CelebrationPrimaryButton(
-                              label: 'Start Discovering',
+                            child: GradientButton(
+                              text: 'Start Discovering',
                               iconPath: AppIcons.discover,
+                              usePrideGradient: true,
                               onPressed: _startDiscovering,
                             ),
                           ),
@@ -455,110 +457,6 @@ class _CelebrationBadge extends StatelessWidget {
                   'Profile complete',
                   style: textTheme.labelMedium?.copyWith(
                     color: AppColors.textPrimaryDark,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CelebrationPrimaryButton extends StatefulWidget {
-  final String label;
-  final String iconPath;
-  final VoidCallback onPressed;
-
-  const _CelebrationPrimaryButton({
-    required this.label,
-    required this.iconPath,
-    required this.onPressed,
-  });
-
-  @override
-  State<_CelebrationPrimaryButton> createState() =>
-      _CelebrationPrimaryButtonState();
-}
-
-class _CelebrationPrimaryButtonState extends State<_CelebrationPrimaryButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pressController;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _pressController = AnimationController(
-      vsync: this,
-      duration: AppAnimations.tapDuration,
-    );
-    _scale = Tween<double>(begin: 1, end: AppAnimations.buttonPressScale)
-        .animate(CurvedAnimation(
-      parent: _pressController,
-      curve: AppAnimations.curveDefault,
-    ));
-  }
-
-  @override
-  void dispose() {
-    _pressController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        if (AppAnimations.animationsEnabled(context)) {
-          _pressController.forward();
-        }
-      },
-      onTapUp: (_) => _pressController.reverse(),
-      onTapCancel: () => _pressController.reverse(),
-      onTap: widget.onPressed,
-      child: ScaleTransition(
-        scale: _scale,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            gradient: AppColors.prideGradient,
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.42),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accentRose.withValues(alpha: 0.45),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-              BoxShadow(
-                color: AppColors.accentPurple.withValues(alpha: 0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AppSvgIcon(
-                  assetPath: widget.iconPath,
-                  size: 20,
-                  color: Colors.white,
-                ),
-                SizedBox(width: AppSpacing.spacingSM),
-                Text(
-                  widget.label,
-                  style: AppTypography.button.copyWith(
-                    color: Colors.white,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
                   ),

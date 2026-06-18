@@ -11,6 +11,7 @@ import '../core/providers/api_providers.dart';
 import '../shared/services/landing_service.dart';
 import '../core/widgets/app_grouped_list_card.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../routes/app_router.dart';

@@ -70,7 +70,6 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textPrimary =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final textSecondary =
@@ -360,7 +359,6 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
               ],
             ),
           ),
-        ),
     );
   }
 }

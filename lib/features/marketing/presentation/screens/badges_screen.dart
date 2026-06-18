@@ -6,7 +6,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../providers/marketing_providers.dart';
 import '../../data/models/badge_model.dart';
 import '../../data/services/gamification_service.dart';
@@ -547,32 +547,28 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        maxChildSize: 0.8,
-        minChildSize: 0.3,
-        builder: (context, scrollController) {
-          final theme = Theme.of(context);
-          final isDark = theme.brightness == Brightness.dark;
-          final backgroundColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-
-          return Container(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: SingleChildScrollView(
-              controller: scrollController,
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: BadgeDetailCard(
-                badge: badge,
-                onClaimReward: badge.isEarned && !badge.rewardClaimed
-                    ? () => _claimBadgeReward(badge)
-                    : null,
-              ),
-            ),
-          );
-        },
+      builder: (context) => AppBottomSheetShell(
+        showCancel: true,
+        body: AppBottomSheetCard(
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.5,
+            maxChildSize: 0.8,
+            minChildSize: 0.3,
+            expand: false,
+            builder: (context, scrollController) {
+              return SingleChildScrollView(
+                controller: scrollController,
+                padding: EdgeInsets.all(AppSpacing.spacingLG),
+                child: BadgeDetailCard(
+                  badge: badge,
+                  onClaimReward: badge.isEarned && !badge.rewardClaimed
+                      ? () => _claimBadgeReward(badge)
+                      : null,
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }

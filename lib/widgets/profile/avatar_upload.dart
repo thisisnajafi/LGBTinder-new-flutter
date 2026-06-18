@@ -1,6 +1,7 @@
 ﻿// Widget: AvatarUpload
 // Circular profile photo picker with gradient ring and overlay actions.
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../images/optimized_image.dart';
 
-/// Avatar upload widget with gradient ring, SVG icons, and half-outside action button.
+/// Avatar upload widget with gradient ring, SVG icons, and rim action button.
 class AvatarUpload extends ConsumerStatefulWidget {
   final String? imageUrl;
   final String? name;
@@ -41,6 +42,8 @@ class AvatarUpload extends ConsumerStatefulWidget {
 class _AvatarUploadState extends ConsumerState<AvatarUpload> {
   static const double _actionTapSize = 44.0;
   static const double _actionVisualSize = 36.0;
+  /// Fraction of the action button diameter that overlaps the avatar circle.
+  static const double _actionInsideFraction = 0.6;
 
   bool get _hasImage =>
       widget.imageUrl != null && widget.imageUrl!.isNotEmpty;
@@ -95,13 +98,23 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
             ),
           if (widget.showEditButton)
             Positioned(
-              right: 0,
-              bottom: 0,
+              left: _cameraBadgeOffset(widget.size, overflow),
+              top: _cameraBadgeOffset(widget.size, overflow),
               child: _actionButton(context, primary),
             ),
         ],
       ),
     );
+  }
+
+  /// Bottom-right badge offset so 60% sits inside the circle and 40% outside.
+  double _cameraBadgeOffset(double size, double overflow) {
+    final avatarCenter = (size + overflow) / 2;
+    final distFromAvatarCenter = size / 2 +
+        _actionTapSize / 2 -
+        _actionInsideFraction * _actionTapSize;
+    final axisOffset = distFromAvatarCenter / math.sqrt2;
+    return avatarCenter + axisOffset - _actionTapSize / 2;
   }
 
   Widget _photoAvatar(BuildContext context, Color primary) {
