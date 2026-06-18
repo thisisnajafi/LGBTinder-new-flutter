@@ -237,15 +237,27 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
 
     if (cacheState.notifications.isEmpty) {
-      return EmptyState(
-        title: 'No notifications',
-        message:
-            'You\'re all caught up. Discover new people to spark activity.',
-        iconPath: AppIcons.notification,
-        actionLabel: 'Go to discovery',
-        onAction: () => context.go('${AppRoutes.home}/discovery'),
-        secondaryActionLabel: 'Contact support',
-        onSecondaryAction: () => context.push(AppRoutes.helpSupport),
+      return RefreshIndicator(
+        onRefresh: () =>
+            ref.read(notificationsCacheProvider.notifier).refresh(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.55,
+              child: EmptyState(
+                title: 'No notifications',
+                message:
+                    'You\'re all caught up. Discover new people to spark activity.',
+                iconPath: AppIcons.notification,
+                actionLabel: 'Go to discovery',
+                onAction: () => context.go('${AppRoutes.home}/discovery'),
+                secondaryActionLabel: 'Contact support',
+                onSecondaryAction: () => context.push(AppRoutes.helpSupport),
+              ),
+            ),
+          ],
+        ),
       );
     }
 

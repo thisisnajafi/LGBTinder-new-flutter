@@ -9,9 +9,8 @@ class NotificationService {
 
   NotificationService(this._apiService);
 
-  /// Get all notifications
-  /// FIXED: Updated to handle backend response structure: {data: {notifications: [...], unread_count: 0}}
-  Future<List<Notification>> getNotifications({
+  /// Get notifications page (list + pagination metadata).
+  Future<NotificationsPageResult> getNotifications({
     int? page,
     int? limit,
     bool? unreadOnly,
@@ -22,46 +21,62 @@ class NotificationService {
       if (limit != null) queryParams['limit'] = limit;
       if (unreadOnly != null) queryParams['unread_only'] = unreadOnly;
 
-      final response = await _apiService.get<dynamic>(
+      final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.notifications,
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        useCache: false,
+        fromJson: (json) => Map<String, dynamic>.from(json as Map),
       );
 
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        // Handle nested structure: {data: {notifications: [...]}}
-        if (data['data'] != null && data['data'] is Map<String, dynamic>) {
-          final dataMap = data['data'] as Map<String, dynamic>;
-          if (dataMap['notifications'] != null && dataMap['notifications'] is List) {
-            dataList = dataMap['notifications'] as List;
-          }
-        }
-        // Fallback: direct list in data: {data: [...]}
-        else if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
+      if (!response.isSuccess || response.data == null) {
+        return NotificationsPageResult.empty;
       }
 
-      if (dataList != null) {
-        return dataList
-            .map((item) {
-              try {
-                return Notification.fromJson(item as Map<String, dynamic>);
-              } catch (e) {
-                // Skip malformed notifications instead of crashing
-                return null;
-              }
-            })
-            .whereType<Notification>()
-            .toList();
+      final payload = _unwrapNotificationsPayload(response.data!);
+      final rawList = payload['notifications'];
+      final notifications = <Notification>[];
+      if (rawList is List) {
+        for (final item in rawList) {
+          if (item is Map<String, dynamic>) {
+            try {
+              notifications.add(Notification.fromJson(item));
+            } catch (_) {}
+          } else if (item is Map) {
+            try {
+              notifications.add(
+                Notification.fromJson(Map<String, dynamic>.from(item)),
+              );
+            } catch (_) {}
+          }
+        }
       }
-      return [];
+
+      final pagination = payload['pagination'];
+      final hasMore = pagination is Map
+          ? pagination['has_more'] == true
+          : notifications.length >= (limit ?? 20);
+
+      final unreadRaw = payload['unread_count'];
+      final unreadCount = unreadRaw is int
+          ? unreadRaw
+          : int.tryParse(unreadRaw?.toString() ?? '') ?? 0;
+
+      return NotificationsPageResult(
+        notifications: notifications,
+        hasMore: hasMore,
+        unreadCount: unreadCount,
+      );
     } catch (e) {
       rethrow;
     }
+  }
+
+  Map<String, dynamic> _unwrapNotificationsPayload(Map<String, dynamic> data) {
+    if (data['notifications'] is List) return data;
+    final nested = data['data'];
+    if (nested is Map<String, dynamic>) return nested;
+    if (nested is Map) return Map<String, dynamic>.from(nested);
+    return data;
   }
 
   /// Get unread notification count
@@ -69,11 +84,16 @@ class NotificationService {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.notificationsUnreadCount,
-        fromJson: (json) => json as Map<String, dynamic>,
+        useCache: false,
+        fromJson: (json) => Map<String, dynamic>.from(json as Map),
       );
 
       if (response.isSuccess && response.data != null) {
-        return response.data!['count'] as int? ?? response.data!['unread_count'] as int? ?? 0;
+        final data = response.data!;
+        return data['count'] as int? ??
+            data['unread_count'] as int? ??
+            int.tryParse(data['unread_count']?.toString() ?? '') ??
+            0;
       }
       return 0;
     } catch (e) {

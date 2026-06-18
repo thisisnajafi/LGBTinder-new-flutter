@@ -6,6 +6,7 @@ import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
 import '../../../../screens/settings/account_management_screen.dart';
+import '../../../../core/utils/country_phone_utils.dart';
 import '../../../profile/providers/profile_page_cache_provider.dart';
 
 /// Read-only account contact and security details with links to change flows.
@@ -50,8 +51,9 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
         (email != null && email.isNotEmpty && email != 'user@unknown.com')
             ? email
             : 'Not set';
-    final phoneDisplay =
-        (phone != null && phone.isNotEmpty) ? phone : 'Not set';
+    final phoneDisplay = (phone != null && phone.isNotEmpty)
+        ? CountryPhoneUtils.formatInternationalDisplay(phone)
+        : 'Not set';
 
     return AppSettingsDetailScaffold(
       title: 'Account details',

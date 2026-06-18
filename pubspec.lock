@@ -1344,6 +1344,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "7.0.2"
+  phone_numbers_parser:
+    dependency: "direct main"
+    description:
+      name: phone_numbers_parser
+      sha256: "330656e2b11b0b44db2a525304ebf0ed9cee3ad069fea09816f799a95d0235d2"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "9.0.23"
   photo_view:
     dependency: "direct main"
     description:

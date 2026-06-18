@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/metric_slider_tile.dart';
 import '../core/theme/spacing_constants.dart';
 import '../widgets/profile/edit/profile_image_editor.dart';
 import '../core/widgets/app_grouped_list_card.dart';
@@ -601,30 +602,16 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               padding: AppSettingsLayout.sectionPadding,
               children: [
                 AppSettingsInset(
-                  child: TextFormField(
-                    initialValue: _height?.toString() ?? '',
-                    decoration: const InputDecoration(
-                      labelText: 'Height (cm)',
-                      hintText: 'Enter your height',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      _height = int.tryParse(value.trim());
-                    },
+                  child: HeightSliderTile(
+                    value: _height ?? 170,
+                    onChanged: (value) => setState(() => _height = value),
                   ),
                 ),
                 const AppGroupedRowSeparator(),
                 AppSettingsInset(
-                  child: TextFormField(
-                    initialValue: _weight?.toString() ?? '',
-                    decoration: const InputDecoration(
-                      labelText: 'Weight (kg)',
-                      hintText: 'Enter your weight',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      _weight = int.tryParse(value.trim());
-                    },
+                  child: WeightSliderTile(
+                    value: _weight ?? 70,
+                    onChanged: (value) => setState(() => _weight = value),
                   ),
                 ),
                 AppGroupedSwitchTile(

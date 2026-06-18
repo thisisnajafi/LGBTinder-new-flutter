@@ -98,9 +98,7 @@ class Notification {
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       isRead: isRead,
-      data: json['data'] != null && json['data'] is Map
-          ? Map<String, dynamic>.from(json['data'] as Map)
-          : null,
+      data: _parseDataField(json['data']),
       userId: userId,
       userName: userName,
       userImageUrl: userImageUrl,
@@ -108,6 +106,18 @@ class Notification {
       isPlanRestricted: json['is_plan_restricted'] == true || json['is_plan_restricted'] == 1,
       upgradeRequired: json['upgrade_required'] == true || json['upgrade_required'] == 1,
     );
+  }
+
+  static Map<String, dynamic>? _parseDataField(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final parsed = jsonDecode(raw);
+        if (parsed is Map) return Map<String, dynamic>.from(parsed);
+      } catch (_) {}
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -127,4 +137,19 @@ class Notification {
       'upgrade_required': upgradeRequired,
     };
   }
+}
+
+/// Paginated notifications list from GET /notifications.
+class NotificationsPageResult {
+  final List<Notification> notifications;
+  final bool hasMore;
+  final int unreadCount;
+
+  const NotificationsPageResult({
+    this.notifications = const [],
+    this.hasMore = false,
+    this.unreadCount = 0,
+  });
+
+  static const empty = NotificationsPageResult();
 }

@@ -31,14 +31,16 @@ class AppBottomNavBar extends ConsumerWidget {
   static const double barHeight = 64.0;
   static const double floatingHorizontalMargin = 16.0;
   static const double floatingBottomMargin = 8.0;
+  static const double _borderWidth = 1.75;
 
   /// Bottom padding reserved for tab content (bar + float inset + safe area).
   static double bottomReserve(double safeAreaBottom) =>
-      barHeight + floatingBottomMargin + safeAreaBottom;
+      barHeight + floatingBottomMargin + safeAreaBottom + (_borderWidth * 2);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final inactiveIconColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.40);
     final profileData = ref.watch(profilePageCacheProvider).valueOrNull?.profile;
@@ -46,6 +48,7 @@ class AppBottomNavBar extends ConsumerWidget {
         ? profileData!.images!.first.imageUrl
         : null;
     final profileIsOnline = profileData?.isOnline ?? true;
+    final innerRadius = 100 - _borderWidth;
 
     return SafeArea(
       top: false,
@@ -56,50 +59,56 @@ class AppBottomNavBar extends ConsumerWidget {
           floatingHorizontalMargin,
           floatingBottomMargin,
         ),
-        child: Container(
-          height: barHeight,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
-              width: 0.5,
+        child: _GradientNavBarShell(
+          isDark: isDark,
+          borderWidth: _borderWidth,
+          child: Container(
+            height: barHeight,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(innerRadius),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.white.withValues(alpha: 0.72),
+                width: 0.75,
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(itemCount, (index) {
-              final isActive = currentIndex == index;
-              final outlinePath = AppIcons.mainNavIconOutline(index);
-              final activePath = AppIcons.mainNavIconActive(index);
-              final label = AppIcons.mainNavItems[index].label;
-              final useProfileAvatar = index == profileTabIndex &&
-                  isActive &&
-                  profileAvatarUrl != null;
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(itemCount, (index) {
+                final isActive = currentIndex == index;
+                final outlinePath = AppIcons.mainNavIconOutline(index);
+                final activePath = AppIcons.mainNavIconActive(index);
+                final label = AppIcons.mainNavItems[index].label;
+                final useProfileAvatar = index == profileTabIndex &&
+                    isActive &&
+                    profileAvatarUrl != null;
 
-              return Expanded(
-                child: _NavItem(
-                  label: label,
-                  outlinePath: outlinePath,
-                  activePath: activePath,
-                  isActive: isActive,
-                  inactiveIconColor: inactiveIconColor,
-                  iconOverride: useProfileAvatar
-                      ? _ProfileNavAvatar(
-                          imageUrl: profileAvatarUrl,
-                          isOnline: profileIsOnline,
-                        )
-                      : null,
-                  badge: _badgeForTab(
-                    index: index,
-                    messengerUnreadCount: messengerUnreadCount,
-                    notificationCount: notificationCount,
+                return Expanded(
+                  child: _NavItem(
+                    label: label,
+                    outlinePath: outlinePath,
+                    activePath: activePath,
+                    isActive: isActive,
+                    inactiveIconColor: inactiveIconColor,
+                    iconOverride: useProfileAvatar
+                        ? _ProfileNavAvatar(
+                            imageUrl: profileAvatarUrl,
+                            isOnline: profileIsOnline,
+                          )
+                        : null,
+                    badge: _badgeForTab(
+                      index: index,
+                      messengerUnreadCount: messengerUnreadCount,
+                      notificationCount: notificationCount,
+                    ),
+                    onTap: () => onTap(index),
                   ),
-                  onTap: () => onTap(index),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
       ),
@@ -122,6 +131,65 @@ class AppBottomNavBar extends ConsumerWidget {
       return NotificationBadge(count: notificationCount, size: 16);
     }
     return null;
+  }
+}
+
+/// Rose → violet gradient ring with soft brand glow.
+class _GradientNavBarShell extends StatelessWidget {
+  final Widget child;
+  final bool isDark;
+  final double borderWidth;
+
+  const _GradientNavBarShell({
+    required this.child,
+    required this.isDark,
+    required this.borderWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(100),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  AppColors.accentRose.withValues(alpha: 0.92),
+                  AppColors.accentPurple.withValues(alpha: 0.95),
+                  AppColors.lgbtGradient[4].withValues(alpha: 0.88),
+                ]
+              : [
+                  AppColors.accentRose.withValues(alpha: 0.72),
+                  AppColors.accentPurple.withValues(alpha: 0.82),
+                  AppColors.accentPink.withValues(alpha: 0.68),
+                ],
+          stops: const [0.0, 0.55, 1.0],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentPurple.withValues(alpha: isDark ? 0.28 : 0.2),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: AppColors.accentRose.withValues(alpha: isDark ? 0.14 : 0.1),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(borderWidth),
+        child: child,
+      ),
+    );
   }
 }
 

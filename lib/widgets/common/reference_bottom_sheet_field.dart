@@ -53,7 +53,7 @@ class ReferenceBottomSheetField extends StatelessWidget {
     );
 
     Future<void> openPicker() async {
-      FocusScope.of(context).unfocus();
+      FocusManager.instance.primaryFocus?.unfocus();
       final selected = await SelectionBottomSheet.showSingleSelect<ReferenceItem>(
         context: context,
         title: 'Select $label',
@@ -62,6 +62,10 @@ class ReferenceBottomSheetField extends StatelessWidget {
         selectedItem: selectedItem.id != -1 ? selectedItem : null,
         searchable: searchable,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      });
       if (selected != null) {
         onChanged?.call(selected.id);
       }

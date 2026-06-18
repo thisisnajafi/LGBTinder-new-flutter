@@ -26,11 +26,15 @@ import '../../routes/app_router.dart';
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   final String email;
   final bool isNewUser; // true for registration, false for existing user
+  final String? firstName;
+  final String? lastName;
 
   const EmailVerificationScreen({
     Key? key,
     required this.email,
     this.isNewUser = true,
+    this.firstName,
+    this.lastName,
   }) : super(key: key);
 
   @override
@@ -154,7 +158,21 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             context.go(AppRoutes.home);
           } else {
             // Profile not completed, go to profile wizard
-            context.go(AppRoutes.profileWizard);
+            final params = <String, String>{};
+            final firstName = widget.firstName?.trim();
+            final lastName = widget.lastName?.trim();
+            if (firstName != null && firstName.isNotEmpty) {
+              params['firstName'] = firstName;
+            }
+            if (lastName != null && lastName.isNotEmpty) {
+              params['lastName'] = lastName;
+            }
+            context.go(
+              Uri(
+                path: AppRoutes.profileWizard,
+                queryParameters: params.isEmpty ? null : params,
+              ).toString(),
+            );
           }
         }
       }

@@ -98,6 +98,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             queryParameters: {
               'email': response.email,
               'isNewUser': 'true',
+              'firstName': _firstNameController.text.trim(),
+              'lastName': _lastNameController.text.trim(),
             },
           ).toString();
           context.go(target);

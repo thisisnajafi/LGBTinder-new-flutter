@@ -3,6 +3,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/widgets/app_action_bottom_sheet.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../core/utils/app_icons.dart';
 
@@ -122,7 +123,6 @@ class _SingleSelectBottomSheetState<T>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
@@ -134,160 +134,128 @@ class _SingleSelectBottomSheetState<T>
       padding: EdgeInsets.only(bottom: viewInsets),
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.radiusXL),
-            topRight: Radius.circular(AppRadius.radiusXL),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-          // Handle bar
-          Container(
-            margin: EdgeInsets.only(top: AppSpacing.spacingMD),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: secondaryTextColor.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Header
-          Padding(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.title,
-                  style: AppTypography.h2.copyWith(color: textColor),
-                ),
-                IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.close,
-                    size: 24,
-                    color: secondaryTextColor,
+      child: AppBottomSheetShell(
+        body: AppBottomSheetListBody(
+          title: widget.title,
+          header: widget.searchable
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.spacingMD,
+                    0,
+                    AppSpacing.spacingMD,
+                    AppSpacing.spacingMD,
                   ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          // Search field (if searchable)
-          if (widget.searchable) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search...',
-                  prefixIcon: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-                    child: AppSvgIcon(
-                      assetPath: AppIcons.search,
-                      size: 16,
-                      color: secondaryTextColor,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingSM,
+                        ),
+                        child: AppSvgIcon(
+                          assetPath: AppIcons.search,
+                          size: 16,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      filled: true,
+                      fillColor: surfaceColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppBottomSheetStyle.cornerRadius,
+                        ),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppBottomSheetStyle.cornerRadius,
+                        ),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppBottomSheetStyle.cornerRadius,
+                        ),
+                        borderSide: const BorderSide(
+                          color: AppColors.accentPurple,
+                          width: 2,
+                        ),
+                      ),
                     ),
+                    style: AppTypography.body.copyWith(color: textColor),
                   ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
+                )
+              : null,
+          child: _filteredItems.isEmpty
+              ? Padding(
+                  padding: EdgeInsets.all(AppSpacing.spacingXXL),
+                  child: Text(
+                    'No items found',
+                    style: AppTypography.body.copyWith(color: secondaryTextColor),
                   ),
-                  filled: true,
-                  fillColor: surfaceColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                  ),
-                ),
-                style: AppTypography.body.copyWith(color: textColor),
-              ),
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-          ],
-          // Items list
-          Flexible(
-            child: _filteredItems.isEmpty
-                ? Padding(
-                    padding: EdgeInsets.all(AppSpacing.spacingXXL),
-                    child: Text(
-                      'No items found',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _filteredItems[index];
-                      final isSelected = widget.selectedItem != null &&
-                          _areItemsEqual(item, widget.selectedItem!);
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _filteredItems[index];
+                    final isSelected = widget.selectedItem != null &&
+                        _areItemsEqual(item, widget.selectedItem!);
 
-                      return InkWell(
-                        onTap: () => Navigator.of(context).pop(item),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingLG,
-                            vertical: AppSpacing.spacingMD,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.accentPurple.withOpacity(0.1)
-                                : Colors.transparent,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: borderColor.withOpacity(0.3),
-                                width: 0.5,
-                              ),
+                    return InkWell(
+                      onTap: () => Navigator.of(context).pop(item),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingMD,
+                          vertical: AppSpacing.spacingMD,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.accentPurple.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: borderColor.withValues(alpha: 0.3),
+                              width: 0.5,
                             ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.getTitle(item),
-                                  style: AppTypography.body.copyWith(
-                                    color: isSelected
-                                        ? AppColors.accentPurple
-                                        : textColor,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.getTitle(item),
+                                style: AppTypography.body.copyWith(
+                                  color: isSelected
+                                      ? AppColors.accentPurple
+                                      : textColor,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
                                 ),
                               ),
-                              if (isSelected)
-                                AppSvgIcon(
-                                  assetPath: AppIcons.checkCircle,
-                                  size: 24,
-                                  color: AppColors.accentPurple,
-                                ),
-                            ],
-                          ),
+                            ),
+                            if (isSelected)
+                              AppSvgIcon(
+                                assetPath: AppIcons.checkCircle,
+                                size: 24,
+                                color: AppColors.accentPurple,
+                              ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
       ),
-    ),
-  );
+    );
   }
 
   bool _areItemsEqual(T a, T b) {
@@ -387,7 +355,6 @@ class _MultiSelectBottomSheetState<T>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
@@ -399,237 +366,212 @@ class _MultiSelectBottomSheetState<T>
       padding: EdgeInsets.only(bottom: viewInsets),
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.radiusXL),
-            topRight: Radius.circular(AppRadius.radiusXL),
-          ),
-        ),
-        child: Column(
+      child: AppBottomSheetShell(
+        showCancel: false,
+        body: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-          // Handle bar
-          Container(
-            margin: EdgeInsets.only(top: AppSpacing.spacingMD),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: secondaryTextColor.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Header
-          Padding(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: AppTypography.h2.copyWith(color: textColor),
-                    ),
-                    if (_selectedItems.isNotEmpty)
-                      Text(
-                        '${_selectedItems.length} selected',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.accentPurple,
-                        ),
+            AppBottomSheetListBody(
+              title: widget.title,
+              header: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_selectedItems.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.spacingMD,
+                        0,
+                        AppSpacing.spacingMD,
+                        AppSpacing.spacingSM,
                       ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    if (_selectedItems.isNotEmpty)
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedItems.clear();
-                          });
-                        },
-                        child: Text(
-                          'Clear',
-                          style: AppTypography.button.copyWith(
-                            color: AppColors.accentPurple,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_selectedItems.length} selected',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.accentPurple,
+                            ),
                           ),
-                        ),
-                      ),
-                    IconButton(
-                      icon: AppSvgIcon(
-                        assetPath: AppIcons.close,
-                        size: 24,
-                        color: secondaryTextColor,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Search field (if searchable)
-          if (widget.searchable) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search...',
-                  prefixIcon: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-                    child: AppSvgIcon(
-                      assetPath: AppIcons.search,
-                      size: 16,
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  filled: true,
-                  fillColor: surfaceColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                  ),
-                ),
-                style: AppTypography.body.copyWith(color: textColor),
-              ),
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-          ],
-          // Items list
-          Flexible(
-            child: _filteredItems.isEmpty
-                ? Padding(
-                    padding: EdgeInsets.all(AppSpacing.spacingXXL),
-                    child: Text(
-                      'No items found',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _filteredItems[index];
-                      final isSelected = _isSelected(item);
-
-                      return InkWell(
-                        onTap: () => _toggleSelection(item),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingLG,
-                            vertical: AppSpacing.spacingMD,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.accentPurple.withOpacity(0.1)
-                                : Colors.transparent,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: borderColor.withOpacity(0.3),
-                                width: 0.5,
+                          TextButton(
+                            onPressed: () {
+                              setState(() => _selectedItems.clear());
+                            },
+                            child: Text(
+                              'Clear',
+                              style: AppTypography.button.copyWith(
+                                color: AppColors.accentPurple,
                               ),
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? AppColors.accentPurple
-                                        : borderColor,
-                                    width: 2,
-                                  ),
-                                  color: isSelected
-                                      ? AppColors.accentPurple
-                                      : Colors.transparent,
-                                ),
-                                child: isSelected
-                                    ? AppSvgIcon(
-                                        assetPath: AppIcons.check,
-                                        size: 16,
-                                        color: Colors.white,
-                                      )
-                                    : null,
-                              ),
-                              SizedBox(width: AppSpacing.spacingMD),
-                              Expanded(
-                                child: Text(
-                                  widget.getTitle(item),
-                                  style: AppTypography.body.copyWith(
-                                    color: isSelected
-                                        ? AppColors.accentPurple
-                                        : textColor,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ],
+                      ),
+                    ),
+                  if (widget.searchable)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.spacingMD,
+                        0,
+                        AppSpacing.spacingMD,
+                        AppSpacing.spacingMD,
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search...',
+                          prefixIcon: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.spacingSM,
+                            ),
+                            child: AppSvgIcon(
+                              assetPath: AppIcons.search,
+                              size: 16,
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 36,
+                            minHeight: 36,
+                          ),
+                          filled: true,
+                          fillColor: surfaceColor,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppBottomSheetStyle.cornerRadius,
+                            ),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppBottomSheetStyle.cornerRadius,
+                            ),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppBottomSheetStyle.cornerRadius,
+                            ),
+                            borderSide: const BorderSide(
+                              color: AppColors.accentPurple,
+                              width: 2,
+                            ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-          ),
-          // Done button
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              border: Border(
-                top: BorderSide(color: borderColor, width: 1),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () =>
-                      Navigator.of(context).pop(List<T>.from(_selectedItems)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPurple,
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                        style: AppTypography.body.copyWith(color: textColor),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    'Done (${_selectedItems.length})',
-                    style: AppTypography.button.copyWith(color: Colors.white),
+                ],
+              ),
+              child: _filteredItems.isEmpty
+                  ? Padding(
+                      padding: EdgeInsets.all(AppSpacing.spacingXXL),
+                      child: Text(
+                        'No items found',
+                        style: AppTypography.body.copyWith(
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _filteredItems[index];
+                        final isSelected = _isSelected(item);
+
+                        return InkWell(
+                          onTap: () => _toggleSelection(item),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.spacingMD,
+                              vertical: AppSpacing.spacingMD,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.accentPurple.withValues(alpha: 0.1)
+                                  : Colors.transparent,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: borderColor.withValues(alpha: 0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.accentPurple
+                                          : borderColor,
+                                      width: 2,
+                                    ),
+                                    color: isSelected
+                                        ? AppColors.accentPurple
+                                        : Colors.transparent,
+                                  ),
+                                  child: isSelected
+                                      ? AppSvgIcon(
+                                          assetPath: AppIcons.check,
+                                          size: 16,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                SizedBox(width: AppSpacing.spacingMD),
+                                Expanded(
+                                  child: Text(
+                                    widget.getTitle(item),
+                                    style: AppTypography.body.copyWith(
+                                      color: isSelected
+                                          ? AppColors.accentPurple
+                                          : textColor,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: AppSpacing.spacingSM),
+            AppBottomSheetCard(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context)
+                        .pop(List<T>.from(_selectedItems)),
+                    child: Text('Done (${_selectedItems.length})'),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.spacingSM),
+            AppBottomSheetCard(
+              child: AppBottomSheetActionTile(
+                item: AppActionSheetItem(
+                  iconPath: AppIcons.close,
+                  label: 'Cancel',
+                  iconColor: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }
 

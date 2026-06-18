@@ -1,7 +1,9 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
@@ -56,21 +58,33 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
 }
 
 class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
-  late final PageController _photoController;
   int _photoIndex = 0;
+  Timer? _photoTimer;
 
   static const double _horizontalPad = AppPageHeader.horizontalPadding;
   static const double _sheetOverlap = 20;
+  static const Duration _photoInterval = Duration(seconds: 5);
+  static const Duration _fadeDuration = Duration(milliseconds: 500);
 
   @override
   void initState() {
     super.initState();
-    _photoController = PageController();
+    _startPhotoTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant OtherUserProfileView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profile.id != widget.profile.id ||
+        oldWidget.profile.images?.length != widget.profile.images?.length) {
+      _photoIndex = 0;
+      _startPhotoTimer();
+    }
   }
 
   @override
   void dispose() {
-    _photoController.dispose();
+    _photoTimer?.cancel();
     super.dispose();
   }
 
@@ -104,149 +118,163 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
 
   UserTier get _tier => tierFromUserProfile(widget.profile);
 
+  void _startPhotoTimer() {
+    _photoTimer?.cancel();
+    if (_imageUrls.length <= 1) return;
+    _photoTimer = Timer.periodic(_photoInterval, (_) {
+      if (!mounted) return;
+      _advancePhoto();
+    });
+  }
+
+  void _advancePhoto() {
+    final urls = _imageUrls;
+    if (urls.length <= 1) return;
+    setState(() {
+      _photoIndex = (_photoIndex + 1) % urls.length;
+    });
+  }
+
+  void _onPhotoTap() {
+    _photoTimer?.cancel();
+    _advancePhoto();
+    _startPhotoTimer();
+  }
+
+  bool get _showMessageAction =>
+      !widget.showInteractionActions && widget.onMessage != null;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final actionBarHeight =
         widget.showInteractionActions ? 88.0 + bottomInset : 0.0;
-    final messageBarHeight =
-        !widget.showInteractionActions && widget.onMessage != null
-            ? 72.0 + bottomInset
-            : 0.0;
-    final bottomPad = actionBarHeight > 0
-        ? actionBarHeight
-        : messageBarHeight > 0
-            ? messageBarHeight
-            : AppSpacing.spacingXXL;
+    final bottomPad = actionBarHeight > 0 ? actionBarHeight : AppSpacing.spacingXXL;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        RefreshIndicator(
-          onRefresh: widget.onRefresh ?? () async {},
-          edgeOffset: MediaQuery.paddingOf(context).top,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              SliverToBoxAdapter(child: _photoHero(context)),
-              SliverToBoxAdapter(
-                child: Transform.translate(
-                  offset: const Offset(0, -_sheetOverlap),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: theme.scaffoldBackgroundColor,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        _horizontalPad,
-                        AppSpacing.spacingLG,
-                        _horizontalPad,
-                        0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (!widget.showInteractionActions &&
-                              widget.onMessage != null)
-                            _messageButton(context),
-                          if (_hasBio) ...[
-                            _aboutSection(context),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.interestLabels.isNotEmpty) ...[
-                            _interestsSection(context),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (_hasBasics) ...[
-                            _basicsSection(context),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.jobLabels.isNotEmpty) ...[
-                            _tagSection(context, 'Work', widget.jobLabels,
-                                AppIcons.getIconPath('briefcase')),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.educationLabels.isNotEmpty) ...[
-                            _tagSection(context, 'Education',
-                                widget.educationLabels,
-                                AppIcons.getIconPath('teacher')),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.languageLabels.isNotEmpty) ...[
-                            _tagSection(context, 'Languages',
-                                widget.languageLabels,
-                                AppIcons.getIconPath('global')),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.musicLabels.isNotEmpty) ...[
-                            _tagSection(context, 'Music', widget.musicLabels,
-                                AppIcons.getIconPath('music')),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.relationGoalLabels.isNotEmpty) ...[
-                            _tagSection(context, 'Looking for',
-                                widget.relationGoalLabels, AppIcons.heartOutline),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (widget.preferredGenderLabels.isNotEmpty) ...[
-                            _tagSection(
-                              context,
-                              'Interested in',
-                              widget.preferredGenderLabels,
-                              AppIcons.getIconPath('people'),
-                            ),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          if (_hasLifestyle) ...[
-                            _lifestyleSection(context),
-                            const SizedBox(height: AppSpacing.spacingXL),
-                          ],
-                          SizedBox(height: bottomPad),
-                        ],
-                      ),
-                    ),
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh ?? () async {},
+      edgeOffset: MediaQuery.paddingOf(context).top,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
+          SliverToBoxAdapter(child: _photoHero(context)),
+          SliverToBoxAdapter(
+            child: Transform.translate(
+              offset: const Offset(0, -_sheetOverlap),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    _horizontalPad,
+                    AppSpacing.spacingSM,
+                    _horizontalPad,
+                    0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _profileActionBar(context),
+                      if (_hasBio) ...[
+                        _aboutSection(context),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.interestLabels.isNotEmpty) ...[
+                        _interestsSection(context),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (_hasBasics) ...[
+                        _basicsSection(context),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.jobLabels.isNotEmpty) ...[
+                        _tagSection(context, 'Work', widget.jobLabels,
+                            AppIcons.getIconPath('briefcase')),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.educationLabels.isNotEmpty) ...[
+                        _tagSection(context, 'Education',
+                            widget.educationLabels,
+                            AppIcons.getIconPath('teacher')),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.languageLabels.isNotEmpty) ...[
+                        _tagSection(context, 'Languages',
+                            widget.languageLabels,
+                            AppIcons.getIconPath('global')),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.musicLabels.isNotEmpty) ...[
+                        _tagSection(context, 'Music', widget.musicLabels,
+                            AppIcons.getIconPath('music')),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.relationGoalLabels.isNotEmpty) ...[
+                        _tagSection(context, 'Looking for',
+                            widget.relationGoalLabels, AppIcons.heartOutline),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (widget.preferredGenderLabels.isNotEmpty) ...[
+                        _tagSection(
+                          context,
+                          'Interested in',
+                          widget.preferredGenderLabels,
+                          AppIcons.getIconPath('people'),
+                        ),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (_hasLifestyle) ...[
+                        _lifestyleSection(context),
+                        const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      SizedBox(height: bottomPad),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.spacingXS,
-              AppSpacing.spacingSM,
-              _horizontalPad,
-              0,
-            ),
-            child: Row(
-              children: [
-                _circleHeaderButton(
-                  context,
-                  icon: AppIcons.arrowLeft,
-                  onTap: () => Navigator.maybePop(context),
-                  tooltip: 'Back',
-                ),
-                const Spacer(),
-                if (widget.onMoreOptions != null)
-                  _circleHeaderButton(
-                    context,
-                    icon: AppIcons.more,
-                    onTap: widget.onMoreOptions!,
-                    tooltip: 'More options',
-                  ),
-              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _profileActionBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingLG),
+      child: Row(
+        children: [
+          _circleActionButton(
+            context,
+            icon: AppIcons.arrowLeft,
+            onTap: () => Navigator.maybePop(context),
+            tooltip: 'Back',
+          ),
+          if (_showMessageAction) ...[
+            const SizedBox(width: AppSpacing.spacingSM),
+            Expanded(child: _messageButton(context)),
+          ] else
+            const Spacer(),
+          if (widget.onMoreOptions != null) ...[
+            const SizedBox(width: AppSpacing.spacingSM),
+            _circleActionButton(
+              context,
+              icon: AppIcons.more,
+              onTap: widget.onMoreOptions!,
+              tooltip: 'More options',
+            ),
+          ] else if (!_showMessageAction)
+            const SizedBox(width: 48),
+        ],
+      ),
     );
   }
 
@@ -271,9 +299,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     final width = MediaQuery.sizeOf(context).width;
     final heroHeight = width * 1.05;
     final urls = _imageUrls;
-    final age = _age;
-    final isVerified = widget.profile.isVerified == true;
-    final isOnline = widget.profile.isOnline == true;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     if (urls.isEmpty) {
       return SizedBox(
@@ -298,14 +324,31 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          PageView.builder(
-            controller: _photoController,
-            onPageChanged: (index) => setState(() => _photoIndex = index),
-            itemCount: urls.length,
-            itemBuilder: (context, index) {
-              return CachedNetworkImage(
-                imageUrl: urls[index],
+          GestureDetector(
+            onTap: urls.length > 1 ? _onPhotoTap : null,
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedSwitcher(
+              duration: _fadeDuration,
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
+              child: CachedNetworkImage(
+                key: ValueKey<String>(urls[_photoIndex]),
+                imageUrl: urls[_photoIndex],
                 fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
                 placeholder: (_, __) => ColoredBox(
                   color: theme.colorScheme.surfaceContainerHighest,
                 ),
@@ -319,8 +362,8 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -328,17 +371,23 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: 0.18),
+                  Colors.black.withValues(alpha: 0.35),
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.72),
+                  Colors.black.withValues(alpha: 0.78),
                 ],
-                stops: const [0, 0.45, 1],
+                stops: const [0, 0.42, 1],
               ),
             ),
           ),
-          if (urls.length > 1)
+          if (urls.length > 1) ...[
             Positioned(
-              top: MediaQuery.paddingOf(context).top + 56,
+              top: topInset + AppSpacing.spacingSM,
+              left: _horizontalPad,
+              right: _horizontalPad,
+              child: _photoSegmentIndicator(urls.length),
+            ),
+            Positioned(
+              top: topInset + AppSpacing.spacingSM + 14,
               right: _horizontalPad,
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -358,90 +407,163 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                 ),
               ),
             ),
+          ],
           Positioned(
             left: _horizontalPad,
             right: _horizontalPad,
-            bottom: _sheetOverlap + AppSpacing.spacingLG,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        age != null ? '$_fullName, $age' : _fullName,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (isVerified)
-                      AppSvgIcon(
-                        assetPath: AppIcons.getIconPath('verify', style: 'bold'),
-                        size: 22,
-                        color: theme.colorScheme.primary,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                Row(
-                  children: [
-                    TierBadge(tier: _tier, compact: false),
-                    if (isOnline) ...[
-                      const SizedBox(width: AppSpacing.spacingSM),
-                      _onlinePill(context),
-                    ],
-                    if (widget.locationLabel.isNotEmpty) ...[
-                      const SizedBox(width: AppSpacing.spacingSM),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            AppSvgIcon(
-                              assetPath: AppIcons.location,
-                              size: 14,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                widget.locationLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.92),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
+            bottom: _sheetOverlap + AppSpacing.spacingMD,
+            child: _profileInfoOverlay(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _photoSegmentIndicator(int count) {
+    return Row(
+      children: List.generate(count, (index) {
+        final isActive = index == _photoIndex;
+        return Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            height: 3,
+            margin: EdgeInsets.only(right: index < count - 1 ? 4 : 0),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          if (urls.length > 1)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: _sheetOverlap + AppSpacing.spacingSM,
-              child: Center(
-                child: SmoothPageIndicator(
-                  controller: _photoController,
-                  count: urls.length,
-                  effect: ExpandingDotsEffect(
-                    dotHeight: 6,
-                    dotWidth: 6,
-                    expansionFactor: 3,
-                    spacing: 4,
-                    activeDotColor: theme.colorScheme.primary,
-                    dotColor: Colors.white.withValues(alpha: 0.45),
-                  ),
-                ),
-              ),
+        );
+      }),
+    );
+  }
+
+  Widget _profileInfoOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    final age = _age;
+    final isVerified = widget.profile.isVerified == true;
+    final isOnline = widget.profile.isOnline == true;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.spacingMD),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.38),
+            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.12),
+              width: 0.5,
             ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _fullName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
+                      ),
+                    ),
+                  ),
+                  if (isVerified) ...[
+                    const SizedBox(width: AppSpacing.spacingXS),
+                    AppSvgIcon(
+                      assetPath: AppIcons.getIconPath('verify', style: 'bold'),
+                      size: 22,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ],
+                ],
+              ),
+              if (age != null) ...[
+                const SizedBox(height: AppSpacing.spacingXS),
+                _ageBadge(context, age),
+              ],
+              const SizedBox(height: AppSpacing.spacingSM),
+              Wrap(
+                spacing: AppSpacing.spacingSM,
+                runSpacing: AppSpacing.spacingXS,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TierBadge(tier: _tier, compact: false),
+                  if (isOnline) _onlinePill(context),
+                  if (widget.locationLabel.isNotEmpty)
+                    _locationChip(context, widget.locationLabel),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _ageBadge(BuildContext context, int age) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: themeColorPrimary(context).withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.28),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        '$age years old',
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+
+  Color themeColorPrimary(BuildContext context) {
+    return Theme.of(context).colorScheme.primary;
+  }
+
+  Widget _locationChip(BuildContext context, String location) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width * 0.55,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppSvgIcon(
+            assetPath: AppIcons.location,
+            size: 14,
+            color: Colors.white.withValues(alpha: 0.92),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              location,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
         ],
       ),
     );
@@ -467,41 +589,44 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     );
   }
 
-  Widget _circleHeaderButton(
+  Widget _circleActionButton(
     BuildContext context, {
     required String icon,
     required VoidCallback onTap,
     required String tooltip,
   }) {
+    final theme = Theme.of(context);
     return Material(
-      color: Colors.black.withValues(alpha: 0.35),
+      color: theme.colorScheme.surface,
+      elevation: 0,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: IconButton(
         tooltip: tooltip,
         onPressed: onTap,
-        icon: AppSvgIcon(assetPath: icon, size: 22, color: Colors.white),
+        icon: AppSvgIcon(
+          assetPath: icon,
+          size: 22,
+          color: theme.colorScheme.onSurface,
+        ),
       ),
     );
   }
 
   Widget _messageButton(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.spacingXL),
-      child: FilledButton.icon(
-        onPressed: widget.onMessage,
-        icon: AppSvgIcon(
-          assetPath: AppIcons.message,
-          size: 20,
-          color: theme.colorScheme.onPrimary,
-        ),
-        label: Text(widget.isMatched ? 'Send message' : 'Message'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          ),
+    return FilledButton.icon(
+      onPressed: widget.onMessage,
+      icon: AppSvgIcon(
+        assetPath: AppIcons.message,
+        size: 20,
+        color: theme.colorScheme.onPrimary,
+      ),
+      label: Text(widget.isMatched ? 'Send message' : 'Message'),
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         ),
       ),
     );

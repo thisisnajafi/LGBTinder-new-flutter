@@ -14,6 +14,11 @@ import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
+import '../core/utils/country_phone_utils.dart';
+import '../core/widgets/inputs/country_phone_input.dart';
+import '../features/reference_data/data/models/reference_item.dart';
+import '../features/reference_data/providers/reference_data_providers.dart';
+import '../widgets/common/reference_bottom_sheet_field.dart';
 
 /// Emergency contacts screen - Manage emergency contacts
 class EmergencyContactsScreen extends ConsumerStatefulWidget {
@@ -345,20 +350,23 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
   }
 }
 
-class _AddContactDialog extends StatefulWidget {
+class _AddContactDialog extends ConsumerStatefulWidget {
   @override
-  State<_AddContactDialog> createState() => _AddContactDialogState();
+  ConsumerState<_AddContactDialog> createState() => _AddContactDialogState();
 }
 
 
-class _AddContactDialogState extends State<_AddContactDialog> {
+class _AddContactDialogState extends ConsumerState<_AddContactDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _phoneDialCodeController = TextEditingController(text: '+1');
   final _emailController = TextEditingController();
   final _relationshipController = TextEditingController();
   final _notesController = TextEditingController();
   bool _isPrimary = false;
+  ReferenceItem? _selectedCountry;
+  String _phoneE164 = '';
 
   final List<String> _relationshipOptions = [
     'Parent',
@@ -375,6 +383,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _phoneDialCodeController.dispose();
     _emailController.dispose();
     _relationshipController.dispose();
     _notesController.dispose();
@@ -384,7 +393,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final countriesAsync = ref.watch(countriesProvider);
 
     return AlertDialog(
       backgroundColor: theme.colorScheme.surface,
@@ -422,24 +431,41 @@ class _AddContactDialogState extends State<_AddContactDialog> {
               ),
               SizedBox(height: AppSpacing.spacingMD),
 
-              // Phone field
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number *',
-                  hintText: '+1234567890',
-                  prefixIcon: Icon(Icons.phone, color: theme.colorScheme.onSurfaceVariant),
+              countriesAsync.when(
+                data: (countries) => ReferenceBottomSheetField(
+                  label: 'Country',
+                  hint: 'Select contact country',
+                  selectedId: _selectedCountry?.id,
+                  items: countries,
+                  groupedStyle: false,
+                  onChanged: (value) {
+                    final country = countries.firstWhere(
+                      (c) => c.id == value,
+                      orElse: () => ReferenceItem(id: -1, title: ''),
+                    );
+                    setState(() {
+                      _selectedCountry =
+                          country.id != -1 ? country : null;
+                      _phoneDialCodeController.text =
+                          CountryPhoneUtils.dialCodeForCountry(_selectedCountry);
+                    });
+                  },
+                  required: true,
+                  searchable: true,
                 ),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Phone number is required';
-                  }
-                  // Basic phone number validation
-                  if (!RegExp(r'^\+?[1-9]\d{1,14}$').hasMatch(value.replaceAll(' ', ''))) {
-                    return 'Please enter a valid phone number';
-                  }
-                  return null;
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const Text('Failed to load countries'),
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+
+              CountryPhoneInput(
+                country: _selectedCountry,
+                nationalController: _phoneController,
+                dialCodeController: _phoneDialCodeController,
+                onPhoneChanged: (parsed) {
+                  setState(() {
+                    _phoneE164 = parsed?.e164 ?? '';
+                  });
                 },
               ),
               SizedBox(height: AppSpacing.spacingMD),
@@ -542,10 +568,22 @@ class _AddContactDialogState extends State<_AddContactDialog> {
         ),
         ElevatedButton(
           onPressed: () {
+            if (_selectedCountry == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please select a country')),
+              );
+              return;
+            }
             if (_formKey.currentState!.validate()) {
+              final iso = CountryPhoneUtils.resolveIso(country: _selectedCountry);
+              final parsed = CountryPhoneUtils.tryBuildFromNational(
+                nationalInput: _phoneController.text,
+                iso: iso,
+                dialCode: _phoneDialCodeController.text,
+              );
               Navigator.of(context).pop({
                 'name': _nameController.text.trim(),
-                'phone_number': _phoneController.text.trim(),
+                'phone_number': parsed?.e164 ?? _phoneE164,
                 'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
                 'relationship': _relationshipController.text,
                 'notes': _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,

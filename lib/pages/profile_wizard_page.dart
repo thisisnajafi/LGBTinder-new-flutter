@@ -16,6 +16,7 @@ import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/app_grouped_list_card.dart';
 import '../widgets/profile/profile_wizard_layout.dart';
 import '../widgets/profile/avatar_upload.dart';
+import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../features/profile/data/models/user_image.dart';
 import '../widgets/profile/edit/profile_section_editor.dart';
 import '../core/utils/app_icons.dart';
@@ -30,14 +31,23 @@ import '../shared/services/error_handler_service.dart';
 import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
 import '../features/onboarding/widgets/onboarding_celebration_screen.dart';
 import '../core/utils/app_haptics.dart';
+import '../core/utils/country_phone_utils.dart';
+import '../core/widgets/inputs/country_phone_input.dart';
+import '../core/widgets/metric_slider_tile.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/reference_data/data/models/reference_item.dart';
+import '../core/providers/api_providers.dart';
 
 /// Profile wizard page - Step-by-step profile setup for new users
 class ProfileWizardPage extends ConsumerStatefulWidget {
   final String? initialFirstName;
+  final String? initialLastName;
   
-  const ProfileWizardPage({Key? key, this.initialFirstName}) : super(key: key);
+  const ProfileWizardPage({
+    Key? key,
+    this.initialFirstName,
+    this.initialLastName,
+  }) : super(key: key);
 
   @override
   ConsumerState<ProfileWizardPage> createState() => _ProfileWizardPageState();
@@ -72,6 +82,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   String? _countryCode;
   int? _countryId;
   int? _cityId;
+  ReferenceItem? _selectedCountry;
   int? _genderId;
   DateTime? _birthDate;
   
@@ -104,16 +115,45 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     super.initState();
     _countryCodeController.text = _countryCode ?? '+1';
     _phoneNumberController.text = _phoneNumber;
-    // Pre-fill name from login response if provided
-    if (widget.initialFirstName != null && widget.initialFirstName!.isNotEmpty) {
-      _name = widget.initialFirstName!;
-      _nameController.text = _name;
-    }
+    _prefillRegistrationName();
     // Load user profile data to pre-fill fields
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRegisteredNameFromSession();
       _loadUserProfile();
     });
     _interestSearchController.addListener(_onInterestSearchChanged);
+  }
+
+  void _prefillRegistrationName() {
+    if (_name.trim().isNotEmpty) return;
+    final parts = <String>[
+      if (widget.initialFirstName?.trim().isNotEmpty == true)
+        widget.initialFirstName!.trim(),
+      if (widget.initialLastName?.trim().isNotEmpty == true)
+        widget.initialLastName!.trim(),
+    ];
+    if (parts.isEmpty) return;
+    _name = parts.join(' ');
+    _nameController.text = _name;
+  }
+
+  Future<void> _loadRegisteredNameFromSession() async {
+    if (_name.trim().isNotEmpty) return;
+    try {
+      final session =
+          await ref.read(tokenStorageServiceProvider).getUserSession();
+      if (session == null || !mounted) return;
+      final first = session.user.firstName.trim();
+      final last = session.user.lastName.trim();
+      if (first.isEmpty || first == 'User') return;
+      final fullName = last.isNotEmpty ? '$first $last' : first;
+      setState(() {
+        _name = fullName;
+        _nameController.text = fullName;
+      });
+    } catch (_) {
+      // Non-fatal — registration name may come from route params instead.
+    }
   }
 
   @override
@@ -133,12 +173,16 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       final profileService = ref.read(profileServiceProvider);
       final profile = await profileService.getMyProfile();
       
-    if (mounted && profile != null) {
+    if (mounted) {
         setState(() {
-          // Pre-fill name from existing profile (only if not already set from login)
-          if (_name.isEmpty && (profile.firstName.isNotEmpty || profile.lastName.isNotEmpty)) {
-            _name = '${profile.firstName} ${profile.lastName}'.trim();
-            _nameController.text = _name;
+          // Pre-fill name from existing profile (only if not already set from registration)
+          if (_name.isEmpty) {
+            final first = profile.firstName.trim();
+            final last = profile.lastName.trim();
+            if (first.isNotEmpty && first != 'User') {
+              _name = last.isNotEmpty ? '$first $last' : first;
+              _nameController.text = _name;
+            }
           }
           if ((_countryCode == null || _countryCode!.isEmpty) && profile.countryId != null) {
             // Attempt to derive country code later when countries load
@@ -152,6 +196,24 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           }
           if (profile.countryId != null) {
             _countryId = profile.countryId;
+          }
+          if (profile.phoneNumber != null && profile.phoneNumber!.trim().isNotEmpty) {
+            try {
+              final iso = _selectedCountry != null
+                  ? CountryPhoneUtils.resolveIso(country: _selectedCountry)
+                  : CountryPhoneUtils.isoFromDialCode(_countryCode);
+              final parsed = CountryPhoneUtils.parseInternational(
+                profile.phoneNumber!,
+                hintIso: iso,
+              );
+              _phoneNumber = parsed.e164;
+              _countryCode = parsed.dialCode;
+              _countryCodeController.text = parsed.dialCode;
+              _phoneNumberController.text = parsed.formattedNational;
+            } catch (_) {
+              _phoneNumber = profile.phoneNumber!.trim();
+              _phoneNumberController.text = profile.phoneNumber!.trim();
+            }
           }
           if (profile.cityId != null) {
             _cityId = profile.cityId;
@@ -230,39 +292,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
-  // Validation methods
-  String? _validateCountryCode(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Country code is required';
-    }
-    
-    final normalized = value.trim();
-    final countryCodeRegex = RegExp(r'^\+[1-9]\d{0,3}$');
-    
-    if (!countryCodeRegex.hasMatch(normalized)) {
-      return 'Please enter a valid country code (e.g., +1, +44, +91)';
-    }
-    
-    return null;
-  }
-
-  String? _validatePhoneNumber(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Phone number is required';
-    }
-    
-    // Remove spaces, dashes, parentheses, and other formatting characters
-    final cleanPhone = value.replaceAll(RegExp(r'[\s\-\(\)\.]'), '');
-    
-    // Phone number should contain only digits and be 7-15 digits long
-    final phoneRegex = RegExp(r'^\d{7,15}$');
-    
-    if (!phoneRegex.hasMatch(cleanPhone)) {
-      return 'Please enter a valid phone number (7-15 digits)';
-    }
-    
-    return null;
-  }
+  // Validation methods — phone validation handled by [CountryPhoneInput] / [CountryPhoneUtils].
 
   void _nextStep() {
     // Validate step before proceeding
@@ -459,6 +489,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     return 'Unknown Device';
   }
 
+  static const int _maxAdditionalPhotos = 6;
+
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
     try {
       final XFile? image = await _imagePicker.pickImage(source: source);
@@ -483,6 +515,37 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           context,
           e,
           customMessage: 'Failed to pick image',
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAdditionalImages(ImageSource source) async {
+    final remaining = _maxAdditionalPhotos - _additionalImageFiles.length;
+    if (remaining <= 0) return;
+
+    try {
+      if (source == ImageSource.gallery) {
+        final images = await _imagePicker.pickMultiImage(limit: remaining);
+        if (images.isEmpty || !mounted) return;
+
+        setState(() {
+          for (final image in images) {
+            if (_additionalImageFiles.length >= _maxAdditionalPhotos) break;
+            _additionalImageFiles.add(File(image.path));
+          }
+        });
+        AppHaptics.light();
+        return;
+      }
+
+      await _pickImage(source, isPrimary: false);
+    } catch (e) {
+      if (mounted) {
+        ErrorHandlerService.handleError(
+          context,
+          e,
+          customMessage: 'Failed to pick images',
         );
       }
     }
@@ -610,20 +673,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     if (errorMessage == null && _phoneNumber.isEmpty) {
       errorMessage = 'Please enter your phone number';
     }
-    
-    // Validate phone number format
+
     if (errorMessage == null && _phoneNumber.isNotEmpty) {
-      final phoneError = _validatePhoneNumber(_phoneNumber);
+      final iso = CountryPhoneUtils.resolveIso(
+        country: _selectedCountry,
+        dialCode: _countryCode,
+      );
+      final phoneError = CountryPhoneUtils.validateNational(
+        _phoneNumberController.text,
+        iso,
+      );
       if (phoneError != null) {
         errorMessage = phoneError;
-      }
-    }
-    
-    // Validate country code format
-    if (errorMessage == null) {
-      final countryCodeError = _validateCountryCode(_countryCodeController.text);
-      if (countryCodeError != null) {
-        errorMessage = countryCodeError;
       }
     }
     
@@ -702,13 +763,21 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       // Format phone number with country code
       final rawCountryCode = _countryCodeController.text.trim().isNotEmpty
           ? _countryCodeController.text.trim()
-          : (_countryCode ?? '');
-      final normalizedCountryCode = rawCountryCode.isNotEmpty
-          ? (rawCountryCode.startsWith('+') ? rawCountryCode : '+$rawCountryCode')
-          : '';
-      final formattedPhone = _phoneNumber.startsWith('+') 
-          ? _phoneNumber 
-          : '$normalizedCountryCode$_phoneNumber';
+          : (_countryCode ?? CountryPhoneUtils.dialCodeForCountry(_selectedCountry));
+      final normalizedCountryCode = CountryPhoneUtils.normalizeDialCode(rawCountryCode);
+      final iso = CountryPhoneUtils.resolveIso(
+        country: _selectedCountry,
+        dialCode: normalizedCountryCode,
+      );
+      final parsedPhone = CountryPhoneUtils.tryBuildFromNational(
+        nationalInput: _phoneNumberController.text,
+        iso: iso,
+        dialCode: normalizedCountryCode,
+      );
+      final formattedPhone = parsedPhone?.e164 ??
+          (_phoneNumber.startsWith('+')
+              ? _phoneNumber
+              : '$normalizedCountryCode${CountryPhoneUtils.digitsOnly(_phoneNumber)}');
       
       // Calculate age from birth date if not provided
       final birthDateString = _birthDate!.toIso8601String().split('T')[0];
@@ -796,14 +865,23 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSettingsLayout.horizontalPadding,
-              AppSpacing.spacingMD,
+              AppSpacing.spacingXL,
               AppSettingsLayout.horizontalPadding,
-              0,
+              AppSpacing.spacingSM,
             ),
             child: OnboardingProgressIndicator(
               currentStep: _currentStep,
               totalSteps: 7,
               style: OnboardingProgressStyle.segmentedBar,
+              stepTitles: const [
+                'Profile Photo',
+                'Basic Info',
+                'About You',
+                'Preferences & Lifestyle',
+                'Interests & Music',
+                'Additional Photos',
+                'Review',
+              ],
             ),
           ),
           // Page view
@@ -814,6 +892,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 setState(() {
                   _currentStep = index;
                 });
+                AppHaptics.selection();
               },
               physics: const NeverScrollableScrollPhysics(),
               children: [
@@ -879,6 +958,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   Widget _buildStep1(Color textColor, Color secondaryTextColor, bool isDark) {
+    final theme = Theme.of(context);
+    final hasPhoto = _primaryImageFile != null ||
+        (_avatarUrl != null && _avatarUrl!.isNotEmpty);
+
     return ProfileWizardLayout.stepList(children: [
       ProfileWizardLayout.section(
         'Profile Photo',
@@ -886,35 +969,36 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           ProfileWizardLayout.inset(
             child: Column(
               children: [
+                const SizedBox(height: AppSpacing.spacingSM),
                 Center(
                   child: AvatarUpload(
                     imageUrl: _avatarUrl,
                     name: _name.isNotEmpty ? _name : 'User',
-                    size: 120,
+                    size: 136,
                     onUpload: () => _showImageSourceDialog(isPrimary: true),
                     onEdit: () => _showImageSourceDialog(isPrimary: true),
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingMD),
+                SizedBox(height: AppSpacing.spacingLG),
                 Text(
-                  'Add a profile photo',
+                  hasPhoto ? 'Looking good!' : 'Add a profile photo',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                 ),
                 SizedBox(height: AppSpacing.spacingXS),
                 Text(
-                  'Choose a clear photo that shows your face',
+                  hasPhoto
+                      ? 'This photo appears on discovery and in chat'
+                      : 'Choose a clear photo that shows your face',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.55),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                        height: 1.45,
                       ),
                 ),
-                if (_primaryImageFile != null) ...[
+                if (hasPhoto) ...[
                   SizedBox(height: AppSpacing.spacingMD),
                   AppGroupedInfoTile(
                     label: 'Status',
@@ -923,6 +1007,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     showDivider: false,
                   ),
                 ],
+                const SizedBox(height: AppSpacing.spacingSM),
               ],
             ),
           ),
@@ -936,55 +1021,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   void _showImageSourceDialog({required bool isPrimary}) {
-    // Dismiss keyboard and unfocus any text fields
     FocusScope.of(context).unfocus();
-    
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: AppSvgIcon(
-                assetPath: AppIcons.gallery,
-                size: 24,
-                color: textColor,
-              ),
-              title: const Text('Choose from Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery, isPrimary: isPrimary);
-              },
-            ),
-            ListTile(
-              leading: AppSvgIcon(
-                assetPath: AppIcons.camera,
-                size: 24,
-                color: textColor,
-              ),
-              title: const Text('Take a Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera, isPrimary: isPrimary);
-              },
-            ),
-            ListTile(
-              leading: AppSvgIcon(
-                assetPath: AppIcons.close,
-                size: 24,
-                color: textColor,
-              ),
-              title: const Text('Cancel'),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      ),
+
+    ProfilePhotoSourceSheet.show(
+      context,
+      title: isPrimary ? 'Profile photo' : 'Additional photos',
+      gallerySubtitle: isPrimary
+          ? 'Pick an existing photo'
+          : 'Select one or more photos at once',
+      onSourceSelected: (source) => isPrimary
+          ? _pickImage(source, isPrimary: true)
+          : _pickAdditionalImages(source),
     );
   }
 
@@ -1034,7 +1081,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     (c) => c.id == value,
                     orElse: () => ReferenceItem(id: -1, title: '', phoneCode: _countryCode),
                   );
-                  final newCode = selectedCountry.phoneCode ?? _countryCode ?? '+1';
+                  _selectedCountry = selectedCountry.id != -1 ? selectedCountry : null;
+                  final newCode = CountryPhoneUtils.dialCodeForCountry(_selectedCountry);
                   _countryCode = newCode;
                   _countryCodeController.text = newCode;
                 });
@@ -1071,10 +1119,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 (c) => c.id == _countryId,
                 orElse: () => ReferenceItem(id: -1, title: ''),
               );
-              final defaultCountryCode = selectedCountry.phoneCode ?? '+1';
-              final effectiveCountryCode = _countryCode?.isNotEmpty == true
-                  ? _countryCode!
-                  : defaultCountryCode;
+              final effectiveCountry =
+                  selectedCountry.id != -1 ? selectedCountry : _selectedCountry;
+              final effectiveCountryCode =
+                  CountryPhoneUtils.dialCodeForCountry(effectiveCountry);
 
               if (_countryCode == null || _countryCode!.isEmpty) {
                 _countryCode = effectiveCountryCode;
@@ -1090,50 +1138,22 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               return ProfileWizardLayout.inset(
                 child: Form(
                   key: _phoneFormKey,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 96,
-                        child: TextFormField(
-                          controller: _countryCodeController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            labelText: 'Code',
-                            hintText: defaultCountryCode,
-                          ),
-                          validator: _validateCountryCode,
-                          onChanged: (value) {
-                            var normalized = value.trim();
-                            if (normalized.isNotEmpty && !normalized.startsWith('+')) {
-                              normalized = '+$normalized';
-                            }
-                            setState(() {
-                              _countryCode = normalized.isNotEmpty
-                                  ? normalized
-                                  : defaultCountryCode;
-                            });
-                          },
-                        ),
-                      ),
-                      SizedBox(width: AppSpacing.spacingSM),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _phoneNumberController,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            labelText: 'Phone Number',
-                            hintText: 'Enter phone number',
-                          ),
-                          validator: _validatePhoneNumber,
-                          onChanged: (value) {
-                            setState(() {
-                              _phoneNumber = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+                  child: CountryPhoneInput(
+                    country: effectiveCountry,
+                    nationalController: _phoneNumberController,
+                    dialCodeController: _countryCodeController,
+                    onPhoneChanged: (parsed) {
+                      setState(() {
+                        if (parsed != null) {
+                          _phoneNumber = parsed.e164;
+                          _countryCode = parsed.dialCode;
+                        } else {
+                          _phoneNumber = CountryPhoneUtils.digitsOnly(
+                            _phoneNumberController.text,
+                          );
+                        }
+                      });
+                    },
                   ),
                 ),
               );
@@ -1169,6 +1189,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             required: true,
             showDivider: false,
             onTap: () async {
+              FocusManager.instance.primaryFocus?.unfocus();
               final DateTime? picked = await showDatePicker(
                 context: context,
                 initialDate: _birthDate ??
@@ -1189,6 +1210,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                   );
                 },
               );
+              FocusManager.instance.primaryFocus?.unfocus();
               if (picked != null) {
                 setState(() {
                   _birthDate = picked;
@@ -1198,6 +1220,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                       (today.month == picked.month && today.day < picked.day)) {
                     _age = _age! - 1;
                   }
+                });
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  FocusManager.instance.primaryFocus?.unfocus();
                 });
               }
             },
@@ -1216,8 +1241,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     required Function(List<int>) onSelected,
     bool withImages = false,
   }) async {
-    // Dismiss keyboard and unfocus any text fields
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     
     final selected = await SelectionBottomSheet.showMultiSelect<ReferenceItem>(
       context: context,
@@ -1227,6 +1251,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       selectedItems: items.where((item) => selectedIds.contains(item.id)).toList(),
       searchable: true,
     );
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    });
     
     if (selected != null) {
       onSelected(selected.map((item) => item.id).toList());
@@ -1235,8 +1264,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   // Helper method to show languages bottom sheet with images
   Future<void> _showLanguagesBottomSheet(List<ReferenceItem> languages) async {
-    // Dismiss keyboard and unfocus any text fields
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -1568,6 +1596,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         },
       ),
     ).then((selected) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      });
       if (selected != null) {
         setState(() {
           _languages = selected.map((lang) => lang.id).toList();
@@ -1578,8 +1610,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   // Helper method to show preferred genders bottom sheet with images
   Future<void> _showPreferredGendersBottomSheet(List<ReferenceItem> genders) async {
-    // Dismiss keyboard and unfocus any text fields
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -1900,6 +1931,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         },
       ),
     ).then((selected) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      });
       if (selected != null) {
         setState(() {
           _preferredGenders = selected.map((gender) => gender.id).toList();
@@ -1948,34 +1983,16 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         'Personal Details',
         [
           ProfileWizardLayout.inset(
-            child: TextFormField(
-              initialValue: _height.toString(),
-              decoration: const InputDecoration(
-                labelText: 'Height (cm)',
-                hintText: 'Enter your height',
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  _height = int.tryParse(value.trim()) ?? _height;
-                });
-              },
+            child: HeightSliderTile(
+              value: _height,
+              onChanged: (value) => setState(() => _height = value),
             ),
           ),
           const AppGroupedRowSeparator(),
           ProfileWizardLayout.inset(
-            child: TextFormField(
-              initialValue: _weight.toString(),
-              decoration: const InputDecoration(
-                labelText: 'Weight (kg)',
-                hintText: 'Enter your weight',
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (value) {
-                setState(() {
-                  _weight = int.tryParse(value.trim()) ?? _weight;
-                });
-              },
+            child: WeightSliderTile(
+              value: _weight,
+              onChanged: (value) => setState(() => _weight = value),
             ),
           ),
         ],
@@ -2171,72 +2188,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                   ],
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
-                Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-          Text(
-                                'Min: ${_minAgePreference}',
-                                style: AppTypography.body.copyWith(color: textColor),
-                              ),
-                              SizedBox(height: AppSpacing.spacingSM),
-                              Slider(
-                                value: _minAgePreference.toDouble(),
-                                min: 18,
-                                max: _maxAgePreference.toDouble() - 1,
-                                divisions: (_maxAgePreference - 19).clamp(1, 82),
-                                activeColor: AppColors.accentPurple,
-                                inactiveColor: isDark
-                                    ? AppColors.borderMediumDark
-                                    : AppColors.borderMediumLight,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _minAgePreference = value.round();
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Max: ${_maxAgePreference}',
-                                style: AppTypography.body.copyWith(color: textColor),
-                              ),
-                              SizedBox(height: AppSpacing.spacingSM),
-                              Slider(
-                                value: _maxAgePreference.toDouble(),
-                                min: (_minAgePreference + 1).toDouble(),
-                                max: 100,
-                                divisions: (100 - _minAgePreference - 1).clamp(1, 82),
-                                activeColor: AppColors.accentPurple,
-                                inactiveColor: isDark
-                                    ? AppColors.borderMediumDark
-                                    : AppColors.borderMediumLight,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _maxAgePreference = value.round();
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                AgeRangeSliderTile(
+                  minAge: _minAgePreference,
+                  maxAge: _maxAgePreference,
+                  onChanged: (values) {
+                    setState(() {
+                      _minAgePreference =
+                          values.start.round().clamp(18, _maxAgePreference - 1);
+                      _maxAgePreference =
+                          values.end.round().clamp(_minAgePreference + 1, 100);
+                    });
+                  },
                 ),
               ],
             ),
@@ -2320,6 +2282,46 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       ProfileWizardLayout.section(
         'Interests & Music',
         [
+          musicGenresAsync.when(
+            data: (genres) {
+              final selectedGenreTitles = genres
+                  .where((g) => _musicGenres.contains(g.id))
+                  .map((g) => g.title)
+                  .toList();
+
+              return _buildGroupedMultiSelectPicker(
+                label: 'Music Genres',
+                hint: 'Select music genres',
+                selectedTitles: selectedGenreTitles,
+                onTap: () => _showMultiSelectBottomSheet(
+                  title: 'Select Music Genres',
+                  items: genres,
+                  selectedIds: _musicGenres,
+                  onSelected: (ids) {
+                    setState(() {
+                      _musicGenres = ids;
+                    });
+                  },
+                ),
+                required: true,
+                showDivider: false,
+              );
+            },
+            loading: () => _buildLoadingField(
+              'Music Genres',
+              textColor,
+              secondaryTextColor,
+              isDark,
+            ),
+            error: (error, stack) => _buildErrorField(
+              'Music Genres',
+              error,
+              textColor,
+              secondaryTextColor,
+              isDark,
+            ),
+          ),
+          const AppGroupedRowSeparator(),
           interestsAsync.when(
             data: (interests) {
               final filteredInterests = interests.where((item) {
@@ -2412,46 +2414,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               isDark,
             ),
           ),
-          const AppGroupedRowSeparator(),
-          musicGenresAsync.when(
-            data: (genres) {
-              final selectedGenreTitles = genres
-                  .where((g) => _musicGenres.contains(g.id))
-                  .map((g) => g.title)
-                  .toList();
-
-              return _buildGroupedMultiSelectPicker(
-                label: 'Music Genres',
-                hint: 'Select music genres',
-                selectedTitles: selectedGenreTitles,
-                onTap: () => _showMultiSelectBottomSheet(
-                  title: 'Select Music Genres',
-                  items: genres,
-                  selectedIds: _musicGenres,
-                  onSelected: (ids) {
-                    setState(() {
-                      _musicGenres = ids;
-                    });
-                  },
-                ),
-                required: true,
-                showDivider: false,
-              );
-            },
-            loading: () => _buildLoadingField(
-              'Music Genres',
-              textColor,
-              secondaryTextColor,
-              isDark,
-            ),
-            error: (error, stack) => _buildErrorField(
-              'Music Genres',
-              error,
-              textColor,
-              secondaryTextColor,
-              isDark,
-            ),
-          ),
         ],
         first: true,
       ),
@@ -2478,7 +2440,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 ),
                 SizedBox(height: AppSpacing.spacingSM),
                 Text(
-                  'You can add up to 6 photos. More photos help others get to know you better!',
+                  'You can add up to 6 photos. Select multiple from your gallery at once!',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context)
@@ -2489,7 +2451,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 ),
                 SizedBox(height: AppSpacing.spacingXL),
                 if (_additionalImageFiles.isEmpty)
-                  Container(
+                  GestureDetector(
+                    onTap: _additionalImageFiles.length >= _maxAdditionalPhotos
+                        ? null
+                        : () => _showImageSourceDialog(isPrimary: false),
+                    child: Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(AppSpacing.spacingXXL),
                     decoration: BoxDecoration(
@@ -2515,8 +2481,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                                     .withValues(alpha: 0.55),
                               ),
                         ),
+                        SizedBox(height: AppSpacing.spacingXS),
+                        Text(
+                          'Tap to add photos',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
                       ],
                     ),
+                  ),
                   )
                 else
                   GridView.builder(
@@ -2574,7 +2549,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: _additionalImageFiles.length >= 6
+                    onPressed: _additionalImageFiles.length >= _maxAdditionalPhotos
                         ? null
                         : () => _showImageSourceDialog(isPrimary: false),
                     icon: AppSvgIcon(
@@ -2583,9 +2558,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     label: Text(
-                      _additionalImageFiles.length >= 6
+                      _additionalImageFiles.length >= _maxAdditionalPhotos
                           ? 'Maximum 6 photos'
-                          : 'Add Photo (${_additionalImageFiles.length}/6)',
+                          : 'Add Photos (${_additionalImageFiles.length}/$_maxAdditionalPhotos)',
                     ),
                   ),
                 ),
@@ -2853,12 +2828,12 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         'Interests & Music',
         [
           AppGroupedInfoTile(
-            label: 'Interests',
-            value: interestsSummary.isEmpty ? 'Not set' : interestsSummary,
-          ),
-          AppGroupedInfoTile(
             label: 'Music Genres',
             value: musicGenresSummary.isEmpty ? 'Not set' : musicGenresSummary,
+          ),
+          AppGroupedInfoTile(
+            label: 'Interests',
+            value: interestsSummary.isEmpty ? 'Not set' : interestsSummary,
             showDivider: false,
           ),
         ],

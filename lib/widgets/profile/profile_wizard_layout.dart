@@ -55,7 +55,10 @@ class ProfileWizardLayout {
         Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onTap,
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              onTap();
+            },
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 52),
               child: Padding(

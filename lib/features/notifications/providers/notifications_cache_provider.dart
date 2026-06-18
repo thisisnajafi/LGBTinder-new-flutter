@@ -188,15 +188,15 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       final page = await _fetchPage(1);
       if (page == null) return;
 
-      final hasMore = page.length >= kNotificationsPageSize;
       state = state.copyWith(
-        notifications: page,
-        currentPage: hasMore ? 2 : 1,
-        hasMore: hasMore,
+        notifications: page.notifications,
+        currentPage: page.hasMore ? 2 : 1,
+        hasMore: page.hasMore,
         initialLoadComplete: true,
         isRefreshing: false,
         clearError: true,
       );
+      _syncUnreadBadge(page.unreadCount);
       unawaited(_persistCache());
     } on ApiError catch (e) {
       state = state.copyWith(
@@ -238,17 +238,17 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       final existingIds = state.notifications.map((e) => e.id).toSet();
       final merged = [
         ...state.notifications,
-        ...page.where((n) => !existingIds.contains(n.id)),
+        ...page.notifications.where((n) => !existingIds.contains(n.id)),
       ];
-      final hasMore = page.length >= kNotificationsPageSize;
 
       state = state.copyWith(
         notifications: merged,
-        currentPage: hasMore ? state.currentPage + 1 : state.currentPage,
-        hasMore: hasMore,
+        currentPage: page.hasMore ? state.currentPage + 1 : state.currentPage,
+        hasMore: page.hasMore,
         isLoadingMore: false,
         clearError: true,
       );
+      _syncUnreadBadge(page.unreadCount);
       unawaited(_persistCache());
     } on ApiError catch (e) {
       AppLogger.warning(
@@ -269,11 +269,15 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     }
   }
 
-  Future<List<app_models.Notification>?> _fetchPage(int page) async {
+  Future<app_models.NotificationsPageResult?> _fetchPage(int page) async {
     return _notificationService.getNotifications(
       page: page,
       limit: kNotificationsPageSize,
     );
+  }
+
+  void _syncUnreadBadge(int unreadCount) {
+    _ref.invalidate(unreadNotificationCountProvider);
   }
 
   void markAsReadLocal(int notificationId) {
@@ -300,6 +304,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           )
           .toList(growable: false),
     );
+    _syncUnreadBadge(0);
     unawaited(_persistCache());
   }
 
@@ -325,6 +330,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           )
           .toList(growable: false),
     );
+    _syncUnreadBadge(0);
     unawaited(_persistCache());
   }
 
@@ -334,6 +340,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           .where((n) => n.id != notificationId)
           .toList(growable: false),
     );
+    _syncUnreadBadge(0);
     unawaited(_persistCache());
   }
 
@@ -345,6 +352,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       initialLoadComplete: true,
       clearError: true,
     );
+    _syncUnreadBadge(0);
     final key = _cacheKey();
     if (key != null) {
       unawaited(_cacheService.clearCache(key));

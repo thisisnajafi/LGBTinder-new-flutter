@@ -9,8 +9,7 @@ class GetNotificationsUseCase {
   GetNotificationsUseCase(this._notificationRepository);
 
   /// Execute get notifications use case
-  /// Returns [List<Notification>] with user's notifications
-  Future<List<Notification>> execute({
+  Future<NotificationsPageResult> execute({
     int? page,
     int? limit,
     String? type,
@@ -22,7 +21,6 @@ class GetNotificationsUseCase {
         type: type,
       );
     } catch (e) {
-      // Re-throw all exceptions to let UI handle them
       rethrow;
     }
   }

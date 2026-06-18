@@ -48,8 +48,10 @@ class AuthService {
     await _tokenStorage.saveUserSession(
       user: UserData(
         id: response.userId,
-        firstName: 'User',
-        lastName: '',
+        firstName: response.firstName?.trim().isNotEmpty == true
+            ? response.firstName!.trim()
+            : 'User',
+        lastName: response.lastName?.trim() ?? '',
         email: response.email,
       ),
       profileCompleted: response.profileCompleted,

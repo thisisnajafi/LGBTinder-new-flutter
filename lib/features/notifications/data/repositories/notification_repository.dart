@@ -1,4 +1,4 @@
-import '../../domain/services/notification_service.dart';
+import '../services/notification_service.dart';
 import '../models/notification.dart';
 import '../models/notification_preferences.dart';
 
@@ -8,16 +8,15 @@ class NotificationRepository {
 
   NotificationRepository(this._notificationService);
 
-  /// Get all notifications for current user
-  Future<List<Notification>> getNotifications({
+  /// Get notifications page for current user
+  Future<NotificationsPageResult> getNotifications({
     int? page,
     int? limit,
     String? type,
   }) async {
-    return await _notificationService.getNotifications(
+    return _notificationService.getNotifications(
       page: page,
       limit: limit,
-      type: type,
     );
   }
 

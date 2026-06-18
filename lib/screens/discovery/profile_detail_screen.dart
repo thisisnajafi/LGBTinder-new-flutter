@@ -4,14 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/app_icons.dart';
 import '../../features/profile/data/models/user_profile.dart';
 import '../../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
+import '../../features/profile/presentation/widgets/other_user_profile/profile_more_options_sheet.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../features/safety/presentation/screens/report_user_screen.dart';
+import '../../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../../features/safety/providers/user_actions_providers.dart';
-import '../../features/safety/data/models/block.dart';
 import '../../features/safety/data/models/favorite.dart';
 import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
@@ -189,127 +189,46 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   }
 
   void _showMoreOptions() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.block,
-                  color: AppColors.feedbackError,
-                  size: 24,
-                ),
-                title: const Text('Block user'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showBlockConfirmation();
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.flag,
-                  color: AppColors.feedbackWarning,
-                  size: 24,
-                ),
-                title: const Text('Report user'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push<void>(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => ReportUserScreen(userId: widget.userId),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: AppSvgIcon(
-                  assetPath: AppIcons.favoriteBorder,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-                title: const Text('Add to favorites'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _addToFavorites();
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: AppSvgIcon(assetPath: AppIcons.close, size: 24),
-                title: const Text('Cancel'),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
+    final profile = _profile;
+    if (profile == null) return;
+
+    ProfileMoreOptionsSheet.show(
+      context,
+      userName: _fullName(profile),
+      onBlock: _openBlockDialog,
+      onReport: _openReportScreen,
+      onAddFavorite: _addToFavorites,
+    );
+  }
+
+  void _openReportScreen() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ReportUserScreen(userId: widget.userId),
       ),
     );
   }
 
-  Future<void> _showBlockConfirmation() async {
+  Future<void> _openBlockDialog() async {
     final profile = _profile;
     if (profile == null) return;
 
-    final confirmed = await showDialog<bool>(
+    final avatar = profile.images != null && profile.images!.isNotEmpty
+        ? profile.images!.first.imageUrl
+        : null;
+
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Block user'),
-        content: Text(
-          'Are you sure you want to block ${_fullName(profile)}? '
-          'You won\'t see each other anymore.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
-            child: const Text('Block'),
-          ),
-        ],
+      builder: (context) => BlockUserDialog(
+        userId: widget.userId,
+        userName: _fullName(profile),
+        userAvatar: avatar,
+        onBlockSuccess: () {
+          if (mounted) Navigator.pop(context);
+        },
       ),
     );
-
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await ref.read(userActionsServiceProvider).blockUser(
-            BlockUserRequest(blockedUserId: widget.userId),
-          );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('User blocked successfully'),
-          backgroundColor: AppColors.feedbackSuccess,
-        ),
-      );
-      Navigator.pop(context);
-    } on ApiError catch (e) {
-      if (!mounted) return;
-      ErrorHandlerService.showErrorSnackBar(
-        context,
-        e,
-        customMessage: 'Failed to block user',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ErrorHandlerService.handleError(
-        context,
-        e,
-        customMessage: 'Failed to block user',
-      );
-    }
   }
 
   Future<void> _addToFavorites() async {

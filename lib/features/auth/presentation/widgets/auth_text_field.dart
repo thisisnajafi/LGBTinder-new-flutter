@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/constants/animation_constants.dart';
+import '../../../../core/utils/country_phone_utils.dart';
+import '../../../../core/widgets/inputs/national_phone_input_formatter.dart';
+import '../../../../features/reference_data/data/models/reference_item.dart';
 
 /// Auth text field widget - reusable text input for authentication forms
 class AuthTextField extends ConsumerStatefulWidget {
@@ -285,7 +289,7 @@ class EmailField extends StatelessWidget {
   }
 }
 
-/// Phone field - specialized auth text field for phone input
+/// Phone field - specialized auth text field for phone input with country rules.
 class PhoneField extends StatelessWidget {
   final TextEditingController? controller;
   final String? hintText;
@@ -295,9 +299,11 @@ class PhoneField extends StatelessWidget {
   final VoidCallback? onSubmitted;
   final FocusNode? focusNode;
   final bool autofocus;
+  final ReferenceItem? country;
+  final IsoCode? isoCode;
 
   const PhoneField({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.labelText,
@@ -306,21 +312,28 @@ class PhoneField extends StatelessWidget {
     this.onSubmitted,
     this.focusNode,
     this.autofocus = false,
-  }) : super(key: key);
+    this.country,
+    this.isoCode,
+  });
+
+  IsoCode get _iso =>
+      isoCode ??
+      CountryPhoneUtils.resolveIso(country: country);
 
   @override
   Widget build(BuildContext context) {
+    final iso = _iso;
     return AuthTextField(
       controller: controller,
-      hintText: hintText ?? 'Enter your phone number',
+      hintText: hintText ?? CountryPhoneUtils.exampleNationalHint(iso),
       labelText: labelText ?? 'Phone Number',
       keyboardType: TextInputType.phone,
       textInputAction: TextInputAction.next,
       inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(15), // Reasonable phone number limit
+        NationalPhoneInputFormatter(iso),
       ],
-      validator: validator ?? _defaultPhoneValidator,
+      validator: validator ??
+          (value) => CountryPhoneUtils.validateNational(value, iso),
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       focusNode: focusNode,
@@ -332,15 +345,5 @@ class PhoneField extends StatelessWidget {
             : AppColors.textSecondaryLight,
       ),
     );
-  }
-
-  String? _defaultPhoneValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Phone number is required';
-    }
-    if (value.length < 10) {
-      return 'Please enter a valid phone number';
-    }
-    return null;
   }
 }

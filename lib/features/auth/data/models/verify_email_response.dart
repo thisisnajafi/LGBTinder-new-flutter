@@ -2,6 +2,8 @@
 class VerifyEmailResponse {
   final int userId;
   final String email;
+  final String? firstName;
+  final String? lastName;
   final String? token;
   final String? tokenType;
   final bool profileCompletionRequired;
@@ -10,6 +12,8 @@ class VerifyEmailResponse {
   VerifyEmailResponse({
     required this.userId,
     required this.email,
+    this.firstName,
+    this.lastName,
     this.token,
     this.tokenType,
     this.profileCompletionRequired = false,
@@ -21,6 +25,8 @@ class VerifyEmailResponse {
     Map<String, dynamic>? userData;
     int? userId;
     String? email;
+    String? firstName;
+    String? lastName;
     bool profileCompleted = false;
     
     if (json['user'] != null && json['user'] is Map) {
@@ -30,6 +36,8 @@ class VerifyEmailResponse {
           ? ((userData['id'] is int) ? userData['id'] as int : int.tryParse(userData['id'].toString()))
           : (userData['user_id'] != null ? ((userData['user_id'] is int) ? userData['user_id'] as int : int.tryParse(userData['user_id'].toString())) : null);
       email = userData['email']?.toString();
+      firstName = userData['first_name']?.toString();
+      lastName = userData['last_name']?.toString();
       // Check profile_completed field (can be bool or int 0/1)
       profileCompleted = userData['profile_completed'] == true || userData['profile_completed'] == 1 || userData['profile_completed'] == '1';
     } else {
@@ -38,6 +46,8 @@ class VerifyEmailResponse {
           ? ((json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()))
           : (json['id'] != null ? ((json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString())) : null);
       email = json['email']?.toString();
+      firstName = json['first_name']?.toString();
+      lastName = json['last_name']?.toString();
       profileCompleted = json['profile_completed'] == true || json['profile_completed'] == 1 || json['profile_completed'] == '1';
     }
     
@@ -62,6 +72,8 @@ class VerifyEmailResponse {
     return VerifyEmailResponse(
       userId: userId,
       email: email,
+      firstName: firstName,
+      lastName: lastName,
       token: token,
       tokenType: tokenType,
       profileCompletionRequired: profileCompletionRequired,

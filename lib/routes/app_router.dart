@@ -337,11 +337,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final email = state.uri.queryParameters['email'] ?? '';
           final isNewUser = state.uri.queryParameters['isNewUser'] == 'true';
+          final firstName = state.uri.queryParameters['firstName'];
+          final lastName = state.uri.queryParameters['lastName'];
           return slideFadePage(
             state,
             EmailVerificationScreen(
               email: email,
               isNewUser: isNewUser,
+              firstName: firstName,
+              lastName: lastName,
             ),
           );
         },
@@ -353,9 +357,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'profile-wizard',
         pageBuilder: (context, state) {
           final firstName = state.uri.queryParameters['firstName'] ?? '';
+          final lastName = state.uri.queryParameters['lastName'] ?? '';
           return slideFadePage(
             state,
-            ProfileWizardPage(initialFirstName: firstName.isNotEmpty ? firstName : null),
+            ProfileWizardPage(
+              initialFirstName: firstName.isNotEmpty ? firstName : null,
+              initialLastName: lastName.isNotEmpty ? lastName : null,
+            ),
           );
         },
       ),

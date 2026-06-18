@@ -140,12 +140,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
           // Pass first_name from login response to profile wizard
           final firstName = response.firstName ?? response.user?.firstName ?? '';
+          final lastName = response.user?.lastName ?? '';
           if (firstName.isNotEmpty) {
-            final target = Uri(
-              path: AppRoutes.profileWizard,
-              queryParameters: {'firstName': firstName},
-            ).toString();
-            context.go(target);
+            final params = <String, String>{'firstName': firstName};
+            if (lastName.trim().isNotEmpty) {
+              params['lastName'] = lastName.trim();
+            }
+            context.go(
+              Uri(
+                path: AppRoutes.profileWizard,
+                queryParameters: params,
+              ).toString(),
+            );
           } else {
             context.go(AppRoutes.profileWizard);
           }

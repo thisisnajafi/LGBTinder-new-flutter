@@ -92,16 +92,18 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final notifications = await _getNotificationsUseCase.execute(
+      final page = await _getNotificationsUseCase.execute(
         page: isRefresh ? 1 : state.currentPage,
         limit: 20,
         type: type,
       );
 
       state = state.copyWith(
-        notifications: isRefresh ? notifications : [...state.notifications, ...notifications],
+        notifications: isRefresh
+            ? page.notifications
+            : [...state.notifications, ...page.notifications],
         isLoading: false,
-        hasMore: notifications.length == 20,
+        hasMore: page.hasMore,
         currentPage: isRefresh ? 2 : state.currentPage + 1,
       );
 

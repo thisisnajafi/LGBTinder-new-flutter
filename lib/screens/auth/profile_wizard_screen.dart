@@ -13,6 +13,8 @@ import '../../widgets/profile/avatar_upload.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../widgets/common/selection_bottom_sheet.dart';
+import '../../core/utils/country_phone_utils.dart';
+import '../../core/widgets/inputs/country_phone_input.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../features/profile/providers/profile_provider.dart';
 import '../../features/profile/data/models/update_profile_request.dart';
@@ -39,7 +41,9 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
   ReferenceItem? _selectedGender;
   DateTime? _birthDate;
   final _phoneController = TextEditingController();
+  final _phoneDialCodeController = TextEditingController(text: '+1');
   String? _countryCode;
+  String _phoneE164 = '';
   ReferenceItem? _selectedCountry;
   ReferenceItem? _selectedCity;
 
@@ -68,6 +72,7 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
+    _phoneDialCodeController.dispose();
     _bioController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -318,28 +323,6 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
             borderColor: borderColor,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          // Phone number
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              labelText: 'Phone Number *',
-              hintText: '+1234567890',
-              prefixIcon: AppSvgIcon(
-                assetPath: AppIcons.phone,
-                size: 20,
-                color: secondaryTextColor,
-              ),
-              filled: true,
-              fillColor: surfaceColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: borderColor),
-              ),
-            ),
-            style: AppTypography.body.copyWith(color: textColor),
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
           // Country selection (with search)
           countriesAsync.when(
             data: (countries) => _buildSelectField<ReferenceItem>(
@@ -352,6 +335,8 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                   _selectedCountry = item;
                   _selectedCity = null; // Reset city when country changes
                   _countryCode = item.code;
+                  _phoneDialCodeController.text =
+                      CountryPhoneUtils.dialCodeForCountry(item);
                 });
               },
               searchable: true,
@@ -384,6 +369,21 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                     error: (error, stack) => _buildErrorField('Failed to load cities', textColor, surfaceColor, borderColor),
                   )
                 : SizedBox.shrink(),
+          if (_selectedCountry != null) ...[
+            SizedBox(height: AppSpacing.spacingMD),
+            CountryPhoneInput(
+              country: _selectedCountry,
+              nationalController: _phoneController,
+              dialCodeController: _phoneDialCodeController,
+              onPhoneChanged: (parsed) {
+                setState(() {
+                  _phoneE164 = parsed?.e164 ?? '';
+                  _countryCode =
+                      parsed?.dialCode ?? _phoneDialCodeController.text;
+                });
+              },
+            ),
+          ],
         ],
       ),
     );
