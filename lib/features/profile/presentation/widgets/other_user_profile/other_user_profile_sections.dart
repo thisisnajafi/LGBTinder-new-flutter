@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +13,7 @@ import '../../../../../shared/models/user_tier.dart';
 import '../../../widgets/tier_badge.dart';
 import '../../../data/models/user_profile.dart';
 import '../own_profile/profile_details_sections.dart';
+import '../own_profile/profile_premium_shell.dart';
 
 /// Compatibility snapshot for another user's profile.
 class ProfileCompatibilityData {
@@ -1358,5 +1357,3 @@ String? formatRecentlyActive(UserProfile profile) {
     return null;
   }
 }
-
-// Import UserProfile for formatRecentlyActive - need import at top

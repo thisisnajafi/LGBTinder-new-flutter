@@ -1,25 +1,25 @@
 ﻿import 'dart:async';
-import 'dart:ui';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
-import '../../../../../core/utils/app_icons.dart';
-import '../../../../../core/widgets/profile_age_badge.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../data/models/user_profile.dart';
-import '../../../widgets/tier_badge.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
+import '../../../../reference_data/providers/reference_data_providers.dart';
+import '../../../providers/profile_page_cache_provider.dart';
 import '../own_profile/profile_details_sections.dart';
+import 'other_user_profile_sections.dart';
+
 class OtherUserProfileView extends ConsumerStatefulWidget {
   final UserProfile profile;
   final bool showInteractionActions;
   final bool isMatched;
   final VoidCallback? onMessage;
+  final VoidCallback? onLike;
+  final VoidCallback? onSuperlike;
+  final VoidCallback? onShare;
   final VoidCallback? onMoreOptions;
   final Future<void> Function()? onRefresh;
   final List<String> interestLabels;
@@ -39,6 +39,9 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
     this.showInteractionActions = false,
     this.isMatched = false,
     this.onMessage,
+    this.onLike,
+    this.onSuperlike,
+    this.onShare,
     this.onMoreOptions,
     this.onRefresh,
     this.interestLabels = const [],
@@ -59,11 +62,10 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
 class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
   int _photoIndex = 0;
   Timer? _photoTimer;
+  final ScrollController _scrollController = ScrollController();
 
-  static const double _horizontalPad = ProfileContentLayout.horizontalInset;
-  static const double _sheetOverlap = 20;
   static const Duration _photoInterval = Duration(seconds: 5);
-  static const Duration _fadeDuration = Duration(milliseconds: 500);
+  static const double _sectionGap = AppSpacing.spacingXL;
 
   @override
   void initState() {
@@ -84,6 +86,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
   @override
   void dispose() {
     _photoTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -132,7 +135,23 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     return base;
   }
 
-  bool get _showTierBadge => _tier != UserTier.basid;
+  bool get _showActionBar =>
+      widget.onMessage != null ||
+      widget.onMoreOptions != null ||
+      widget.onLike != null ||
+      widget.onSuperlike != null ||
+      widget.onShare != null ||
+      widget.showInteractionActions;
+
+  int? get _apiMatchPercent {
+    final profile = widget.profile;
+    if (profile.matchPercentage != null && profile.matchPercentage! > 0) {
+      return profile.matchPercentage;
+    }
+    final raw = profile.additionalData?['compatibility_score'];
+    if (raw is int) return raw;
+    return int.tryParse('$raw');
+  }
 
   void _startPhotoTimer() {
     _photoTimer?.cancel();
@@ -151,487 +170,213 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     });
   }
 
-  void _onPhotoTap() {
+  void _onHeroPhotoTap() {
     _photoTimer?.cancel();
     _advancePhoto();
     _startPhotoTimer();
   }
 
-  bool get _showMessageAction =>
-      !widget.showInteractionActions && widget.onMessage != null;
+  void _onGalleryPhotoTap(int index) {
+    setState(() => _photoIndex = index);
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+    _startPhotoTimer();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final actionBarHeight =
-        widget.showInteractionActions ? 88.0 + bottomInset : 0.0;
-    final bottomPad = actionBarHeight > 0 ? actionBarHeight : AppSpacing.spacingXXL;
+    final viewerProfile =
+        ref.watch(profilePageCacheProvider).valueOrNull?.profile;
+    final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
+    final relationGoalsRef =
+        ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
 
-    final detailChips = buildProfileDetailChips(
-      job: widget.jobLabels.isNotEmpty ? widget.jobLabels.join(', ') : null,
-      education: widget.educationLabels.isNotEmpty
-          ? widget.educationLabels.join(', ')
-          : null,
-      height: widget.profile.height,
+    final viewerInterestLabels = viewerProfile != null
+        ? profileLabelsFromRefs(
+            apiTitles: viewerProfile.interestTitles,
+            ids: viewerProfile.interests,
+            refs: interestsRef,
+          )
+        : const <String>[];
+
+    final viewerGoalLabels = viewerProfile != null
+        ? profileLabelsFromRefs(
+            ids: viewerProfile.relationGoals,
+            refs: relationGoalsRef,
+          )
+        : const <String>[];
+
+    final compatibility = computeProfileCompatibility(
+      theirInterests: widget.interestLabels,
+      viewerInterests: viewerInterestLabels,
+      theirGoals: widget.relationGoalLabels,
+      viewerGoals: viewerGoalLabels,
+      theirSmoke: widget.profile.smoke,
+      viewerSmoke: viewerProfile?.smoke,
+      theirDrink: widget.profile.drink,
+      viewerDrink: viewerProfile?.drink,
+      theirGym: widget.profile.gym,
+      viewerGym: viewerProfile?.gym,
+      apiMatchPercent: _apiMatchPercent,
+    );
+
+    final conversationStarters = buildConversationStarters(
+      city: widget.profile.city,
+      interests: widget.interestLabels,
+      job: widget.jobLabels.isNotEmpty ? widget.jobLabels.first : null,
+    );
+
+    final detailGroups = buildCategorizedDetailGroups(
       gender: widget.genderLabel,
-      relationGoals: widget.relationGoalLabels,
-      languages: widget.languageLabels,
+      height: widget.profile.height,
       smoke: widget.profile.smoke,
       drink: widget.profile.drink,
       gym: widget.profile.gym,
+      jobs: widget.jobLabels,
+      educations: widget.educationLabels,
+      relationGoals: widget.relationGoalLabels,
+      preferredGenders: widget.preferredGenderLabels,
+      languages: widget.languageLabels,
+      musicGenres: widget.musicLabels,
     );
+
+    final bio = widget.profile.profileBio?.trim();
+    final hasAbout = (bio != null && bio.isNotEmpty) ||
+        conversationStarters.isNotEmpty;
 
     return RefreshIndicator(
       onRefresh: widget.onRefresh ?? () async {},
       edgeOffset: MediaQuery.paddingOf(context).top,
       child: CustomScrollView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          SliverToBoxAdapter(child: _photoHero(context)),
           SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -_sheetOverlap),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    _horizontalPad,
-                    AppSpacing.spacingSM,
-                    _horizontalPad,
-                    0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _profileActionBar(context),
-                      if (_hasBio) ...[
-                        PremiumPersonalitySection(
-                          bio: widget.profile.profileBio,
-                          conversationStarters: const [],
-                          sectionTitle: 'About',
-                          sectionSubtitle: null,
-                          quoteBio: false,
-                          shellMargin: ProfileContentLayout.shellMarginNone,
-                        ),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.interestLabels.isNotEmpty) ...[
-                        PremiumInterestsSection(
-                          labels: widget.interestLabels,
-                          shellMargin: ProfileContentLayout.shellMarginNone,
-                        ),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (detailChips.isNotEmpty) ...[
-                        PremiumDetailsGridSection(
-                          chips: detailChips,
-                          sectionTitle: 'Details',
-                          sectionSubtitle: null,
-                          shellMargin: ProfileContentLayout.shellMarginNone,
-                        ),
-                      ],
-                      SizedBox(height: bottomPad),
-                    ],
-                  ),
+            child: OtherUserProfileHero(
+              imageUrls: _imageUrls,
+              photoIndex: _photoIndex,
+              fullName: _fullName,
+              age: _age,
+              isVerified: widget.profile.isVerified == true,
+              isOnline: widget.profile.isOnline == true,
+              tier: _tier,
+              locationLabel: _locationDisplay,
+              matchPercent: compatibility.matchPercent,
+              sharedInterestCount: compatibility.sharedInterests.length,
+              recentlyActiveLabel: formatRecentlyActive(widget.profile),
+              onBack: () => Navigator.maybePop(context),
+              onPhotoTap: _imageUrls.length > 1 ? _onHeroPhotoTap : null,
+            ),
+          ),
+          if (_showActionBar)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _ProfileActionBarHeader(
+                child: OtherUserProfileActionBar(
+                  showDiscoveryActions: widget.showInteractionActions,
+                  isMatched: widget.isMatched,
+                  onMessage: widget.onMessage,
+                  onLike: widget.onLike,
+                  onSuperlike: widget.onSuperlike,
+                  onShare: widget.onShare,
+                  onMore: widget.onMoreOptions,
                 ),
               ),
             ),
+          SliverToBoxAdapter(
+            child: PremiumCompatibilitySection(data: compatibility),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _profileActionBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.spacingLG),
-      child: Row(
-        children: [
-          _circleActionButton(
-            context,
-            icon: AppIcons.arrowLeft,
-            onTap: () => Navigator.maybePop(context),
-            tooltip: 'Back',
-          ),
-          if (_showMessageAction) ...[
-            const SizedBox(width: AppSpacing.spacingSM),
-            Expanded(child: _messageButton(context)),
-          ] else
-            const Spacer(),
-          if (widget.onMoreOptions != null) ...[
-            const SizedBox(width: AppSpacing.spacingSM),
-            _circleActionButton(
-              context,
-              icon: AppIcons.more,
-              onTap: widget.onMoreOptions!,
-              tooltip: 'More options',
-            ),
-          ] else if (!_showMessageAction)
-            const SizedBox(width: 48),
-        ],
-      ),
-    );
-  }
-
-  bool get _hasBio {
-    final bio = widget.profile.profileBio?.trim();
-    return bio != null && bio.isNotEmpty;
-  }
-
-  Widget _photoHero(BuildContext context) {
-    final theme = Theme.of(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final heroHeight = width * 1.05;
-    final urls = _imageUrls;
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    if (urls.isEmpty) {
-      return SizedBox(
-        height: heroHeight,
-        width: width,
-        child: ColoredBox(
-          color: theme.colorScheme.surfaceContainerHighest,
-          child: Center(
-            child: AppSvgIcon(
-              assetPath: AppIcons.userOutline,
-              size: 56,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: heroHeight,
-      width: width,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          GestureDetector(
-            onTap: urls.length > 1 ? _onPhotoTap : null,
-            behavior: HitTestBehavior.opaque,
-            child: AnimatedSwitcher(
-              duration: _fadeDuration,
-              switchInCurve: Curves.easeInOut,
-              switchOutCurve: Curves.easeInOut,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              layoutBuilder: (currentChild, previousChildren) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ...previousChildren,
-                    if (currentChild != null) currentChild,
-                  ],
-                );
-              },
-              child: CachedNetworkImage(
-                key: ValueKey<String>(urls[_photoIndex]),
-                imageUrl: urls[_photoIndex],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                placeholder: (_, __) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                ),
-                errorWidget: (_, __, ___) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: Center(
-                    child: AppSvgIcon(
-                      assetPath: AppIcons.gallery,
-                      size: 40,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.35),
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.78),
-                ],
-                stops: const [0, 0.42, 1],
-              ),
-            ),
-          ),
-          if (urls.length > 1) ...[
-            Positioned(
-              top: topInset + AppSpacing.spacingSM,
-              left: _horizontalPad,
-              right: _horizontalPad,
-              child: _photoSegmentIndicator(urls.length),
-            ),
-            Positioned(
-              top: topInset + AppSpacing.spacingSM + 14,
-              right: _horizontalPad,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingSM,
-                  vertical: AppSpacing.spacingXS,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                ),
-                child: Text(
-                  '${_photoIndex + 1}/${urls.length}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          if (hasAbout) ...[
+            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
+            SliverToBoxAdapter(
+              child: PremiumPersonalitySection(
+                bio: bio,
+                conversationStarters: conversationStarters,
+                sectionTitle: 'About',
+                sectionSubtitle: 'Get to know them',
+                quoteBio: false,
+                readOnly: true,
               ),
             ),
           ],
-          Positioned(
-            left: _horizontalPad,
-            right: _horizontalPad,
-            bottom: _sheetOverlap + AppSpacing.spacingMD,
-            child: _profileInfoOverlay(context),
+          if (widget.interestLabels.isNotEmpty) ...[
+            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
+            SliverToBoxAdapter(
+              child: PremiumSharedInterestsSection(
+                allLabels: widget.interestLabels,
+                sharedLabels: compatibility.sharedInterests.toSet(),
+              ),
+            ),
+          ],
+          if (detailGroups.isNotEmpty) ...[
+            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
+            SliverToBoxAdapter(
+              child: PremiumCategorizedDetailsSection(groups: detailGroups),
+            ),
+          ],
+          if (_imageUrls.length > 1) ...[
+            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
+            SliverToBoxAdapter(
+              child: PremiumViewerPhotosSection(
+                imageUrls: _imageUrls,
+                onPhotoTap: _onGalleryPhotoTap,
+              ),
+            ),
+          ],
+          SliverToBoxAdapter(
+            child: SizedBox(height: AppSpacing.spacingXXL + bottomInset),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _photoSegmentIndicator(int count) {
-    return Row(
-      children: List.generate(count, (index) {
-        final isActive = index == _photoIndex;
-        return Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            height: 3,
-            margin: EdgeInsets.only(right: index < count - 1 ? 4 : 0),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        );
-      }),
-    );
-  }
+class _ProfileActionBarHeader extends SliverPersistentHeaderDelegate {
+  _ProfileActionBarHeader({required this.child});
 
-  Widget _profileInfoOverlay(BuildContext context) {
-    final theme = Theme.of(context);
-    final age = _age;
-    final isVerified = widget.profile.isVerified == true;
-    final isOnline = widget.profile.isOnline == true;
-    final location = _locationDisplay;
+  final Widget child;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.spacingMD),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.42),
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.14),
-              width: 0.5,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: AppSpacing.spacingSM,
-                      runSpacing: AppSpacing.spacingXS,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          _fullName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            height: 1.15,
-                          ),
-                        ),
-                        if (age != null)
-                          ProfileAgeBadge(
-                            age: age,
-                            style: ProfileAgeBadgeStyle.heroOverlay,
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (isVerified) ...[
-                    const SizedBox(width: AppSpacing.spacingXS),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: AppSvgIcon(
-                        assetPath:
-                            AppIcons.getIconPath('verify', style: 'bold'),
-                        size: 18,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: AppSpacing.spacingSM),
-              Wrap(
-                spacing: AppSpacing.spacingSM,
-                runSpacing: AppSpacing.spacingXS,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (_showTierBadge) TierBadge(tier: _tier, compact: false),
-                  if (isOnline) _onlinePill(context),
-                  if (location.isNotEmpty) _locationChip(context, location),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  static const double _height = 70;
 
-  Widget _locationChip(BuildContext context, String location) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * 0.55,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppSvgIcon(
-            assetPath: AppIcons.location,
-            size: 14,
-            color: Colors.white.withValues(alpha: 0.92),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              location,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  double get minExtent => _height;
 
-  Widget _onlinePill(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.feedbackSuccess.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        border: Border.all(
-          color: AppColors.feedbackSuccess.withValues(alpha: 0.55),
-        ),
+        color: isDark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: overlapsContent
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
-      child: Text(
-        'Online',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.feedbackSuccess,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
+      child: child,
     );
   }
 
-  Widget _circleActionButton(
-    BuildContext context, {
-    required String icon,
-    required VoidCallback onTap,
-    required String tooltip,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Material(
-      color: isDark
-          ? AppColors.cardBackgroundDark
-          : AppColors.cardBackgroundLight,
-      elevation: 0,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.accentViolet.withValues(alpha: 0.12),
-          ),
-        ),
-        child: IconButton(
-          tooltip: tooltip,
-          onPressed: onTap,
-          icon: AppSvgIcon(
-            assetPath: icon,
-            size: 22,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _messageButton(BuildContext context) {
-    final theme = Theme.of(context);
-    return FilledButton.icon(
-      onPressed: widget.onMessage,
-      icon: AppSvgIcon(
-        assetPath: AppIcons.message,
-        size: 20,
-        color: theme.colorScheme.onPrimary,
-      ),
-      label: Text(widget.isMatched ? 'Send message' : 'Message'),
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingMD),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        ),
-        elevation: 0,
-      ),
-    );
-  }
+  @override
+  bool shouldRebuild(covariant _ProfileActionBarHeader old) =>
+      old.child != child;
 }
 
 /// Resolve another user's plan tier from profile payload (not the viewer's tier).

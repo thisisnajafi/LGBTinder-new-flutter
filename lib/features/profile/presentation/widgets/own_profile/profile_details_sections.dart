@@ -195,6 +195,7 @@ class PremiumPersonalitySection extends StatelessWidget {
     this.sectionTitle = 'Personality',
     this.sectionSubtitle = 'Let your authentic self shine',
     this.quoteBio = true,
+    this.readOnly = false,
     this.shellMargin,
   });
 
@@ -204,6 +205,7 @@ class PremiumPersonalitySection extends StatelessWidget {
   final String sectionTitle;
   final String? sectionSubtitle;
   final bool quoteBio;
+  final bool readOnly;
   final EdgeInsets? shellMargin;
 
   @override
@@ -224,51 +226,53 @@ class PremiumPersonalitySection extends StatelessWidget {
             onEdit: onEdit,
           ),
           const SizedBox(height: AppSpacing.spacingMD),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-              color: isDark
-                  ? AppColors.cardBackgroundDark
-                  : AppColors.cardBackgroundLight,
-              border: Border.all(
-                color: AppColors.accentPink.withValues(alpha: 0.15),
+          if (hasBio || !readOnly)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.spacingLG),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                color: isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight,
+                border: Border.all(
+                  color: AppColors.accentPink.withValues(alpha: 0.15),
+                ),
               ),
-            ),
-            child: hasBio
-                ? Text(
-                    quoteBio ? '"$trimmed"' : trimmed,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      height: 1.55,
-                      fontWeight: FontWeight.w500,
-                      fontStyle: quoteBio ? FontStyle.italic : FontStyle.normal,
-                    ),
-                  )
-                : PremiumTapScale(
-                    onTap: onEdit ?? () {},
-                    semanticLabel: 'Add bio',
-                    child: Row(
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.edit,
-                          size: 22,
-                          color: AppColors.accentPink,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Write a bio that shows who you are — humor, passions, what you are looking for.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.65),
+              child: hasBio
+                  ? Text(
+                      quoteBio ? '"$trimmed"' : trimmed,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        height: 1.55,
+                        fontWeight: FontWeight.w500,
+                        fontStyle:
+                            quoteBio ? FontStyle.italic : FontStyle.normal,
+                      ),
+                    )
+                  : PremiumTapScale(
+                      onTap: onEdit ?? () {},
+                      semanticLabel: 'Add bio',
+                      child: Row(
+                        children: [
+                          AppSvgIcon(
+                            assetPath: AppIcons.edit,
+                            size: 22,
+                            color: AppColors.accentPink,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Write a bio that shows who you are — humor, passions, what you are looking for.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.65),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-          ),
+            ),
           if (conversationStarters.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.spacingMD),
             Text(

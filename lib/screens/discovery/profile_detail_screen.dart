@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../features/profile/data/models/user_profile.dart';
@@ -17,7 +18,6 @@ import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import '../../widgets/error_handling/error_display_widget.dart';
-import '../../widgets/profile/profile_action_buttons.dart';
 import '../../core/cache/cache_manager.dart' show notifyNewMatch;
 import '../../features/matching/providers/likes_providers.dart';
 import '../../features/matching/providers/matching_provider.dart';
@@ -154,6 +154,16 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     }
   }
 
+  Future<void> _handleShare() async {
+    final profile = _profile;
+    if (profile == null) return;
+    final name = _fullName(profile);
+    final message = name.isEmpty
+        ? 'Check out this profile on LGBTFinder!'
+        : 'Check out $name on LGBTFinder!';
+    await Share.share(message, subject: 'LGBTFinder Profile');
+  }
+
   void _handleMessage() {
     if (_profile == null) return;
     context.push(
@@ -263,10 +273,6 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final profile = _profile;
-    final showActions = widget.showInteractionActions &&
-        profile != null &&
-        !_isLoading &&
-        !_hasError;
 
     if (_isLoading) {
       return const Scaffold(
@@ -303,20 +309,14 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      bottomNavigationBar: showActions
-          ? ProfileActionButtons(
-              onLike: _handleLike,
-              onDislike: () => Navigator.pop(context),
-              onSuperlike: _handleSuperlike,
-              onMessage: _handleMessage,
-              isMatched: _isMatched,
-            )
-          : null,
       body: OtherUserProfileView(
           profile: profile,
           showInteractionActions: widget.showInteractionActions,
           isMatched: _isMatched,
           onMessage: _handleMessage,
+          onLike: widget.showInteractionActions ? _handleLike : null,
+          onSuperlike: widget.showInteractionActions ? _handleSuperlike : null,
+          onShare: _handleShare,
           onMoreOptions: _showMoreOptions,
           onRefresh: _loadProfile,
           locationLabel: profileLocationLabel(profile),
