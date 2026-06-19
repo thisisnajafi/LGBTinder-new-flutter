@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../features/matching/data/models/match.dart';
 import '../../routes/app_router.dart';
@@ -18,63 +19,61 @@ class ChatMatchesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.5);
-
     if (matches.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppPageHeader.horizontalPadding,
-          ),
-          child: Text(
-            'Likes and matches',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: mutedColor,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.spacingSM),
-        SizedBox(
-          height: 90,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppPageHeader.horizontalPadding,
+              horizontal: PremiumPageHeader.horizontalPadding,
             ),
-            itemCount: matches.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppSpacing.spacingSM),
-            itemBuilder: (context, index) {
-              final match = matches[index];
-              final isNew = match.isRead != true;
-              return _MatchAvatarChip(
-                match: match,
-                isNew: isNew,
-                onTap: () {
-                  context.push(
-                    Uri(
-                      path: AppRoutes.chat,
-                      queryParameters: {
-                        'userId': match.userId.toString(),
-                        if (match.firstName.isNotEmpty)
-                          'userName': match.firstName,
-                        if (match.primaryImageUrl?.isNotEmpty == true)
-                          'avatarUrl': match.primaryImageUrl!,
-                      },
-                    ).toString(),
-                  );
-                },
-              );
-            },
+            child: PremiumSectionHeader(
+              title: 'Likes and matches',
+              subtitle: 'Tap to start chatting',
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.spacingSM),
+          SizedBox(
+            height: 96,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: PremiumPageHeader.horizontalPadding,
+              ),
+              itemCount: matches.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.spacingSM),
+              itemBuilder: (context, index) {
+                final match = matches[index];
+                final isNew = match.isRead != true;
+                return _MatchAvatarChip(
+                  match: match,
+                  isNew: isNew,
+                  onTap: () {
+                    context.push(
+                      Uri(
+                        path: AppRoutes.chat,
+                        queryParameters: {
+                          'userId': match.userId.toString(),
+                          if (match.firstName.isNotEmpty)
+                            'userName': match.firstName,
+                          if (match.primaryImageUrl?.isNotEmpty == true)
+                            'avatarUrl': match.primaryImageUrl!,
+                        },
+                      ).toString(),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -93,29 +92,36 @@ class _MatchAvatarChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return GestureDetector(
+    return PremiumTapScale(
       onTap: onTap,
+      semanticLabel: 'Chat with ${match.firstName}',
       child: SizedBox(
-        width: 64,
+        width: 68,
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(2),
+              padding: const EdgeInsets.all(2.5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: isNew
-                      ? theme.colorScheme.primary
-                      : Colors.transparent,
-                  width: 2,
-                ),
+                gradient: isNew ? AppColors.brandGradient : null,
+                color: isNew
+                    ? null
+                    : (isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.white.withValues(alpha: 0.5)),
+                border: isNew
+                    ? null
+                    : Border.all(
+                        color: AppColors.accentViolet.withValues(alpha: 0.2),
+                      ),
               ),
               child: ClipOval(
                 child: ProfileImageWidget(
                   imageUrl: match.primaryImageUrl,
-                  width: 52,
-                  height: 52,
+                  width: 54,
+                  height: 54,
                   fit: BoxFit.cover,
                 ),
               ),
@@ -126,7 +132,9 @@ class _MatchAvatarChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: theme.textTheme.labelSmall,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: isNew ? FontWeight.w700 : FontWeight.w500,
+              ),
             ),
           ],
         ),

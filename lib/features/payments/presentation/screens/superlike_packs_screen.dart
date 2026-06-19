@@ -18,6 +18,7 @@ import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_subscription_plans.dart';
 import '../../data/models/superlike_pack.dart';
+import '../../data/services/plan_limits_service.dart';
 import '../../providers/payment_providers.dart';
 
 /// Full-screen superlike pack purchase — mirrors subscription plans UX.
@@ -85,7 +86,7 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
       ref.invalidate(userSuperlikePacksProvider);
       ref.read(planLimitsServiceProvider).clearCache();
       ref.read(planLimitsProvider.notifier).clearCache();
-      await ref.read(planLimitsProvider.notifier).refreshFromApi();
+      await ref.read(planLimitsProvider.notifier).refresh();
       final remaining = ref.read(superlikesRemainingProvider);
       if (remaining != null) {
         await ref
@@ -337,7 +338,7 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
           child: Row(
             children: [
               AppSvgIcon(
-                assetPath: AppIcons.getIconPath('card'),
+                assetPath: AppIcons.card,
                 size: 20,
                 color: AppColors.accentPink,
               ),

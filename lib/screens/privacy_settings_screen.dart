@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
 
-import '../core/widgets/app_grouped_list_card.dart';
+import '../core/theme/spacing_constants.dart';
 import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/utils/app_icons.dart';
 import '../core/cache/cache_invalidator.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/settings/providers/settings_provider.dart';
@@ -163,19 +165,21 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     }
   }
 
-  AppGroupedSwitchTile _switch({
+  Widget _premiumToggle({
     required String label,
     String? subtitle,
     required bool value,
     required ValueChanged<bool>? onChanged,
-    bool showDivider = true,
+    String? iconPath,
   }) {
-    return AppGroupedSwitchTile(
-      label: label,
+    final enabled = onChanged != null;
+    return PremiumToggleRow(
+      title: label,
       subtitle: subtitle,
       value: value,
-      onChanged: onChanged,
-      showDivider: showDivider,
+      onChanged: onChanged ?? (_) {},
+      enabled: enabled,
+      iconPath: iconPath,
     );
   }
 
@@ -183,50 +187,55 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   Widget build(BuildContext context) {
     return AppSettingsDetailScaffold(
       title: 'Privacy & safety',
+      subtitle: 'Control visibility, discovery, and your data',
       body: AppSettingsDetailList(
         children: [
-          AppGroupedListSection(
+          PremiumSettingsGroup(
             title: 'Profile visibility',
-            padding: AppSettingsLayout.firstSectionPadding,
+            subtitle: 'What others see on your profile',
             children: [
-              _switch(
+              _premiumToggle(
                 label: 'Show my profile',
                 subtitle: 'Allow others to see your profile',
                 value: _showProfile,
+                iconPath: AppIcons.profileCircle,
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) => _togglePrivacy((p) => p.copyWith(profileVisible: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Show age',
                 subtitle: 'Display your age on profile',
                 value: _showAge,
+                iconPath: AppIcons.getIconPath('cake'),
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) => _togglePrivacy((p) => p.copyWith(showAge: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Show distance',
                 subtitle: 'Display distance to other users',
                 value: _showDistance,
+                iconPath: AppIcons.location,
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) => _togglePrivacy((p) => p.copyWith(showDistance: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Show online status',
                 subtitle: 'Let others see when you\'re online',
                 value: _showOnlineStatus,
+                iconPath: AppIcons.online,
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) => _togglePrivacy((p) => p.copyWith(showOnlineStatus: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Show last seen',
                 subtitle: 'Display when you were last active',
                 value: _showLastSeen,
+                iconPath: AppIcons.clock,
                 onChanged: (v) => setState(() => _showLastSeen = v),
-                showDivider: false,
               ),
             ],
           ),
@@ -256,80 +265,86 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
               MapEntry('hidden', 'Hidden from discovery'),
             ],
           ),
-          AppGroupedListSection(
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
             title: 'Discovery',
-            padding: AppSettingsLayout.sectionPadding,
+            subtitle: 'How you appear in the stack',
             children: [
-              _switch(
+              _premiumToggle(
                 label: 'Show me in discovery',
                 subtitle:
                     'Allow others to find you (synced with option above when Everyone)',
                 value: _showInDiscovery,
+                iconPath: AppIcons.discover,
                 onChanged: (v) => setState(() => _showInDiscovery = v),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Show me in top picks',
                 subtitle: 'Appear in curated top picks',
                 value: _showInTopPicks,
+                iconPath: AppIcons.crown,
                 onChanged: (v) => setState(() => _showInTopPicks = v),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Allow swipe back',
                 subtitle: 'Let others undo swipes on you',
                 value: _allowSwipeBack,
+                iconPath: AppIcons.refresh,
                 onChanged: (v) => setState(() => _allowSwipeBack = v),
-                showDivider: false,
               ),
             ],
           ),
-          AppGroupedListSection(
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
             title: 'Data sharing',
-            padding: AppSettingsLayout.sectionPadding,
             children: [
-              _switch(
+              _premiumToggle(
                 label: 'Share data for matching',
                 subtitle: 'Use your data to improve matches',
                 value: _shareDataForMatching,
+                iconPath: AppIcons.heart,
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) => _togglePrivacy((p) => p.copyWith(dataCollection: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Share data for analytics',
                 subtitle: 'Help us improve the app',
                 value: _shareDataForAnalytics,
+                iconPath: AppIcons.getIconPath('chart'),
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) => _togglePrivacy((p) => p.copyWith(analyticsSharing: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Share data for ads',
                 subtitle: 'Personalized advertising',
                 value: _shareDataForAds,
+                iconPath: AppIcons.getIconPath('notification-bing'),
                 onChanged: (v) => setState(() => _shareDataForAds = v),
-                showDivider: false,
               ),
             ],
           ),
-          AppGroupedListSection(
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
             title: 'Messaging privacy',
-            padding: AppSettingsLayout.sectionPadding,
             children: [
-              _switch(
+              _premiumToggle(
                 label: 'Block messages from non-matches',
                 subtitle: 'Only receive messages from matches',
                 value: _blockMessagesFromNonMatches,
+                iconPath: AppIcons.message,
                 onChanged: _privacyLoading || _privacySaving
                     ? null
                     : (v) =>
                         _togglePrivacy((p) => p.copyWith(blockUnknownMessages: v)),
               ),
-              _switch(
+              _premiumToggle(
                 label: 'Show read receipts',
                 subtitle: 'Let others know when you read messages',
                 value: _showReadReceipts,
+                iconPath: AppIcons.tickCircle,
                 onChanged: (v) => setState(() => _showReadReceipts = v),
-                showDivider: false,
               ),
             ],
           ),

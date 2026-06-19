@@ -7,8 +7,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
-import '../core/widgets/app_grouped_list_card.dart';
 import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../widgets/modals/confirmation_dialog.dart';
@@ -179,6 +179,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
 
     return AppSettingsDetailScaffold(
       title: 'Active sessions',
+      subtitle: 'Devices where your account is signed in',
       body: _isLoading
           ? ListView.builder(
               padding: AppSettingsLayout.firstSectionPadding,
@@ -194,81 +195,57 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
             )
           : AppSettingsDetailList(
               children: [
-                AppGroupedListSection(
+                PremiumSettingsGroup(
                   title: 'This device',
-                  padding: AppSettingsLayout.firstSectionPadding,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingLG,
+                  ),
                   children: [
                     if (currentSession != null)
                       _SessionTile(
                         session: currentSession,
                         isCurrent: true,
-                        platformIconPath:
-                            _platformIconPath(currentSession['platform']?.toString() ?? ''),
+                        platformIconPath: _platformIconPath(
+                          currentSession['platform']?.toString() ?? '',
+                        ),
                         formatTime: _formatTime,
                       )
                     else
-                      const AppSettingsInset(
-                        child: Text('No current session'),
+                      Text(
+                        'No current session',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                        ),
                       ),
                   ],
                 ),
                 if (otherSessions.isNotEmpty) ...[
-                  Padding(
-                    padding: AppSettingsLayout.sectionPadding,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Other devices',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.60),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                  const SizedBox(height: AppSpacing.spacingXL),
+                  PremiumSettingsGroup(
+                    title: 'Other devices',
+                    trailing: TextButton(
+                      onPressed: _handleTerminateAllSessions,
+                      child: Text(
+                        'Terminate all',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppColors.feedbackError,
                         ),
-                        TextButton(
-                          onPressed: _handleTerminateAllSessions,
-                          child: Text(
-                            'Terminate all',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: AppColors.feedbackError,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSettingsLayout.horizontalPadding,
-                    ),
-                    child: Material(
-                      color: theme.colorScheme.surface,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.radiusMD),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          for (var i = 0; i < otherSessions.length; i++)
-                            _SessionTile(
-                              session: otherSessions[i],
-                              isCurrent: false,
-                              platformIconPath: _platformIconPath(
-                                otherSessions[i]['platform']?.toString() ?? '',
-                              ),
-                              formatTime: _formatTime,
-                              onTerminate: () => _handleTerminateSession(
-                                otherSessions[i]['id'].toString(),
-                              ),
-                              showDivider: i < otherSessions.length - 1,
-                            ),
-                        ],
                       ),
                     ),
+                    children: [
+                      for (var i = 0; i < otherSessions.length; i++)
+                        _SessionTile(
+                          session: otherSessions[i],
+                          isCurrent: false,
+                          platformIconPath: _platformIconPath(
+                            otherSessions[i]['platform']?.toString() ?? '',
+                          ),
+                          formatTime: _formatTime,
+                          onTerminate: () => _handleTerminateSession(
+                            otherSessions[i]['id'].toString(),
+                          ),
+                        ),
+                    ],
                   ),
                 ] else
                   Padding(
@@ -291,7 +268,6 @@ class _SessionTile extends StatelessWidget {
   final String platformIconPath;
   final String Function(dynamic) formatTime;
   final VoidCallback? onTerminate;
-  final bool showDivider;
 
   const _SessionTile({
     required this.session,
@@ -299,107 +275,112 @@ class _SessionTile extends StatelessWidget {
     required this.platformIconPath,
     required this.formatTime,
     this.onTerminate,
-    this.showDivider = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSettingsInset(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(
+          color: isCurrent
+              ? AppColors.accentPink.withValues(alpha: 0.35)
+              : AppColors.accentViolet.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.10),
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.radiusXS),
-                    ),
-                    child: Center(
-                      child: AppSvgIcon(
-                        assetPath: platformIconPath,
-                        size: 20,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppRadius.radiusXS),
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: platformIconPath,
+                    size: 20,
+                    color: theme.colorScheme.primary,
                   ),
-                  const SizedBox(width: AppSpacing.spacingMD),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.spacingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                session['device']?.toString() ?? 'Unknown device',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                        Expanded(
+                          child: Text(
+                            session['device']?.toString() ?? 'Unknown device',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
-                            if (isCurrent)
-                              Text(
-                                'Current',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.spacingXS),
-                        Text(
-                          session['location']?.toString() ?? '',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.55),
                           ),
                         ),
+                        if (isCurrent)
+                          Text(
+                            'Current',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                  if (!isCurrent && onTerminate != null)
-                    IconButton(
-                      tooltip: 'Terminate session',
-                      onPressed: onTerminate,
-                      icon: AppSvgIcon(
-                        assetPath: AppIcons.close,
-                        size: 18,
-                        color: AppColors.feedbackError,
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      session['location']?.toString() ?? '',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.spacingMD),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Meta(
-                      label: 'IP address',
-                      value: session['ip_address']?.toString() ?? '—',
-                    ),
+              if (!isCurrent && onTerminate != null)
+                IconButton(
+                  tooltip: 'Terminate session',
+                  onPressed: onTerminate,
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.close,
+                    size: 18,
+                    color: AppColors.feedbackError,
                   ),
-                  _Meta(
-                    label: 'Last active',
-                    value: formatTime(session['last_active']),
-                    alignEnd: true,
-                  ),
-                ],
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingMD),
+          Row(
+            children: [
+              Expanded(
+                child: _Meta(
+                  label: 'IP address',
+                  value: session['ip_address']?.toString() ?? '—',
+                ),
+              ),
+              _Meta(
+                label: 'Last active',
+                value: formatTime(session['last_active']),
+                alignEnd: true,
               ),
             ],
           ),
-        ),
-        if (showDivider) const AppGroupedRowSeparator(),
-      ],
+        ],
+      ),
     );
   }
 }

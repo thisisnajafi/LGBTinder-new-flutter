@@ -8,8 +8,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/discovery/filter_widgets.dart';
 import '../../features/discover/data/models/discovery_filter_mapper.dart';
@@ -279,17 +279,30 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     final musicAsync = ref.watch(musicGenresProvider);
     final goalsAsync = ref.watch(relationshipGoalsProvider);
 
-    return AppPageScaffold(
-      title: 'Filters',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return PremiumDetailScaffold(
+      title: 'Discovery filters',
+      subtitle: 'Fine-tune who you see',
       action: TextButton(
         onPressed: _resetFilters,
         child: Text(
           'Reset',
           style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
+            color: AppColors.accentPink,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            PremiumPageHeader.horizontalPadding,
+            AppSpacing.spacingSM,
+            PremiumPageHeader.horizontalPadding,
+            AppSpacing.spacingMD,
+          ),
+          child: GradientButton(
+            text: 'Apply filters',
+            onPressed: _applyFilters,
           ),
         ),
       ),
@@ -299,63 +312,71 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
             child: ListView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
-                AppPageHeader.horizontalPadding,
+                PremiumPageHeader.horizontalPadding,
                 AppSpacing.spacingMD,
-                AppPageHeader.horizontalPadding,
+                PremiumPageHeader.horizontalPadding,
                 AppSpacing.spacingLG,
               ),
               children: [
-                FilterSectionHeader(iconPath: _iconCake, title: 'Age Range'),
-                SizedBox(height: AppSpacing.spacingLG),
-                FilterSliderTheme(
-                  child: RangeSlider(
-                    values: _ageRange,
-                    min: 18,
-                    max: 100,
-                    divisions: 82,
-                    onChanged: (values) => setState(() => _ageRange = values),
+                PremiumFilterSection(
+                  iconPath: _iconCake,
+                  title: 'Discover range',
+                  subtitle: 'Who appears in your stack',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilterSubsectionTitle(title: 'Age range'),
+                      SizedBox(height: AppSpacing.spacingLG),
+                      FilterSliderTheme(
+                        child: RangeSlider(
+                          values: _ageRange,
+                          min: 18,
+                          max: 100,
+                          divisions: 82,
+                          onChanged: (values) => setState(() => _ageRange = values),
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.spacingSM),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_ageRange.start.round()}',
+                            style: AppTypography.body.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '${_ageRange.end.round()}',
+                            style: AppTypography.body.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.spacingLG),
+                      FilterSubsectionTitle(title: 'Maximum distance'),
+                      SizedBox(height: AppSpacing.spacingLG),
+                      FilterSliderTheme(
+                        child: Slider(
+                          value: _maxDistance,
+                          min: 1,
+                          max: 200,
+                          divisions: 199,
+                          onChanged: (value) => setState(() => _maxDistance = value),
+                        ),
+                      ),
+                      FilterValuePill(label: '${_maxDistance.round()} km'),
+                    ],
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingSM),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${_ageRange.start.round()}',
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      '${_ageRange.end.round()}',
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const FilterSectionDivider(),
-                FilterSectionHeader(
-                  iconPath: _iconLocation,
-                  title: 'Maximum Distance',
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                FilterSliderTheme(
-                  child: Slider(
-                    value: _maxDistance,
-                    min: 1,
-                    max: 200,
-                    divisions: 199,
-                    onChanged: (value) => setState(() => _maxDistance = value),
-                  ),
-                ),
-                FilterValuePill(label: '${_maxDistance.round()} km'),
-                const FilterSectionDivider(),
-                FilterSectionHeader(iconPath: _iconPeople, title: 'Show Me'),
-                SizedBox(height: AppSpacing.spacingMD),
-                gendersAsync.when(
+                PremiumFilterSection(
+                  iconPath: _iconPeople,
+                  title: 'Identity',
+                  subtitle: 'Gender preferences',
+                  child: gendersAsync.when(
                   data: (genders) {
                     if (genders.isEmpty) {
                       return Text(
@@ -396,20 +417,13 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                     style: AppTypography.caption.copyWith(color: secondaryColor),
                   ),
                 ),
-                const FilterSectionDivider(),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilterSectionHeader(
-                        iconPath: _iconFilter,
-                        title: 'Advanced Filters',
-                      ),
-                    ),
-                    if (!_isPremium) const FilterProBadge(),
-                  ],
                 ),
-                SizedBox(height: AppSpacing.spacingSM),
-                FilterPremiumGate(
+                PremiumFilterSection(
+                  iconPath: _iconFilter,
+                  title: 'Advanced filters',
+                  subtitle: 'Verified, interests, lifestyle & more',
+                  trailing: !_isPremium ? const FilterProBadge() : null,
+                  child: FilterPremiumGate(
                   isPremium: _isPremium,
                   onUpgrade: _openUpgrade,
                   child: Column(
@@ -523,10 +537,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                         error: (_, __) => const SizedBox.shrink(),
                       ),
                       const FilterSectionDivider(),
-                      FilterSectionHeader(
-                        iconPath: _iconFilter,
-                        title: 'Lifestyle Match',
-                      ),
+                      FilterSubsectionTitle(title: 'Lifestyle match'),
                       _lifestyleToggle(
                         title: 'Smoking',
                         subtitle: 'Match smoking preference',
@@ -548,50 +559,16 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                     ],
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Text(
-                  'Tip: widen age or distance if you see fewer profiles nearby.',
-                  style: AppTypography.caption.copyWith(color: secondaryColor),
-                  textAlign: TextAlign.center,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.spacingSM),
+                  child: Text(
+                    'Tip: widen age or distance if you see fewer profiles nearby.',
+                    style: AppTypography.caption.copyWith(color: secondaryColor),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
-              border: Border(
-                top: BorderSide(
-                  color: isDark
-                      ? AppColors.borderSubtleDark
-                      : AppColors.borderSubtleLight,
-                ),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingMD,
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingMD,
-                ),
-                child: GradientButton(
-                  text: 'Apply Filters',
-                  iconPath: AppIcons.getIconOutline('filter-tick'),
-                  onPressed: _applyFilters,
-                  isFullWidth: true,
-                  height: 52,
-                ),
-              ),
             ),
           ),
         ],

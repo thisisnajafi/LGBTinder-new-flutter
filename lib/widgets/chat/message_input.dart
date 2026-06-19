@@ -171,184 +171,178 @@ class _MessageInputState extends ConsumerState<MessageInput>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final hasText = _controller.text.trim().isNotEmpty;
     final canRecord = !hasText && widget.onVoiceRecordStart != null;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.spacingLG,
-        vertical: AppSpacing.spacingMD,
-      ),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
         border: Border(
           top: BorderSide(
-            color: borderColor,
-            width: 1,
+            color: AppColors.accentViolet.withValues(alpha: 0.1),
           ),
         ),
       ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxHeight: 120,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
+      child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingLG,
+              vertical: AppSpacing.spacingMD,
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        maxHeight: 120,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.backgroundDark
+                            : AppColors.backgroundLight,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                        border: Border.all(
+                          color: AppColors.accentViolet.withValues(alpha: 0.12),
+                        ),
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        child: _isHoldingToRecord
+                            ? Padding(
+                                key: const ValueKey('recording'),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.spacingLG,
+                                  vertical: AppSpacing.spacingMD,
+                                ),
+                                child: Row(
+                                  children: [
+                                    PulsingRecordDot(color: AppColors.feedbackError),
+                                    SizedBox(width: AppSpacing.spacingSM),
+                                    Text(
+                                      _formatRecordingDuration(_recordingSeconds),
+                                      style: AppTypography.body.copyWith(
+                                        color: textColor,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(width: AppSpacing.spacingMD),
+                                    Expanded(
+                                      child: VoiceWaveformBars(
+                                        active: true,
+                                        color: AppColors.primaryLight,
+                                        height: 20,
+                                        barCount: 10,
+                                      ),
+                                    ),
+                                    SizedBox(width: AppSpacing.spacingSM),
+                                    Text(
+                                      '< Slide to cancel',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: secondaryTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : TextField(
+                                key: const ValueKey('text-input'),
+                                controller: _controller,
+                                focusNode: _focusNode,
+                                enabled: widget.enabled,
+                                maxLines: null,
+                                textInputAction: TextInputAction.send,
+                                onSubmitted: (_) => _handleSend(),
+                                onChanged: (text) {
+                                  if (widget.onTextChanged != null) {
+                                    widget.onTextChanged!(text);
+                                  }
+                                },
+                                style: AppTypography.body.copyWith(color: textColor),
+                                decoration: InputDecoration(
+                                  hintText: widget.hintText ?? 'Type a message...',
+                                  hintStyle:
+                                      AppTypography.body.copyWith(color: secondaryTextColor),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.spacingLG,
+                                    vertical: AppSpacing.spacingMD,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
-                ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: _isHoldingToRecord
-                      ? Padding(
-                          key: const ValueKey('recording'),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingLG,
-                            vertical: AppSpacing.spacingMD,
+                  SizedBox(width: AppSpacing.spacingSM),
+                  if (widget.onMediaTap != null && !_isHoldingToRecord)
+                    GestureDetector(
+                      onLongPress: widget.enabled ? widget.onMediaLongPress : null,
+                      child: IconButton(
+                        icon: AppSvgIcon(
+                          assetPath: AppIcons.attach,
+                          size: 22,
+                          color: secondaryTextColor,
+                        ),
+                        onPressed: widget.enabled ? widget.onMediaTap : null,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                      ),
+                    ),
+                  SizedBox(width: AppSpacing.spacingXS),
+                  GestureDetector(
+                    onLongPressStart:
+                        canRecord ? (d) => unawaited(_startRecordingHold(d)) : null,
+                    onLongPressMoveUpdate: canRecord ? _onRecordingMove : null,
+                    onLongPressEnd: canRecord ? (_) => unawaited(_sendRecording()) : null,
+                    child: ScaleTransition(
+                      scale: _isHoldingToRecord
+                          ? _micPulseAnimation
+                          : const AlwaysStoppedAnimation(1),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        decoration: BoxDecoration(
+                          gradient: (hasText || _isHoldingToRecord) && widget.enabled
+                              ? AppTheme.accentGradient
+                              : null,
+                          color: (!hasText && !_isHoldingToRecord) || !widget.enabled
+                              ? secondaryTextColor.withValues(alpha: 0.3)
+                              : null,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: AppSvgIcon(
+                              key: ValueKey(hasText ? 'send' : 'mic'),
+                              assetPath: hasText ? AppIcons.send : AppIcons.microphone,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              PulsingRecordDot(color: AppColors.feedbackError),
-                              SizedBox(width: AppSpacing.spacingSM),
-                              Text(
-                                _formatRecordingDuration(_recordingSeconds),
-                                style: AppTypography.body.copyWith(
-                                  color: textColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              SizedBox(width: AppSpacing.spacingMD),
-                              Expanded(
-                                child: VoiceWaveformBars(
-                                  active: true,
-                                  color: AppColors.primaryLight,
-                                  height: 20,
-                                  barCount: 10,
-                                ),
-                              ),
-                              SizedBox(width: AppSpacing.spacingSM),
-                              Text(
-                                '< Slide to cancel',
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: secondaryTextColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : TextField(
-                        key: const ValueKey('text-input'),
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        enabled: widget.enabled,
-                        maxLines: null,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _handleSend(),
-                        onChanged: (text) {
-                          if (widget.onTextChanged != null) {
-                            widget.onTextChanged!(text);
-                          }
-                        },
-                        style: AppTypography.body.copyWith(color: textColor),
-                        decoration: InputDecoration(
-                          hintText: widget.hintText ?? 'Type a message...',
-                          hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingLG,
-                            vertical: AppSpacing.spacingMD,
+                          onPressed: hasText && widget.enabled ? _handleSend : null,
+                          padding: EdgeInsets.all(AppSpacing.spacingMD),
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
                           ),
                         ),
                       ),
-                ),
-              ),
-            ),
-            SizedBox(width: AppSpacing.spacingSM),
-            if (widget.onMediaTap != null && !_isHoldingToRecord)
-              GestureDetector(
-                onLongPress: widget.enabled ? widget.onMediaLongPress : null,
-                child: IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.attach,
-                    size: 22,
-                    color: secondaryTextColor,
-                  ),
-                  onPressed: widget.enabled ? widget.onMediaTap : null,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
-                  ),
-                ),
-              ),
-            SizedBox(width: AppSpacing.spacingXS),
-            GestureDetector(
-              onLongPressStart: canRecord ? (d) => unawaited(_startRecordingHold(d)) : null,
-              onLongPressMoveUpdate: canRecord ? _onRecordingMove : null,
-              onLongPressEnd: canRecord ? (_) => unawaited(_sendRecording()) : null,
-              child: ScaleTransition(
-                scale: _isHoldingToRecord
-                    ? _micPulseAnimation
-                    : const AlwaysStoppedAnimation(1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  decoration: BoxDecoration(
-                    gradient: (hasText || _isHoldingToRecord) && widget.enabled
-                        ? AppTheme.accentGradient
-                        : null,
-                    color: (!hasText && !_isHoldingToRecord) || !widget.enabled
-                        ? secondaryTextColor.withValues(alpha: 0.3)
-                        : null,
-                    shape: BoxShape.circle,
-                    boxShadow: _isHoldingToRecord
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primaryLight.withValues(alpha: 0.45),
-                              blurRadius: 14,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: IconButton(
-                    icon: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      child: AppSvgIcon(
-                        key: ValueKey(hasText ? 'send' : 'mic'),
-                        assetPath: hasText ? AppIcons.send : AppIcons.microphone,
-                        size: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                    onPressed: hasText && widget.enabled ? _handleSend : null,
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
                     ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 }

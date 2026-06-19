@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../data/models/sound_preferences.dart';
 import '../../providers/sound_preferences_provider.dart';
 
@@ -43,53 +44,42 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
     await SoundService.instance.previewSound(soundId, category);
   }
 
-  List<Widget> _soundSection({
+  Widget _soundGroup({
     required String title,
-    required EdgeInsetsGeometry padding,
     required List<SoundOption> options,
     required String selectedId,
     required SoundCategory category,
     required ValueChanged<String> onSelect,
   }) {
     if (options.isEmpty) {
-      return [
-        AppGroupedListSection(
-          title: title,
-          padding: padding,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.spacingMD),
-              child: Text(
-                'No sounds available',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.55),
-                    ),
-              ),
-            ),
-          ],
-        ),
-      ];
+      return PremiumSettingsGroup(
+        title: title,
+        children: [
+          Text(
+            'No sounds available',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.55),
+                ),
+          ),
+        ],
+      );
     }
 
-    return [
-      AppGroupedListSection(
-        title: title,
-        padding: padding,
-        children: [
-          for (var i = 0; i < options.length; i++)
-            AppGroupedSoundOptionTile(
-              label: options[i].name,
-              isSelected: options[i].id == selectedId,
-              onSelect: _isSaving ? null : () => onSelect(options[i].id),
-              onPreview: () => _preview(options[i].id, category),
-              showDivider: i < options.length - 1,
-            ),
-        ],
-      ),
-    ];
+    return PremiumSettingsGroup(
+      title: title,
+      children: [
+        for (final option in options)
+          PremiumSoundOptionTile(
+            label: option.name,
+            isSelected: option.id == selectedId,
+            onSelect: _isSaving ? null : () => onSelect(option.id),
+            onPreview: () => _preview(option.id, category),
+          ),
+      ],
+    );
   }
 
   @override
@@ -99,6 +89,7 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
 
     return AppSettingsDetailScaffold(
       title: 'Sounds & notifications',
+      subtitle: 'Choose tones for messages, calls, and alerts',
       body: prefsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
@@ -129,42 +120,42 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
   Widget _buildContent(SoundPreferences prefs, SoundCatalog catalog) {
     return AppSettingsDetailList(
       children: [
-        ..._soundSection(
+        _soundGroup(
           title: 'Message sounds',
-          padding: AppSettingsLayout.firstSectionPadding,
           options: catalog.messageSounds,
           selectedId: prefs.messageSound,
           category: SoundCategory.message,
           onSelect: (id) => _save(prefs.copyWith(messageSound: id)),
         ),
-        ..._soundSection(
+        const SizedBox(height: AppSpacing.spacingXL),
+        _soundGroup(
           title: 'Call ringtones',
-          padding: AppSettingsLayout.sectionPadding,
           options: catalog.callRingtones,
           selectedId: prefs.callRingtone,
           category: SoundCategory.call,
           onSelect: (id) => _save(prefs.copyWith(callRingtone: id)),
         ),
-        ..._soundSection(
+        const SizedBox(height: AppSpacing.spacingXL),
+        _soundGroup(
           title: 'Notification sounds',
-          padding: AppSettingsLayout.sectionPadding,
           options: catalog.notificationSounds,
           selectedId: prefs.notificationSound,
           category: SoundCategory.notification,
           onSelect: (id) => _save(prefs.copyWith(notificationSound: id)),
         ),
-        AppGroupedListSection(
+        const SizedBox(height: AppSpacing.spacingXL),
+        PremiumSettingsGroup(
           title: 'Haptics',
-          padding: AppSettingsLayout.sectionPadding,
           children: [
-            AppGroupedSwitchTile(
-              label: 'Vibration',
+            PremiumToggleRow(
+              title: 'Vibration',
               subtitle: 'Vibrate when playing message sounds',
               value: prefs.vibrationEnabled,
               onChanged: _isSaving
-                  ? null
+                  ? (_) {}
                   : (value) => _save(prefs.copyWith(vibrationEnabled: value)),
-              showDivider: false,
+              iconPath: AppIcons.getIconPath('mobile'),
+              enabled: !_isSaving,
             ),
           ],
         ),

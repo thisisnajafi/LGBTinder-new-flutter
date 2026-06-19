@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../widgets/common/selection_bottom_sheet.dart';
 import '../core/utils/app_icons.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/chat/chat_matches_row.dart';
 import '../features/matching/data/models/match.dart';
 import '../features/matching/providers/likes_providers.dart';
@@ -264,23 +263,6 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         .toList();
   }
 
-  Future<void> _openFilterSheet() async {
-    final selected = await SelectionBottomSheet.showSingleSelect<_ChatFilter>(
-      context: context,
-      title: 'Filter chats',
-      items: _ChatFilter.values,
-      getTitle: (filter) => switch (filter) {
-        _ChatFilter.all => 'All chats',
-        _ChatFilter.unread => 'Unread only',
-        _ChatFilter.online => 'Online only',
-      },
-      selectedItem: _activeFilter,
-    );
-    if (selected != null) {
-      setState(() => _activeFilter = selected);
-    }
-  }
-
   void _handleChatTap(Map<String, dynamic> chat) {
     final userTier = ref.read(userTierProvider);
     if (userTier == UserTier.basid) {
@@ -317,126 +299,105 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     final showPremiumBanner =
         tier == UserTier.basid && !_premiumBannerDismissed;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppPageHeader(
-              title: 'Messenger',
-              action: IconButton(
-                icon: AppSvgIcon(
-                  assetPath: AppIcons.search,
-                  size: 24,
-                  color: theme.colorScheme.onSurface,
-                ),
-                onPressed: () {
-                  setState(() => _showSearch = !_showSearch);
-                },
-              ),
-            ),
-            if (_showSearch)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppPageHeader.horizontalPadding,
-                  AppSpacing.spacingSM,
-                  AppPageHeader.horizontalPadding,
-                  0,
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    setState(() => _searchQuery = value);
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search conversations...',
-                    prefixIcon: AppSvgIcon(
-                      assetPath: AppIcons.search,
-                      size: 20,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.spacingMD,
-                      vertical: AppSpacing.spacingSM,
-                    ),
-                  ),
-                ),
-              ),
-            ChatMatchesRow(matches: _matches),
-            const SizedBox(height: AppSpacing.spacingLG),
+    return PremiumTabPageLayout(
+      title: 'Messenger',
+      subtitle: 'Your conversations & matches',
+      action: IconButton(
+        icon: AppSvgIcon(
+          assetPath: AppIcons.search,
+          size: 24,
+          color: theme.colorScheme.onSurface,
+        ),
+        onPressed: () => setState(() => _showSearch = !_showSearch),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_showSearch)
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppPageHeader.horizontalPadding,
+              padding: const EdgeInsets.fromLTRB(
+                PremiumPageHeader.horizontalPadding,
+                0,
+                PremiumPageHeader.horizontalPadding,
+                AppSpacing.spacingSM,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Messages',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Search conversations...',
+                  prefixIcon: AppSvgIcon(
+                    assetPath: AppIcons.search,
+                    size: 20,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
                   ),
-                  IconButton(
-                    icon: AppSvgIcon(
-                      assetPath: AppIcons.sort,
-                      size: 20,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    onPressed: _openFilterSheet,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
+                  filled: true,
+                  fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                    borderSide: BorderSide.none,
                   ),
-                ],
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingMD,
+                    vertical: AppSpacing.spacingSM,
+                  ),
+                ),
               ),
             ),
-            if (showPremiumBanner)
-              ChatPremiumBanner(
-                onDismiss: _dismissPremiumBanner,
-                onUpgrade: () => context.push(AppRoutes.subscriptionPlans),
-              ),
-            Expanded(
-              child: _isLoading && _chats.isEmpty
-                  ? const ChatListLoading(itemCount: 5)
-                  : _hasError && _chats.isEmpty
-                      ? ErrorDisplayWidget(
-                          errorMessage:
-                              _errorMessage ?? 'Failed to load conversations',
-                          onRetry: _loadChats,
-                        )
-                      : _filteredChats.isEmpty
-                          ? RefreshIndicator(
-                              onRefresh: () async {
-                                await _loadChats(forceRefresh: true);
-                                await _loadMatches();
-                              },
-                              child: SingleChildScrollView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                child: SizedBox(
-                                  height: MediaQuery.of(context).size.height * 0.5,
-                                  child: const ChatListEmpty(),
-                                ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+            child: PremiumCategoryChips(
+              labels: const ['All', 'Unread', 'Online'],
+              selectedIndex: _activeFilter.index,
+              onSelected: (i) =>
+                  setState(() => _activeFilter = _ChatFilter.values[i]),
+            ),
+          ),
+          ChatMatchesRow(matches: _matches),
+          const SizedBox(height: AppSpacing.spacingMD),
+          if (showPremiumBanner)
+            ChatPremiumBanner(
+              onDismiss: _dismissPremiumBanner,
+              onUpgrade: () => context.push(AppRoutes.subscriptionPlans),
+            ),
+          Expanded(
+            child: _isLoading && _chats.isEmpty
+                ? const ChatListLoading(itemCount: 5)
+                : _hasError && _chats.isEmpty
+                    ? ErrorDisplayWidget(
+                        errorMessage:
+                            _errorMessage ?? 'Failed to load conversations',
+                        onRetry: _loadChats,
+                      )
+                    : _filteredChats.isEmpty
+                        ? RefreshIndicator(
+                            onRefresh: () async {
+                              await _loadChats(forceRefresh: true);
+                              await _loadMatches();
+                            },
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.5,
+                                child: const ChatListEmpty(),
                               ),
-                            )
-                          : RefreshIndicator(
-                              onRefresh: () async {
-                                await _loadChats(forceRefresh: true);
-                                await _loadMatches();
-                              },
-                              child: ListView.separated(
-                                itemCount: _filteredChats.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: AppSpacing.spacingXS),
-                                itemBuilder: (context, index) {
-                                  final chat = _filteredChats[index];
-                                  final userId = chat['id'] as int;
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () async {
+                              await _loadChats(forceRefresh: true);
+                              await _loadMatches();
+                            },
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: PremiumPageHeader.horizontalPadding,
+                              ),
+                              itemCount: _filteredChats.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: AppSpacing.spacingSM),
+                              itemBuilder: (context, index) {
+                                final chat = _filteredChats[index];
+                                final userId = chat['id'] as int;
                                   final isTypingLive =
                                       typingUsers[userId] == true;
                                   final item = ChatListItem(
@@ -463,9 +424,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                                 },
                               ),
                             ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

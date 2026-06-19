@@ -8,10 +8,10 @@ import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
-import '../shared/services/landing_service.dart';
-import '../core/widgets/app_grouped_list_card.dart';
 import '../core/utils/app_icons.dart';
+import '../shared/services/landing_service.dart';
 import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../routes/app_router.dart';
@@ -78,41 +78,39 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
 
     return AppSettingsDetailScaffold(
       title: 'Help & Support',
+      subtitle: 'FAQ, contact, and legal',
       body: AppSettingsDetailList(
         children: [
-          AppGroupedListSection(
+          PremiumSettingsGroup(
             title: 'About',
-            padding: AppSettingsLayout.firstSectionPadding,
             children: [
-              AppSettingsInset(
-                child: Consumer(
-                  builder: (context, ref, _) {
-                    final settingsAsync = ref.watch(_landingSettingsProvider);
-                    return settingsAsync.when(
-                      data: (LandingSettings? settings) {
-                        if (settings == null) {
-                          return _buildAboutPlaceholder(
-                            textColor: textColor,
-                            secondaryTextColor: secondaryTextColor,
-                          );
-                        }
-                        return _buildAboutContent(
-                          settings: settings,
+              Consumer(
+                builder: (context, ref, _) {
+                  final settingsAsync = ref.watch(_landingSettingsProvider);
+                  return settingsAsync.when(
+                    data: (LandingSettings? settings) {
+                      if (settings == null) {
+                        return _buildAboutPlaceholder(
                           textColor: textColor,
                           secondaryTextColor: secondaryTextColor,
                         );
-                      },
-                      loading: () => _buildAboutPlaceholder(
+                      }
+                      return _buildAboutContent(
+                        settings: settings,
                         textColor: textColor,
                         secondaryTextColor: secondaryTextColor,
-                      ),
-                      error: (_, __) => _buildAboutPlaceholder(
-                        textColor: textColor,
-                        secondaryTextColor: secondaryTextColor,
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                    loading: () => _buildAboutPlaceholder(
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                    error: (_, __) => _buildAboutPlaceholder(
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -122,16 +120,18 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               return statsAsync.when(
                 data: (List<LandingStatItem> stats) {
                   if (stats.isEmpty) return const SizedBox.shrink();
-                  return AppGroupedListSection(
-                    title: 'Community',
-                    padding: AppSettingsLayout.sectionPadding,
+                  return Column(
                     children: [
-                      AppSettingsInset(
-                        child: _buildStatsContent(
-                          stats: stats,
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                        ),
+                      const SizedBox(height: AppSpacing.spacingXL),
+                      PremiumSettingsGroup(
+                        title: 'Community',
+                        children: [
+                          _buildStatsContent(
+                            stats: stats,
+                            textColor: textColor,
+                            secondaryTextColor: secondaryTextColor,
+                          ),
+                        ],
                       ),
                     ],
                   );
@@ -147,16 +147,18 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               return testimonialsAsync.when(
                 data: (List<LandingTestimonialItem> list) {
                   if (list.isEmpty) return const SizedBox.shrink();
-                  return AppGroupedListSection(
-                    title: 'What People Say',
-                    padding: AppSettingsLayout.sectionPadding,
+                  return Column(
                     children: [
-                      AppSettingsInset(
-                        child: _buildTestimonialsContent(
-                          list: list,
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                        ),
+                      const SizedBox(height: AppSpacing.spacingXL),
+                      PremiumSettingsGroup(
+                        title: 'What people say',
+                        children: [
+                          _buildTestimonialsContent(
+                            list: list,
+                            textColor: textColor,
+                            secondaryTextColor: secondaryTextColor,
+                          ),
+                        ],
                       ),
                     ],
                   );
@@ -166,9 +168,9 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               );
             },
           ),
-          AppGroupedListSection(
-            title: 'Tips & Blog',
-            padding: AppSettingsLayout.sectionPadding,
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Tips & blog',
             children: [
               Consumer(
                 builder: (context, ref, _) {
@@ -176,58 +178,50 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   return blogsAsync.when(
                     data: (List<LandingBlogItem> blogs) {
                       if (blogs.isEmpty) {
-                        return AppSettingsInset(
-                          child: _buildBlogPlaceholder(
-                            secondaryTextColor: secondaryTextColor,
-                          ),
+                        return _buildBlogPlaceholder(
+                          secondaryTextColor: secondaryTextColor,
                         );
                       }
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          for (var i = 0; i < blogs.length; i++) ...[
-                            AppGroupedListTile(
+                          for (final blog in blogs)
+                            PremiumSettingsTile(
                               iconPath: AppIcons.documentText,
-                              label: blogs[i].title ?? 'Untitled',
-                              subtitle: blogs[i].excerpt,
+                              title: blog.title ?? 'Untitled',
+                              subtitle: blog.excerpt,
                               onTap: () => _showBlogDetail(
                                 context,
                                 ref,
-                                blogs[i],
+                                blog,
                                 isDark,
                                 textColor,
                                 secondaryTextColor,
                                 surfaceColor,
                                 borderColor,
                               ),
-                              showDivider: i < blogs.length - 1,
                             ),
-                          ],
                         ],
                       );
                     },
-                    loading: () => AppSettingsInset(
-                      child: _buildBlogPlaceholder(
-                        secondaryTextColor: secondaryTextColor,
-                      ),
+                    loading: () => _buildBlogPlaceholder(
+                      secondaryTextColor: secondaryTextColor,
                     ),
-                    error: (_, __) => AppSettingsInset(
-                      child: _buildBlogPlaceholder(
-                        secondaryTextColor: secondaryTextColor,
-                      ),
+                    error: (_, __) => _buildBlogPlaceholder(
+                      secondaryTextColor: secondaryTextColor,
                     ),
                   );
                 },
               ),
             ],
           ),
-          AppGroupedListSection(
-            title: 'Contact Support',
-            padding: AppSettingsLayout.sectionPadding,
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Contact support',
             children: [
-              AppGroupedListTile(
+              PremiumSettingsTile(
                 iconPath: AppIcons.send,
-                label: 'Send A Message',
+                title: 'Send a message',
                 subtitle: 'We\'ll get back to you soon',
                 onTap: () => _showContactFormBottomSheet(
                   context,
@@ -239,15 +233,15 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   borderColor,
                 ),
               ),
-              AppGroupedListTile(
+              PremiumSettingsTile(
                 iconPath: AppIcons.document,
-                label: 'My Tickets',
+                title: 'My tickets',
                 subtitle: 'View and create support tickets',
                 onTap: () => context.push(AppRoutes.supportTickets),
               ),
-              AppGroupedListTile(
+              PremiumSettingsTile(
                 iconPath: AppIcons.message,
-                label: 'Email Support',
+                title: 'Email support',
                 subtitle: 'support@lgbtfinder.com',
                 onTap: () async {
                   final Uri emailUri = Uri(
@@ -292,9 +286,9 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   }
                 },
               ),
-              AppGroupedListTile(
+              PremiumSettingsTile(
                 iconPath: AppIcons.messageCircle,
-                label: 'Live Chat',
+                title: 'Live chat',
                 subtitle: 'Available 24/7',
                 onTap: () {
                   showDialog(
@@ -332,90 +326,39 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                     ),
                   );
                 },
-                showDivider: false,
               ),
             ],
           ),
-          AppGroupedListSection(
-            title: 'Frequently Asked Questions',
-            padding: AppSettingsLayout.sectionPadding,
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Frequently asked questions',
             children: [
-              for (var i = 0; i < _faqItems.length; i++)
-                _buildGroupedFAQItem(
-                  question: _faqItems[i]['question'] as String,
-                  answer: _faqItems[i]['answer'] as String,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  showDivider: i < _faqItems.length - 1,
+              for (final item in _faqItems)
+                PremiumFaqTile(
+                  question: item['question'] as String,
+                  answer: item['answer'] as String,
                 ),
             ],
           ),
-          AppGroupedListSection(
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
             title: 'Legal',
-            padding: AppSettingsLayout.sectionPadding,
             children: [
-              AppGroupedListTile(
+              PremiumSettingsTile(
                 iconPath: AppIcons.documentText,
-                label: 'Terms Of Service',
+                title: 'Terms of service',
                 onTap: () => context.push(AppRoutes.termsOfService),
               ),
-              AppGroupedListTile(
+              PremiumSettingsTile(
                 iconPath: AppIcons.shield,
-                label: 'Privacy Policy',
+                title: 'Privacy policy',
                 onTap: () => context.push(AppRoutes.privacyPolicy),
-                showDivider: false,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
-    );
-  }
-
-  Widget _buildGroupedFAQItem({
-    required String question,
-    required String answer,
-    required Color textColor,
-    required Color secondaryTextColor,
-    bool showDivider = true,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingMD,
-            ),
-            childrenPadding: const EdgeInsets.fromLTRB(
-              AppSpacing.spacingMD,
-              0,
-              AppSpacing.spacingMD,
-              AppSpacing.spacingMD,
-            ),
-            title: Text(
-              question,
-              style: AppTypography.body.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            iconColor: AppColors.accentPurple,
-            collapsedIconColor: secondaryTextColor,
-            children: [
-              Text(
-                answer,
-                style: AppTypography.body.copyWith(
-                  color: secondaryTextColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (showDivider) const AppGroupedRowSeparator(),
-      ],
     );
   }
 

@@ -4,8 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
-import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../data/models/subscription_plan.dart';
 
 /// Renewal notice shown inside a settings-style grouped section.
@@ -73,11 +72,8 @@ class SubscriptionRenewalReminder extends StatelessWidget {
 
     final tiles = <Widget>[
       Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.spacingMD,
-          AppSpacing.spacingMD,
-          AppSpacing.spacingMD,
-          actionEntries.isEmpty ? AppSpacing.spacingMD : AppSpacing.spacingSM,
+        padding: EdgeInsets.only(
+          bottom: actionEntries.isEmpty ? 0 : AppSpacing.spacingSM,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,23 +112,23 @@ class SubscriptionRenewalReminder extends StatelessWidget {
       ),
     ];
 
-    for (var i = 0; i < actionEntries.length; i++) {
-      final entry = actionEntries[i];
+    for (final entry in actionEntries) {
       tiles.add(
-        AppGroupedListTile(
+        PremiumSettingsTile(
           iconPath: entry.icon,
-          label: entry.label,
+          title: entry.label,
           subtitle: entry.subtitle,
           onTap: entry.onTap,
-          showDivider: i < actionEntries.length - 1,
         ),
       );
     }
 
-    return AppGroupedListSection(
-      title: reminderLevel.title,
-      padding: AppSettingsLayout.sectionPadding,
-      children: tiles,
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.spacingXL),
+      child: PremiumSettingsGroup(
+        title: reminderLevel.title,
+        children: tiles,
+      ),
     );
   }
 

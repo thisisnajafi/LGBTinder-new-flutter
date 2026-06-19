@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
+import '../utils/app_icons.dart';
 import 'app_grouped_list_card.dart';
-import 'app_page_header.dart';
-import 'app_page_scaffold.dart';
+import 'premium/premium_design_system.dart';
 
 /// Title Case for settings page headings (every word capitalized).
 String formatSettingsTitle(String title) {
@@ -27,7 +28,7 @@ String _titleCaseWord(String word) {
 class AppSettingsLayout {
   AppSettingsLayout._();
 
-  static const double horizontalPadding = AppPageHeader.horizontalPadding;
+  static const double horizontalPadding = PremiumPageHeader.horizontalPadding;
 
   static const EdgeInsets firstSectionPadding = EdgeInsets.fromLTRB(
     horizontalPadding,
@@ -44,12 +45,13 @@ class AppSettingsLayout {
   );
 }
 
-/// Standard back-nav settings detail shell (matches settings hub).
+/// Premium settings detail shell — matches own-profile design language.
 class AppSettingsDetailScaffold extends StatelessWidget {
   final String title;
   final Widget body;
   final Widget? action;
   final VoidCallback? onBack;
+  final String? subtitle;
 
   const AppSettingsDetailScaffold({
     super.key,
@@ -57,13 +59,14 @@ class AppSettingsDetailScaffold extends StatelessWidget {
     required this.body,
     this.action,
     this.onBack,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: formatSettingsTitle(title),
-      showBackButton: true,
+      subtitle: subtitle,
       action: action,
       onBack: onBack,
       body: body,
@@ -129,7 +132,7 @@ class AppSettingsInset extends StatelessWidget {
   }
 }
 
-/// Builds a grouped single-choice section (radio-style options in one card).
+/// Builds a grouped single-choice section inside premium shell.
 class AppSettingsOptionSection extends StatelessWidget {
   final String title;
   final String? footnote;
@@ -153,18 +156,24 @@ class AppSettingsOptionSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppGroupedListSection(
+        PremiumSettingsGroup(
           title: title,
-          padding: padding,
           children: [
             for (var i = 0; i < options.length; i++)
-              AppGroupedOptionTile(
-                label: options[i].value,
-                isSelected: value == options[i].key,
-                onTap: onChanged == null
-                    ? null
-                    : () => onChanged!(options[i].key),
-                showDivider: i < options.length - 1,
+              PremiumSettingsTile(
+                iconPath: AppIcons.getIconPath('tick-circle'),
+                title: options[i].value,
+                accent: value == options[i].key
+                    ? AppColors.accentPink
+                    : AppColors.accentViolet,
+                onTap: onChanged == null ? () {} : () => onChanged!(options[i].key),
+                trailing: value == options[i].key
+                    ? AppSvgIcon(
+                        assetPath: AppIcons.checkCircle,
+                        size: 20,
+                        color: AppColors.accentPink,
+                      )
+                    : null,
               ),
           ],
         ),

@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../providers/payment_providers.dart';
 import '../../data/models/subscription_plan.dart';
@@ -231,6 +231,7 @@ class _SubscriptionManagementScreenState
 
     return AppSettingsDetailScaffold(
       title: 'Subscription',
+      subtitle: 'Your plan, billing, and renewals',
       action: IconButton(
         tooltip: 'Refresh',
         onPressed: _isLoading ? null : _loadSubscriptionStatus,
@@ -269,7 +270,10 @@ class _SubscriptionManagementScreenState
               onChangePlan: _openPlans,
             ),
           OfflinePurchaseQueueIndicator(onRetry: _loadSubscriptionStatus),
-          if (_subscriptionStatus != null) _buildDetailsSection(context),
+          if (_subscriptionStatus != null) ...[
+            const SizedBox(height: AppSpacing.spacingXL),
+            _buildDetailsSection(context),
+          ],
           ..._buildGooglePlaySections(context),
           _buildManageSection(context),
           if (!_hasActiveSubscription)
@@ -289,27 +293,18 @@ class _SubscriptionManagementScreenState
     final planName = _subscriptionStatus?.planName?.trim();
     final statusLabel = _subscriptionStatus?.status?.toUpperCase();
 
-    return AppGroupedListSection(
-      title: 'Current Plan',
-      padding: AppSettingsLayout.firstSectionPadding,
+    return PremiumSettingsGroup(
+      title: 'Current plan',
       children: [
-        AppGroupedInfoTile(
+        PremiumInfoRow(
           label: 'Status',
           value: isActive ? 'Active subscription' : 'No active subscription',
           badge: isActive && statusLabel != null ? statusLabel : null,
         ),
         if (planName != null && planName.isNotEmpty)
-          AppGroupedInfoTile(
-            label: 'Plan',
-            value: planName,
-            showDivider: false,
-          )
+          PremiumInfoRow(label: 'Plan', value: planName)
         else if (!isActive)
-          AppGroupedInfoTile(
-            label: 'Plan',
-            value: 'Free',
-            showDivider: false,
-          ),
+          const PremiumInfoRow(label: 'Plan', value: 'Free'),
       ],
     );
   }
@@ -327,16 +322,11 @@ class _SubscriptionManagementScreenState
       (label: 'Auto renew', value: status.autoRenew ? 'Yes' : 'No'),
     ];
 
-    return AppGroupedListSection(
-      title: 'Subscription Details',
-      padding: AppSettingsLayout.sectionPadding,
+    return PremiumSettingsGroup(
+      title: 'Subscription details',
       children: [
-        for (var i = 0; i < entries.length; i++)
-          AppGroupedInfoTile(
-            label: entries[i].label,
-            value: entries[i].value,
-            showDivider: i < entries.length - 1,
-          ),
+        for (final entry in entries)
+          PremiumInfoRow(label: entry.label, value: entry.value),
       ],
     );
   }
@@ -396,27 +386,26 @@ class _SubscriptionManagementScreenState
     final hasCancelAction = subscriptionId != null && status == 'active';
 
     final children = <Widget>[
-      for (var i = 0; i < entries.length; i++)
-        AppGroupedInfoTile(
-          label: entries[i].label,
-          value: entries[i].value,
-          badge: entries[i].badge,
-          showDivider: hasCancelAction || i < entries.length - 1,
+      for (final entry in entries)
+        PremiumInfoRow(
+          label: entry.label,
+          value: entry.value,
+          badge: entry.badge,
         ),
     ];
 
     if (hasCancelAction) {
       children.add(
-        AppGroupedListTile(
+        PremiumSettingsTile(
           iconPath: AppIcons.close,
-          label: 'Cancel subscription',
+          title: 'Cancel subscription',
           subtitle: 'Managed through Google Play',
+          destructive: true,
           onTap: _isCancelling
               ? () {}
               : () => _cancelSubscription(
                     googlePlaySubscriptionId: subscriptionId,
                   ),
-          showDivider: false,
           trailing: _isCancelling
               ? SizedBox(
                   width: 20,
@@ -431,60 +420,53 @@ class _SubscriptionManagementScreenState
       );
     }
 
-    return AppGroupedListSection(
-      title: 'Google Play · $planName',
-      padding: AppSettingsLayout.sectionPadding,
-      children: children,
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.spacingXL),
+      child: PremiumSettingsGroup(
+        title: 'Google Play · $planName',
+        children: children,
+      ),
     );
   }
 
   Widget _buildManageSection(BuildContext context) {
-    final tiles = <Widget>[];
-
-    if (_hasActiveSubscription) {
-      tiles.add(
-        AppGroupedListTile(
-          iconPath: AppIcons.crown,
-          label: 'Upgrade plan',
-          subtitle: 'Compare plans and billing options',
-          onTap: _openPlans,
-        ),
-      );
-    } else {
-      tiles.add(
-        AppGroupedListTile(
-          iconPath: AppIcons.crown,
-          label: 'Subscribe now',
-          subtitle: 'Unlock premium features',
-          onTap: _openPlans,
-        ),
-      );
-    }
-
-    tiles.add(
-      AppGroupedListTile(
-        iconPath: AppIcons.refreshCircle,
-        label: 'Restore purchases',
-        subtitle: 'Sync purchases from Google Play',
-        onTap: _isLoading ? () {} : _restorePurchases,
-        showDivider: false,
-        trailing: _isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              )
-            : null,
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.spacingXL),
+      child: PremiumSettingsGroup(
+        title: 'Manage',
+        children: [
+          if (_hasActiveSubscription)
+            PremiumSettingsTile(
+              iconPath: AppIcons.crown,
+              title: 'Upgrade plan',
+              subtitle: 'Compare plans and billing options',
+              onTap: _openPlans,
+            )
+          else
+            PremiumSettingsTile(
+              iconPath: AppIcons.crown,
+              title: 'Subscribe now',
+              subtitle: 'Unlock premium features',
+              onTap: _openPlans,
+            ),
+          PremiumSettingsTile(
+            iconPath: AppIcons.refreshCircle,
+            title: 'Restore purchases',
+            subtitle: 'Sync purchases from Google Play',
+            onTap: _isLoading ? () {} : _restorePurchases,
+            trailing: _isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  )
+                : null,
+          ),
+        ],
       ),
-    );
-
-    return AppGroupedListSection(
-      title: 'Manage',
-      padding: AppSettingsLayout.sectionPadding,
-      children: tiles,
     );
   }
 }

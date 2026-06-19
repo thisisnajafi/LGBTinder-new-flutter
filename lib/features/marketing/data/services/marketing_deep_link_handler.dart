@@ -132,6 +132,9 @@ class MarketingDeepLinkHandler {
     final segments = path.split('/');
     if (segments.length >= 3) {
       final profileId = segments[2];
+      if (!RegExp(r'^\d+$').hasMatch(profileId)) {
+        return false;
+      }
       final target = Uri(path: AppRoutes.profileDetail, queryParameters: {'userId': profileId}).toString();
       context.push(target);
       return true;

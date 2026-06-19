@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_notifications.dart';
@@ -29,6 +29,16 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
+  int _categoryIndex = 0;
+
+  static const _categories = [
+    'All',
+    'Matches',
+    'Likes',
+    'Messages',
+    'Views',
+    'System',
+  ];
 
   @override
   void initState() {
@@ -224,6 +234,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
+  List<app_models.Notification> _filterByCategory(
+    List<app_models.Notification> items,
+  ) {
+    if (_categoryIndex == 0) return items;
+    final label = _categories[_categoryIndex].toLowerCase();
+    return items.where((n) {
+      final type = n.type.toLowerCase();
+      return switch (label) {
+        'matches' => type.contains('match'),
+        'likes' => type.contains('like'),
+        'messages' => type.contains('message'),
+        'views' => type.contains('view'),
+        'system' => type.contains('plan') ||
+            type.contains('system') ||
+            type.contains('verify'),
+        _ => true,
+      };
+    }).toList();
+  }
+
   Widget _buildBody(NotificationsCacheState cacheState) {
     if (cacheState.showSkeleton) {
       return const SkeletonNotifications();
@@ -263,7 +293,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
     final theme = Theme.of(context);
     final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.5);
-    final notifications = cacheState.notifications;
+    final notifications = _filterByCategory(cacheState.notifications);
     final footerCount = cacheState.isLoadingMore ? 1 : 0;
 
     return RefreshIndicator(
@@ -273,27 +303,38 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
-          AppPageHeader.horizontalPadding,
+          PremiumPageHeader.horizontalPadding,
           0,
-          AppPageHeader.horizontalPadding,
+          PremiumPageHeader.horizontalPadding,
           AppSpacing.spacingLG,
         ),
-        itemCount: notifications.length + 1 + footerCount,
+        itemCount: notifications.length + 2 + footerCount,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+              child: PremiumCategoryChips(
+                labels: _categories,
+                selectedIndex: _categoryIndex,
+                onSelected: (i) => setState(() => _categoryIndex = i),
+              ),
+            );
+          }
+
+          if (index == 1) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
               child: Text(
-                'Recent',
+                notifications.isEmpty ? 'No activity in this category' : 'Recent',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: mutedColor,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             );
           }
 
-          final notificationIndex = index - 1;
+          final notificationIndex = index - 2;
           if (notificationIndex >= notifications.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingLG),
@@ -324,35 +365,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final cacheState = ref.watch(notificationsCacheProvider);
     final unreadCount =
         cacheState.notifications.where((n) => !n.isRead).length;
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppPageHeader(
-              title: 'Notifications',
-              action: _buildHeaderAction(
-                context,
-                unreadCount,
-                cacheState.notifications,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spacingLG),
-            Expanded(
-              child: _buildBody(cacheState),
-            ),
-          ],
-        ),
+    return PremiumTabPageLayout(
+      title: 'Notifications',
+      subtitle: unreadCount > 0
+          ? '$unreadCount unread · Stay in the loop'
+          : 'Your social activity hub',
+      action: _buildHeaderAction(
+        context,
+        unreadCount,
+        cacheState.notifications,
       ),
+      body: _buildBody(cacheState),
     );
   }
 }

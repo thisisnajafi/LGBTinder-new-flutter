@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,13 +10,11 @@ import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
 import '../../../../../core/widgets/profile_age_badge.dart';
-import '../../../../../core/widgets/app_page_header.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../widgets/tier_badge.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
-
-/// Full-screen layout for viewing another user's profile (chat, discovery, etc.).
+import '../own_profile/profile_details_sections.dart';
 class OtherUserProfileView extends ConsumerStatefulWidget {
   final UserProfile profile;
   final bool showInteractionActions;
@@ -62,7 +60,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
   int _photoIndex = 0;
   Timer? _photoTimer;
 
-  static const double _horizontalPad = AppPageHeader.horizontalPadding;
+  static const double _horizontalPad = ProfileContentLayout.horizontalInset;
   static const double _sheetOverlap = 20;
   static const Duration _photoInterval = Duration(seconds: 5);
   static const Duration _fadeDuration = Duration(milliseconds: 500);
@@ -170,6 +168,20 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
         widget.showInteractionActions ? 88.0 + bottomInset : 0.0;
     final bottomPad = actionBarHeight > 0 ? actionBarHeight : AppSpacing.spacingXXL;
 
+    final detailChips = buildProfileDetailChips(
+      job: widget.jobLabels.isNotEmpty ? widget.jobLabels.join(', ') : null,
+      education: widget.educationLabels.isNotEmpty
+          ? widget.educationLabels.join(', ')
+          : null,
+      height: widget.profile.height,
+      gender: widget.genderLabel,
+      relationGoals: widget.relationGoalLabels,
+      languages: widget.languageLabels,
+      smoke: widget.profile.smoke,
+      drink: widget.profile.drink,
+      gym: widget.profile.gym,
+    );
+
     return RefreshIndicator(
       onRefresh: widget.onRefresh ?? () async {},
       edgeOffset: MediaQuery.paddingOf(context).top,
@@ -202,56 +214,30 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                     children: [
                       _profileActionBar(context),
                       if (_hasBio) ...[
-                        _aboutSection(context),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.interestLabels.isNotEmpty) ...[
-                        _interestsSection(context),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (_hasBasics) ...[
-                        _basicsSection(context),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.jobLabels.isNotEmpty) ...[
-                        _tagSection(context, 'Work', widget.jobLabels,
-                            AppIcons.getIconPath('briefcase')),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.educationLabels.isNotEmpty) ...[
-                        _tagSection(context, 'Education',
-                            widget.educationLabels,
-                            AppIcons.getIconPath('teacher')),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.languageLabels.isNotEmpty) ...[
-                        _tagSection(context, 'Languages',
-                            widget.languageLabels,
-                            AppIcons.getIconPath('global')),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.musicLabels.isNotEmpty) ...[
-                        _tagSection(context, 'Music', widget.musicLabels,
-                            AppIcons.getIconPath('music')),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.relationGoalLabels.isNotEmpty) ...[
-                        _tagSection(context, 'Looking for',
-                            widget.relationGoalLabels, AppIcons.heartOutline),
-                        const SizedBox(height: AppSpacing.spacingXL),
-                      ],
-                      if (widget.preferredGenderLabels.isNotEmpty) ...[
-                        _tagSection(
-                          context,
-                          'Interested in',
-                          widget.preferredGenderLabels,
-                          AppIcons.getIconPath('people'),
+                        PremiumPersonalitySection(
+                          bio: widget.profile.profileBio,
+                          conversationStarters: const [],
+                          sectionTitle: 'About',
+                          sectionSubtitle: null,
+                          quoteBio: false,
+                          shellMargin: ProfileContentLayout.shellMarginNone,
                         ),
                         const SizedBox(height: AppSpacing.spacingXL),
                       ],
-                      if (_hasLifestyle) ...[
-                        _lifestyleSection(context),
+                      if (widget.interestLabels.isNotEmpty) ...[
+                        PremiumInterestsSection(
+                          labels: widget.interestLabels,
+                          shellMargin: ProfileContentLayout.shellMarginNone,
+                        ),
                         const SizedBox(height: AppSpacing.spacingXL),
+                      ],
+                      if (detailChips.isNotEmpty) ...[
+                        PremiumDetailsGridSection(
+                          chips: detailChips,
+                          sectionTitle: 'Details',
+                          sectionSubtitle: null,
+                          shellMargin: ProfileContentLayout.shellMarginNone,
+                        ),
                       ],
                       SizedBox(height: bottomPad),
                     ],
@@ -300,17 +286,6 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     final bio = widget.profile.profileBio?.trim();
     return bio != null && bio.isNotEmpty;
   }
-
-  bool get _hasBasics =>
-      widget.locationLabel.isNotEmpty ||
-      (widget.genderLabel != null && widget.genderLabel!.isNotEmpty);
-
-  bool get _hasLifestyle =>
-      widget.profile.height != null ||
-      widget.profile.weight != null ||
-      widget.profile.smoke != null ||
-      widget.profile.drink != null ||
-      widget.profile.gym != null;
 
   Widget _photoHero(BuildContext context) {
     final theme = Theme.of(context);
@@ -608,8 +583,12 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     required String tooltip,
   }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Material(
-      color: theme.colorScheme.surface,
+      color: isDark
+          ? AppColors.cardBackgroundDark
+          : AppColors.cardBackgroundLight,
       elevation: 0,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
@@ -617,7 +596,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            color: AppColors.accentViolet.withValues(alpha: 0.12),
           ),
         ),
         child: IconButton(
@@ -644,245 +623,12 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       ),
       label: Text(widget.isMatched ? 'Send message' : 'Message'),
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+        minimumSize: const Size.fromHeight(48),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingMD),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
         ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(BuildContext context, String title) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            gradient: AppColors.brandGradient,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.spacingSM),
-        Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _sectionCard(BuildContext context, {required Widget child}) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-          width: 0.5,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.spacingMD),
-        child: child,
-      ),
-    );
-  }
-
-  Widget _aboutSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(context, 'About'),
-        const SizedBox(height: AppSpacing.spacingSM),
-        _sectionCard(
-          context,
-          child: Text(
-            widget.profile.profileBio!.trim(),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.55,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.85),
-                ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _interestsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(context, 'Interests'),
-        const SizedBox(height: AppSpacing.spacingSM),
-        _sectionCard(
-          context,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: widget.interestLabels
-                .map((label) => _infoPill(context, AppIcons.getIconPath('tag'), label))
-                .toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _basicsSection(BuildContext context) {
-    final pills = <Widget>[];
-    final location = _locationDisplay;
-    if (location.isNotEmpty) {
-      pills.add(_infoPill(context, AppIcons.location, location));
-    }
-    if (widget.genderLabel != null && widget.genderLabel!.isNotEmpty) {
-      pills.add(_infoPill(context, AppIcons.userOutline, widget.genderLabel!));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(context, 'Basics'),
-        const SizedBox(height: AppSpacing.spacingSM),
-        _sectionCard(
-          context,
-          child: Wrap(spacing: 8, runSpacing: 8, children: pills),
-        ),
-      ],
-    );
-  }
-
-  Widget _lifestyleSection(BuildContext context) {
-    final profile = widget.profile;
-    final pills = <Widget>[];
-    if (profile.height != null) {
-      pills.add(_infoPill(
-        context,
-        AppIcons.getIconPath('ruler'),
-        '${profile.height} cm',
-      ));
-    }
-    if (profile.weight != null) {
-      pills.add(_infoPill(
-        context,
-        AppIcons.getIconPath('weight'),
-        '${profile.weight} kg',
-      ));
-    }
-    if (profile.smoke != null) {
-      pills.add(_infoPill(
-        context,
-        AppIcons.getIconPath('cloud'),
-        'Smoking: ${profile.smoke! ? 'Yes' : 'No'}',
-      ));
-    }
-    if (profile.drink != null) {
-      pills.add(_infoPill(
-        context,
-        AppIcons.getIconPath('cup'),
-        'Drinking: ${profile.drink! ? 'Yes' : 'No'}',
-      ));
-    }
-    if (profile.gym != null) {
-      pills.add(_infoPill(
-        context,
-        AppIcons.getIconPath('activity'),
-        'Gym: ${profile.gym! ? 'Yes' : 'No'}',
-      ));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(context, 'Lifestyle'),
-        const SizedBox(height: AppSpacing.spacingSM),
-        _sectionCard(
-          context,
-          child: Wrap(spacing: 8, runSpacing: 8, children: pills),
-        ),
-      ],
-    );
-  }
-
-  Widget _tagSection(
-    BuildContext context,
-    String title,
-    List<String> labels,
-    String iconPath,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(context, title),
-        const SizedBox(height: AppSpacing.spacingSM),
-        _sectionCard(
-          context,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                labels.map((label) => _infoPill(context, iconPath, label)).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoPill(BuildContext context, String iconPath, String text) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  primary.withValues(alpha: 0.18),
-                  AppColors.accentPink.withValues(alpha: 0.14),
-                ],
-              ),
-            ),
-            child: Center(
-              child: AppSvgIcon(
-                assetPath: iconPath,
-                size: 14,
-                color: primary,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              text,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.88),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
+        elevation: 0,
       ),
     );
   }

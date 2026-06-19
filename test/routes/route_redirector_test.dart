@@ -36,6 +36,14 @@ void main() {
       final r = RouteRedirector();
       expect(r.resolveLegacyRoute(Uri.parse('/home/discovery')), isNull);
       expect(r.resolveLegacyRoute(Uri.parse('/profile-detail?userId=1')), isNull);
+      expect(r.resolveLegacyRoute(Uri.parse('/profile/edit')), isNull);
+      expect(r.resolveLegacyRoute(Uri.parse(AppRoutes.profileEdit)), isNull);
+    });
+
+    test('does not treat reserved profile slugs as user ids', () {
+      final r = RouteRedirector();
+      expect(r.resolveLegacyRoute(Uri.parse('/profile/edit')), isNull);
+      expect(r.resolveLegacyRoute(Uri.parse('/profile/verification')), isNull);
     });
   });
 

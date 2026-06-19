@@ -6,6 +6,19 @@ import 'app_router.dart';
 class RouteRedirector {
   String? _pendingProtectedRoute;
 
+  /// App routes under `/profile/...` that must not be treated as `/profile/:userId`.
+  static const Set<String> _reservedProfileSegments = {
+    'edit',
+    'verification',
+    'views',
+    'completion-status',
+    'search',
+    'update',
+    'badge',
+    'change-email',
+    'verify-email-change',
+  };
+
   String? get pendingProtectedRoute => _pendingProtectedRoute;
 
   void setPendingIfEmpty(String location) {
@@ -34,9 +47,18 @@ class RouteRedirector {
     if (path == '/matches') return '${AppRoutes.home}/matches';
 
     if (path.startsWith('/profile/')) {
-      final userId = path.split('/').last;
-      if (userId.isNotEmpty) {
-        return Uri(path: AppRoutes.profileDetail, queryParameters: {'userId': userId}).toString();
+      final segments = uri.pathSegments;
+      if (segments.length >= 2 && segments.first == 'profile') {
+        final slug = segments[1];
+        if (_reservedProfileSegments.contains(slug)) {
+          return null;
+        }
+        if (RegExp(r'^\d+$').hasMatch(slug)) {
+          return Uri(
+            path: AppRoutes.profileDetail,
+            queryParameters: {'userId': slug},
+          ).toString();
+        }
       }
     }
 

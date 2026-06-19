@@ -6,9 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/app_date_time.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../shared/models/user_tier.dart';
 import '../../shared/providers/user_tier_provider.dart';
@@ -47,24 +48,34 @@ class ChatListItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final tier = ref.watch(userTierProvider);
     final isLocked = tier == UserTier.basid;
     final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final displayName = name.trim().isNotEmpty ? name.trim() : 'User';
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 76,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppPageHeader.horizontalPadding,
-            ),
-            child: Row(
-              children: [
-                Stack(
+    return PremiumTapScale(
+      onTap: onTap ?? () {},
+      semanticLabel: 'Chat with $displayName',
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM,
+        ),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: unreadCount > 0
+                ? AppColors.accentPink.withValues(alpha: 0.25)
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.1 : 0.08),
+          ),
+        ),
+        child: Row(
+          children: [
+            Stack(
                   clipBehavior: Clip.none,
                   children: [
                     ClipOval(
@@ -155,8 +166,6 @@ class ChatListItem extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
-        ),
       ),
     );
   }

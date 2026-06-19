@@ -3,27 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../core/providers/theme_mode_provider.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
-import '../../../core/widgets/app_grouped_list_card.dart';
-import '../../../core/providers/theme_mode_provider.dart';
+import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/settings/presentation/screens/account_details_screen.dart';
 import '../../../features/settings/presentation/screens/appearance_settings_screen.dart';
+import '../../../features/settings/presentation/screens/matching_preferences_screen.dart';
 import '../../../features/settings/presentation/screens/sound_preferences_screen.dart';
 import '../../../routes/app_router.dart';
+import '../../../routes/home_tab_routes.dart';
 import '../../../screens/active_sessions_screen.dart';
 import '../../../screens/blocked_users_screen.dart';
+import '../../../screens/help_support_screen.dart';
 import '../../../screens/legal/privacy_policy_screen.dart';
 import '../../../screens/legal/terms_of_service_screen.dart';
 import '../../../screens/notification_settings_screen.dart';
-import '../../../screens/two_factor_auth_screen.dart';
-import '../../../screens/help_support_screen.dart';
 import '../../../screens/privacy_settings_screen.dart';
+import '../../../screens/two_factor_auth_screen.dart';
 
-/// App settings hub — account, app, legal, and danger zone (not profile content).
+/// Premium account dashboard — aligned with own-profile design language.
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -32,23 +33,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
-  static const double _horizontalPad = 20;
-
-  /// Space above a section title (after the previous card).
-  static const EdgeInsets _sectionPadding = EdgeInsets.fromLTRB(
-    _horizontalPad,
-    AppSpacing.spacingXL,
-    _horizontalPad,
-    0,
-  );
-
-  static const EdgeInsets _firstSectionPadding = EdgeInsets.fromLTRB(
-    _horizontalPad,
-    0,
-    _horizontalPad,
-    0,
-  );
-
+  static const double _sectionGap = AppSpacing.spacingXL;
   String? _appVersion;
 
   @override
@@ -68,6 +53,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  void _push(Widget screen) {
+    Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
+  }
+
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -75,10 +64,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         title: const Text('Log out?'),
         content: const Text('You will need to sign in again to use the app.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
@@ -102,10 +88,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           'This action cannot be undone.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
@@ -115,183 +98,169 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    // TODO: wire delete-account flow via settings provider / account management
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account deletion is available under Account Management.'),
-      ),
-    );
-  }
-
-  void _push(Widget screen) {
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(builder: (_) => screen),
+      const SnackBar(content: Text('Account deletion is available under Account Management.')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final themeMode = ref.watch(themeModeProvider);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, AppSpacing.spacingSM, 20, 0),
-              child: Text(
-                'Settings',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+    return PremiumTabPageLayout(
+      title: 'Settings',
+      subtitle: 'Your account, privacy, and preferences',
+      body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
+        children: [
+          PremiumHubGridSection(
+            title: 'Quick access',
+            subtitle: 'Essential account tools',
+            actions: [
+              PremiumHubActionData(
+                iconPath: AppIcons.userEdit,
+                title: 'Profile',
+                subtitle: 'Edit your dating profile',
+                onTap: () => context.go(HomeTabRoutes.locationForTab(3)),
               ),
-            ),
-            const SizedBox(height: AppSpacing.spacingXL),
-            AppGroupedListSection(
-              title: 'Account',
-              padding: _firstSectionPadding,
-              children: [
-                _tile(
-                  iconPath: AppIcons.user,
-                  label: 'Account Details',
-                  subtitle: 'Phone, email, and password',
-                  onTap: () => _push(const AccountDetailsScreen()),
-                ),
-                _tile(
-                  iconPath: AppIcons.notification,
-                  label: 'Notifications',
-                  onTap: () => _push(const NotificationSettingsScreen()),
-                ),
-                _tile(
-                  iconPath: AppIcons.shieldTick,
-                  label: 'Privacy & Safety',
-                  onTap: () => _push(const PrivacySettingsScreen()),
-                ),
-                _tile(
-                  iconPath: AppIcons.block,
-                  label: 'Blocked Users',
-                  onTap: () => context.pushNamed('blocked-users'),
-                ),
-                _tile(
-                  iconPath: AppIcons.getIconPath('monitor'),
-                  label: 'Active Sessions',
-                  onTap: () => _push(const ActiveSessionsScreen()),
-                ),
-                _tile(
-                  iconPath: AppIcons.lockOutline,
-                  label: 'Two-Factor Authentication',
-                  onTap: () => _push(const TwoFactorAuthScreen()),
-                  showDivider: false,
-                ),
-              ],
-            ),
-            AppGroupedListSection(
-              title: 'App',
-              padding: _sectionPadding,
-              children: [
-                _tile(
-                  iconPath: AppIcons.getIconPath('volume-high'),
-                  label: 'Sounds & Notifications',
-                  onTap: () => _push(const SoundPreferencesScreen()),
-                ),
-                _tile(
-                  iconPath: AppIcons.getIconPath('translate'),
-                  label: 'Language / Locale',
-                  onTap: () {
-                    // TODO: locale picker screen
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Language settings coming soon')),
-                    );
-                  },
-                ),
-                _tile(
-                  iconPath: AppIcons.setting,
-                  label: 'Appearance',
-                  subtitle: themeModeLabel(themeMode),
-                  onTap: () => _push(const AppearanceSettingsScreen()),
-                  showDivider: false,
-                ),
-              ],
-            ),
-            AppGroupedListSection(
-              title: 'Legal & Support',
-              padding: _sectionPadding,
-              children: [
-                _tile(
-                  iconPath: AppIcons.help,
-                  label: 'Help & Support',
-                  onTap: () => context.pushNamed('help-support'),
-                ),
-                _tile(
-                  iconPath: AppIcons.shield,
-                  label: 'Privacy Policy',
-                  onTap: () => context.pushNamed('privacy-policy'),
-                ),
-                _tile(
-                  iconPath: AppIcons.document,
-                  label: 'Terms Of Service',
-                  onTap: () => context.pushNamed('terms-of-service'),
-                ),
-                _tile(
-                  iconPath: AppIcons.info,
-                  label: 'About',
-                  subtitle: _appVersion != null ? 'Version $_appVersion' : 'Loading version…',
-                  onTap: () {},
-                  showDivider: false,
-                  trailing: _appVersion != null
-                      ? Text(
-                          _appVersion!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
-                          ),
-                        )
-                      : null,
-                ),
-              ],
-            ),
-            AppGroupedListSection(
-              title: 'Danger Zone',
-              padding: _sectionPadding,
-              children: [
-                _tile(
-                  iconPath: AppIcons.logout,
-                  label: 'Log Out',
-                  onTap: _confirmLogout,
-                ),
-                _tile(
-                  iconPath: AppIcons.delete,
-                  label: 'Delete Account',
-                  onTap: _confirmDeleteAccount,
-                  showDivider: false,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.spacingXXL),
-          ],
-        ),
+              PremiumHubActionData(
+                iconPath: AppIcons.crown,
+                title: 'Membership',
+                subtitle: 'Plans & benefits',
+                onTap: () => context.pushNamed('subscription-management'),
+              ),
+              PremiumHubActionData(
+                iconPath: AppIcons.shieldTick,
+                title: 'Security',
+                subtitle: 'Sessions & 2FA',
+                onTap: () => _push(const ActiveSessionsScreen()),
+              ),
+              PremiumHubActionData(
+                iconPath: AppIcons.shield,
+                title: 'Privacy',
+                subtitle: 'Visibility & data',
+                onTap: () => _push(const PrivacySettingsScreen()),
+              ),
+              PremiumHubActionData(
+                iconPath: AppIcons.notification,
+                title: 'Alerts',
+                subtitle: 'Push & email prefs',
+                onTap: () => _push(const NotificationSettingsScreen()),
+              ),
+              PremiumHubActionData(
+                iconPath: AppIcons.discover,
+                title: 'Discovery',
+                subtitle: 'Who you want to meet',
+                onTap: () => _push(const MatchingPreferencesScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: _sectionGap),
+          PremiumSettingsGroup(
+            title: 'Account',
+            subtitle: 'Identity, safety, and access',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.user,
+                title: 'Account details',
+                subtitle: 'Phone, email, and password',
+                onTap: () => _push(const AccountDetailsScreen()),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.block,
+                title: 'Blocked users',
+                subtitle: 'Manage blocked profiles',
+                accent: AppColors.feedbackWarning,
+                onTap: () => context.pushNamed('blocked-users'),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.lockOutline,
+                title: 'Two-factor authentication',
+                subtitle: 'Extra sign-in protection',
+                onTap: () => _push(const TwoFactorAuthScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: _sectionGap),
+          PremiumSettingsGroup(
+            title: 'App experience',
+            subtitle: 'Sounds, language, and appearance',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.getIconPath('volume-high'),
+                title: 'Sounds & haptics',
+                subtitle: 'Notification sounds',
+                onTap: () => _push(const SoundPreferencesScreen()),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.setting,
+                title: 'Appearance',
+                subtitle: themeModeLabel(themeMode),
+                onTap: () => _push(const AppearanceSettingsScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: _sectionGap),
+          PremiumSettingsGroup(
+            title: 'Support & legal',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.help,
+                title: 'Help & support',
+                subtitle: 'FAQs and contact us',
+                onTap: () => context.pushNamed('help-support'),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.shield,
+                title: 'Privacy policy',
+                onTap: () => context.pushNamed('privacy-policy'),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.document,
+                title: 'Terms of service',
+                onTap: () => context.pushNamed('terms-of-service'),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.info,
+                title: 'About',
+                subtitle: _appVersion != null ? 'Version $_appVersion' : 'Loading…',
+                onTap: () {},
+                trailing: _appVersion != null
+                    ? Text(
+                        _appVersion!,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.45),
+                            ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: _sectionGap),
+          PremiumSettingsGroup(
+            title: 'Account actions',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.logout,
+                title: 'Log out',
+                onTap: _confirmLogout,
+                destructive: true,
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.delete,
+                title: 'Delete account',
+                subtitle: 'Permanent — cannot be undone',
+                onTap: _confirmDeleteAccount,
+                destructive: true,
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
-
-  AppGroupedListTile _tile({
-    required String iconPath,
-    required String label,
-    String? subtitle,
-    required VoidCallback onTap,
-    bool showDivider = true,
-    Widget? trailing,
-  }) {
-    return AppGroupedListTile(
-      iconPath: iconPath,
-      label: label,
-      subtitle: subtitle,
-      onTap: onTap,
-      showDivider: showDivider,
-      trailing: trailing,
     );
   }
 }

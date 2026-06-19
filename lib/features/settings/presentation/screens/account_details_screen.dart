@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../screens/settings/account_management_screen.dart';
 import '../../../../core/utils/country_phone_utils.dart';
 import '../../../profile/providers/profile_page_cache_provider.dart';
@@ -57,41 +58,37 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
 
     return AppSettingsDetailScaffold(
       title: 'Account details',
+      subtitle: 'Contact info and sign-in security',
       body: profileState.isLoading && profile == null
           ? const Center(child: CircularProgressIndicator())
           : AppSettingsDetailList(
               children: [
-                AppGroupedListSection(
+                PremiumSettingsGroup(
                   title: 'Contact',
-                  padding: AppSettingsLayout.firstSectionPadding,
                   children: [
-                    AppGroupedInfoTile(
+                    PremiumInfoRow(
                       label: 'Phone number',
                       value: phoneDisplay,
-                      badge: profile?.isPhoneVerified == true
-                          ? 'Verified'
-                          : null,
+                      badge: profile?.isPhoneVerified == true ? 'Verified' : null,
+                      badgeColor: AppColors.feedbackSuccess,
                     ),
-                    AppGroupedInfoTile(
+                    PremiumInfoRow(
                       label: 'Email',
                       value: emailDisplay,
-                      badge: profile?.isEmailVerified == true
-                          ? 'Verified'
-                          : null,
-                      showDivider: false,
+                      badge: profile?.isEmailVerified == true ? 'Verified' : null,
+                      badgeColor: AppColors.feedbackSuccess,
                     ),
                   ],
                 ),
-                AppGroupedListSection(
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
                   title: 'Security',
-                  padding: AppSettingsLayout.sectionPadding,
                   children: [
-                    AppGroupedListTile(
+                    PremiumSettingsTile(
                       iconPath: AppIcons.lockOutline,
-                      label: 'Password',
+                      title: 'Password',
                       subtitle: 'Change your sign-in password',
                       onTap: _openAccountManagement,
-                      showDivider: false,
                       trailing: Text(
                         '••••••••',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -109,16 +106,15 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                   text:
                       'To update your email or password, open account management.',
                 ),
-                AppGroupedListSection(
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
                   title: 'Management',
-                  padding: AppSettingsLayout.sectionPadding,
                   children: [
-                    AppGroupedListTile(
+                    PremiumSettingsTile(
                       iconPath: AppIcons.setting,
-                      label: 'Account management',
+                      title: 'Account management',
                       subtitle: 'Change email, password, or delete account',
                       onTap: _openAccountManagement,
-                      showDivider: false,
                     ),
                   ],
                 ),

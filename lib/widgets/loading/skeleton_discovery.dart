@@ -51,111 +51,141 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
     super.dispose();
   }
 
+  static const double _maxCardWidth = 340;
+  static const double _maxCardHeight = 520;
+  static const double _minCardHeight = 240;
+  /// Space for dots, label, and vertical gaps below the card.
+  static const double _footerReservedHeight = 72;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final cardColor = isDark ? const Color(0xFF252528) : AppColors.backgroundLight;
 
-    return Center(
-      child: FadeTransition(
-        opacity: _opacity,
-        child: ScaleTransition(
-          scale: _scale,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 340, maxHeight: 520),
-                margin: const EdgeInsets.all(AppSpacing.spacingLG),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusXL),
-                  border: isDark
-                      ? Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
-                        )
-                      : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark
-                          ? Colors.black.withValues(alpha: 0.5)
-                          : Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SkeletonLoader(
-                        width: double.infinity,
-                        height: double.infinity,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(AppRadius.radiusXL),
-                          topRight: Radius.circular(AppRadius.radiusXL),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth;
+        final maxH = constraints.maxHeight;
+        final cardWidth = (maxW - AppSpacing.spacingLG * 2).clamp(0.0, _maxCardWidth);
+        final cardHeight = (maxH - _footerReservedHeight - AppSpacing.spacingLG * 2)
+            .clamp(_minCardHeight, _maxCardHeight);
+        final nameW = (cardWidth * 0.44).clamp(100.0, 150.0);
+        final subW = (cardWidth * 0.29).clamp(72.0, 100.0);
+        final bioLastW = (cardWidth * 0.59).clamp(120.0, 200.0);
+
+        return FadeTransition(
+          opacity: _opacity,
+          child: ScaleTransition(
+            scale: _scale,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.spacingLG),
+                    child: Center(
+                      child: SizedBox(
+                        width: cardWidth,
+                        height: cardHeight,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.radiusXL),
+                            border: isDark
+                                ? Border.all(
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                  )
+                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark
+                                    ? Colors.black.withValues(alpha: 0.5)
+                                    : Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: SkeletonLoader(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft:
+                                        Radius.circular(AppRadius.radiusXL),
+                                    topRight:
+                                        Radius.circular(AppRadius.radiusXL),
+                                  ),
+                                  highlightColorOverride: isDark
+                                      ? Colors.white.withValues(alpha: 0.22)
+                                      : AppColors.lgbtGradient[4]
+                                          .withValues(alpha: 0.12),
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.all(AppSpacing.spacingLG),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SkeletonLoader(
+                                      width: nameW,
+                                      height: 20,
+                                      borderRadius: BorderRadius.circular(
+                                          AppRadius.radiusSM),
+                                    ),
+                                    const SizedBox(height: AppSpacing.spacingSM),
+                                    SkeletonLoader(
+                                      width: subW,
+                                      height: 16,
+                                      borderRadius: BorderRadius.circular(
+                                          AppRadius.radiusSM),
+                                    ),
+                                    const SizedBox(height: AppSpacing.spacingMD),
+                                    SkeletonLoader(
+                                      width: double.infinity,
+                                      height: 14,
+                                      borderRadius: BorderRadius.circular(
+                                          AppRadius.radiusSM),
+                                    ),
+                                    const SizedBox(height: AppSpacing.spacingSM),
+                                    SkeletonLoader(
+                                      width: bioLastW,
+                                      height: 14,
+                                      borderRadius: BorderRadius.circular(
+                                          AppRadius.radiusSM),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        highlightColorOverride: isDark
-                            ? Colors.white.withValues(alpha: 0.22)
-                            : AppColors.lgbtGradient[4].withValues(alpha: 0.12),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(AppSpacing.spacingLG),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SkeletonLoader(
-                            width: 150,
-                            height: 20,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusSM),
-                          ),
-                          const SizedBox(height: AppSpacing.spacingSM),
-                          SkeletonLoader(
-                            width: 100,
-                            height: 16,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusSM),
-                          ),
-                          const SizedBox(height: AppSpacing.spacingMD),
-                          SkeletonLoader(
-                            width: double.infinity,
-                            height: 14,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusSM),
-                          ),
-                          const SizedBox(height: AppSpacing.spacingSM),
-                          SkeletonLoader(
-                            width: 200,
-                            height: 14,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusSM),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.spacingLG),
-              _PulsingDots(color: theme.colorScheme.primary),
-              const SizedBox(height: AppSpacing.spacingMD),
-              Text(
-                'Finding your perfect matches...',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+                _PulsingDots(color: theme.colorScheme.primary),
+                const SizedBox(height: AppSpacing.spacingSM),
+                Text(
+                  'Finding your perfect matches...',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.spacingSM),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

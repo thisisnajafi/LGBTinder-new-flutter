@@ -7,6 +7,25 @@ import '../../core/utils/app_icons.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../common/selection_bottom_sheet.dart';
 
+/// Compact subsection label inside a [PremiumFilterSection].
+class FilterSubsectionTitle extends StatelessWidget {
+  final String title;
+
+  const FilterSubsectionTitle({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      child: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
 /// Purple icon badge + section title (Filters screen).
 class FilterSectionHeader extends StatelessWidget {
   final String iconPath;
@@ -26,26 +45,35 @@ class FilterSectionHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 4,
+          height: 32,
           decoration: BoxDecoration(
-            color: AppColors.accentPurple.withValues(alpha: isDark ? 0.22 : 0.12),
+            borderRadius: BorderRadius.circular(99),
+            gradient: AppColors.brandGradient,
+          ),
+        ),
+        SizedBox(width: AppSpacing.spacingSM),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.accentViolet.withValues(alpha: isDark ? 0.2 : 0.12),
             borderRadius: BorderRadius.circular(AppRadius.radiusMD),
           ),
           alignment: Alignment.center,
           child: AppSvgIcon(
             assetPath: iconPath,
-            size: 22,
-            color: AppColors.accentPurple,
+            size: 20,
+            color: AppColors.accentViolet,
           ),
         ),
-        SizedBox(width: AppSpacing.spacingMD),
+        SizedBox(width: AppSpacing.spacingSM),
         Expanded(
           child: Text(
             title,
-            style: AppTypography.h4.copyWith(
+            style: AppTypography.titleMedium.copyWith(
               color: textColor,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
@@ -54,21 +82,13 @@ class FilterSectionHeader extends StatelessWidget {
   }
 }
 
-/// Thin section separator.
+/// Thin section separator — hidden when inside premium shells.
 class FilterSectionDivider extends StatelessWidget {
   const FilterSectionDivider({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingLG),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: isDark ? AppColors.borderSubtleDark : AppColors.borderSubtleLight,
-      ),
-    );
+    return const SizedBox(height: AppSpacing.spacingMD);
   }
 }
 

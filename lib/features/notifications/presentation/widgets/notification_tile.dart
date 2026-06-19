@@ -187,15 +187,15 @@ class NotificationTile extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
           padding: const EdgeInsets.all(AppSpacing.spacingMD),
           decoration: BoxDecoration(
-            color: notification.isRead
-                ? surfaceColor
-                : surfaceColor.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
             border: Border.all(
               color: notification.isRead
-                  ? borderColor.withValues(alpha: 0.45)
-                  : accent.withValues(alpha: 0.28),
-              width: notification.isRead ? 1 : 1.5,
+                  ? borderColor.withValues(alpha: 0.25)
+                  : accent.withValues(alpha: 0.22),
+              width: 1,
             ),
           ),
           child: Row(

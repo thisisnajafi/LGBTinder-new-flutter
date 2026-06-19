@@ -249,16 +249,55 @@ class MessageBubble extends ConsumerWidget {
       );
     }
 
-    final bubbleColor = isSent
-        ? (deliveryStatus == MessageDeliveryStatus.failed
-            ? AppColors.feedbackError.withValues(alpha: 0.85)
-            : AppColors.primaryLight)
-        : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
+    final isFailed = deliveryStatus == MessageDeliveryStatus.failed;
+    final sentDecoration = isSent && !isFailed
+        ? BoxDecoration(
+            gradient: AppColors.brandGradient,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.radiusLG),
+              topRight: const Radius.circular(AppRadius.radiusLG),
+              bottomLeft: const Radius.circular(AppRadius.radiusLG),
+              bottomRight: Radius.zero,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          )
+        : BoxDecoration(
+            color: isFailed
+                ? AppColors.feedbackError.withValues(alpha: 0.85)
+                : AppColors.primaryLight,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(AppRadius.radiusLG),
+              topRight: const Radius.circular(AppRadius.radiusLG),
+              bottomLeft: const Radius.circular(AppRadius.radiusLG),
+              bottomRight: Radius.zero,
+            ),
+          );
+
+    final receivedDecoration = BoxDecoration(
+      color: isDark
+          ? Colors.white.withValues(alpha: 0.07)
+          : Colors.white.withValues(alpha: 0.82),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(AppRadius.radiusLG),
+        topRight: Radius.circular(AppRadius.radiusLG),
+        bottomLeft: Radius.zero,
+        bottomRight: Radius.circular(AppRadius.radiusLG),
+      ),
+      border: Border.all(
+        color: AppColors.accentViolet.withValues(alpha: 0.12),
+      ),
+    );
 
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
-        onTap: deliveryStatus == MessageDeliveryStatus.failed ? onRetry : null,
+        onTap: isFailed ? onRetry : null,
         child: Container(
         margin: EdgeInsets.only(
           left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
@@ -270,15 +309,7 @@ class MessageBubble extends ConsumerWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         padding: EdgeInsets.all(AppSpacing.spacingMD),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(AppRadius.radiusMD),
-            topRight: Radius.circular(AppRadius.radiusMD),
-            bottomLeft: isSent ? Radius.circular(AppRadius.radiusMD) : Radius.zero,
-            bottomRight: isSent ? Radius.zero : Radius.circular(AppRadius.radiusMD),
-          ),
-        ),
+        decoration: isSent ? sentDecoration : receivedDecoration,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

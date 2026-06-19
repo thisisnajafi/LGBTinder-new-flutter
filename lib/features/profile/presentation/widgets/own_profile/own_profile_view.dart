@@ -1,35 +1,29 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/cache/session_cache_providers.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
-import '../../../../../core/widgets/app_grouped_list_card.dart';
-import '../../../../../core/widgets/profile_age_badge.dart';
-import '../../../../../core/widgets/profile_camera_badge.dart';
-import '../../../../../core/widgets/profile_image_widget.dart';
-import '../../../../../widgets/buttons/gradient_button.dart';
 import '../../../../payments/data/models/plan_limits.dart';
 import '../../../../payments/data/models/subscription_plan.dart';
 import '../../../../payments/providers/payment_providers.dart';
-import '../../../data/models/user_image.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../providers/profile_page_cache_provider.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
 import '../../../../settings/presentation/screens/matching_preferences_screen.dart';
 import '../../../../../routes/app_router.dart';
+import '../../../../../screens/active_sessions_screen.dart';
+import '../../../../../screens/privacy_settings_screen.dart';
 import '../../../../../screens/profile/profile_verification_screen.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
 import 'profile_completeness_utils.dart';
-
+import 'profile_details_sections.dart';
+import 'profile_hero_section.dart';
+import 'profile_premium_shell.dart';
 /// Own-profile scroll layout (dating-app standard).
 class OwnProfileView extends ConsumerWidget {
   final UserProfile profile;
@@ -47,22 +41,7 @@ class OwnProfileView extends ConsumerWidget {
     required this.onPhotoTap,
   });
 
-  static const double _hPad = 20;
   static const double _sectionGap = AppSpacing.spacingXL;
-  static const double _avatarSize = 96.0;
-  static const double _cameraTapSize = 44.0;
-  static const double _cameraInsideFraction = 0.6;
-
-  /// Bottom-right badge offset so 60% sits inside the circle and 40% outside.
-  static double _cameraBadgeOffset(double size, double overflow) {
-    final avatarCenter = (size + overflow) / 2;
-    final distFromAvatarCenter = size / 2 +
-        _cameraTapSize / 2 -
-        _cameraInsideFraction * _cameraTapSize;
-    final axisOffset = distFromAvatarCenter / math.sqrt2;
-    return avatarCenter + axisOffset - _cameraTapSize / 2;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fullName = profile.lastName.trim().isEmpty
@@ -94,6 +73,9 @@ class OwnProfileView extends ConsumerWidget {
     final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
     final educationsRef = ref.watch(educationLevelsProvider).valueOrNull ?? const [];
     final gendersRef = ref.watch(gendersProvider).valueOrNull ?? const [];
+    final languagesRef = ref.watch(languagesProvider).valueOrNull ?? const [];
+    final relationGoalsRef =
+        ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
 
     final interestLabels = _resolveLabels(
       profile.interestTitles,
@@ -112,317 +94,83 @@ class OwnProfileView extends ConsumerWidget {
     );
     final genderLabel = profile.gender ?? _labelForId(profile.genderId, gendersRef);
     final locationLabel = _locationLabel(profile);
+    final relationGoalLabels = _mapReferenceIds(profile.relationGoals, relationGoalsRef);
+    final languageLabels = _mapReferenceIds(profile.languages, languagesRef);
 
     final photos = profile.images ?? [];
-    final displayPhotos =
-        photos.take(AppConstants.profilePhotoGridPreview).toList();
+    final photoUrls = photos.map((p) => p.imageUrl).toList();
+    final detailChips = buildProfileDetailChips(
+      job: jobLabel,
+      education: educationLabel,
+      height: profile.height,
+      gender: genderLabel,
+      relationGoals: relationGoalLabels,
+      languages: languageLabels,
+      smoke: profile.smoke,
+      drink: profile.drink,
+      gym: profile.gym,
+    );
+    final hubActions = _buildHubActions(
+      context,
+      isVerified: isVerified,
+      tier: tier,
+    );
 
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
+    return CustomScrollView(      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _pageHeader(context, onViewProfile),
-              const SizedBox(height: AppSpacing.spacingLG),
-              _identityBlock(
-                context,
+              ProfileHeroSection(
                 fullName: fullName,
                 avatarUrl: avatarUrl,
                 age: age,
                 isVerified: isVerified,
                 tier: tier,
+                locationLabel: locationLabel,
+                isOnline: profile.isOnline ?? false,
+                completeness: completeness,
+                viewsCount: profile.viewsCount ?? 0,
+                superlikesRemaining: superlikes,
+                onEditProfile: () => _openEdit(context),
                 onEditPhoto: onEditPhotos,
-              ),
-              if (!completeness.isComplete) ...[
-                const SizedBox(height: _sectionGap),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                  child: _completenessCard(
-                    context,
-                    completeness: completeness,
-                    onComplete: () => _openEdit(context),
-                  ),
-                ),
-              ],
-              if (superlikes != null) ...[
-                const SizedBox(height: _sectionGap),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                  child: _superlikesSection(
-                    context,
-                    superlikes: superlikes,
-                  ),
-                ),
-              ],
-              const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _photosSection(
-                  context,
-                  photos: displayPhotos,
-                  totalCount: photos.length,
-                  onEdit: onEditPhotos,
-                  onAdd: onAddPhoto,
-                  onPhotoTap: onPhotoTap,
-                ),
+                onViewProfile: onViewProfile,
               ),
               const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _bioSection(context, bio: profile.profileBio),
+              PremiumPhotosSection(                imageUrls: photoUrls,
+                totalCount: photos.length,
+                onEdit: onEditPhotos,
+                onAdd: onAddPhoto,
+                onPhotoTap: onPhotoTap,
               ),
               const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _detailsSection(
-                  context,
-                  location: locationLabel,
-                  job: jobLabel,
-                  education: educationLabel,
-                  height: profile.height,
-                  gender: genderLabel,
-                ),
+              PremiumPersonalitySection(
+                bio: profile.profileBio,
+                conversationStarters: const [],
+                onEdit: () => _openEdit(context),
+              ),              const SizedBox(height: _sectionGap),
+              PremiumDetailsGridSection(
+                chips: detailChips,
+                onEdit: () => _openEdit(context),
               ),
               const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _interestsSection(context, labels: interestLabels),
+              PremiumInterestsSection(
+                labels: interestLabels,
+                onEdit: () => _openEdit(context),
               ),
               const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _profileActions(
-                  context,
-                  isVerified: isVerified,
-                  tier: tier,
-                ),
-              ),
+              PremiumAccountHubSection(actions: hubActions),
               const SizedBox(height: _sectionGap),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                child: _subscriptionCard(
-                  context,
-                  tier: tier,
-                  subscription: subscription,
-                ),
+              PremiumMembershipSection(
+                tier: tier,
+                subscription: subscription,
+                onUpgrade: () => context.pushNamed('subscription-plans'),
+                onManage: () => context.pushNamed('subscription-management'),
               ),
-              const SizedBox(height: AppSpacing.spacingXXL),
-            ],
+              const SizedBox(height: AppSpacing.spacingXXL),            ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _pageHeader(BuildContext context, VoidCallback onViewProfile) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(_hPad, AppSpacing.spacingSM, _hPad, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Profile',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          TextButton(
-            onPressed: onViewProfile,
-            style: TextButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-            ),
-            child: Text(
-              'View profile',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _identityBlock(
-    BuildContext context, {
-    required String fullName,
-    required String? avatarUrl,
-    required int? age,
-    required bool isVerified,
-    required UserTier tier,
-    required VoidCallback onEditPhoto,
-  }) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    final isPremium = tier != UserTier.basid;
-
-    const avatarSize = _avatarSize;
-    const cameraTapSize = _cameraTapSize;
-    const overflow = cameraTapSize / 2;
-    const verifiedBadgeSize = 22.0;
-    const ageBadgeHalfHeight = 10.0;
-    final frameSize = avatarSize + overflow;
-
-    return Column(
-      children: [
-        SizedBox(
-          width: frameSize,
-          height: frameSize + ageBadgeHalfHeight,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.topCenter,
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                child: SizedBox(
-                  width: frameSize,
-                  height: frameSize,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: avatarSize,
-                        height: avatarSize,
-                        padding: const EdgeInsets.all(2.5),
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppColors.brandGradient,
-                        ),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.colorScheme.surface,
-                          ),
-                          child: ClipOval(
-                            child: ProfileImageWidget(
-                              imageUrl: avatarUrl,
-                              width: avatarSize - 5,
-                              height: avatarSize - 5,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (isVerified)
-                        Positioned(
-                          top: overflow - 2,
-                          left: overflow - 2,
-                          child: Container(
-                            width: verifiedBadgeSize,
-                            height: verifiedBadgeSize,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: primary, width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.12),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: AppSvgIcon(
-                                assetPath: AppIcons.getIconPath('tick-circle'),
-                                size: 13,
-                                color: primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      Positioned(
-                        left: _cameraBadgeOffset(avatarSize, overflow),
-                        top: _cameraBadgeOffset(avatarSize, overflow),
-                        child: Semantics(
-                          label: 'Change profile photo',
-                          button: true,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: onEditPhoto,
-                              customBorder: const CircleBorder(),
-                              child: const SizedBox(
-                                width: cameraTapSize,
-                                height: cameraTapSize,
-                                child: Center(
-                                  child: ProfileCameraBadge(
-                                    size: 28,
-                                    iconSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (age != null)
-                Positioned(
-                  left: overflow,
-                  right: overflow,
-                  top: avatarSize - ageBadgeHalfHeight - 1,
-                  child: Center(
-                    child: ProfileAgeBadge(
-                      age: age,
-                      style: ProfileAgeBadgeStyle.avatarOverlay,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.spacingMD),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                fullName,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (isPremium) ...[
-              const SizedBox(width: 6),
-              AppSvgIcon(
-                assetPath: AppIcons.crown,
-                size: 18,
-                color: tier == UserTier.golden
-                    ? AppColors.warningYellow
-                    : primary,
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: AppSpacing.spacingSM),
-        if (tier == UserTier.basid)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _hPad),
-            child: GradientButton(
-              text: 'Upgrade to Premium',
-              height: 40,
-              isFullWidth: false,
-              onPressed: () => context.pushNamed('subscription-plans'),
-            ),
-          )
-        else
-          _tierPill(context, tier),
       ],
     );
   }
@@ -456,761 +204,59 @@ class OwnProfileView extends ConsumerWidget {
     return fallback;
   }
 
-  Widget _tierPill(BuildContext context, UserTier tier) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    final isGolden = tier == UserTier.golden;
-    final label = tier == UserTier.silder ? 'Silder' : 'Golden';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: isGolden
-            ? AppColors.warningYellow.withValues(alpha: 0.15)
-            : primary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        border: Border.all(
-          color: isGolden ? AppColors.warningYellow : primary,
-          width: 0.5,
-        ),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: isGolden ? AppColors.warningYellow : primary,
-        ),
-      ),
-    );
-  }
-
-  Widget _completenessCard(
-    BuildContext context, {
-    required ProfileCompletenessResult completeness,
-    required VoidCallback onComplete,
-  }) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    final surface = theme.colorScheme.surfaceContainerHighest;
-    final border = theme.colorScheme.outlineVariant.withValues(alpha: 0.45);
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.spacingLG),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: border, width: 0.5),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: CustomPaint(
-              painter: _CompletenessArcPainter(
-                progress: completeness.percent / 100,
-                trackColor: primary.withValues(alpha: 0.15),
-                arcColor: primary,
-              ),
-              child: Center(
-                child: Text(
-                  '${completeness.percent}%',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Complete your profile',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                if (completeness.firstTip != null)
-                  Text(
-                    completeness.firstTip!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                OutlinedButton(
-                  onPressed: onComplete,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  ),
-                  child: Text('Complete now', style: theme.textTheme.labelSmall),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _superlikesSection(
-    BuildContext context, {
-    required int superlikes,
-  }) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primary.withValues(alpha: 0.30), width: 0.5),
-      ),
-      child: Row(
-        children: [
-          AppSvgIcon(
-            assetPath: AppIcons.getIconPath('star'),
-            size: 18,
-            color: primary,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Superlikes remaining',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-          Text(
-            '$superlikes',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionHeader(
-    BuildContext context, {
-    required String title,
-    String? actionLabel,
-    VoidCallback? onAction,
-    VoidCallback? onEditIcon,
-  }) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        if (actionLabel != null && onAction != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-            child: Text(
-              actionLabel,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          )
-        else if (onEditIcon != null)
-          Semantics(
-            button: true,
-            label: 'Edit $title',
-            child: InkWell(
-              onTap: onEditIcon,
-              borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: Center(
-                  child: AppSvgIcon(
-                    assetPath: AppIcons.getIconPath('edit'),
-                    size: 18,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _photosSection(
-    BuildContext context, {
-    required List<UserImage> photos,
-    required int totalCount,
-    required VoidCallback onEdit,
-    required VoidCallback onAdd,
-    required void Function(int index) onPhotoTap,
-  }) {
-    final theme = Theme.of(context);
-    final hasPhotos = photos.isNotEmpty;
-    final previewCount = AppConstants.profilePhotoGridPreview;
-    final itemCount = hasPhotos ? photos.length.clamp(0, previewCount) + 1 : 3;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionHeader(
-          context,
-          title: 'My Photos',
-          actionLabel: hasPhotos ? 'Edit' : null,
-          onAction: hasPhotos ? onEdit : null,
-        ),
-        const SizedBox(height: AppSpacing.spacingSM),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 1,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
-          ),
-          itemCount: itemCount,
-          itemBuilder: (context, index) {
-            if (!hasPhotos) {
-              return _addPhotoTile(context, onAdd);
-            }
-            if (index < photos.length) {
-              final url = photos[index].imageUrl;
-              return GestureDetector(
-                onTap: () => onPhotoTap(index),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: ProfileImageWidget(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              );
-            }
-            return _addPhotoTile(context, onAdd);
-          },
-        ),
-        if (totalCount > previewCount)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.spacingSM),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: onEdit,
-                child: Text(
-                  'See all',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _addPhotoTile(BuildContext context, VoidCallback onAdd) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
-    return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.25),
-          width: 1.5,
-        ),
-      ),
-      child: InkWell(
-        onTap: onAdd,
-        borderRadius: BorderRadius.circular(10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AppSvgIcon(assetPath: AppIcons.camera, size: 24, color: muted),
-            const SizedBox(height: 6),
-            Text('Add photo', style: theme.textTheme.labelSmall?.copyWith(color: muted)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _bioSection(BuildContext context, {String? bio}) {
-    final theme = Theme.of(context);
-    final surface = theme.colorScheme.surfaceContainerHighest;
-    final border = theme.colorScheme.outlineVariant.withValues(alpha: 0.45);
-    final trimmed = bio?.trim() ?? '';
-    final hasBio = trimmed.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionHeader(
-          context,
-          title: 'About me',
-          onEditIcon: () => _openEdit(context),
-        ),
-        const SizedBox(height: AppSpacing.spacingSM),
-        Material(
-          color: surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: border, width: 0.5),
-          ),
-          child: InkWell(
-            onTap: hasBio ? null : () => _openEdit(context),
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: hasBio
-                  ? Text(
-                      trimmed,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-                        height: 1.6,
-                      ),
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.getIconPath('edit'),
-                          size: 18,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Add a bio to attract more matches',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _detailsSection(
-    BuildContext context, {
-    String? location,
-    String? job,
-    String? education,
-    int? height,
-    String? gender,
-  }) {
-    final theme = Theme.of(context);
-    final pills = <Widget>[];
-    if (location != null) {
-      pills.add(_infoPill(context, AppIcons.location, location));
-    }
-    if (job != null) pills.add(_infoPill(context, AppIcons.getIconPath('briefcase'), job));
-    if (education != null) {
-      pills.add(_infoPill(context, AppIcons.getIconPath('teacher'), education));
-    }
-    if (height != null) {
-      pills.add(_infoPill(context, AppIcons.getIconPath('ruler'), '${height} cm'));
-    }
-    if (gender != null && gender.isNotEmpty) {
-      // TODO: pronouns field not on UserProfile — showing gender for now
-      pills.add(_infoPill(context, AppIcons.getIconPath('woman'), gender));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionHeader(
-          context,
-          title: 'My details',
-          onEditIcon: () => _openEdit(context),
-        ),
-        const SizedBox(height: AppSpacing.spacingSM),
-        if (pills.isEmpty)
-          _emptyDetailsTile(context)
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: pills,
-          ),
-      ],
-    );
-  }
-
-  Widget _infoPill(BuildContext context, String iconPath, String text) {
-    final theme = Theme.of(context);
-    final surface = theme.colorScheme.surfaceContainerHighest;
-    final border = theme.colorScheme.outlineVariant.withValues(alpha: 0.45);
-    final iconColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        border: Border.all(color: border, width: 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppSvgIcon(assetPath: iconPath, size: 15, color: iconColor),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyDetailsTile(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        side: BorderSide(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.25),
-          width: 1.5,
-        ),
-      ),
-      child: InkWell(
-        onTap: () => _openEdit(context),
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppSvgIcon(
-                assetPath: AppIcons.getIconPath('edit'),
-                size: 18,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Add details',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _interestsSection(BuildContext context, {required List<String> labels}) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionHeader(
-          context,
-          title: 'Interests',
-          onEditIcon: () => _openEdit(context),
-        ),
-        const SizedBox(height: AppSpacing.spacingSM),
-        if (labels.isEmpty)
-          Material(
-            color: theme.colorScheme.surfaceContainerHighest,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
-                width: 0.5,
-              ),
-            ),
-            child: InkWell(
-              onTap: () => _openEdit(context),
-              borderRadius: BorderRadius.circular(14),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AppSvgIcon(
-                      assetPath: AppIcons.getIconPath('edit'),
-                      size: 18,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Add your interests to find better matches',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: labels.map((label) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  border: Border.all(color: primary.withValues(alpha: 0.25), width: 0.5),
-                ),
-                child: Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: primary,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-      ],
-    );
-  }
-
-  Widget _profileActions(
+  List<ProfileHubActionData> _buildHubActions(
     BuildContext context, {
     required bool isVerified,
     required UserTier tier,
   }) {
-    final theme = Theme.of(context);
     final isBasid = tier == UserTier.basid;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.spacingXS, bottom: AppSpacing.spacingSM),
-          child: Text(
-            'My profile',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.60),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Material(
-          color: theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            side: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-              width: 0.5,
-            ),
-          ),
-          clipBehavior: Clip.hardEdge,
-          child: Column(
-            children: [
-              AppGroupedListTile(
-                iconPath: AppIcons.userEdit,
-                label: 'Edit profile',
-                onTap: () => _openEdit(context),
-              ),
-              AppGroupedListTile(
-                iconPath: AppIcons.verify,
-                label: 'Verification',
-                onTap: () {
-                  // TODO: named route for profile verification when added to app_router
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ProfileVerificationScreen(),
-                    ),
-                  );
-                },
-                trailing: isVerified
-                    ? Text(
-                        'Verified',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.feedbackSuccess,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    : null,
-              ),
-              AppGroupedListTile(
-                iconPath: AppIcons.discover,
-                label: 'Discovery preferences',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const MatchingPreferencesScreen(),
-                    ),
-                  );
-                },
-              ),
-              AppGroupedListTile(
-                iconPath: AppIcons.flash,
-                label: 'Boost profile',
-                onTap: () => context.pushNamed('subscription-plans'),
-                trailing: isBasid
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.lockOutline,
-                        size: 16,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
-                      )
-                    : Text(
-                        'Get more views',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                showDivider: false,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _subscriptionCard(
-    BuildContext context, {
-    required UserTier tier,
-    required SubscriptionStatus? subscription,
-  }) {
-    final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-
-    if (tier == UserTier.basid) {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.spacingLG),
-        decoration: BoxDecoration(
-          color: primary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          border: Border.all(color: primary.withValues(alpha: 0.30), width: 1),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      AppSvgIcon(assetPath: AppIcons.crown, size: 18, color: primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Go Premium',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Unlock unlimited likes, see who liked you, and more',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.spacingMD),
-            OutlinedButton(
-              onPressed: () => context.pushNamed('subscription-plans'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(48, 40),
-                side: BorderSide(color: primary),
-                foregroundColor: primary,
-              ),
-              child: Text('Upgrade', style: theme.textTheme.labelSmall),
-            ),
-          ],
-        ),
+    void pushScreen(Widget screen) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(builder: (_) => screen),
       );
     }
 
-    final tierLabel = tier == UserTier.golden ? 'Golden' : 'Silder';
-    final planLabel = subscription?.planName?.trim();
-    final expiry = subscription?.endDate ?? subscription?.nextBillingDate;
-    final expiryText = expiry != null
-        ? _formatDate(expiry)
-        : '—'; // TODO: expiry from subscription:status cache when missing
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: primary.withValues(alpha: 0.20), width: 0.5),
+    return [
+      ProfileHubActionData(
+        iconPath: AppIcons.verify,
+        title: 'Verification',
+        subtitle: isVerified ? 'Identity confirmed' : 'Build trust faster',
+        statusLabel: isVerified ? 'Verified' : 'Pending',
+        statusColor:
+            isVerified ? AppColors.feedbackSuccess : AppColors.feedbackWarning,
+        onTap: () => pushScreen(const ProfileVerificationScreen()),
       ),
-      child: Row(
-        children: [
-          AppSvgIcon(assetPath: AppIcons.crown, size: 20, color: primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  planLabel != null && planLabel.isNotEmpty
-                      ? planLabel
-                      : '$tierLabel Member',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Active until $expiryText',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.pushNamed('subscription-management'),
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-            child: Text(
-              'Manage',
-              style: theme.textTheme.bodySmall?.copyWith(color: primary),
-            ),
-          ),
-        ],
+      ProfileHubActionData(
+        iconPath: AppIcons.discover,
+        title: 'Discovery',
+        subtitle: 'Who you want to meet',
+        onTap: () => pushScreen(const MatchingPreferencesScreen()),
       ),
-    );
+      ProfileHubActionData(
+        iconPath: AppIcons.shield,
+        title: 'Privacy',
+        subtitle: 'Visibility & data controls',
+        onTap: () => pushScreen(const PrivacySettingsScreen()),
+      ),
+      ProfileHubActionData(
+        iconPath: AppIcons.lockOutline,
+        title: 'Security',
+        subtitle: 'Sessions & sign-in',
+        onTap: () => pushScreen(const ActiveSessionsScreen()),
+      ),
+      ProfileHubActionData(
+        iconPath: AppIcons.flash,
+        title: 'Boost',
+        subtitle: isBasid ? 'Premium feature' : 'Get more views',
+        locked: isBasid,
+        onTap: () => context.pushNamed('subscription-plans'),
+      ),
+    ];
   }
 
-  void _openEdit(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(builder: (_) => const ProfileEditPage()),
-    );
+  void _openEdit(BuildContext context) {    context.push(AppRoutes.profileEdit);
   }
 
   int? _age(UserProfile profile) {
@@ -1274,45 +320,4 @@ class OwnProfileView extends ConsumerWidget {
     }
     return null;
   }
-
-  String _formatDate(DateTime date) {
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$m-$d';
-  }
-}
-
-class _CompletenessArcPainter extends CustomPainter {
-  final double progress;
-  final Color trackColor;
-  final Color arcColor;
-
-  _CompletenessArcPainter({
-    required this.progress,
-    required this.trackColor,
-    required this.arcColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const start = -3.1415926535 / 2;
-    final rect = Rect.fromLTWH(2, 2, size.width - 4, size.height - 4);
-    final track = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, start, 3.1415926535 * 2, false, track);
-
-    final arc = Paint()
-      ..color = arcColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, start, 3.1415926535 * 2 * progress.clamp(0, 1), false, arc);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CompletenessArcPainter old) =>
-      old.progress != progress;
 }

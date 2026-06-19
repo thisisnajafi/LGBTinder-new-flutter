@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/theme_mode_provider.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 
 /// Choose light, dark, or system (device) appearance.
 class AppearanceSettingsScreen extends ConsumerWidget {
@@ -15,43 +17,59 @@ class AppearanceSettingsScreen extends ConsumerWidget {
 
     return AppSettingsDetailScaffold(
       title: 'Appearance',
+      subtitle: 'Match your vibe — light, dark, or automatic',
       body: AppSettingsDetailList(
         children: [
-          AppGroupedListSection(
+          PremiumSettingsGroup(
             title: 'Theme',
-            padding: AppSettingsLayout.firstSectionPadding,
+            subtitle: 'Applies across profile, chat, and settings',
             children: [
-              AppGroupedOptionTile(
-                label: 'Light',
+              PremiumSettingsTile(
+                iconPath: AppIcons.getIconPath('sun'),
+                title: 'Light',
                 subtitle: 'Always use light mode',
-                isSelected: selected == ThemeMode.light,
-                onTap: () => ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(ThemeMode.light),
+                accent: AppColors.warningYellow,
+                onTap: () =>
+                    ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light),
+                trailing: selected == ThemeMode.light
+                    ? AppSvgIcon(
+                        assetPath: AppIcons.checkCircle,
+                        size: 20,
+                        color: AppColors.accentPink,
+                      )
+                    : null,
               ),
-              AppGroupedOptionTile(
-                label: 'Dark',
+              PremiumSettingsTile(
+                iconPath: AppIcons.getIconPath('moon'),
+                title: 'Dark',
                 subtitle: 'Always use dark mode',
-                isSelected: selected == ThemeMode.dark,
-                onTap: () => ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(ThemeMode.dark),
+                accent: AppColors.accentViolet,
+                onTap: () =>
+                    ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark),
+                trailing: selected == ThemeMode.dark
+                    ? AppSvgIcon(
+                        assetPath: AppIcons.checkCircle,
+                        size: 20,
+                        color: AppColors.accentPink,
+                      )
+                    : null,
               ),
-              AppGroupedOptionTile(
-                label: 'System',
-                subtitle: 'Match your device settings',
-                isSelected: selected == ThemeMode.system,
+              PremiumSettingsTile(
+                iconPath: AppIcons.setting,
+                title: 'System',
+                subtitle: 'Follow device settings',
                 onTap: () => ref
                     .read(themeModeProvider.notifier)
                     .setThemeMode(ThemeMode.system),
-                showDivider: false,
+                trailing: selected == ThemeMode.system
+                    ? AppSvgIcon(
+                        assetPath: AppIcons.checkCircle,
+                        size: 20,
+                        color: AppColors.accentPink,
+                      )
+                    : null,
               ),
             ],
-          ),
-          const AppSettingsSectionFootnote(
-            text:
-                'Light and dark stay fixed regardless of your device. '
-                'System updates when your phone or tablet theme changes.',
           ),
         ],
       ),
