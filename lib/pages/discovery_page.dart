@@ -39,6 +39,8 @@ import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../core/location/location_providers.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import '../core/location/data/models/user_location.dart';
+import '../features/discover/widgets/discover_passport_banner.dart';
+import '../core/location/passport_provider.dart';
 import '../routes/app_router.dart';
 
 /// Discovery page - Main swiping/discovery screen
@@ -63,15 +65,22 @@ const double _kDiscoverHorizontalPadding = AppSpacing.contentPadding;
 class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   // Filter state
   Map<String, dynamic>? _activeFilters;
+  bool _isClearingPassport = false;
   bool _isSwipeInProgress = false;
   bool _isProfileSheetOpen = false;
   late final DraggableScrollableController _sheetController;
+
+  Map<String, dynamic>? _discoverQueryFilters() {
+    final location = ref.read(userLocationProvider).valueOrNull;
+    final merged = DiscoveryFilterMapper.withPassportSearch(_activeFilters, location);
+    return merged.isEmpty ? null : merged;
+  }
 
   Future<void> _bootstrapDiscoverLocationAndRefresh() async {
     await runDiscoverLocationBootstrap(ref, context);
     if (!mounted) return;
     ref.read(profilePageCacheProvider.notifier).refresh();
-    ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
+    ref.read(discoverCacheProvider.notifier).refresh(filters: _discoverQueryFilters());
   }
 
   @override
@@ -207,7 +216,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       unawaited(_bootstrapDiscoverLocationAndRefresh());
       ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
         threshold: kDiscoverStackBufferThreshold,
-        filters: _activeFilters,
+        filters: _discoverQueryFilters(),
       );
     }
   }
@@ -462,7 +471,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
     ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
       threshold: kDiscoverStackBufferThreshold,
-      filters: _activeFilters,
+      filters: _discoverQueryFilters(),
     );
   }
 
@@ -628,7 +637,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         _activeFilters = filters.isEmpty ? null : filters;
       });
       ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
-      ref.read(discoverCacheProvider.notifier).clearAndRefresh(filters: _activeFilters);
+      ref.read(discoverCacheProvider.notifier).clearAndRefresh(filters: _discoverQueryFilters());
     }
   }
 
@@ -895,6 +904,35 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
   }
 
+  Future<void> _openPassport() async {
+    final changed = await context.push<bool>(AppRoutes.passport);
+    if (!mounted || changed != true) return;
+    ref.invalidate(userLocationProvider);
+    await ref.read(discoverCacheProvider.notifier).clearAndRefresh(
+          filters: _discoverQueryFilters(),
+        );
+  }
+
+  Future<void> _returnFromPassport() async {
+    if (_isClearingPassport) return;
+    setState(() => _isClearingPassport = true);
+    try {
+      await ref.read(passportControllerProvider).clear();
+      if (!mounted) return;
+      ref.invalidate(userLocationProvider);
+      await ref.read(discoverCacheProvider.notifier).clearAndRefresh(
+            filters: _discoverQueryFilters(),
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isClearingPassport = false);
+    }
+  }
+
   Widget _buildHeaderActions(BuildContext context, bool isDark) {
     final iconColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
@@ -902,9 +940,24 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       alpha: 0.08,
     );
 
+    final canUsePassport =
+        ref.watch(planLimitsProvider).valueOrNull?.features.passport ?? false;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (canUsePassport) ...[
+          _buildHeaderIconButton(
+            context: context,
+            iconPath: AppIcons.map,
+            iconColor: iconColor,
+            backgroundColor: iconBackgroundColor,
+            semanticLabel: 'Passport — change discovery location',
+            onTap: _openPassport,
+            showBadge: ref.watch(passportLocationProvider).active,
+          ),
+          const SizedBox(width: AppSpacing.spacingXS),
+        ],
         Consumer(
           builder: (context, ref, child) {
             final notificationCount =
@@ -1026,6 +1079,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           error: (_, __) => _emptyStateConfig(null),
         );
 
+    final passport = ref.watch(passportLocationProvider);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -1041,6 +1096,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   action: _buildHeaderActions(context, isDark),
                 ),
                 const DiscoverGreetingWidget(),
+                DiscoverPassportBanner(
+                  passport: passport,
+                  isClearing: _isClearingPassport,
+                  onReturnHome: _returnFromPassport,
+                ),
                 _buildLimitIndicator(),
                 Expanded(
                   child: showSkeleton
@@ -1069,7 +1129,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                 .revalidateAll();
                             await ref
                                 .read(discoverCacheProvider.notifier)
-                                .refresh(filters: _activeFilters);
+                                .refresh(filters: _discoverQueryFilters());
                           },
                           emptyTitle: emptyConfig.title,
                           emptySubtitle: emptyConfig.subtitle,

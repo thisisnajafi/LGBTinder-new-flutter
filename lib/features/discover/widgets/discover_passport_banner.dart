@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/location/data/models/passport_location.dart';
-import '../../../core/location/passport_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
@@ -10,7 +8,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_icons.dart';
 
 /// Shown on discover when a premium passport search location is active.
-class DiscoverPassportBanner extends ConsumerWidget {
+class DiscoverPassportBanner extends StatelessWidget {
   const DiscoverPassportBanner({
     super.key,
     required this.passport,

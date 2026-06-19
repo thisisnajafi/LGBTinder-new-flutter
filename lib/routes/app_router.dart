@@ -37,6 +37,7 @@ import '../screens/support_tickets_screen.dart';
 import '../screens/legal/terms_of_service_screen.dart';
 import '../screens/legal/privacy_policy_screen.dart';
 import '../screens/banned_account_screen.dart';
+import '../features/discover/presentation/screens/passport_screen.dart';
 import '../features/payments/presentation/screens/subscription_management_screen.dart';
 
 /// Route names constants
@@ -73,6 +74,7 @@ class AppRoutes {
   static const String termsOfService = '/terms-of-service';
   static const String privacyPolicy = '/privacy-policy';
   static const String subscriptionManagement = '/subscription-management';
+  static const String passport = '/passport';
 }
 
 /// Builds a page with slide-from-right + fade using [AppAnimations.transitionPage].
@@ -570,6 +572,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           );
         },
+      ),
+
+      // Passport — premium virtual discovery location (requires auth)
+      GoRoute(
+        path: AppRoutes.passport,
+        name: 'passport',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const PassportScreen()),
       ),
 
       // Chat Page (requires auth)

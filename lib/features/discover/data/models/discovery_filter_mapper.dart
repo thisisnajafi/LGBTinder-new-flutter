@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/location/data/models/user_location.dart';
+
 /// Maps discovery filter UI state ↔ API query parameters for nearby-suggestions.
 class DiscoveryFilterMapper {
   DiscoveryFilterMapper._();
@@ -80,8 +82,26 @@ class DiscoveryFilterMapper {
 
     addRaw('country', filters['country']);
     addRaw('city', filters['city']);
+    addRaw('latitude', filters['latitude']);
+    addRaw('longitude', filters['longitude']);
 
     return params;
+  }
+
+  /// Merge active passport search coordinates into filter map for nearby-suggestions.
+  static Map<String, dynamic> withPassportSearch(
+    Map<String, dynamic>? filters,
+    UserLocation? location,
+  ) {
+    final merged = Map<String, dynamic>.from(filters ?? {});
+    if (location != null && location.isPassportActive) {
+      final passport = location.passport;
+      if (passport.latitude != null && passport.longitude != null) {
+        merged['latitude'] = passport.latitude;
+        merged['longitude'] = passport.longitude;
+      }
+    }
+    return merged;
   }
 
   /// Convert filter screen result to API map (applies premium stripping for free users).
