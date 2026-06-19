@@ -10,6 +10,7 @@ import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../features/settings/providers/settings_provider.dart';
+import '../features/settings/data/models/privacy_settings.dart';
 import 'blocked_users_screen.dart';
 import 'report_history_screen.dart';
 import 'emergency_contacts_screen.dart';
@@ -29,6 +30,67 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
   bool _readReceipts = true;
   bool _safetyAlerts = true;
   bool _blockUnknownUsers = false;
+
+  bool _privacyLoading = true;
+  bool _privacySaving = false;
+  PrivacySettings? _privacy;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPrivacySettings());
+  }
+
+  Future<void> _loadPrivacySettings() async {
+    try {
+      await ref.read(settingsProvider.notifier).loadPrivacySettings();
+      final privacy = ref.read(settingsProvider).privacySettings;
+      if (mounted && privacy != null) {
+        _applyPrivacy(privacy);
+      }
+    } finally {
+      if (mounted) setState(() => _privacyLoading = false);
+    }
+  }
+
+  void _applyPrivacy(PrivacySettings privacy) {
+    setState(() {
+      _privacy = privacy;
+      _shareLocation = privacy.locationSharing;
+      _showDistance = privacy.showDistance;
+      _allowMessages = privacy.allowMessaging;
+      _blockUnknownUsers = privacy.blockUnknownMessages;
+    });
+  }
+
+  Future<void> _savePrivacy(PrivacySettings updated) async {
+    if (_privacySaving) return;
+    setState(() => _privacySaving = true);
+    try {
+      await ref.read(settingsProvider.notifier).updatePrivacySettings(
+            UpdatePrivacySettingsRequest(settings: updated),
+          );
+      if (mounted) {
+        _applyPrivacy(updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Safety settings saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _privacySaving = false);
+    }
+  }
+
+  void _togglePrivacy(PrivacySettings Function(PrivacySettings current) update) {
+    final current = _privacy ?? PrivacySettings();
+    _savePrivacy(update(current));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,11 +121,9 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             title: 'Share Location',
             subtitle: 'Allow others to see your approximate location',
             value: _shareLocation,
-            onChanged: (value) {
-              setState(() {
-                _shareLocation = value;
-              });
-            },
+            onChanged: _privacyLoading || _privacySaving
+                ? null
+                : (value) => _togglePrivacy((p) => p.copyWith(locationSharing: value)),
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
@@ -71,11 +131,9 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             title: 'Show Distance',
             subtitle: 'Display distance to other users',
             value: _showDistance,
-            onChanged: (value) {
-              setState(() {
-                _showDistance = value;
-              });
-            },
+            onChanged: _privacyLoading || _privacySaving
+                ? null
+                : (value) => _togglePrivacy((p) => p.copyWith(showDistance: value)),
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
@@ -83,11 +141,9 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             title: 'Allow Messages',
             subtitle: 'Let others message you',
             value: _allowMessages,
-            onChanged: (value) {
-              setState(() {
-                _allowMessages = value;
-              });
-            },
+            onChanged: _privacyLoading || _privacySaving
+                ? null
+                : (value) => _togglePrivacy((p) => p.copyWith(allowMessaging: value)),
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
@@ -128,11 +184,10 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
             title: 'Block Unknown Users',
             subtitle: 'Only allow messages from matched users',
             value: _blockUnknownUsers,
-            onChanged: (value) {
-              setState(() {
-                _blockUnknownUsers = value;
-              });
-            },
+            onChanged: _privacyLoading || _privacySaving
+                ? null
+                : (value) =>
+                    _togglePrivacy((p) => p.copyWith(blockUnknownMessages: value)),
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
@@ -250,7 +305,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     required String title,
     required String subtitle,
     required bool value,
-    required Function(bool) onChanged,
+    required ValueChanged<bool>? onChanged,
     required Color textColor,
     required Color secondaryTextColor,
   }) {

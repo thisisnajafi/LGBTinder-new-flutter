@@ -705,7 +705,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       context,
       permanentlyDenied: permanentlyDenied,
       onEnable: () async {
-        await ref.read(locationSyncServiceProvider).syncIfNeeded(force: true);
+        await ref.read(locationSyncServiceProvider).syncIfNeeded(
+              discoverOpen: true,
+              force: true,
+            );
         ref.invalidate(userLocationProvider);
         await _bootstrapDiscoverLocationAndRefresh();
       },

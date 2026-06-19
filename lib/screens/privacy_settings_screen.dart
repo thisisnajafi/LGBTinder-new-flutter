@@ -7,6 +7,7 @@ import '../core/widgets/app_settings_detail.dart';
 import '../core/cache/cache_invalidator.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/settings/providers/settings_provider.dart';
+import '../features/settings/data/models/privacy_settings.dart';
 
 /// Privacy settings screen - Manage privacy and visibility settings
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
@@ -39,10 +40,78 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   bool _blockMessagesFromNonMatches = false;
   bool _showReadReceipts = true;
 
+  bool _privacyLoading = true;
+  bool _privacySaving = false;
+  PrivacySettings? _privacy;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDiscoveryVisibility());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDiscoveryVisibility();
+      _loadPrivacySettings();
+    });
+  }
+
+  Future<void> _loadPrivacySettings() async {
+    try {
+      await ref.read(settingsProvider.notifier).loadPrivacySettings();
+      final privacy = ref.read(settingsProvider).privacySettings;
+      if (mounted && privacy != null) {
+        _applyPrivacy(privacy);
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to load privacy settings',
+        tag: 'privacy_settings_screen',
+        error: e,
+      );
+    } finally {
+      if (mounted) setState(() => _privacyLoading = false);
+    }
+  }
+
+  void _applyPrivacy(PrivacySettings privacy) {
+    setState(() {
+      _privacy = privacy;
+      _showProfile = privacy.profileVisible;
+      _showAge = privacy.showAge;
+      _showDistance = privacy.showDistance;
+      _showOnlineStatus = privacy.showOnlineStatus;
+      _blockMessagesFromNonMatches = privacy.blockUnknownMessages;
+      _shareDataForMatching = privacy.dataCollection;
+      _shareDataForAnalytics = privacy.analyticsSharing;
+    });
+  }
+
+  Future<void> _savePrivacy(PrivacySettings updated) async {
+    if (_privacySaving) return;
+    setState(() => _privacySaving = true);
+    try {
+      await ref.read(settingsProvider.notifier).updatePrivacySettings(
+            UpdatePrivacySettingsRequest(settings: updated),
+          );
+      if (mounted) {
+        _applyPrivacy(updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Privacy settings saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _privacySaving = false);
+    }
+  }
+
+  void _togglePrivacy(PrivacySettings Function(PrivacySettings current) update) {
+    final current = _privacy ?? PrivacySettings();
+    final updated = update(current);
+    _savePrivacy(updated);
   }
 
   Future<void> _loadDiscoveryVisibility() async {
@@ -98,7 +167,7 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
     required String label,
     String? subtitle,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
     bool showDivider = true,
   }) {
     return AppGroupedSwitchTile(
@@ -124,25 +193,33 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                 label: 'Show my profile',
                 subtitle: 'Allow others to see your profile',
                 value: _showProfile,
-                onChanged: (v) => setState(() => _showProfile = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) => _togglePrivacy((p) => p.copyWith(profileVisible: v)),
               ),
               _switch(
                 label: 'Show age',
                 subtitle: 'Display your age on profile',
                 value: _showAge,
-                onChanged: (v) => setState(() => _showAge = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) => _togglePrivacy((p) => p.copyWith(showAge: v)),
               ),
               _switch(
                 label: 'Show distance',
                 subtitle: 'Display distance to other users',
                 value: _showDistance,
-                onChanged: (v) => setState(() => _showDistance = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) => _togglePrivacy((p) => p.copyWith(showDistance: v)),
               ),
               _switch(
                 label: 'Show online status',
                 subtitle: 'Let others see when you\'re online',
                 value: _showOnlineStatus,
-                onChanged: (v) => setState(() => _showOnlineStatus = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) => _togglePrivacy((p) => p.copyWith(showOnlineStatus: v)),
               ),
               _switch(
                 label: 'Show last seen',
@@ -213,13 +290,17 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                 label: 'Share data for matching',
                 subtitle: 'Use your data to improve matches',
                 value: _shareDataForMatching,
-                onChanged: (v) => setState(() => _shareDataForMatching = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) => _togglePrivacy((p) => p.copyWith(dataCollection: v)),
               ),
               _switch(
                 label: 'Share data for analytics',
                 subtitle: 'Help us improve the app',
                 value: _shareDataForAnalytics,
-                onChanged: (v) => setState(() => _shareDataForAnalytics = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) => _togglePrivacy((p) => p.copyWith(analyticsSharing: v)),
               ),
               _switch(
                 label: 'Share data for ads',
@@ -238,8 +319,10 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
                 label: 'Block messages from non-matches',
                 subtitle: 'Only receive messages from matches',
                 value: _blockMessagesFromNonMatches,
-                onChanged: (v) =>
-                    setState(() => _blockMessagesFromNonMatches = v),
+                onChanged: _privacyLoading || _privacySaving
+                    ? null
+                    : (v) =>
+                        _togglePrivacy((p) => p.copyWith(blockUnknownMessages: v)),
               ),
               _switch(
                 label: 'Show read receipts',

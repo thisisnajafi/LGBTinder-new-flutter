@@ -18,8 +18,10 @@ import '../features/profile/data/models/update_profile_request.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../shared/models/api_error.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
+import '../features/reference_data/data/models/reference_item.dart';
 import '../widgets/common/reference_bottom_sheet_field.dart';
 import '../core/location/location_providers.dart';
+import '../core/location/location_sync_service.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
@@ -576,14 +578,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     return name.isEmpty ? 'Not set' : name;
   }
 
-  String _displayLocation() {
-    final parts = [_profile?.city, _profile?.country]
-        .whereType<String>()
-        .where((part) => part.isNotEmpty)
-        .toList();
-    return parts.isEmpty ? 'Not set' : parts.join(', ');
-  }
-
   String _displayAge() {
     final birthDate = _profile?.birthDate;
     if (birthDate == null || birthDate.isEmpty) return 'Not set';
@@ -802,7 +796,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       ),
                     ],
                   ),
-                  showDivider: false,
                 ),
               ],
             ),

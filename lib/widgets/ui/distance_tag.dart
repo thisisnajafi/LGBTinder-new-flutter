@@ -28,7 +28,7 @@ class DistanceTag extends ConsumerWidget {
     required this.distance,
     this.unit,
     this.variant = DistanceTagVariant.light,
-  }) : super();
+  });
 
   String _formatDistance() {
     final unitValue = unit ?? 'km';

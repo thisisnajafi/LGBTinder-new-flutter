@@ -38,6 +38,8 @@ final locationPermissionProvider = FutureProvider<LocationPermission>((ref) asyn
 final userLocationProvider = FutureProvider<UserLocation>((ref) async {
   return ref.watch(locationApiServiceProvider).getLocation();
 });
+
+/// Runs discover-time location sync and optional permission prompt.
 Future<void> runDiscoverLocationBootstrap(
   WidgetRef ref,
   BuildContext context,
