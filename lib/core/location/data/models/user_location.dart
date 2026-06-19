@@ -1,4 +1,6 @@
 /// Normalized user location payload from `GET/PATCH /user/location`.
+import 'passport_location.dart';
+
 class UserLocation {
   final double? latitude;
   final double? longitude;
@@ -10,6 +12,7 @@ class UserLocation {
   final DateTime? locationUpdatedAt;
   final String? locationSource;
   final int? locationAccuracyMeters;
+  final PassportLocation passport;
 
   const UserLocation({
     this.latitude,
@@ -22,7 +25,10 @@ class UserLocation {
     this.locationUpdatedAt,
     this.locationSource,
     this.locationAccuracyMeters,
+    this.passport = const PassportLocation(),
   });
+
+  bool get isPassportActive => passport.active;
 
   factory UserLocation.fromJson(Map<String, dynamic> json) {
     return UserLocation(
@@ -38,6 +44,11 @@ class UserLocation {
           : null,
       locationSource: json['location_source']?.toString(),
       locationAccuracyMeters: _parseInt(json['location_accuracy_meters']),
+      passport: PassportLocation.fromJson(
+        json['passport'] is Map
+            ? Map<String, dynamic>.from(json['passport'] as Map)
+            : null,
+      ),
     );
   }
 

@@ -65,4 +65,37 @@ class LocationApiService {
 
     return UserLocation.fromJson(response.data!);
   }
+
+  Future<UserLocation> activatePassport({
+    required int cityId,
+    int durationHours = 24,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.userLocationPassport,
+      data: {
+        'city_id': cityId,
+        'duration_hours': durationHours,
+      },
+      fromJson: (json) => Map<String, dynamic>.from(json as Map),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message.isNotEmpty ? response.message : 'Failed to activate passport');
+    }
+
+    return UserLocation.fromJson(response.data!);
+  }
+
+  Future<UserLocation> clearPassport() async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiEndpoints.userLocationPassport,
+      fromJson: (json) => Map<String, dynamic>.from(json as Map),
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message.isNotEmpty ? response.message : 'Failed to clear passport');
+    }
+
+    return UserLocation.fromJson(response.data!);
+  }
 }

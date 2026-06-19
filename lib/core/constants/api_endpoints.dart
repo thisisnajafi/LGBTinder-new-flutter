@@ -202,6 +202,7 @@ class ApiEndpoints {
   static const String settings = '/settings';
   static const String userSettings = '/user/settings';
   static const String userLocation = '/user/location';
+  static const String userLocationPassport = '/user/location/passport';
   static const String privacySettings = '/privacy/settings';
   static const String preferencesMatching = '/preferences/matching';
   static const String preferencesAge = '/preferences/age';
