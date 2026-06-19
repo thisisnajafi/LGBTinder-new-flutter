@@ -11,6 +11,7 @@ import '../../shared/models/match_reason.dart';
 import 'swipeable_card.dart';
 import '../../features/discover/widgets/discover_empty_state.dart';
 import '../../features/discover/utils/discovery_image_prefetch.dart';
+import '../../widgets/loading/skeleton_loader.dart';
 import '../../core/widgets/loading_indicator.dart';
 
 /// Card stack manager widget
@@ -346,19 +347,45 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     required Size cardSize,
   }) {
     if (!_frontImagesReady) {
+      final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
       return Positioned.fill(
         child: Align(
           alignment: Alignment.center,
           child: SizedBox(
             width: cardSize.width,
             height: cardSize.height,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              ),
-              child: Center(
-                child: LoadingIndicator(size: 36),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SkeletonLoader(
+                      width: double.infinity,
+                      height: double.infinity,
+                      highlightColorOverride: isDark
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : AppColors.lgbtGradient[4].withValues(alpha: 0.1),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.spacingLG),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonLoader(
+                          width: 140,
+                          height: 18,
+                        ),
+                        const SizedBox(height: AppSpacing.spacingSM),
+                        SkeletonLoader(
+                          width: 90,
+                          height: 14,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

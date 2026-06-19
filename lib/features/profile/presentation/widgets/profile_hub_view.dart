@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/profile_age_badge.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 
 /// Profile hub layout (REF-01) — avatar hero and grouped menu list.
@@ -138,19 +139,23 @@ class _ProfileHeroBlock extends StatelessWidget {
               Container(
                 width: avatarSize,
                 height: avatarSize,
-                decoration: BoxDecoration(
+                padding: const EdgeInsets.all(2.5),
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: theme.colorScheme.primary,
-                    width: 2.5,
-                  ),
+                  gradient: AppColors.brandGradient,
                 ),
-                child: ClipOval(
-                  child: ProfileImageWidget(
-                    imageUrl: avatarUrl,
-                    width: avatarSize,
-                    height: avatarSize,
-                    fit: BoxFit.cover,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colorScheme.surface,
+                  ),
+                  child: ClipOval(
+                    child: ProfileImageWidget(
+                      imageUrl: avatarUrl,
+                      width: avatarSize - 5,
+                      height: avatarSize - 5,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -158,24 +163,11 @@ class _ProfileHeroBlock extends StatelessWidget {
                 Positioned(
                   left: 0,
                   right: 0,
-                  top: avatarSize - ageBadgeHalfHeight,
+                  top: avatarSize - ageBadgeHalfHeight - 1,
                   child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingSM,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                      ),
-                      child: Text(
-                        '$age',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    child: ProfileAgeBadge(
+                      age: age!,
+                      style: ProfileAgeBadgeStyle.avatarOverlay,
                     ),
                   ),
                 ),

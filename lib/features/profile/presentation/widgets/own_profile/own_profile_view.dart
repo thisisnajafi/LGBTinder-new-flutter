@@ -4,13 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/cache/session_cache_providers.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
 import '../../../../../core/widgets/app_grouped_list_card.dart';
+import '../../../../../core/widgets/profile_age_badge.dart';
+import '../../../../../core/widgets/profile_camera_badge.dart';
 import '../../../../../core/widgets/profile_image_widget.dart';
 import '../../../../../widgets/buttons/gradient_button.dart';
 import '../../../../payments/data/models/plan_limits.dart';
@@ -112,7 +114,8 @@ class OwnProfileView extends ConsumerWidget {
     final locationLabel = _locationLabel(profile);
 
     final photos = profile.images ?? [];
-    final displayPhotos = photos.take(6).toList();
+    final displayPhotos =
+        photos.take(AppConstants.profilePhotoGridPreview).toList();
 
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -350,7 +353,10 @@ class OwnProfileView extends ConsumerWidget {
                                 width: cameraTapSize,
                                 height: cameraTapSize,
                                 child: Center(
-                                  child: _CameraOverlayButton(),
+                                  child: ProfileCameraBadge(
+                                    size: 28,
+                                    iconSize: 14,
+                                  ),
                                 ),
                               ),
                             ),
@@ -365,28 +371,11 @@ class OwnProfileView extends ConsumerWidget {
                 Positioned(
                   left: overflow,
                   right: overflow,
-                  top: avatarSize - ageBadgeHalfHeight,
+                  top: avatarSize - ageBadgeHalfHeight - 1,
                   child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.accentGradient,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primary.withValues(alpha: 0.28),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        '$age',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    child: ProfileAgeBadge(
+                      age: age,
+                      style: ProfileAgeBadgeStyle.avatarOverlay,
                     ),
                   ),
                 ),
@@ -672,7 +661,8 @@ class OwnProfileView extends ConsumerWidget {
   }) {
     final theme = Theme.of(context);
     final hasPhotos = photos.isNotEmpty;
-    final itemCount = hasPhotos ? photos.length.clamp(0, 6) + 1 : 3;
+    final previewCount = AppConstants.profilePhotoGridPreview;
+    final itemCount = hasPhotos ? photos.length.clamp(0, previewCount) + 1 : 3;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -714,7 +704,7 @@ class OwnProfileView extends ConsumerWidget {
             return _addPhotoTile(context, onAdd);
           },
         ),
-        if (totalCount > 6)
+        if (totalCount > previewCount)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.spacingSM),
             child: Align(
@@ -1289,29 +1279,6 @@ class OwnProfileView extends ConsumerWidget {
     final m = date.month.toString().padLeft(2, '0');
     final d = date.day.toString().padLeft(2, '0');
     return '${date.year}-$m-$d';
-  }
-}
-
-class _CameraOverlayButton extends StatelessWidget {
-  const _CameraOverlayButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: AppSvgIcon(
-          assetPath: AppIcons.camera,
-          size: 13,
-          color: Colors.white,
-        ),
-      ),
-    );
   }
 }
 

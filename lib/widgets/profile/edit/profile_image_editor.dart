@@ -18,11 +18,13 @@ class ProfileImageEditor extends ConsumerStatefulWidget {
   final Function(int)? onImageDelete;
   final Function(int, int)? onImageReorder;
   final Function(int)? onImageSetPrimary;
+  final int? maxImages;
 
   const ProfileImageEditor({
     Key? key,
     required this.imageUrls,
     this.primaryIndex = 0,
+    this.maxImages,
     this.onImageAdd,
     this.onImageDelete,
     this.onImageReorder,
@@ -44,6 +46,9 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
     final secondaryTextColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+    final canAddMore = widget.maxImages == null ||
+        widget.imageUrls.length < widget.maxImages!;
 
     return Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
@@ -73,9 +78,9 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
               mainAxisSpacing: 12,
               childAspectRatio: 0.75,
             ),
-            itemCount: widget.imageUrls.length + 1,
+            itemCount: widget.imageUrls.length + (canAddMore ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == widget.imageUrls.length) {
+              if (canAddMore && index == widget.imageUrls.length) {
                 return _buildAddImageButton(context, isDark, surfaceColor, borderColor);
               }
               return _buildDraggableImageItem(context, index, isDark, borderColor);

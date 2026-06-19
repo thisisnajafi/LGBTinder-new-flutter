@@ -9,6 +9,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
+import '../../../../../core/widgets/profile_age_badge.dart';
 import '../../../../../core/widgets/app_page_header.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../data/models/user_profile.dart';
@@ -117,6 +118,23 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
   }
 
   UserTier get _tier => tierFromUserProfile(widget.profile);
+
+  String get _locationDisplay {
+    final distance = widget.profile.additionalData?['distance'];
+    final base = widget.locationLabel;
+    if (distance != null) {
+      final km =
+          distance is num ? distance.toDouble() : double.tryParse('$distance');
+      if (km != null) {
+        final distanceText = '${km.toStringAsFixed(1)} km away';
+        if (base.isNotEmpty) return '$base · $distanceText';
+        return distanceText;
+      }
+    }
+    return base;
+  }
+
+  bool get _showTierBadge => _tier != UserTier.basid;
 
   void _startPhotoTimer() {
     _photoTimer?.cancel();
@@ -446,19 +464,20 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     final age = _age;
     final isVerified = widget.profile.isVerified == true;
     final isOnline = widget.profile.isOnline == true;
+    final location = _locationDisplay;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.radiusMD),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.spacingMD),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.38),
+            color: Colors.black.withValues(alpha: 0.42),
             borderRadius: BorderRadius.circular(AppRadius.radiusMD),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Colors.white.withValues(alpha: 0.14),
               width: 0.5,
             ),
           ),
@@ -467,44 +486,62 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      _fullName,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
-                      ),
+                    child: Wrap(
+                      spacing: AppSpacing.spacingSM,
+                      runSpacing: AppSpacing.spacingXS,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          _fullName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            height: 1.15,
+                          ),
+                        ),
+                        if (age != null)
+                          ProfileAgeBadge(
+                            age: age,
+                            style: ProfileAgeBadgeStyle.heroOverlay,
+                          ),
+                      ],
                     ),
                   ),
                   if (isVerified) ...[
                     const SizedBox(width: AppSpacing.spacingXS),
-                    AppSvgIcon(
-                      assetPath: AppIcons.getIconPath('verify', style: 'bold'),
-                      size: 22,
-                      color: theme.colorScheme.primary,
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: AppSvgIcon(
+                        assetPath:
+                            AppIcons.getIconPath('verify', style: 'bold'),
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ],
                 ],
               ),
-              if (age != null) ...[
-                const SizedBox(height: AppSpacing.spacingXS),
-                _ageBadge(context, age),
-              ],
               const SizedBox(height: AppSpacing.spacingSM),
               Wrap(
                 spacing: AppSpacing.spacingSM,
                 runSpacing: AppSpacing.spacingXS,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  TierBadge(tier: _tier, compact: false),
+                  if (_showTierBadge) TierBadge(tier: _tier, compact: false),
                   if (isOnline) _onlinePill(context),
-                  if (widget.locationLabel.isNotEmpty)
-                    _locationChip(context, widget.locationLabel),
+                  if (location.isNotEmpty) _locationChip(context, location),
                 ],
               ),
             ],
@@ -512,31 +549,6 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
         ),
       ),
     );
-  }
-
-  Widget _ageBadge(BuildContext context, int age) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: themeColorPrimary(context).withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.28),
-          width: 0.5,
-        ),
-      ),
-      child: Text(
-        '$age years old',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
-    );
-  }
-
-  Color themeColorPrimary(BuildContext context) {
-    return Theme.of(context).colorScheme.primary;
   }
 
   Widget _locationChip(BuildContext context, String location) {
@@ -601,13 +613,21 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       elevation: 0,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        icon: AppSvgIcon(
-          assetPath: icon,
-          size: 22,
-          color: theme.colorScheme.onSurface,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onTap,
+          icon: AppSvgIcon(
+            assetPath: icon,
+            size: 22,
+            color: theme.colorScheme.onSurface,
+          ),
         ),
       ),
     );
@@ -624,7 +644,8 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       ),
       label: Text(widget.isMatched ? 'Send message' : 'Message'),
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
+        minimumSize: const Size.fromHeight(50),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         ),
@@ -633,11 +654,25 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
   }
 
   Widget _sectionTitle(BuildContext context, String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 16,
+          decoration: BoxDecoration(
+            gradient: AppColors.brandGradient,
+            borderRadius: BorderRadius.circular(2),
           ),
+        ),
+        const SizedBox(width: AppSpacing.spacingSM),
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 
@@ -704,8 +739,9 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
 
   Widget _basicsSection(BuildContext context) {
     final pills = <Widget>[];
-    if (widget.locationLabel.isNotEmpty) {
-      pills.add(_infoPill(context, AppIcons.location, widget.locationLabel));
+    final location = _locationDisplay;
+    if (location.isNotEmpty) {
+      pills.add(_infoPill(context, AppIcons.location, location));
     }
     if (widget.genderLabel != null && widget.genderLabel!.isNotEmpty) {
       pills.add(_infoPill(context, AppIcons.userOutline, widget.genderLabel!));
@@ -802,29 +838,48 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
 
   Widget _infoPill(BuildContext context, String iconPath, String text) {
     final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppRadius.radiusRound),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
           width: 0.5,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppSvgIcon(
-            assetPath: iconPath,
-            size: 15,
-            color: theme.colorScheme.primary,
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  primary.withValues(alpha: 0.18),
+                  AppColors.accentPink.withValues(alpha: 0.14),
+                ],
+              ),
+            ),
+            child: Center(
+              child: AppSvgIcon(
+                assetPath: iconPath,
+                size: 14,
+                color: primary,
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.88),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

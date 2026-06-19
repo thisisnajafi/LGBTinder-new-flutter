@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/cache/cache_providers.dart';
 import '../core/constants/animation_constants.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -512,7 +513,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     return 'Unknown Device';
   }
 
-  static const int _maxAdditionalPhotos = 6;
+  static int get _maxAdditionalPhotos => AppConstants.maxProfilePhotos;
 
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
     try {
@@ -1836,7 +1837,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 ),
                 SizedBox(height: AppSpacing.spacingSM),
                 Text(
-                  'You can add up to 6 photos. Select multiple from your gallery at once!',
+                  'You can add up to $_maxAdditionalPhotos photos. Select multiple from your gallery at once!',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context)
@@ -1955,7 +1956,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     ),
                     label: Text(
                       _additionalImageFiles.length >= _maxAdditionalPhotos
-                          ? 'Maximum 6 photos'
+                          ? 'Maximum $_maxAdditionalPhotos photos'
                           : 'Add Photos (${_additionalImageFiles.length}/$_maxAdditionalPhotos)',
                     ),
                   ),

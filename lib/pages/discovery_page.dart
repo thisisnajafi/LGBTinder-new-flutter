@@ -35,6 +35,7 @@ import '../features/discover/data/models/discovery_filter_mapper.dart';
 import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
+import '../features/discover/widgets/discover_ambient_background.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../core/location/location_providers.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
@@ -988,6 +989,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           backgroundColor: iconBackgroundColor,
           semanticLabel: 'Open filters',
           onTap: _openFilters,
+          showBadge: _activeFilters != null && _activeFilters!.isNotEmpty,
         ),
       ],
     );
@@ -1081,8 +1083,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     final passport = ref.watch(passportLocationProvider);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+    return DiscoverAmbientBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Stack(
           clipBehavior: Clip.none,
@@ -1096,6 +1099,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   action: _buildHeaderActions(context, isDark),
                 ),
                 const DiscoverGreetingWidget(),
+                if (_activeFilters != null && _activeFilters!.isNotEmpty)
+                  _buildActiveFiltersBar(context),
                 DiscoverPassportBanner(
                   passport: passport,
                   isClearing: _isClearingPassport,
@@ -1173,7 +1178,110 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           ],
         ),
       ),
+      ),
     );
+  }
+
+  Widget _buildActiveFiltersBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final chips = _activeFilterLabels();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        _kDiscoverHorizontalPadding,
+        0,
+        _kDiscoverHorizontalPadding,
+        AppSpacing.spacingSM,
+      ),
+      child: Material(
+        color: theme.colorScheme.surface.withValues(alpha: 0.72),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingSM,
+            vertical: AppSpacing.spacingXS,
+          ),
+          child: Row(
+            children: [
+              AppSvgIcon(
+                assetPath: AppIcons.filter,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: AppSpacing.spacingSM),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: chips
+                        .map(
+                          (label) => Padding(
+                            padding: const EdgeInsets.only(
+                              right: AppSpacing.spacingXS,
+                            ),
+                            child: Chip(
+                              label: Text(label),
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              side: BorderSide.none,
+                              backgroundColor: theme.colorScheme.primary
+                                  .withValues(alpha: 0.12),
+                              labelStyle: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _openFilters,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child: const Text('Edit'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<String> _activeFilterLabels() {
+    final filters = _activeFilters;
+    if (filters == null || filters.isEmpty) return const [];
+
+    final labels = <String>[];
+    final maxDistance = filters['max_distance'];
+    if (maxDistance != null) {
+      labels.add('${maxDistance}km');
+    }
+    final minAge = filters['min_age'];
+    final maxAge = filters['max_age'];
+    if (minAge != null || maxAge != null) {
+      labels.add('${minAge ?? 18}–${maxAge ?? 99}');
+    }
+    if (filters['online_only'] == true) {
+      labels.add('Online');
+    }
+    if (filters['verified_only'] == true) {
+      labels.add('Verified');
+    }
+    if (labels.isEmpty) {
+      labels.add('Custom filters');
+    }
+    return labels;
   }
 
   Widget _buildDiscoveryActionRow() {

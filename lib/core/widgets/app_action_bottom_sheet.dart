@@ -77,54 +77,62 @@ class AppBottomSheetShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottom = MediaQuery.paddingOf(context).bottom;
-    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.92;
+    final mediaQuery = MediaQuery.of(context);
+    final bottomSafe = mediaQuery.padding.bottom;
+    final keyboardInset = mediaQuery.viewInsets.bottom;
+    final screenHeight = mediaQuery.size.height;
+    // Keep the sheet above the keyboard without growing past the viewport.
+    final maxHeight = (screenHeight - keyboardInset) * 0.92;
 
-    return Padding(
+    return AnimatedPadding(
       padding: padding ??
           EdgeInsets.fromLTRB(
             AppSpacing.spacingMD,
             0,
             AppSpacing.spacingMD,
-            bottom + AppSpacing.spacingMD + viewInsets,
+            bottomSafe + AppSpacing.spacingMD,
           ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _DragHandle(color: theme.colorScheme.onSurface.withValues(alpha: 0.22)),
-            if (body != null)
-              Flexible(child: body!)
-            else
-              AppBottomSheetCard(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (title != null) _TitleHeader(title: title!),
-                    for (var i = 0; i < actions.length; i++) ...[
-                      if (i > 0) const AppBottomSheetDivider(),
-                      AppBottomSheetActionTile(item: actions[i]),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboardInset),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _DragHandle(color: theme.colorScheme.onSurface.withValues(alpha: 0.22)),
+              if (body != null)
+                Flexible(child: body!)
+              else
+                AppBottomSheetCard(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (title != null) _TitleHeader(title: title!),
+                      for (var i = 0; i < actions.length; i++) ...[
+                        if (i > 0) const AppBottomSheetDivider(),
+                        AppBottomSheetActionTile(item: actions[i]),
+                      ],
                     ],
-                  ],
-                ),
-              ),
-            if (showCancel) ...[
-              const SizedBox(height: AppSpacing.spacingSM),
-              AppBottomSheetCard(
-                child: AppBottomSheetActionTile(
-                  item: AppActionSheetItem(
-                    iconPath: AppIcons.close,
-                    label: 'Cancel',
-                    iconColor:
-                        theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                    onTap: () => Navigator.pop(context),
                   ),
                 ),
-              ),
+              if (showCancel) ...[
+                const SizedBox(height: AppSpacing.spacingSM),
+                AppBottomSheetCard(
+                  child: AppBottomSheetActionTile(
+                    item: AppActionSheetItem(
+                      iconPath: AppIcons.close,
+                      label: 'Cancel',
+                      iconColor:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -302,10 +310,14 @@ class AppBottomSheetListBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final availableHeight =
+        mediaQuery.size.height - mediaQuery.viewInsets.bottom;
+
     return AppBottomSheetCard(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * maxHeightFactor,
+          maxHeight: availableHeight * maxHeightFactor,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

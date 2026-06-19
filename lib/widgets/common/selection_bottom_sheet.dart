@@ -128,14 +128,8 @@ class _SingleSelectBottomSheetState<T>
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: viewInsets),
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      child: AppBottomSheetShell(
-        body: AppBottomSheetListBody(
+    return AppBottomSheetShell(
+      body: AppBottomSheetListBody(
           title: widget.title,
           header: widget.searchable
               ? Padding(
@@ -200,7 +194,6 @@ class _SingleSelectBottomSheetState<T>
                   ),
                 )
               : ListView.builder(
-                  shrinkWrap: true,
                   itemCount: _filteredItems.length,
                   itemBuilder: (context, index) {
                     final item = _filteredItems[index];
@@ -254,7 +247,6 @@ class _SingleSelectBottomSheetState<T>
                   },
                 ),
         ),
-      ),
     );
   }
 
@@ -266,7 +258,6 @@ class _SingleSelectBottomSheetState<T>
   }
 }
 
-/// Multi-select bottom sheet widget
 class _MultiSelectBottomSheet<T> extends StatefulWidget {
   final String title;
   final List<T> items;
@@ -360,15 +351,9 @@ class _MultiSelectBottomSheetState<T>
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-
-    return AnimatedPadding(
-      padding: EdgeInsets.only(bottom: viewInsets),
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      child: AppBottomSheetShell(
-        showCancel: false,
-        body: Column(
+    return AppBottomSheetShell(
+      showCancel: false,
+      body: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppBottomSheetListBody(
@@ -473,7 +458,6 @@ class _MultiSelectBottomSheetState<T>
                       ),
                     )
                   : ListView.builder(
-                      shrinkWrap: true,
                       itemCount: _filteredItems.length,
                       itemBuilder: (context, index) {
                         final item = _filteredItems[index];
@@ -570,7 +554,6 @@ class _MultiSelectBottomSheetState<T>
             ),
           ],
         ),
-      ),
     );
   }
 }

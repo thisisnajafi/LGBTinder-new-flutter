@@ -1,10 +1,10 @@
-﻿// App-wide constants
-// TODO: Implement AppConstants
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-/// App-wide constants
+﻿/// App-wide constants
 class AppConstants {
-  // TODO: Implement class
+  AppConstants._();
+
+  /// Maximum profile photos (primary + gallery) per user.
+  static const int maxProfilePhotos = 12;
+
+  /// How many photos to preview on the own-profile grid before "View all".
+  static const int profilePhotoGridPreview = 9;
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/metric_slider_tile.dart';
@@ -155,6 +156,19 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   }
 
   Future<void> _pickImage(ImageSource source, {required bool setAsPrimary}) async {
+    if (!setAsPrimary && _images.length >= AppConstants.maxProfilePhotos) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Maximum ${AppConstants.maxProfilePhotos} photos allowed',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     try {
       final XFile? image = await _imagePicker.pickImage(source: source);
       if (image != null) {
@@ -649,6 +663,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   child: ProfileImageEditor(
                     imageUrls: _images.map((img) => img.imageUrl).toList(),
                     primaryIndex: _primaryImageIndex,
+                    maxImages: AppConstants.maxProfilePhotos,
                     onImageAdd: (_) => _showGalleryImageSourceDialog(),
                     onImageDelete: (index) {
                       if (index < _images.length) {
