@@ -22,6 +22,7 @@ import '../screens/blocked_users_screen.dart';
 import '../features/matching/presentation/screens/matches_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
 import '../features/payments/presentation/screens/subscription_plans_screen.dart' as payments;
+import '../features/payments/presentation/screens/superlike_packs_screen.dart' as payments_superlikes;
 import '../screens/billing_history_screen.dart';
 import '../core/providers/api_providers.dart';
 import '../core/providers/startup_flow_provider.dart';
@@ -66,6 +67,7 @@ class AppRoutes {
   static const String matches = '/matches';
   static const String googlePlayBillingTest = '/google-play-billing-test';
   static const String subscriptionPlans = '/subscription-plans';
+  static const String superlikePacks = '/superlike-packs';
   static const String featureLocked = '/feature-locked';
   static const String tierComparison = '/tier-comparison';
   static const String subscriptionStatus = '/subscription-status';
@@ -484,6 +486,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.subscriptionPlans,
         name: 'subscription-plans',
         pageBuilder: (context, state) => slideFadePage(state, const payments.SubscriptionPlansScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.superlikePacks,
+        name: 'superlike-packs',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const payments_superlikes.SuperlikePacksScreen()),
       ),
 
       // Feature locked (requires auth; upsell screen)

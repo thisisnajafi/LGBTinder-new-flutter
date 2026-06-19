@@ -24,7 +24,7 @@ import '../../../providers/profile_page_cache_provider.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
 import '../../../../settings/presentation/screens/matching_preferences_screen.dart';
-import '../../../../../pages/profile_edit_page.dart';
+import '../../../../../routes/app_router.dart';
 import '../../../../../screens/profile/profile_verification_screen.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
