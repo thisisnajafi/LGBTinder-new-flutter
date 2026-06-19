@@ -7,6 +7,8 @@ class ReferenceItem {
   final String? phoneCode;
   final String? stateProvince;
   final String? imageUrl;
+  final double? latitude;
+  final double? longitude;
 
   ReferenceItem({
     required this.id,
@@ -16,7 +18,17 @@ class ReferenceItem {
     this.phoneCode,
     this.stateProvince,
     this.imageUrl,
+    this.latitude,
+    this.longitude,
   });
+
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude! >= -90 &&
+      latitude! <= 90 &&
+      longitude! >= -180 &&
+      longitude! <= 180;
 
   factory ReferenceItem.fromJson(Map<String, dynamic> json) {
     // Get ID - use 0 as fallback if not provided
@@ -45,7 +57,15 @@ class ReferenceItem {
       phoneCode: json['phone_code']?.toString(),
       stateProvince: json['state_province']?.toString(),
       imageUrl: json['image_url']?.toString(),
+      latitude: _parseDouble(json['latitude']),
+      longitude: _parseDouble(json['longitude']),
     );
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   Map<String, dynamic> toJson() {
@@ -57,6 +77,8 @@ class ReferenceItem {
       if (phoneCode != null) 'phone_code': phoneCode,
       if (stateProvince != null) 'state_province': stateProvince,
       if (imageUrl != null) 'image_url': imageUrl,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     };
   }
 }

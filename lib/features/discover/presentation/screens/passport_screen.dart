@@ -6,14 +6,32 @@ import '../../../../core/location/passport_provider.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../features/payments/data/services/plan_limits_service.dart';
 import '../../../../features/reference_data/data/models/reference_item.dart';
 import '../../../../features/reference_data/providers/reference_data_providers.dart';
 import '../../../../routes/app_router.dart';
+import '../../../../shared/models/api_error.dart';
 import '../../../../shared/utils/plan_guard.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/common/reference_bottom_sheet_field.dart';
+import '../../../../widgets/common/selection_bottom_sheet.dart';
+import '../../../../widgets/profile/profile_wizard_layout.dart';
+
+class _DurationOption {
+  const _DurationOption(this.hours, this.label);
+
+  final int hours;
+  final String label;
+}
+
+const _durationOptions = <_DurationOption>[
+  _DurationOption(24, '24 hours'),
+  _DurationOption(48, '48 hours'),
+  _DurationOption(72, '72 hours'),
+  _DurationOption(168, '1 week'),
+];
 
 /// Premium passport — explore discover in another city temporarily.
 class PassportScreen extends ConsumerStatefulWidget {
@@ -64,6 +82,42 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
     return null;
   }
 
+  String get _durationLabel {
+    for (final option in _durationOptions) {
+      if (option.hours == _durationHours) return option.label;
+    }
+    return '$_durationHours hours';
+  }
+
+  Future<void> _pickDuration() async {
+    if (_isSubmitting) return;
+    final selected = _durationOptions.firstWhere(
+      (option) => option.hours == _durationHours,
+      orElse: () => _durationOptions.first,
+    );
+    final picked = await SelectionBottomSheet.showSingleSelect<_DurationOption>(
+      context: context,
+      title: 'Select duration',
+      items: _durationOptions,
+      getTitle: (option) => option.label,
+      selectedItem: selected,
+      searchable: false,
+    );
+    if (picked != null && mounted) {
+      setState(() => _durationHours = picked.hours);
+    }
+  }
+
+  String _errorMessage(Object error) {
+    if (error is ApiError) return error.message;
+    final text = error.toString();
+    if (text.startsWith('ApiError(')) {
+      final match = RegExp(r'message: ([^,}]+)').firstMatch(text);
+      if (match != null) return match.group(1)!.trim();
+    }
+    return text;
+  }
+
   Future<void> _activatePassport() async {
     if (_cityId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +140,7 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(_errorMessage(e))),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -105,7 +159,7 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(_errorMessage(e))),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -204,62 +258,66 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.spacingLG),
-          Text(
-            'Choose a destination',
-            style: AppTypography.titleMedium,
-          ),
-          const SizedBox(height: AppSpacing.spacingSM),
-          countriesAsync.when(
-            data: (countries) => ReferenceBottomSheetField(
-              label: 'Country',
-              hint: 'Select country',
-              selectedId: _countryId,
-              items: countries,
-              groupedStyle: true,
-              searchable: true,
-              onChanged: (value) {
-                setState(() {
-                  _countryId = value;
-                  _cityId = null;
-                });
-              },
-            ),
-            loading: () => const LinearProgressIndicator(),
-            error: (e, _) => Text('Failed to load countries: $e'),
-          ),
-          if (_countryId != null)
-            citiesAsync.when(
-              data: (cities) => ReferenceBottomSheetField(
-                label: 'City',
-                hint: 'Select city',
-                selectedId: _cityId,
-                items: cities,
-                groupedStyle: true,
-                searchable: true,
-                enabled: cities.isNotEmpty,
-                onChanged: (value) => setState(() => _cityId = value),
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text('Failed to load cities: $e'),
-            ),
-          const SizedBox(height: AppSpacing.spacingMD),
-          DropdownButtonFormField<int>(
-            value: _durationHours,
-            decoration: const InputDecoration(
-              labelText: 'Duration',
-            ),
-            items: const [
-              DropdownMenuItem(value: 24, child: Text('24 hours')),
-              DropdownMenuItem(value: 48, child: Text('48 hours')),
-              DropdownMenuItem(value: 72, child: Text('72 hours')),
-              DropdownMenuItem(value: 168, child: Text('1 week')),
-            ],
-            onChanged: _isSubmitting
-                ? null
-                : (value) {
-                    if (value != null) setState(() => _durationHours = value);
+          AppGroupedListSection(
+            title: 'Choose a destination',
+            padding: const EdgeInsets.fromLTRB(0, AppSpacing.spacingLG, 0, 0),
+            children: [
+              countriesAsync.when(
+                data: (countries) => ReferenceBottomSheetField(
+                  label: 'Country',
+                  hint: 'Select country',
+                  selectedId: _countryId,
+                  items: countries,
+                  groupedStyle: true,
+                  searchable: true,
+                  showDivider: _countryId != null,
+                  onChanged: (value) {
+                    setState(() {
+                      _countryId = value;
+                      _cityId = null;
+                    });
                   },
+                ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(AppSpacing.spacingMD),
+                  child: LinearProgressIndicator(),
+                ),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                  child: Text('Failed to load countries: $e'),
+                ),
+              ),
+              if (_countryId != null)
+                citiesAsync.when(
+                  data: (cities) => ReferenceBottomSheetField(
+                    label: 'City',
+                    hint: 'Select city',
+                    selectedId: _cityId,
+                    items: cities,
+                    groupedStyle: true,
+                    searchable: true,
+                    enabled: cities.isNotEmpty,
+                    showDivider: true,
+                    onChanged: (value) => setState(() => _cityId = value),
+                  ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(AppSpacing.spacingMD),
+                    child: LinearProgressIndicator(),
+                  ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                    child: Text('Failed to load cities: $e'),
+                  ),
+                ),
+              ProfileWizardLayout.pickerTile(
+                context: context,
+                label: 'Duration',
+                value: _durationLabel,
+                hint: 'Select duration',
+                onTap: _pickDuration,
+                showDivider: false,
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.spacingLG),
           citiesAsync.maybeWhen(
