@@ -268,7 +268,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           button: true,
           child: GradientButton(
             text: 'Create Account',
-            onPressed: () => context.go(AppRoutes.register),
+            onPressed: () => context.push(AppRoutes.register),
             usePrideGradient: true,
             height: 56,
           ),

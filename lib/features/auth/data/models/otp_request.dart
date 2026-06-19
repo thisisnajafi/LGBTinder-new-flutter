@@ -47,13 +47,13 @@ class VerifyOtpRequest {
 /// Reset Password Request model
 class ResetPasswordRequest {
   final String email;
-  final String token;
+  final String code;
   final String password;
   final String passwordConfirmation;
 
   ResetPasswordRequest({
     required this.email,
-    required this.token,
+    required this.code,
     required this.password,
     required this.passwordConfirmation,
   });
@@ -61,7 +61,7 @@ class ResetPasswordRequest {
   factory ResetPasswordRequest.fromJson(Map<String, dynamic> json) {
     return ResetPasswordRequest(
       email: json['email'] as String,
-      token: json['token'] as String,
+      code: json['code'] as String,
       password: json['password'] as String,
       passwordConfirmation: json['password_confirmation'] as String,
     );
@@ -70,7 +70,7 @@ class ResetPasswordRequest {
   Map<String, dynamic> toJson() {
     return {
       'email': email,
-      'token': token,
+      'code': code,
       'password': password,
       'password_confirmation': passwordConfirmation,
     };

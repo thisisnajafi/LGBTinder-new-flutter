@@ -8,8 +8,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/navigation/auth_navigation.dart';
+import '../../core/widgets/auth_page_scaffold.dart';
+import '../../routes/app_router.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/utils/app_icons.dart';
@@ -39,7 +40,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
   bool _isResendingOtp = false;
   int _resendCountdown = 0;
   Timer? _countdownTimer;
-  String? _resetToken;
+  String? _verifiedOtpCode;
 
   // Step 3: New Password
   final _passwordController = TextEditingController();
@@ -113,7 +114,6 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       final authService = ref.read(authServiceProvider);
       final request = SendOtpRequest(
         email: _emailController.text.trim(),
-        type: 'password_reset',
       );
 
       await authService.sendOtp(request);
@@ -154,15 +154,14 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       final authService = ref.read(authServiceProvider);
       final request = VerifyOtpRequest(
         email: _emailController.text.trim(),
-        otp: code,
-        type: 'password_reset',
+        code: code,
       );
 
-      final response = await authService.verifyOtp(request);
+      await authService.verifyOtp(request);
 
       if (mounted) {
         setState(() {
-          _resetToken = response.token ?? '';
+          _verifiedOtpCode = code;
         });
         _nextStep();
       }
@@ -196,7 +195,6 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       final authService = ref.read(authServiceProvider);
       final request = SendOtpRequest(
         email: _emailController.text.trim(),
-        type: 'password_reset',
       );
 
       await authService.sendOtp(request);
@@ -249,9 +247,18 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     });
 
     try {
+      final code = _verifiedOtpCode ?? _getOtpCode();
+      if (code.length != 6) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please verify the OTP code first')),
+        );
+        return;
+      }
+
       final authService = ref.read(authServiceProvider);
       final request = ResetPasswordRequest(
-        token: _resetToken,
+        email: _emailController.text.trim(),
+        code: code,
         password: _passwordController.text.trim(),
         passwordConfirmation: _confirmPasswordController.text.trim(),
       );
@@ -269,7 +276,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
           if (context.canPop()) {
             context.pop(true);
           } else {
-            context.go('/login');
+            context.go(AppRoutes.login);
           }
         });
       }
@@ -318,10 +325,10 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
+    return AuthPageScaffold(
       title: 'Reset Password',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Recover access to your account',
+      onBack: _currentStep > 0 ? _previousStep : null,
       body: Column(
         children: [
           // Progress indicator

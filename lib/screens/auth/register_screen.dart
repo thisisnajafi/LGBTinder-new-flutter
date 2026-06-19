@@ -6,8 +6,11 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/auth_page_scaffold.dart';
+import '../../core/navigation/auth_navigation.dart';
+import '../../features/auth/presentation/widgets/social_login_button.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/data/models/register_request.dart';
@@ -31,7 +34,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _referralCodeController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -44,7 +46,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _referralCodeController.dispose();
     super.dispose();
   }
 
@@ -73,9 +74,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
         passwordConfirmation: _confirmPasswordController.text,
-        referralCode: _referralCodeController.text.trim().isEmpty 
-            ? null 
-            : _referralCodeController.text.trim(),
       );
 
       final response = await authService.register(request);
@@ -128,6 +126,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         });
       }
     }
+  }
+
+  Future<String> _getDeviceName() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return '${androidInfo.brand} ${androidInfo.model}';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return '${iosInfo.name} (${iosInfo.model})';
+      }
+    } catch (_) {}
+    return 'Unknown Device';
   }
 
   @override

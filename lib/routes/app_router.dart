@@ -10,6 +10,7 @@ import '../pages/onboarding_page.dart';
 import '../screens/auth/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/auth/password_reset_flow_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../pages/profile_wizard_page.dart';
 import '../screens/onboarding/onboarding_preferences_screen.dart';
@@ -48,6 +49,7 @@ class AppRoutes {
   static const String accountBanned = '/account-banned';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
   static const String emailVerification = '/email-verification';
   static const String profileWizard = '/profile-wizard';
   static const String onboarding = '/onboarding';
@@ -124,6 +126,7 @@ const Set<String> _publicRoutes = {
   AppRoutes.accountBanned,
   AppRoutes.login,
   AppRoutes.register,
+  AppRoutes.forgotPassword,
   AppRoutes.emailVerification,
   AppRoutes.onboarding,
 };
@@ -332,6 +335,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.register,
         name: 'register',
         pageBuilder: (context, state) => slideFadePage(state, const RegisterScreen()),
+      ),
+
+      // Forgot password — full OTP reset flow (pushed from login)
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        name: 'forgot-password',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const PasswordResetFlowScreen()),
       ),
       
       // Email Verification Screen (no guard - public, but requires email param)

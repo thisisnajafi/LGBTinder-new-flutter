@@ -8,8 +8,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/auth_page_scaffold.dart';
+import '../../core/navigation/auth_navigation.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
@@ -21,12 +21,9 @@ import '../../shared/services/error_handler_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../pages/home_page.dart';
 import '../../pages/profile_wizard_page.dart';
-import 'forgot_password_screen.dart';
-import '../../core/utils/app_icons.dart';
-import 'register_screen.dart';
-import 'email_verification_screen.dart';
-import '../../shared/analytics/app_event_tracker.dart';
 import '../../routes/app_router.dart';
+import '../../core/utils/app_icons.dart';
+import '../../shared/analytics/app_event_tracker.dart';
 
 /// Login screen - User authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -307,10 +304,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
+    return AuthPageScaffold(
       title: 'Sign In',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Welcome back',
       body: SingleChildScrollView(
           padding: EdgeInsets.all(AppSpacing.spacingLG),
           child: Form(
@@ -318,17 +314,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: AppSpacing.spacingXXL),
-                Text(
-                  'Welcome Back',
-                  style: AppTypography.h1.copyWith(color: textColor),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppSpacing.spacingSM),
-                Text(
-                  'Sign in to continue',
-                  style: AppTypography.body.copyWith(color: secondaryTextColor),
-                  textAlign: TextAlign.center,
+                const AuthFormHeader(
+                  title: 'Welcome Back',
+                  subtitle: 'Sign in to continue',
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
                 // Email field
@@ -479,12 +467,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordScreen(),
-                          ),
-                        );
+                        context.push(AppRoutes.forgotPassword);
                       },
                       child: Text(
                         'Forgot Password?',
@@ -504,23 +487,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   isFullWidth: true,
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: borderColor)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingMD,
-                      ),
-                      child: Text(
-                        'or',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: borderColor)),
-                  ],
-                ),
+                const AuthOrDivider(),
                 SizedBox(height: AppSpacing.spacingLG),
                 SocialLoginButton(
                   getDeviceName: _getDeviceName,
@@ -536,7 +503,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        context.go(AppRoutes.register);
+                        context.push(AppRoutes.register);
                       },
                       child: Text(
                         'Sign Up',
