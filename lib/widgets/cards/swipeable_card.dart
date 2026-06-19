@@ -1,5 +1,6 @@
 // Widget: SwipeableCard — full-bleed discovery profile card (Phase 1 spec)
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cache/cache_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/match_percentage_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
@@ -60,9 +62,24 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.hideBioMore = false,
   });
 
-  static const double cardRadius = 28;
-  static const double cardAspectRatio = 0.62;
+  static const double cardRadius = AppRadius.radiusLG;
+  /// Wider/shorter discover card (width ÷ height).
+  static const double cardAspectRatio = 0.76;
   static const Duration imageCarouselInterval = Duration(seconds: 5);
+
+  /// Uses full [maxWidth]; height follows aspect ratio, capped so vertical centering keeps margin.
+  static Size fitSize({
+    required double maxWidth,
+    required double maxHeight,
+    double minimumVerticalMargin = 32,
+  }) {
+    if (maxWidth <= 0 || maxHeight <= 0) return Size.zero;
+
+    final maxCardHeight =
+        (maxHeight - minimumVerticalMargin).clamp(0.0, maxHeight);
+    final idealHeight = maxWidth / cardAspectRatio;
+    return Size(maxWidth, idealHeight.clamp(0.0, maxCardHeight));
+  }
 
   @override
   ConsumerState<SwipeableCard> createState() => _SwipeableCardState();
@@ -197,25 +214,6 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
     return list;
   }
 
-  Border? _cardBorder(BuildContext context, int? matchPct) {
-    if (!widget.isBackgroundPreview &&
-        matchPct != null &&
-        matchPct > 0) {
-      return Border.all(
-        color: MatchPercentageColors.colorFor(matchPct),
-        width: 2.5,
-      );
-    }
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Border.all(
-      color: widget.isBackgroundPreview
-          ? (isDark ? AppColors.borderSubtleDark : AppColors.borderSubtleLight)
-          : (isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight),
-      width: widget.isBackgroundPreview ? 1 : 1.5,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final images = _images;
@@ -228,8 +226,15 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenHeight = MediaQuery.sizeOf(context).height;
-        final expandedHeaderHeight = screenHeight * 0.45;
-        final fullHeight = constraints.maxWidth / SwipeableCard.cardAspectRatio;
+        final fitted = SwipeableCard.fitSize(
+          maxWidth: constraints.maxWidth,
+          maxHeight: constraints.maxHeight,
+        );
+        final cardWidth = fitted.width;
+        final fullHeight = fitted.height;
+        final expandedHeaderHeight =
+            (screenHeight * 0.45).clamp(0.0, constraints.maxHeight);
+        final textBottomInset = math.max(18.0, fullHeight * 0.04);
 
         return AnimatedBuilder(
           animation: _headerCurve,
@@ -239,17 +244,18 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
               end: expandedHeaderHeight,
             ).transform(_headerCurve.value);
 
-            return SizedBox(
-              height: height.clamp(0, constraints.maxHeight),
-              width: constraints.maxWidth,
-              child: child,
+            return Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                height: height.clamp(0, constraints.maxHeight),
+                width: cardWidth,
+                child: child,
+              ),
             );
           },
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
-              border: _cardBorder(context, matchPct),
-            ),
+          child: _DiscoveryCardFrame(
+            matchPct: matchPct,
+            isBackgroundPreview: widget.isBackgroundPreview,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
               child: Stack(
@@ -305,13 +311,15 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                   Positioned(
                     left: 16,
                     right: 16,
-                    bottom: 16,
+                    bottom: textBottomInset,
                     child: _BottomTextBlock(
                       name: displayName,
                       age: widget.age,
                       city: widget.city,
                       bio: widget.bio,
                       isOnline: widget.isOnline,
+                      isVerified: widget.isVerified,
+                      isPremium: widget.isPremium,
                       hideBioMore: widget.hideBioMore || widget.isExpanded,
                       onBioMoreTap: widget.onBioMoreTap,
                       onProfileTap: widget.onProfileTap,
@@ -324,6 +332,91 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
           ),
         );
       },
+    );
+  }
+}
+
+class _DiscoveryCardFrame extends StatelessWidget {
+  const _DiscoveryCardFrame({
+    required this.child,
+    required this.matchPct,
+    required this.isBackgroundPreview,
+  });
+
+  final Widget child;
+  final int? matchPct;
+  final bool isBackgroundPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = SwipeableCard.cardRadius;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isBackgroundPreview) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(
+            color: isDark
+                ? AppColors.borderSubtleDark
+                : AppColors.borderSubtleLight,
+            width: 1,
+          ),
+        ),
+        child: child,
+      );
+    }
+
+    final matchColor = matchPct != null && matchPct! > 0
+        ? MatchPercentageColors.colorFor(matchPct!)
+        : null;
+    const borderWidth = 2.5;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius + 1),
+        gradient: matchColor != null
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  matchColor,
+                  matchColor.withValues(alpha: 0.55),
+                  AppColors.accentViolet.withValues(alpha: 0.85),
+                ],
+              )
+            : AppColors.brandGradient,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentPurple.withValues(alpha: 0.20),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: AppColors.accentRose.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(borderWidth),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.32),
+              width: 1,
+            ),
+          ),
+          child: child,
+        ),
+      ),
     );
   }
 }
@@ -427,12 +520,13 @@ class _PhotoGradientOverlay extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: const [0.0, 0.38, 0.68, 1.0],
+          stops: const [0.0, 0.32, 0.58, 0.82, 1.0],
           colors: [
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.45),
-            Colors.black.withValues(alpha: 0.88),
+            Colors.black.withValues(alpha: 0.28),
+            Colors.black.withValues(alpha: 0.62),
+            Colors.black.withValues(alpha: 0.92),
           ],
         ),
       ),
@@ -451,21 +545,40 @@ class _MatchPercentageBadge extends StatelessWidget {
     final color = MatchPercentageColors.colorFor(percentage);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(100),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(
-          color: color.withValues(alpha: 0.65),
+          color: Colors.white.withValues(alpha: 0.28),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Text(
-        'Match $percentage%',
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppSvgIcon(
+            assetPath: AppIcons.getIconPath('magic-star'),
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'Match $percentage%',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -487,8 +600,12 @@ class _MatchReasonBadges extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(100),
+            color: Colors.black.withValues(alpha: 0.52),
+            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.14),
+              width: 1,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -560,6 +677,8 @@ class _BottomTextBlock extends StatelessWidget {
     required this.city,
     required this.bio,
     required this.isOnline,
+    required this.isVerified,
+    required this.isPremium,
     required this.hideBioMore,
     required this.onBioMoreTap,
     required this.onProfileTap,
@@ -570,6 +689,8 @@ class _BottomTextBlock extends StatelessWidget {
   final String? city;
   final String? bio;
   final bool isOnline;
+  final bool isVerified;
+  final bool isPremium;
   final bool hideBioMore;
   final VoidCallback? onBioMoreTap;
   final VoidCallback? onProfileTap;
@@ -605,6 +726,28 @@ class _BottomTextBlock extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (isVerified) ...[
+                    const SizedBox(width: 6),
+                    Semantics(
+                      label: 'Verified profile',
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.getIconPath('verify'),
+                        size: 20,
+                        color: AppColors.feedbackInfo,
+                      ),
+                    ),
+                  ],
+                  if (isPremium) ...[
+                    const SizedBox(width: 4),
+                    Semantics(
+                      label: 'Premium member',
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.getIconPath('crown'),
+                        size: 18,
+                        color: AppColors.warningYellow,
+                      ),
+                    ),
+                  ],
                   if (isOnline) ...[
                     const SizedBox(width: 8),
                     Semantics(
@@ -612,9 +755,13 @@ class _BottomTextBlock extends StatelessWidget {
                       child: Container(
                         width: 10,
                         height: 10,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: kDiscoveryOnlineGreen,
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ),
@@ -714,13 +861,21 @@ String matchReasonIconPath(String type) {
     case 'interests':
       return AppIcons.getIconPath('heart');
     case 'location':
+    case 'same_city':
+    case 'distance':
       return AppIcons.getIconPath('location');
     case 'job':
       return AppIcons.getIconPath('briefcase');
     case 'education':
       return AppIcons.getIconPath('teacher');
     case 'age':
-      return AppIcons.getIconPath('calendar');
+    case 'preferred_gender':
+    case 'gender':
+    case 'your_type':
+      return AppIcons.getIconPath('user-tag');
+    case 'relationship':
+    case 'relation_goal':
+      return AppIcons.getIconPath('heart');
     default:
       return AppIcons.getIconPath('star');
   }

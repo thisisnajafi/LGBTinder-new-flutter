@@ -8,6 +8,7 @@ const Map<int, String> httpErrorMessages = {
   404: 'The requested resource was not found.',
   409: 'This action conflicts with existing data.',
   422: 'Please check your input and try again.',
+  413: 'Image file is too large. Please try a smaller photo.',
   429: 'Too many requests. Please wait a moment.',
   500: 'Server error. Please try again later.',
   502: 'Service temporarily unavailable. Please try again.',

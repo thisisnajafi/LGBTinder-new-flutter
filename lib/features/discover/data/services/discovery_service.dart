@@ -43,7 +43,18 @@ class DiscoveryService {
     }
     try {
 
-      final cacheKey = CacheKeys.nearbySuggestions(pageNum, limitNum);
+      final queryParams = _buildNearbyQueryParams(
+        page: pageNum,
+        limit: limitNum,
+        filters: filters,
+      );
+      final filtersHash =
+          DiscoveryFilterMapper.cacheKeySuffixFromQuery(queryParams);
+      final cacheKey = CacheKeys.nearbySuggestions(
+        pageNum,
+        limitNum,
+        filtersHash: filtersHash,
+      );
 
       final cachedPayload = await _cacheService.getCached<Map<String, dynamic>>(
         cacheKey,
@@ -53,41 +64,6 @@ class DiscoveryService {
       if (cachedPayload != null) {
         fromCache = _parseNearbySuggestionsResponse(cachedPayload);
         fromCache = _applyLimit(fromCache, cap);
-      }
-
-      final queryParams = <String, dynamic>{
-        'page': pageNum,
-        'limit': limitNum,
-        ...DiscoveryFilterMapper.toQueryParameters(filters),
-      };
-
-      // Legacy UI-shaped filter maps (ageRange / camelCase keys)
-      if (filters != null) {
-        if (filters['ageRange'] != null && !queryParams.containsKey('min_age')) {
-          final ageRange = filters['ageRange'] as RangeValues;
-          queryParams['min_age'] = ageRange.start.toInt();
-          queryParams['max_age'] = ageRange.end.toInt();
-        }
-        if (filters['maxDistance'] != null && !queryParams.containsKey('max_distance')) {
-          queryParams['max_distance'] = filters['maxDistance'];
-        }
-        if (filters['genders'] != null &&
-            filters['genders'] is List<String> &&
-            !queryParams.containsKey('gender_ids')) {
-          final genders = filters['genders'] as List<String>;
-          if (!genders.contains('All')) {
-            queryParams['gender_ids'] = genders.join(',');
-          }
-        }
-        if (filters['verifiedOnly'] == true && !queryParams.containsKey('verified_only')) {
-          queryParams['verified_only'] = '1';
-        }
-        if (filters['onlineOnly'] == true && !queryParams.containsKey('online_only')) {
-          queryParams['online_only'] = '1';
-        }
-        if (filters['premiumOnly'] == true && !queryParams.containsKey('premium_only')) {
-          queryParams['premium_only'] = '1';
-        }
       }
 
       // Always hit the API (no ApiService-level cache) so discover/refresh always calls nearby-suggestions
@@ -111,6 +87,53 @@ class DiscoveryService {
       if (fromCache != null) return fromCache;
       rethrow;
     }
+  }
+
+  Map<String, dynamic> _buildNearbyQueryParams({
+    required int page,
+    required int limit,
+    Map<String, dynamic>? filters,
+  }) {
+    final queryParams = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      ...DiscoveryFilterMapper.toQueryParameters(filters),
+    };
+
+    // Legacy UI-shaped filter maps (ageRange / camelCase keys)
+    if (filters != null) {
+      if (filters['ageRange'] != null && !queryParams.containsKey('min_age')) {
+        final ageRange = filters['ageRange'] as RangeValues;
+        queryParams['min_age'] = ageRange.start.toInt();
+        queryParams['max_age'] = ageRange.end.toInt();
+      }
+      if (filters['maxDistance'] != null &&
+          !queryParams.containsKey('max_distance')) {
+        queryParams['max_distance'] = filters['maxDistance'];
+      }
+      if (filters['genders'] != null &&
+          filters['genders'] is List<String> &&
+          !queryParams.containsKey('gender_ids')) {
+        final genders = filters['genders'] as List<String>;
+        if (!genders.contains('All')) {
+          queryParams['gender_ids'] = genders.join(',');
+        }
+      }
+      if (filters['verifiedOnly'] == true &&
+          !queryParams.containsKey('verified_only')) {
+        queryParams['verified_only'] = '1';
+      }
+      if (filters['onlineOnly'] == true &&
+          !queryParams.containsKey('online_only')) {
+        queryParams['online_only'] = '1';
+      }
+      if (filters['premiumOnly'] == true &&
+          !queryParams.containsKey('premium_only')) {
+        queryParams['premium_only'] = '1';
+      }
+    }
+
+    return queryParams;
   }
 
   /// Cap list to remaining swipes when not unlimited
@@ -137,38 +160,11 @@ class DiscoveryService {
     } catch (_) {
       cap = null;
     }
-    final queryParams = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-      ...DiscoveryFilterMapper.toQueryParameters(filters),
-    };
-    if (filters != null) {
-      if (filters['ageRange'] != null && !queryParams.containsKey('min_age')) {
-        final ageRange = filters['ageRange'] as RangeValues;
-        queryParams['min_age'] = ageRange.start.toInt();
-        queryParams['max_age'] = ageRange.end.toInt();
-      }
-      if (filters['maxDistance'] != null && !queryParams.containsKey('max_distance')) {
-        queryParams['max_distance'] = filters['maxDistance'];
-      }
-      if (filters['genders'] != null &&
-          filters['genders'] is List<String> &&
-          !queryParams.containsKey('gender_ids')) {
-        final genders = filters['genders'] as List<String>;
-        if (!genders.contains('All')) {
-          queryParams['gender_ids'] = genders.join(',');
-        }
-      }
-      if (filters['verifiedOnly'] == true && !queryParams.containsKey('verified_only')) {
-        queryParams['verified_only'] = '1';
-      }
-      if (filters['onlineOnly'] == true && !queryParams.containsKey('online_only')) {
-        queryParams['online_only'] = '1';
-      }
-      if (filters['premiumOnly'] == true && !queryParams.containsKey('premium_only')) {
-        queryParams['premium_only'] = '1';
-      }
-    }
+    final queryParams = _buildNearbyQueryParams(
+      page: page,
+      limit: limit,
+      filters: filters,
+    );
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.matchingNearbySuggestions,
       queryParameters: queryParams,

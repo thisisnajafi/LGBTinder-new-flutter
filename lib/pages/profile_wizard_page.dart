@@ -516,7 +516,12 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
     try {
-      final XFile? image = await _imagePicker.pickImage(source: source);
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
       if (image != null) {
         final file = File(image.path);
         if (isPrimary || _currentStep == 0) {
@@ -549,7 +554,12 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
     try {
       if (source == ImageSource.gallery) {
-        final images = await _imagePicker.pickMultiImage(limit: remaining);
+        final images = await _imagePicker.pickMultiImage(
+          limit: remaining,
+          maxWidth: 1920,
+          maxHeight: 1920,
+          imageQuality: 85,
+        );
         if (images.isEmpty || !mounted) return;
 
         setState(() {

@@ -1,15 +1,18 @@
 // Widget: NotificationTile
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/avatar_widget.dart';
-import '../../../../core/theme/typography.dart';
-import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/border_radius_constants.dart';
-import '../../data/models/notification.dart' as app_models;
 import 'package:intl/intl.dart';
 
-/// Notification tile widget for displaying individual notifications
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/avatar_widget.dart';
+import '../../data/models/notification.dart' as app_models;
+import 'notification_visuals.dart';
+
+/// Notification tile widget for displaying individual notifications.
 class NotificationTile extends ConsumerWidget {
   final app_models.Notification notification;
   final VoidCallback? onTap;
@@ -17,43 +20,12 @@ class NotificationTile extends ConsumerWidget {
   final VoidCallback? onDelete;
 
   const NotificationTile({
-    Key? key,
+    super.key,
     required this.notification,
     this.onTap,
     this.onMarkAsRead,
     this.onDelete,
-  }) : super(key: key);
-
-  IconData _getNotificationIcon() {
-    switch (notification.type) {
-      case 'like':
-        return Icons.favorite;
-      case 'match':
-        return Icons.favorite;
-      case 'superlike':
-        return Icons.star;
-      case 'message':
-        return Icons.message;
-      case 'view':
-        return Icons.visibility;
-      default:
-        return Icons.notifications;
-    }
-  }
-
-  Color _getNotificationColor() {
-    switch (notification.type) {
-      case 'like':
-      case 'match':
-        return AppColors.accentRed;
-      case 'superlike':
-        return AppColors.accentYellow;
-      case 'message':
-        return AppColors.accentPurple;
-      default:
-        return AppColors.accentPurple;
-    }
-  }
+  });
 
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
@@ -76,28 +48,134 @@ class NotificationTile extends ConsumerWidget {
     }
   }
 
+  String _getDefaultTitle() {
+    switch (notification.type) {
+      case 'like':
+        return 'New Like';
+      case 'match':
+        return "It's a Match!";
+      case 'superlike':
+      case 'superlike_sent':
+        return 'Superlike';
+      case 'message':
+        return 'New Message';
+      case 'view':
+      case 'profile_view':
+        return 'Profile Viewed';
+      case 'plan_granted':
+      case 'plan_upgraded':
+        return 'Plan Updated';
+      default:
+        return 'Notification';
+    }
+  }
+
+  Widget _buildLeadingIcon(BuildContext context) {
+    const size = 48.0;
+    final accent = NotificationVisuals.accentFor(notification);
+    final isUserRelated = NotificationVisuals.isUserRelated(notification);
+    final imageUrl = NotificationVisuals.actorImageUrl(notification);
+
+    if (isUserRelated) {
+      if (imageUrl != null) {
+        return Container(
+          width: size,
+          height: size,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                accent,
+                AppColors.accentViolet.withValues(alpha: 0.85),
+              ],
+            ),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Theme.of(context).colorScheme.surface,
+            ),
+            child: ClipOval(
+              child: AvatarWidget(
+                imageUrl: imageUrl,
+                radius: 21,
+                fallbackInitial: NotificationVisuals.actorInitial(notification),
+              ),
+            ),
+          ),
+        );
+      }
+
+      final initial = NotificationVisuals.actorInitial(notification);
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+          border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ),
+        child: Center(
+          child: initial != null
+              ? Text(
+                  initial,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )
+              : AppSvgIcon(
+                  assetPath: AppIcons.getIconPath('profile-circle'),
+                  size: 24,
+                  color: accent,
+                ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
+      ),
+      child: Center(
+        child: AppSvgIcon(
+          assetPath: NotificationVisuals.iconAssetFor(notification),
+          size: 22,
+          color: accent,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final accent = NotificationVisuals.accentFor(notification);
 
     return Dismissible(
       key: Key('notification_${notification.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: AppSpacing.spacingLG),
+        padding: const EdgeInsets.only(right: AppSpacing.spacingLG),
         decoration: BoxDecoration(
-          color: AppColors.accentRed.withOpacity(0.1),
+          color: AppColors.accentRed.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         ),
-        child: Icon(
-          Icons.delete_outline,
+        child: AppSvgIcon(
+          assetPath: AppIcons.getIconPath('trash'),
+          size: 22,
           color: AppColors.accentRed,
         ),
       ),
@@ -106,35 +184,25 @@ class NotificationTile extends ConsumerWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         child: Container(
-          margin: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-          padding: EdgeInsets.all(AppSpacing.spacingMD),
+          margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+          padding: const EdgeInsets.all(AppSpacing.spacingMD),
           decoration: BoxDecoration(
-            color: notification.isRead ? surfaceColor : surfaceColor.withOpacity(0.5),
+            color: notification.isRead
+                ? surfaceColor
+                : surfaceColor.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(AppRadius.radiusMD),
             border: Border.all(
-              color: notification.isRead ? borderColor : _getNotificationColor().withOpacity(0.3),
-              width: notification.isRead ? 1 : 2,
+              color: notification.isRead
+                  ? borderColor.withValues(alpha: 0.45)
+                  : accent.withValues(alpha: 0.28),
+              width: notification.isRead ? 1 : 1.5,
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: _getNotificationColor().withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _getNotificationIcon(),
-                  color: _getNotificationColor(),
-                  size: 24,
-                ),
-              ),
-              SizedBox(width: AppSpacing.spacingMD),
-              // Content
+              _buildLeadingIcon(context),
+              const SizedBox(width: AppSpacing.spacingMD),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +216,9 @@ class NotificationTile extends ConsumerWidget {
                                 : _getDefaultTitle(),
                             style: AppTypography.body.copyWith(
                               color: textColor,
-                              fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
+                              fontWeight: notification.isRead
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
                             ),
                           ),
                         ),
@@ -157,13 +227,13 @@ class NotificationTile extends ConsumerWidget {
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _getNotificationColor(),
+                              color: accent,
                               shape: BoxShape.circle,
                             ),
                           ),
                       ],
                     ),
-                    SizedBox(height: AppSpacing.spacingXS),
+                    const SizedBox(height: AppSpacing.spacingXS),
                     Text(
                       notification.message,
                       style: AppTypography.caption.copyWith(
@@ -172,7 +242,7 @@ class NotificationTile extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: AppSpacing.spacingXS),
+                    const SizedBox(height: AppSpacing.spacingXS),
                     Text(
                       _formatTime(notification.createdAt),
                       style: AppTypography.caption.copyWith(
@@ -183,45 +253,10 @@ class NotificationTile extends ConsumerWidget {
                   ],
                 ),
               ),
-              // User image (if available)
-              if (notification.userImageUrl != null)
-                Container(
-                  margin: EdgeInsets.only(left: AppSpacing.spacingSM),
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: borderColor,
-                      width: 2,
-                    ),
-                  ),
-                  child: AvatarWidget(
-                    imageUrl: notification.userImageUrl,
-                    radius: 18,
-                  ),
-                ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  String _getDefaultTitle() {
-    switch (notification.type) {
-      case 'like':
-        return 'New Like';
-      case 'match':
-        return 'It\'s a Match!';
-      case 'superlike':
-        return 'Superlike Received';
-      case 'message':
-        return 'New Message';
-      case 'view':
-        return 'Profile Viewed';
-      default:
-        return 'Notification';
-    }
   }
 }

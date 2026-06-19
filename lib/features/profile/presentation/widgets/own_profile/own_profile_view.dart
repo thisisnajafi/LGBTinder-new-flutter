@@ -1,18 +1,24 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/cache/session_cache_providers.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
 import '../../../../../core/widgets/app_grouped_list_card.dart';
 import '../../../../../core/widgets/profile_image_widget.dart';
+import '../../../../../widgets/buttons/gradient_button.dart';
+import '../../../../payments/data/models/plan_limits.dart';
 import '../../../../payments/data/models/subscription_plan.dart';
 import '../../../../payments/providers/payment_providers.dart';
 import '../../../data/models/user_image.dart';
 import '../../../data/models/user_profile.dart';
+import '../../../providers/profile_page_cache_provider.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
 import '../../../../settings/presentation/screens/matching_preferences_screen.dart';
@@ -41,6 +47,19 @@ class OwnProfileView extends ConsumerWidget {
 
   static const double _hPad = 20;
   static const double _sectionGap = AppSpacing.spacingXL;
+  static const double _avatarSize = 96.0;
+  static const double _cameraTapSize = 44.0;
+  static const double _cameraInsideFraction = 0.6;
+
+  /// Bottom-right badge offset so 60% sits inside the circle and 40% outside.
+  static double _cameraBadgeOffset(double size, double overflow) {
+    final avatarCenter = (size + overflow) / 2;
+    final distFromAvatarCenter = size / 2 +
+        _cameraTapSize / 2 -
+        _cameraInsideFraction * _cameraTapSize;
+    final axisOffset = distFromAvatarCenter / math.sqrt2;
+    return avatarCenter + axisOffset - _cameraTapSize / 2;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,14 +72,21 @@ class OwnProfileView extends ConsumerWidget {
         : null;
     final isVerified = profile.isVerified == true;
 
-    final UserTier tier = ref.watch(userTierProvider);
+    final UserTier fallbackTier = ref.watch(userTierProvider);
     final superlikes = ref.watch(superlikesRemainingProvider);
     final completeness = computeProfileCompleteness(profile);
 
+    final cacheData = ref.watch(profilePageCacheProvider).valueOrNull;
     final sessionCache = ref.watch(sessionDataCacheServiceProvider);
     final cachedSub = sessionCache.getSubscriptionStatusSync();
     final subAsync = ref.watch(subscriptionStatusProvider);
-    final subscription = cachedSub ?? subAsync.valueOrNull;
+    final subscription =
+        cacheData?.subscription ?? cachedSub ?? subAsync.valueOrNull;
+    final tier = _resolveTier(
+      subscription: subscription,
+      planLimits: cacheData?.planLimits,
+      fallback: fallbackTier,
+    );
 
     final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
     final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
@@ -230,129 +256,215 @@ class OwnProfileView extends ConsumerWidget {
   }) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
+    final isPremium = tier != UserTier.basid;
 
-    const avatarSize = 92.0;
-    const cameraTapSize = 44.0;
+    const avatarSize = _avatarSize;
+    const cameraTapSize = _cameraTapSize;
+    const overflow = cameraTapSize / 2;
     const verifiedBadgeSize = 22.0;
     const ageBadgeHalfHeight = 10.0;
+    final frameSize = avatarSize + overflow;
 
     return Column(
       children: [
         SizedBox(
-          width: avatarSize,
-          height: avatarSize + ageBadgeHalfHeight,
+          width: frameSize,
+          height: frameSize + ageBadgeHalfHeight,
           child: Stack(
             clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
             children: [
-              Container(
-                width: avatarSize,
-                height: avatarSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: primary, width: 2.5),
-                ),
-                child: ClipOval(
-                  child: ProfileImageWidget(
-                    imageUrl: avatarUrl,
-                    width: avatarSize,
-                    height: avatarSize,
-                    fit: BoxFit.cover,
+              Positioned(
+                top: 0,
+                left: 0,
+                child: SizedBox(
+                  width: frameSize,
+                  height: frameSize,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: avatarSize,
+                        height: avatarSize,
+                        padding: const EdgeInsets.all(2.5),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppColors.brandGradient,
+                        ),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.surface,
+                          ),
+                          child: ClipOval(
+                            child: ProfileImageWidget(
+                              imageUrl: avatarUrl,
+                              width: avatarSize - 5,
+                              height: avatarSize - 5,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (isVerified)
+                        Positioned(
+                          top: overflow - 2,
+                          left: overflow - 2,
+                          child: Container(
+                            width: verifiedBadgeSize,
+                            height: verifiedBadgeSize,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: primary, width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.getIconPath('tick-circle'),
+                                size: 13,
+                                color: primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        left: _cameraBadgeOffset(avatarSize, overflow),
+                        top: _cameraBadgeOffset(avatarSize, overflow),
+                        child: Semantics(
+                          label: 'Change profile photo',
+                          button: true,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: onEditPhoto,
+                              customBorder: const CircleBorder(),
+                              child: const SizedBox(
+                                width: cameraTapSize,
+                                height: cameraTapSize,
+                                child: Center(
+                                  child: _CameraOverlayButton(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               if (age != null)
                 Positioned(
-                  left: 0,
-                  right: 0,
+                  left: overflow,
+                  right: overflow,
                   top: avatarSize - ageBadgeHalfHeight,
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: primary,
+                        gradient: AppTheme.accentGradient,
                         borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primary.withValues(alpha: 0.28),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Text(
                         '$age',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ),
                 ),
-              if (isVerified)
-                Positioned(
-                  right: -verifiedBadgeSize / 2,
-                  bottom: -verifiedBadgeSize / 2,
-                  child: Container(
-                    width: verifiedBadgeSize,
-                    height: verifiedBadgeSize,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: primary, width: 1.5),
-                    ),
-                    child: Center(
-                      child: AppSvgIcon(
-                        assetPath: AppIcons.getIconPath('tick-circle'),
-                        size: 13,
-                        color: primary,
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned(
-                top: -cameraTapSize / 2,
-                right: -cameraTapSize / 2,
-                child: Semantics(
-                  label: 'Change profile photo',
-                  button: true,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onEditPhoto,
-                      customBorder: const CircleBorder(),
-                      child: const SizedBox(
-                        width: cameraTapSize,
-                        height: cameraTapSize,
-                        child: Center(
-                          child: _CameraOverlayButton(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.spacingMD),
-        Text(
-          fullName,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: AppSpacing.spacingXS),
-        if (tier == UserTier.basid)
-          OutlinedButton(
-            onPressed: () => context.pushNamed('subscription-plans'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(48, 36),
-              side: BorderSide(color: primary),
-              foregroundColor: primary,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                fullName,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            child: Text(
-              'Upgrade to Premium',
-              style: theme.textTheme.labelSmall,
+            if (isPremium) ...[
+              const SizedBox(width: 6),
+              AppSvgIcon(
+                assetPath: AppIcons.crown,
+                size: 18,
+                color: tier == UserTier.golden
+                    ? AppColors.warningYellow
+                    : primary,
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.spacingSM),
+        if (tier == UserTier.basid)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _hPad),
+            child: GradientButton(
+              text: 'Upgrade to Premium',
+              height: 40,
+              isFullWidth: false,
+              onPressed: () => context.pushNamed('subscription-plans'),
             ),
           )
         else
           _tierPill(context, tier),
       ],
     );
+  }
+
+  UserTier _resolveTier({
+    required SubscriptionStatus? subscription,
+    required PlanLimits? planLimits,
+    required UserTier fallback,
+  }) {
+    if (subscription != null) {
+      if (subscription.tier != null && subscription.tier!.isNotEmpty) {
+        return UserTier.values.firstWhere(
+          (t) => t.key == subscription.tier,
+          orElse: () => userTierFromPlan(
+            planId: subscription.planId,
+            planName: subscription.planName,
+          ),
+        );
+      }
+      return userTierFromPlan(
+        planId: subscription.planId,
+        planName: subscription.planName,
+      );
+    }
+    if (planLimits != null) {
+      return userTierFromPlan(
+        planId: planLimits.planInfo.planId,
+        planName: planLimits.planInfo.planName,
+      );
+    }
+    return fallback;
   }
 
   Widget _tierPill(BuildContext context, UserTier tier) {
@@ -1053,6 +1165,7 @@ class OwnProfileView extends ConsumerWidget {
     }
 
     final tierLabel = tier == UserTier.golden ? 'Golden' : 'Silder';
+    final planLabel = subscription?.planName?.trim();
     final expiry = subscription?.endDate ?? subscription?.nextBillingDate;
     final expiryText = expiry != null
         ? _formatDate(expiry)
@@ -1074,7 +1187,9 @@ class OwnProfileView extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$tierLabel Member',
+                  planLabel != null && planLabel.isNotEmpty
+                      ? planLabel
+                      : '$tierLabel Member',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

@@ -201,6 +201,18 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
                       width: 1,
                     ),
                   ),
+                  child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.28),
+                        Colors.white.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
                   child: Center(
                     child: AppSvgIcon(
                       assetPath: visuals.iconPath,
@@ -208,6 +220,7 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
                       color: visuals.iconColor,
                     ),
                   ),
+                ),
                 ),
               ),
             ),

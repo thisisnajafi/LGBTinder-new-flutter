@@ -189,7 +189,21 @@ class DiscoveryFilterMapper {
     };
   }
 
-  static Map<String, dynamic> stripPremiumKeys(Map<String, dynamic> api) {
+  /// Stable suffix for nearby-suggestions cache keys (excludes page/limit).
+  static String cacheKeySuffixFromQuery(Map<String, dynamic> queryParams) {
+    final filtered = Map<String, dynamic>.from(queryParams)
+      ..remove('page')
+      ..remove('limit');
+    if (filtered.isEmpty) return 'default';
+    final keys = filtered.keys.toList()..sort();
+    return Object.hashAll(keys.map((k) => '$k:${filtered[k]}')).toRadixString(16);
+  }
+
+  /// Stable suffix from stored filter map (API or UI shape).
+  static String cacheKeySuffix(Map<String, dynamic>? filters) {
+    if (filters == null || filters.isEmpty) return 'default';
+    return cacheKeySuffixFromQuery(toQueryParameters(filters));
+  }
     return Map<String, dynamic>.from(api)
       ..removeWhere((key, _) => premiumOnlyKeys.contains(key));
   }

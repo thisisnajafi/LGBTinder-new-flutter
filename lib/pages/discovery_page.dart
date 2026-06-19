@@ -23,6 +23,7 @@ import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
+import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/discovery/discovery_swipe_action_button.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';
@@ -52,11 +53,8 @@ class DiscoveryPage extends ConsumerStatefulWidget {
   ConsumerState<DiscoveryPage> createState() => _DiscoveryPageState();
 }
 
-/// Resting card offset below header chrome (header + greeting).
-const double _kDiscoverCardTopInset = 128;
-
-/// Space reserved for the floating action row (button size + vertical padding).
-const double _kDiscoverActionBarHeight = 90;
+/// Shared horizontal inset for discover chrome (greeting + profile card).
+const double _kDiscoverHorizontalPadding = AppSpacing.contentPadding;
 
 class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   // Filter state
@@ -621,7 +619,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         _activeFilters = filters.isEmpty ? null : filters;
       });
       ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
-      ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
+      ref.read(discoverCacheProvider.notifier).clearAndRefresh(filters: _activeFilters);
     }
   }
 
@@ -733,13 +731,16 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         }
         
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.contentPadding,
+            vertical: AppSpacing.spacingSM,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: remaining > 3
                 ? AppColors.onlineGreen.withValues(alpha: 0.1)
                 : AppColors.warningYellow.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
             border: Border.all(
               color: remaining > 3
                   ? AppColors.onlineGreen.withValues(alpha: 0.3)
@@ -748,10 +749,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           ),
           child: Row(
             children: [
-              Icon(
-                remaining > 3 ? Icons.favorite : Icons.warning_amber_rounded,
-                color: remaining > 3 ? AppColors.onlineGreen : AppColors.warningYellow,
+              AppSvgIcon(
+                assetPath: remaining > 3
+                    ? AppIcons.getIconPath('heart')
+                    : AppIcons.getIconPath('warning-2'),
                 size: 20,
+                color: remaining > 3
+                    ? AppColors.onlineGreen
+                    : AppColors.warningYellow,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -857,13 +862,19 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               height: 40,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.1),
+                ),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   InkWell(
-                    customBorder: const CircleBorder(),
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
                     onTap: onTap,
                     child: Center(
                       child: AppSvgIcon(
@@ -924,65 +935,57 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 ),
                 const DiscoverGreetingWidget(),
                 _buildLimitIndicator(),
-                const Spacer(),
+                Expanded(
+                  child: showSkeleton
+                      ? Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            _kDiscoverHorizontalPadding,
+                            AppSpacing.spacingXS,
+                            _kDiscoverHorizontalPadding,
+                            AppSpacing.spacingXS,
+                          ),
+                          child: const SkeletonDiscovery(),
+                        )
+                      : CardStackManager(
+                          cards: cards,
+                          onSwipe: _onCardStackSwipe,
+                          onViewProfile: _handleCardTap,
+                          isSheetOpen: _isProfileSheetOpen,
+                          onSheetOpenChanged: _setProfileSheetOpen,
+                          horizontalPadding: _kDiscoverHorizontalPadding,
+                          contentTopInset: AppSpacing.spacingSM,
+                          contentBottomInset: AppSpacing.spacingSM,
+                          isLoading: false,
+                          onRefresh: () async {
+                            await ref
+                                .read(appCacheManagerProvider)
+                                .revalidateAll();
+                            await ref
+                                .read(discoverCacheProvider.notifier)
+                                .refresh(filters: _activeFilters);
+                          },
+                          emptyActionLabel: 'Adjust filters',
+                          onEmptyAction: _openFilters,
+                          emptySecondaryActionLabel: 'Increase distance + retry',
+                          onEmptySecondaryAction: _expandRadiusAndRetry,
+                        ),
+                ),
                 if (showActionRow)
-                  SizedBox(height: _kDiscoverActionBarHeight),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      _kDiscoverHorizontalPadding,
+                      AppSpacing.spacingSM,
+                      _kDiscoverHorizontalPadding,
+                      AppSpacing.spacingXS,
+                    ),
+                    child: AnimatedOpacity(
+                      opacity: _isSwipeInProgress ? 0.5 : 1.0,
+                      duration: const Duration(milliseconds: 150),
+                      child: _buildDiscoveryActionRow(),
+                    ),
+                  ),
               ],
             ),
-            if (showActionRow)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppPageHeader.horizontalPadding,
-                    vertical: AppSpacing.spacingLG,
-                  ),
-                  child: AnimatedOpacity(
-                    opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                    duration: const Duration(milliseconds: 150),
-                    child: _buildDiscoveryActionRow(),
-                  ),
-                ),
-              ),
-            if (showSkeleton)
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: _kDiscoverCardTopInset + AppSpacing.spacingSM,
-                    bottom: _kDiscoverActionBarHeight,
-                    left: AppSpacing.spacingLG,
-                    right: AppSpacing.spacingLG,
-                  ),
-                  child: const SkeletonDiscovery(),
-                ),
-              )
-            else
-              Positioned.fill(
-                child: CardStackManager(
-                  cards: cards,
-                  onSwipe: _onCardStackSwipe,
-                  onViewProfile: _handleCardTap,
-                  isSheetOpen: _isProfileSheetOpen,
-                  onSheetOpenChanged: _setProfileSheetOpen,
-                  contentTopInset: _kDiscoverCardTopInset + AppSpacing.spacingSM,
-                  contentBottomInset: showActionRow
-                      ? _kDiscoverActionBarHeight
-                      : AppSpacing.spacingLG,
-                  isLoading: false,
-                  onRefresh: () async {
-                    await ref.read(appCacheManagerProvider).revalidateAll();
-                    await ref
-                        .read(discoverCacheProvider.notifier)
-                        .refresh(filters: _activeFilters);
-                  },
-                  emptyActionLabel: 'Adjust filters',
-                  onEmptyAction: _openFilters,
-                  emptySecondaryActionLabel: 'Increase distance + retry',
-                  onEmptySecondaryAction: _expandRadiusAndRetry,
-                ),
-              ),
             if (_isProfileSheetOpen && sheetProfile != null)
               Positioned.fill(
                 child: ProfileDetailSheet(
@@ -1012,14 +1015,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           onPressed:
               _isSwipeInProgress ? null : () => _handleAction('dislike'),
         ),
-        const SizedBox(width: AppSpacing.spacingXL),
+        const SizedBox(width: AppSpacing.spacingXXL),
         DiscoverySwipeActionButton(
           type: DiscoverySwipeActionType.superlike,
           size: 54,
           onPressed:
               _isSwipeInProgress ? null : () => _handleAction('superlike'),
         ),
-        const SizedBox(width: AppSpacing.spacingXL),
+        const SizedBox(width: AppSpacing.spacingXXL),
         DiscoverySwipeActionButton(
           type: DiscoverySwipeActionType.like,
           size: 58,

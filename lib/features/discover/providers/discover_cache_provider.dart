@@ -225,6 +225,14 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     unawaited(_refresh(filters: filters));
   }
 
+  /// Clear persisted discover/nearby caches and fetch a fresh feed.
+  Future<void> clearAndRefresh({Map<String, dynamic>? filters}) async {
+    state = const DiscoverCacheState();
+    await _cacheService.clearCache(CacheKeys.discoverFeed);
+    await _cacheService.clearCacheByPattern('nearby_suggestions_');
+    await _refresh(filters: filters);
+  }
+
   /// Fetch more and merge when stack drops below threshold. Throttled to avoid repeated calls.
   Future<void> fetchMoreIfNeeded({
     required int threshold,

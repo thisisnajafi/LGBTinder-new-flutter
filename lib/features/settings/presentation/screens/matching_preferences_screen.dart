@@ -12,6 +12,8 @@ import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/common/section_header.dart';
 import '../../data/models/matching_preferences.dart';
 import '../../providers/settings_provider.dart';
+import '../../../../core/cache/cache_invalidator.dart';
+import '../../../discover/providers/discover_cache_provider.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Matching/Discovery preferences screen — age range, distance, discovery visibility
@@ -106,6 +108,8 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
       );
       final updated = await service.updatePreferences(prefs);
       ref.invalidate(matchingPreferencesProvider);
+      await ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
+      await ref.read(discoverCacheProvider.notifier).clearAndRefresh();
       if (mounted) {
         setState(() {
           _saving = false;
@@ -140,6 +144,8 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
     try {
       final service = ref.read(matchingPreferencesServiceProvider);
       await service.resetAgePreferences();
+      await ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
+      await ref.read(discoverCacheProvider.notifier).clearAndRefresh();
       if (mounted) {
         setState(() {
           _ageMin = 18;

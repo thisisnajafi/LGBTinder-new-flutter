@@ -4,23 +4,31 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/cache/session_cache_providers.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../shared/services/cache_service.dart';
+import '../../../core/cache/session_data_cache_service.dart';
 import '../../payments/data/models/plan_limits.dart';
+import '../../payments/data/models/subscription_plan.dart';
+import '../../payments/data/services/payment_service.dart';
 import '../../payments/data/services/plan_limits_service.dart';
 import '../data/models/user_profile.dart';
 import '../data/services/profile_service.dart';
+import '../../../shared/models/user_tier.dart';
+import '../../payments/providers/payment_providers.dart';
 import 'profile_providers.dart';
 
 /// Immutable snapshot of Profile page data (only cached values are shown in UI).
 class ProfilePageData {
   final UserProfile profile;
   final PlanLimits planLimits;
+  final SubscriptionStatus? subscription;
 
   const ProfilePageData({
     required this.profile,
     required this.planLimits,
+    this.subscription,
   });
 }
 
@@ -31,7 +39,9 @@ final profilePageCacheProvider =
   return ProfilePageCacheNotifier(
     ref.read(profileServiceProvider),
     ref.read(planLimitsServiceProvider),
+    ref.read(paymentServiceProvider),
     ref.read(cacheServiceProvider),
+    ref.read(sessionDataCacheServiceProvider),
   );
 });
 
@@ -44,6 +54,17 @@ PlanLimits? _parsePlanLimitsMap(Map<String, dynamic>? raw) {
     profileLog('parsePlanLimitsMap failed: invalid payload');
   }
   return parsed;
+}
+
+SubscriptionStatus? _parseSubscriptionMap(Map<String, dynamic>? raw) {
+  if (raw == null) return null;
+  try {
+    return SubscriptionStatus.fromJson(raw);
+  } catch (e, st) {
+    profileLog('parseSubscriptionMap failed: invalid payload');
+    profileLogError('parseSubscriptionMap', e, st);
+    return null;
+  }
 }
 
 PlanLimits _fallbackPlanLimits() {
@@ -114,20 +135,24 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
   ProfilePageCacheNotifier(
     this._profileService,
     this._planLimitsService,
+    this._paymentService,
     this._cacheService,
+    this._sessionCache,
   ) : super(const AsyncValue.loading()) {
     _init();
   }
 
   final ProfileService _profileService;
   final PlanLimitsService _planLimitsService;
+  final PaymentService _paymentService;
   final CacheService _cacheService;
+  final SessionDataCacheService _sessionCache;
 
   bool _isRefreshing = false;
 
   /// 1) Load from cache only — no network. UI renders from this.
   Future<void> loadFromCache() async {
-    profileLog('loadFromCache: reading ${CacheKeys.myProfile} + ${CacheKeys.planLimits}');
+    profileLog('loadFromCache: reading ${CacheKeys.myProfile} + ${CacheKeys.planLimits} + ${CacheKeys.subscriptionStatus}');
     final profileMap = await _cacheService.getCached<Map<String, dynamic>>(
       CacheKeys.myProfile,
       (json) => Map<String, dynamic>.from(json),
@@ -138,10 +163,16 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
       (json) => Map<String, dynamic>.from(json),
       customExpiry: CacheDuration.profile,
     );
+    final subscriptionMap = await _cacheService.getCached<Map<String, dynamic>>(
+      CacheKeys.subscriptionStatus,
+      (json) => Map<String, dynamic>.from(json),
+      customExpiry: CacheDuration.profile,
+    );
 
     profileLog(
       'loadFromCache: profileMap=${profileMap != null ? "hit (${profileMap.length} keys)" : "miss"}, '
-      'planLimitsMap=${planLimitsMap != null ? "hit" : "miss"}',
+      'planLimitsMap=${planLimitsMap != null ? "hit" : "miss"}, '
+      'subscriptionMap=${subscriptionMap != null ? "hit" : "miss"}',
     );
 
     if (profileMap == null) {
@@ -153,12 +184,18 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
       final profile = UserProfile.fromJson(profileMap);
       final planLimits =
           _parsePlanLimitsMap(planLimitsMap) ?? _fallbackPlanLimits();
+      final subscription = _parseSubscriptionMap(subscriptionMap);
       profileLog(
         'loadFromCache: OK userId=${profile.id} email=${profile.email} '
-        'planLimits=${planLimitsMap != null ? "from cache" : "fallback"}',
+        'plan=${planLimits.planInfo.planName} '
+        'subscription=${subscription?.planName ?? "none"}',
       );
       state = AsyncValue.data(
-        ProfilePageData(profile: profile, planLimits: planLimits),
+        ProfilePageData(
+          profile: profile,
+          planLimits: planLimits,
+          subscription: subscription,
+        ),
       );
     } catch (e, st) {
       profileLog('loadFromCache: UserProfile.fromJson failed — cache may be corrupt');
@@ -203,12 +240,33 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
       try {
         profileLog('refresh: GET plan limits');
         planLimits = await _planLimitsService.getPlanLimits(forceRefresh: true);
-        profileLog('refresh: plan limits OK plan=${planLimits.planInfo?.planName}');
+        profileLog('refresh: plan limits OK plan=${planLimits.planInfo.planName}');
       } catch (e, st) {
         profileLogError('refresh planLimits', e, st);
         planLimits =
             state.valueOrNull?.planLimits ?? _fallbackPlanLimits();
         profileLog('refresh: using ${state.hasValue ? "cached" : "fallback"} plan limits');
+      }
+
+      SubscriptionStatus? subscription;
+      try {
+        profileLog('refresh: GET subscription status');
+        subscription = await _paymentService.getSubscriptionStatus();
+        profileLog(
+          'refresh: subscription OK plan=${subscription.planName} '
+          'active=${subscription.isActive}',
+        );
+        await _sessionCache.setSubscriptionStatus(subscription);
+        final tierKey = subscription.tier ??
+            userTierFromPlan(
+              planId: subscription.planId ?? planLimits.planInfo.planId,
+              planName: subscription.planName ?? planLimits.planInfo.planName,
+            ).key;
+        await _sessionCache.setUserTier(tierKey);
+      } catch (e, st) {
+        profileLogError('refresh subscriptionStatus', e, st);
+        subscription = state.valueOrNull?.subscription;
+        profileLog('refresh: using ${subscription != null ? "cached" : "no"} subscription');
       }
 
       await Future.wait([
@@ -222,11 +280,21 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
           {'data': planLimits.toJson()},
           duration: CacheDuration.profile,
         ),
+        if (subscription != null)
+          _cacheService.cacheData(
+            CacheKeys.subscriptionStatus,
+            subscription.toJson(),
+            duration: CacheDuration.profile,
+          ),
       ]);
       profileLog('refresh: cache written');
 
       state = AsyncValue.data(
-        ProfilePageData(profile: profile, planLimits: planLimits),
+        ProfilePageData(
+          profile: profile,
+          planLimits: planLimits,
+          subscription: subscription,
+        ),
       );
       profileLog('refresh: complete — state=data');
 
@@ -261,6 +329,7 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
   Future<void> invalidate() async {
     await _cacheService.clearCache(CacheKeys.myProfile);
     await _cacheService.clearCache(CacheKeys.planLimits);
+    await _cacheService.clearCache(CacheKeys.subscriptionStatus);
     state = const AsyncValue.loading();
     await loadFromCache();
     unawaited(refresh());

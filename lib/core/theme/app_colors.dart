@@ -77,6 +77,7 @@ class AppColors {
   static const Color feedbackSuccess = Color(0xFF2ECC71); // onlineGreen
   static const Color feedbackError = Color(0xFFE11D48);   // rose-600 for errors
   static const Color feedbackWarning = warningYellow;
+  static const Color feedbackInfo = Color(0xFF3B82F6);    // blue-500 (info / verified)
 
   /// Legacy card background names (prefer surfaceLight / surfaceDark).
   static const Color cardBackgroundLight = surfaceLight;

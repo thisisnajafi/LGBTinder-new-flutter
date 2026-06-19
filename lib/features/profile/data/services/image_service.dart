@@ -1,5 +1,6 @@
 import 'dart:io';
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/utils/image_upload_compressor.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/models/api_response.dart';
 import '../models/user_image.dart';
@@ -13,13 +14,14 @@ class ImageService {
   /// Upload image
   Future<UserImage> uploadImage(File imageFile, {String type = 'gallery'}) async {
     try {
+      final prepared = await ImageUploadCompressor.prepareForUpload(imageFile);
       ApiResponse<Map<String, dynamic>> response;
       
       if (type == 'primary' || type == 'profile') {
         // Use profile pictures endpoint for primary/profile images
         response = await _apiService.uploadFile<Map<String, dynamic>>(
           ApiEndpoints.profilePicturesUpload,
-          imageFile,
+          prepared,
           fieldName: 'image',
           fields: {'is_primary': '1'}, // Send as string '1' for true (Laravel boolean validation accepts '1'/'0')
           fromJson: (json) => json as Map<String, dynamic>,
@@ -47,7 +49,7 @@ class ImageService {
         // Backend expects 'images' as an array, so we use uploadFiles even for single file
         response = await _apiService.uploadFiles<Map<String, dynamic>>(
           ApiEndpoints.imagesUpload,
-          [imageFile], // Single file as array
+          [prepared],
           fieldName: 'images',
           fields: {'type': 'gallery'},
           fromJson: (json) => json as Map<String, dynamic>,

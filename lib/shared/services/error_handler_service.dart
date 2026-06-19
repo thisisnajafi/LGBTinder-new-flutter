@@ -58,6 +58,8 @@ class ErrorHandlerService {
           return error.getUserFriendlyMessage();
         case 404:
           return 'The requested resource was not found.';
+        case 413:
+          return 'Photo is too large to upload. We\'ll compress it automatically — please try again.';
         case 422:
           // For 422, prefer validation errors if available, otherwise use the message
           if (error.errors != null && error.errors!.isNotEmpty) {

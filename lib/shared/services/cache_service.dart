@@ -360,10 +360,13 @@ class CacheKeys {
   static const String myProfile = 'my_profile';
   /// Plan limits (GET /api/plan-limits) — cache-first on Profile page
   static const String planLimits = 'plan_limits';
+  /// Subscription status (GET /api/subscriptions/status) — cache-first on Profile page
+  static const String subscriptionStatus = 'subscription_status';
   /// Discover feed: cache-first stack with interaction state (single source of truth for Discover page)
   static const String discoverFeed = 'discover_feed';
-  /// Nearby suggestions (GET /matching/nearby-suggestions) — cache per page/limit; limits applied when reading
-  static String nearbySuggestions(int page, int limit) => 'nearby_suggestions_${page}_$limit';
+  /// Nearby suggestions (GET /matching/nearby-suggestions) — cache per page/limit/filters
+  static String nearbySuggestions(int page, int limit, {String filtersHash = 'default'}) =>
+      'nearby_suggestions_${page}_${limit}_$filtersHash';
   static String userProfile(int userId) => 'user_profile_$userId';
   static String userPlan(int userId) => 'user_plan_$userId';
   static String userMatches(int userId) => 'user_matches_$userId';

@@ -83,6 +83,25 @@ class Notification {
       }
     }
     userImageUrl ??= json['user_image_url']?.toString() ?? json['image_url']?.toString();
+
+    final dataMap = _parseDataField(json['data']);
+    if (userImageUrl == null && dataMap != null) {
+      for (final key in const [
+        'avatar_url',
+        'user_avatar',
+        'from_user_avatar',
+        'profile_image',
+      ]) {
+        final candidate = dataMap[key]?.toString();
+        if (candidate != null && candidate.isNotEmpty) {
+          userImageUrl = candidate;
+          break;
+        }
+      }
+    }
+    if (userName == null && dataMap != null) {
+      userName = dataMap['user_name']?.toString() ?? dataMap['name']?.toString();
+    }
     
     // FIXED: Check both 'is_read' and 'read_at' for read status
     final isRead = json['is_read'] == true || 
@@ -98,7 +117,7 @@ class Notification {
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       isRead: isRead,
-      data: _parseDataField(json['data']),
+      data: dataMap,
       userId: userId,
       userName: userName,
       userImageUrl: userImageUrl,

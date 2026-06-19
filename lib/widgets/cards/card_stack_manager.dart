@@ -31,6 +31,8 @@ class CardStackManager extends ConsumerStatefulWidget {
   final double contentTopInset;
   /// Keeps the default card position above the action row.
   final double contentBottomInset;
+  /// Horizontal inset — use [AppSpacing.contentPadding] to match greeting card width.
+  final double horizontalPadding;
 
   const CardStackManager({
     super.key,
@@ -47,6 +49,7 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.isSheetOpen = false,
     this.contentTopInset = 0,
     this.contentBottomInset = 0,
+    this.horizontalPadding = AppSpacing.contentPadding,
   });
 
   @override
@@ -227,26 +230,46 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.spacingLG,
+        widget.horizontalPadding,
         widget.contentTopInset,
-        AppSpacing.spacingLG,
+        widget.horizontalPadding,
         widget.contentBottomInset,
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          if (widget.cards.length > 2)
-            _buildStackCard(widget.cards[2], depth: 2),
-          if (widget.cards.length > 1)
-            _buildStackCard(widget.cards[1], depth: 1),
-          if (widget.cards.isNotEmpty)
-            _exitingCardSnapshot == null
-                ? _buildInteractiveTopCard(widget.cards[0])
-                : _buildStackCard(widget.cards[0], depth: 0),
-          if (_exitingCardSnapshot != null)
-            _buildExitingCard(_exitingCardSnapshot!),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardSize = SwipeableCard.fitSize(
+            maxWidth: constraints.maxWidth,
+            maxHeight: constraints.maxHeight,
+            minimumVerticalMargin: AppSpacing.spacingLG * 2,
+          );
+
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (widget.cards.length > 2)
+                _buildStackCard(widget.cards[2], depth: 2, cardSize: cardSize),
+              if (widget.cards.length > 1)
+                _buildStackCard(widget.cards[1], depth: 1, cardSize: cardSize),
+              if (widget.cards.isNotEmpty)
+                _exitingCardSnapshot == null
+                    ? _buildInteractiveTopCard(
+                        widget.cards[0],
+                        cardSize: cardSize,
+                      )
+                    : _buildStackCard(
+                        widget.cards[0],
+                        depth: 0,
+                        cardSize: cardSize,
+                      ),
+              if (_exitingCardSnapshot != null)
+                _buildExitingCard(
+                  _exitingCardSnapshot!,
+                  cardSize: cardSize,
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -257,7 +280,6 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     required int depth,
   }) {
     final scale = 1.0 - (depth * 0.05);
-    final verticalOffset = depth * 12.0;
     final tiltX = depth * 0.035;
     final tiltZ = depth == 1 ? -0.018 : depth == 2 ? 0.018 : 0.0;
     final opacity = (1.0 - depth * 0.14).clamp(0.72, 1.0);
@@ -265,28 +287,33 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     return Opacity(
       opacity: opacity,
       child: Transform(
-        alignment: Alignment.topCenter,
+        alignment: Alignment.center,
         transform: Matrix4.identity()
           ..setEntry(3, 2, 0.0011)
           ..rotateX(tiltX)
           ..rotateZ(tiltZ)
           ..scale(scale, scale, 1),
-        child: Padding(
-          padding: EdgeInsets.only(top: verticalOffset),
+        child: Transform.translate(
+          offset: Offset(0, -depth * 8.0),
           child: child,
         ),
       ),
     );
   }
 
-  Widget _buildStackCard(Map<String, dynamic> cardData, {required int depth}) {
+  Widget _buildStackCard(
+    Map<String, dynamic> cardData, {
+    required int depth,
+    required Size cardSize,
+  }) {
     return Positioned.fill(
       child: _applyStackDepth(
         depth: depth,
         child: Align(
-          alignment: Alignment.topCenter,
-          child: AspectRatio(
-            aspectRatio: SwipeableCard.cardAspectRatio,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: cardSize.width,
+            height: cardSize.height,
             child: _buildCard(
               cardData,
               depth: depth,
@@ -298,13 +325,17 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     );
   }
 
-  Widget _buildInteractiveTopCard(Map<String, dynamic> cardData) {
+  Widget _buildInteractiveTopCard(
+    Map<String, dynamic> cardData, {
+    required Size cardSize,
+  }) {
     if (!_frontImagesReady) {
       return Positioned.fill(
         child: Align(
-          alignment: Alignment.topCenter,
-          child: AspectRatio(
-            aspectRatio: SwipeableCard.cardAspectRatio,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: cardSize.width,
+            height: cardSize.height,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
@@ -335,7 +366,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
             scale: _revealScale,
             child: Stack(
               clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
+              alignment: Alignment.center,
               children: [
                 Transform.translate(
                   offset: widget.isSheetOpen ? Offset.zero : _dragOffset,
@@ -362,12 +393,16 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
                                 ]
                               : null,
                         ),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            _buildCard(cardData, depth: 0),
-                            if (!widget.isSheetOpen) _buildSwipeOverlay(),
-                          ],
+                        child: SizedBox(
+                          width: cardSize.width,
+                          height: cardSize.height,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              _buildCard(cardData, depth: 0),
+                              if (!widget.isSheetOpen) _buildSwipeOverlay(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -381,16 +416,20 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     );
   }
 
-  Widget _buildExitingCard(Map<String, dynamic> cardData) {
+  Widget _buildExitingCard(
+    Map<String, dynamic> cardData, {
+    required Size cardSize,
+  }) {
     return Positioned.fill(
       child: SlideTransition(
         position: _exitSlide,
         child: FadeTransition(
           opacity: _exitFade,
           child: Align(
-            alignment: Alignment.topCenter,
-            child: AspectRatio(
-              aspectRatio: SwipeableCard.cardAspectRatio,
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: cardSize.width,
+              height: cardSize.height,
               child: _buildCard(cardData, depth: 0),
             ),
           ),

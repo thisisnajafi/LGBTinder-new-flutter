@@ -4,6 +4,8 @@ import 'package:lgbtindernew/core/services/app_logger.dart';
 
 import '../core/widgets/app_grouped_list_card.dart';
 import '../core/widgets/app_settings_detail.dart';
+import '../core/cache/cache_invalidator.dart';
+import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/settings/providers/settings_provider.dart';
 
 /// Privacy settings screen - Manage privacy and visibility settings
@@ -71,6 +73,8 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
       );
       ref.invalidate(matchingPreferencesProvider);
       ref.invalidate(settingsSummaryProvider);
+      await ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
+      await ref.read(discoverCacheProvider.notifier).clearAndRefresh();
       if (mounted) {
         setState(() {
           _discoveryVisibility = value;

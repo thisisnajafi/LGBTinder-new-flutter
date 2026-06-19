@@ -14,6 +14,7 @@ import '../models/verify_email_response.dart';
 import '../models/complete_registration_request.dart';
 import '../models/complete_registration_response.dart';
 import '../models/check_token_response.dart';
+import '../models/email_verification_required_exception.dart';
 import '../models/otp_request.dart';
 import '../models/otp_response.dart';
 import '../models/social_auth_request.dart';

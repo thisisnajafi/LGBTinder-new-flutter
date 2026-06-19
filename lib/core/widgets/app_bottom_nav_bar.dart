@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
+import '../theme/border_radius_constants.dart';
 import '../utils/app_icons.dart';
 import '../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../widgets/badges/notification_badge.dart';
@@ -31,7 +32,7 @@ class AppBottomNavBar extends ConsumerWidget {
   static const double barHeight = 64.0;
   static const double floatingHorizontalMargin = 16.0;
   static const double floatingBottomMargin = 8.0;
-  static const double _borderWidth = 1.75;
+  static const double _borderWidth = 2.0;
 
   /// Bottom padding reserved for tab content (bar + float inset + safe area).
   static double bottomReserve(double safeAreaBottom) =>
@@ -302,7 +303,7 @@ class _NavItem extends StatelessWidget {
                 color: isActive
                     ? activeColor.withValues(alpha: 0.12)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(100),
+                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
               ),
               child: Stack(
                 clipBehavior: Clip.none,

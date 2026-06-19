@@ -177,7 +177,8 @@ class CacheInvalidator {
       await _userCache.invalidateDiscoveryCards(id);
     }
     await _legacyCache.clearCache(CacheKeys.discoverFeed);
-    _ref.read(discoverCacheProvider.notifier).loadFromCache();
+    await _legacyCache.clearCacheByPattern('nearby_suggestions_');
+    _ref.read(discoverCacheProvider.notifier).resetSession();
   }
 
   Future<String?> _resolveCurrentUserId() async {
