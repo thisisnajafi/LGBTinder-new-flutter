@@ -16,6 +16,9 @@ class AppAnimations {
   /// Push / pop page transitions. ~300 ms.
   static const Duration transitionPage = Duration(milliseconds: 300);
 
+  /// Main shell bottom-nav tab changes. 250–350 ms.
+  static const Duration transitionTab = Duration(milliseconds: 300);
+
   /// Bottom sheet, dialog open/close. ~250 ms.
   static const Duration transitionModal = Duration(milliseconds: 250);
 
