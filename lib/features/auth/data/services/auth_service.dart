@@ -509,10 +509,22 @@ class AuthService {
     }
   }
 
-  /// Logout - clear tokens
+  /// Logout - revoke server token, clear local session.
   Future<void> logout() async {
-    await _tokenStorage.clearAllTokens();
-    _dioClient.clearAuthToken();
+    try {
+      final token = await _tokenStorage.getAuthToken();
+      if (token != null && token.isNotEmpty) {
+        await _apiService.post<Map<String, dynamic>>(
+          ApiEndpoints.logout,
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+      }
+    } catch (_) {
+      // Local logout should still proceed if the network call fails.
+    } finally {
+      await _tokenStorage.clearAllTokens();
+      _dioClient.clearAuthToken();
+    }
   }
 
   /// Send OTP for password reset
@@ -573,6 +585,51 @@ class AuthService {
             ? response.message
             : 'Failed to reset password');
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Sign in with Google ID token (native mobile flow).
+  Future<SocialAuthResponse> signInWithGoogle({
+    required String idToken,
+    String? deviceName,
+  }) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.googleAuth,
+        data: {
+          'id_token': idToken,
+          if (deviceName != null && deviceName.isNotEmpty)
+            'device_name': deviceName,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.data != null) {
+        final socialResponse = SocialAuthResponse.fromJson({
+          'status': response.status,
+          'message': response.message,
+          'data': response.data,
+        });
+
+        if (socialResponse.token != null) {
+          await _saveAuthTokensForLogin(
+            token: socialResponse.token!,
+            profileCompleted: socialResponse.profileCompleted,
+            userState: socialResponse.userState,
+          );
+        }
+        await _persistSocialResponse(socialResponse);
+
+        return socialResponse;
+      }
+
+      throw Exception(
+        response.message.isNotEmpty
+            ? response.message
+            : 'Google authentication failed',
+      );
     } catch (e) {
       rethrow;
     }

@@ -1,25 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
-import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../shared/services/error_handler_service.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../../shared/models/api_error.dart';
+import '../../../../shared/services/error_handler_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/auth_service_provider.dart';
+import '../../utils/auth_navigation.dart';
 
-/// Social login button widget - supports Google OAuth
+typedef GoogleSignInCallback = Future<void> Function();
+
+/// Production Google sign-in button (native SDK + backend ID token verification).
 class SocialLoginButton extends ConsumerStatefulWidget {
-  final VoidCallback? onSuccess;
-  final VoidCallback? onError;
-
   const SocialLoginButton({
-    Key? key,
+    super.key,
     this.onSuccess,
     this.onError,
-  }) : super(key: key);
+    this.onBeforeAuth,
+    this.getDeviceName,
+    this.lightStyle = false,
+  });
+
+  final VoidCallback? onSuccess;
+  final VoidCallback? onError;
+  final GoogleSignInCallback? onBeforeAuth;
+  final Future<String> Function()? getDeviceName;
+  final bool lightStyle;
 
   @override
   ConsumerState<SocialLoginButton> createState() => _SocialLoginButtonState();
@@ -31,22 +40,29 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = widget.lightStyle
+        ? Colors.white
+        : (isDark ? AppColors.surfaceDark : Colors.white);
+    final foregroundColor =
+        widget.lightStyle ? Colors.black87 : AppColors.textPrimaryLight;
+    final borderColor = widget.lightStyle
+        ? Colors.white.withValues(alpha: 0.55)
+        : (isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight);
 
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: 52,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _handleGoogleSignIn,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isDark ? Colors.white : Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 2,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          elevation: widget.lightStyle ? 0 : 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-            side: BorderSide(
-              color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-              width: 1,
+            borderRadius: BorderRadius.circular(
+              widget.lightStyle ? AppRadius.radiusRound : AppRadius.radiusLG,
             ),
+            side: BorderSide(color: borderColor, width: 1.2),
           ),
           padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
         ),
@@ -56,39 +72,19 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? Colors.black87 : Colors.black87,
-                  ),
+                  valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
                 ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Google logo placeholder (you can replace with actual Google logo)
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade600,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'G',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                  _GoogleMark(),
                   SizedBox(width: AppSpacing.spacingMD),
                   Text(
                     'Continue with Google',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -101,52 +97,84 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
     setState(() => _isLoading = true);
 
     try {
-      // Get Google OAuth URL from backend
+      if (widget.onBeforeAuth != null) {
+        await widget.onBeforeAuth!();
+      }
+
+      final googleAuth = ref.read(googleAuthServiceProvider);
       final authService = ref.read(authServiceProvider);
-      final authUrlResponse = await authService.getGoogleAuthUrl();
 
-      if (authUrlResponse.isSuccess && authUrlResponse.data != null) {
-        final authUrl = authUrlResponse.data!['authorization_url'] as String;
-        final state = authUrlResponse.data!['state'] as String;
-
-        // Store state securely for callback validation
-        const storage = FlutterSecureStorage();
-        await storage.write(key: 'oauth_state', value: state);
-
-        // Launch URL in external browser
-        final Uri url = Uri.parse(authUrl);
-        if (await canLaunchUrl(url)) {
-          await launchUrl(
-            url,
-            mode: LaunchMode.externalApplication,
-          );
-
-          // Note: For mobile apps, you would typically handle the callback
-          // through deep linking or a custom URL scheme
-          // The callback would then call the social login use case
-
-          widget.onSuccess?.call();
-        } else {
-          throw Exception('Could not launch Google OAuth URL');
-        }
-      } else {
-        throw Exception(authUrlResponse.message);
+      final idToken = await googleAuth.signIn();
+      if (idToken == null) {
+        return;
       }
+
+      final deviceName = widget.getDeviceName != null
+          ? await widget.getDeviceName!()
+          : 'mobile';
+
+      final response = await authService.signInWithGoogle(
+        idToken: idToken,
+        deviceName: deviceName,
+      );
+
+      final loginResponse = AuthNavigation.toLoginResponse(response);
+      await ref.read(authProvider.notifier).login(loginResponse);
+
+      if (!mounted) return;
+
+      AuthNavigation.navigateAfterAuth(
+        context,
+        userState: response.userState,
+        profileCompleted: response.profileCompleted,
+        email: response.email,
+        firstName: response.firstName,
+        lastName: response.lastName,
+      );
+
+      widget.onSuccess?.call();
     } catch (e) {
-      if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          ApiError(
-            message: 'Failed to sign in with Google: ${e.toString()}',
-            code: 0,
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      final message = e is ApiError
+          ? e.message
+          : e is StateError
+              ? e.message
+              : 'Failed to sign in with Google. Please try again.';
+
+      ErrorHandlerService.showErrorSnackBar(
+        context,
+        ApiError(message: message, code: 0),
+      );
       widget.onError?.call();
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+}
+
+class _GoogleMark extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.black12),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'G',
+        style: TextStyle(
+          color: Color(0xFF4285F4),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }

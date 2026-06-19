@@ -13,6 +13,7 @@ import '../../core/widgets/app_page_header.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/presentation/widgets/social_login_button.dart';
 import '../../features/auth/data/models/login_request.dart';
 import '../../features/auth/data/models/email_verification_required_exception.dart';
 import '../../shared/models/api_error.dart';
@@ -501,6 +502,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onPressed: _isLoading ? null : _handleLogin,
                   isLoading: _isLoading,
                   isFullWidth: true,
+                ),
+                SizedBox(height: AppSpacing.spacingLG),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: borderColor)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingMD,
+                      ),
+                      child: Text(
+                        'or',
+                        style: AppTypography.caption.copyWith(
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: borderColor)),
+                  ],
+                ),
+                SizedBox(height: AppSpacing.spacingLG),
+                SocialLoginButton(
+                  getDeviceName: _getDeviceName,
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
                 // Sign up link

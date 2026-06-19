@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/api_providers.dart';
 import '../data/services/auth_service.dart';
+import '../data/services/google_auth_service.dart';
 import '../data/repositories/auth_repository.dart';
 
 /// Auth Service Provider
@@ -9,6 +10,10 @@ final authServiceProvider = Provider<AuthService>((ref) {
   final tokenStorage = ref.watch(tokenStorageServiceProvider);
   final dioClient = ref.watch(dioClientProvider);
   return AuthService(apiService, tokenStorage, dioClient);
+});
+
+final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
+  return GoogleAuthService();
 });
 
 /// Auth Repository Provider
