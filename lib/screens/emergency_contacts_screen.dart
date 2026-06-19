@@ -5,10 +5,9 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/utils/app_icons.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
@@ -193,170 +192,149 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
-      title: 'Emergency Contacts',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: Column(
-        children: [
-          // Info banner
-          Container(
-            margin: EdgeInsets.all(AppSpacing.spacingLG),
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              color: AppColors.warningYellow.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(color: AppColors.warningYellow),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: AppColors.warningYellow,
-                  size: 24,
-                ),
-                SizedBox(width: AppSpacing.spacingMD),
-                Expanded(
-                  child: Text(
-                    'Emergency contacts can be notified in case of safety concerns',
-                    style: AppTypography.body.copyWith(
-                      color: textColor,
+    return PremiumDetailScaffold(
+      title: 'Emergency contacts',
+      subtitle: 'Trusted contacts for safety alerts',
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.spacingLG,
+            AppSpacing.spacingSM,
+            AppSpacing.spacingLG,
+            AppSpacing.spacingLG,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_contacts.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+                  child: ElevatedButton(
+                    onPressed: _handleEmergencyAlert,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.feedbackError,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                      ),
                     ),
+                    child: const Text('Send emergency alert'),
                   ),
                 ),
-              ],
-            ),
+              GradientButton(
+                text: 'Add emergency contact',
+                onPressed: _handleAddContact,
+                isFullWidth: true,
+              ),
+            ],
           ),
-          // Contacts list
-          Expanded(
-            child: _contacts.isEmpty
-                ? EmptyState(
-                    title: 'No Emergency Contacts',
-                    message: 'Add emergency contacts for your safety',
-                    icon: Icons.emergency,
-                    actionLabel: 'Add Contact',
-                    onAction: _handleAddContact,
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-                    itemCount: _contacts.length,
-                    itemBuilder: (context, index) {
-                      final contact = _contacts[index];
-                      return Container(
-                        margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        ),
+      ),
+      body: _contacts.isEmpty
+          ? EmptyState(
+              title: 'No emergency contacts',
+              message: 'Add emergency contacts for your safety',
+              icon: Icons.emergency,
+              actionLabel: 'Add contact',
+              onAction: _handleAddContact,
+            )
+          : AppSettingsDetailList(
+              children: [
+                PremiumSettingsGroup(
+                  title: 'Info',
+                  children: [
+                    Text(
+                      'Emergency contacts can be notified in case of safety concerns.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
+                  title: 'Your contacts',
+                  children: [
+                    for (final contact in _contacts)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+                        padding: const EdgeInsets.all(AppSpacing.spacingMD),
                         decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(color: borderColor),
+                          color: isDark
+                              ? AppColors.cardBackgroundDark
+                              : AppColors.cardBackgroundLight,
+                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                          border: Border.all(
+                            color: AppColors.accentViolet.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 48,
-                              height: 48,
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.notificationRed.withOpacity(0.2),
+                                color: AppColors.feedbackError.withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                Icons.emergency,
-                                color: AppColors.notificationRed,
+                              child: Center(
+                                child: AppSvgIcon(
+                                  assetPath: AppIcons.call,
+                                  size: 18,
+                                  color: AppColors.feedbackError,
+                                ),
                               ),
                             ),
-                            SizedBox(width: AppSpacing.spacingMD),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    contact['name'],
-                                    style: AppTypography.h3.copyWith(
-                                      color: textColor,
+                                    contact['name']?.toString() ?? 'Contact',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  SizedBox(height: AppSpacing.spacingXS),
-                                  Text(
-                                    contact['phone'],
-                                    style: AppTypography.body.copyWith(
-                                      color: secondaryTextColor,
+                                  if (contact['phone'] != null)
+                                    Text(
+                                      contact['phone'].toString(),
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.55),
+                                      ),
                                     ),
-                                  ),
                                   if (contact['relationship'] != null)
                                     Text(
-                                      contact['relationship'],
-                                      style: AppTypography.caption.copyWith(
-                                        color: secondaryTextColor,
+                                      contact['relationship'].toString(),
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.45),
                                       ),
                                     ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                color: AppColors.notificationRed,
+                              icon: AppSvgIcon(
+                                assetPath: AppIcons.delete,
+                                size: 20,
+                                color: AppColors.feedbackError,
                               ),
-                              onPressed: () => _handleDeleteContact(contact['id']),
+                              onPressed: () =>
+                                  _handleDeleteContact(contact['id']),
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-          ),
-          // Emergency alert button (only show if contacts exist)
-          if (_contacts.isNotEmpty) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-              child: ElevatedButton(
-                onPressed: _handleEmergencyAlert,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.notificationRed,
-                  foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                  ),
-                  elevation: 4,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.emergency, color: Colors.white),
-                    SizedBox(width: AppSpacing.spacingSM),
-                    Text(
-                      'Send Emergency Alert',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
                       ),
-                    ),
                   ],
                 ),
-              ),
+              ],
             ),
-            SizedBox(height: AppSpacing.spacingMD),
-          ],
-
-          // Add button
-          Padding(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: GradientButton(
-              text: 'Add Emergency Contact',
-              onPressed: _handleAddContact,
-              isFullWidth: true,
-              icon: Icons.add,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

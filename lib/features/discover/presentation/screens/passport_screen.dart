@@ -4,10 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/location/passport_provider.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/typography.dart';
-import '../../../../core/utils/app_icons.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../features/payments/data/services/plan_limits_service.dart';
 import '../../../../features/reference_data/data/models/reference_item.dart';
 import '../../../../features/reference_data/providers/reference_data_providers.dart';
@@ -169,98 +167,54 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_accessChecked) {
-      return const AppPageScaffold(
+      return const AppSettingsDetailScaffold(
         title: 'Passport',
-        showBackButton: true,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    final theme = Theme.of(context);
     final passport = ref.watch(passportLocationProvider);
     final countriesAsync = ref.watch(countriesProvider);
     final citiesAsync = _countryId != null
         ? ref.watch(citiesProvider(_countryId!))
         : const AsyncValue<List<ReferenceItem>>.data([]);
 
-    return AppPageScaffold(
+    return AppSettingsDetailScaffold(
       title: 'Passport',
-      showBackButton: true,
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.contentPadding),
+      subtitle: 'Temporarily explore matches in another city',
+      body: AppSettingsDetailList(
         children: [
-          Row(
+          PremiumSettingsGroup(
+            title: 'Swipe anywhere',
+            subtitle:
+                'Change where you discover matches. Your home GPS stays private.',
             children: [
-              AppSvgIcon(
-                assetPath: AppIcons.map,
-                size: 28,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: AppSpacing.spacingSM),
-              Expanded(
-                child: Text(
-                  'Swipe anywhere',
-                  style: AppTypography.titleLarge.copyWith(
-                    color: theme.colorScheme.onSurface,
-                  ),
+              if (passport.active) ...[
+                PremiumInfoRow(
+                  label: 'Currently exploring',
+                  value: passport.displayLabel,
+                  badge: passport.expiresAt != null
+                      ? 'Expires ${_formatExpiry(passport.expiresAt!)}'
+                      : null,
                 ),
-              ),
+                const SizedBox(height: AppSpacing.spacingSM),
+                OutlinedButton(
+                  onPressed: _isSubmitting ? null : _clearPassport,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Return to my location'),
+                ),
+                const SizedBox(height: AppSpacing.spacingMD),
+              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.spacingSM),
-          Text(
-            'Temporarily change where you discover matches. Your home GPS stays private.',
-            style: AppTypography.bodyMedium.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          if (passport.active) ...[
-            const SizedBox(height: AppSpacing.spacingLG),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.spacingMD),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Currently exploring',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      passport.displayLabel,
-                      style: AppTypography.titleMedium,
-                    ),
-                    if (passport.expiresAt != null) ...[
-                      const SizedBox(height: AppSpacing.spacingXS),
-                      Text(
-                        'Expires ${_formatExpiry(passport.expiresAt!)}',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    OutlinedButton(
-                      onPressed: _isSubmitting ? null : _clearPassport,
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Return to my location'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          AppGroupedListSection(
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
             title: 'Choose a destination',
-            padding: const EdgeInsets.fromLTRB(0, AppSpacing.spacingLG, 0, 0),
             children: [
               countriesAsync.when(
                 data: (countries) => ReferenceBottomSheetField(
@@ -319,19 +273,27 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.spacingLG),
-          citiesAsync.maybeWhen(
-            data: (cities) {
-              final cityLabel = _selectedCityLabel(cities) ?? 'this city';
-              return GradientButton(
-                text: 'Explore $cityLabel',
-                onPressed: _isSubmitting || _cityId == null ? null : _activatePassport,
-                isLoading: _isSubmitting,
-              );
-            },
-            orElse: () => const GradientButton(
-              text: 'Explore',
-              onPressed: null,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSettingsLayout.horizontalPadding,
+              AppSpacing.spacingXL,
+              AppSettingsLayout.horizontalPadding,
+              0,
+            ),
+            child: citiesAsync.maybeWhen(
+              data: (cities) {
+                final cityLabel = _selectedCityLabel(cities) ?? 'this city';
+                return GradientButton(
+                  text: 'Explore $cityLabel',
+                  onPressed:
+                      _isSubmitting || _cityId == null ? null : _activatePassport,
+                  isLoading: _isSubmitting,
+                );
+              },
+              orElse: () => const GradientButton(
+                text: 'Explore',
+                onPressed: null,
+              ),
             ),
           ),
         ],

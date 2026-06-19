@@ -6,8 +6,9 @@ import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/utils/app_icons.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../shared/services/error_handler_service.dart';
@@ -210,38 +211,47 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
+    return AppSettingsDetailScaffold(
       title: 'Support tickets',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      action: TextButton.icon(
-        onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
-        icon: Icon(Icons.add, size: 20, color: AppColors.accentPurple),
-        label: Text(
-          'New ticket',
-          style: AppTypography.button.copyWith(color: AppColors.accentPurple),
+      subtitle: 'View and create support requests',
+      action: IconButton(
+        onPressed: () =>
+            _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
+        icon: AppSvgIcon(
+          assetPath: AppIcons.add,
+          size: 22,
+          color: AppColors.accentViolet,
         ),
+        tooltip: 'New ticket',
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: AppColors.accentPurple))
+          ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
                   child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
+                    padding: const EdgeInsets.all(AppSpacing.spacingLG),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(_error!, style: AppTypography.body.copyWith(color: secondaryTextColor), textAlign: TextAlign.center),
-                        SizedBox(height: AppSpacing.spacingMD),
+                        Text(
+                          _error!,
+                          style: AppTypography.body
+                              .copyWith(color: secondaryTextColor),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.spacingMD),
                         TextButton(
                           onPressed: _loadTickets,
-                          child: Text('Retry', style: AppTypography.button.copyWith(color: AppColors.accentPurple)),
+                          child: Text(
+                            'Retry',
+                            style: AppTypography.button
+                                .copyWith(color: AppColors.accentViolet),
+                          ),
                         ),
                       ],
                     ),
@@ -249,110 +259,72 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                 )
               : _tickets.isEmpty
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.confirmation_number_outlined, size: 64, color: secondaryTextColor),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Text(
-                            'No tickets yet',
-                            style: AppTypography.h3.copyWith(color: textColor),
-                          ),
-                          SizedBox(height: AppSpacing.spacingSM),
-                          Text(
-                            'Create a ticket to get help from support.',
-                            style: AppTypography.body.copyWith(color: secondaryTextColor),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: AppSpacing.spacingLG),
-                          GradientButton(
-                            onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
-                            text: 'New ticket',
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.spacingLG),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AppSvgIcon(
+                              assetPath: AppIcons.document,
+                              size: 56,
+                              color: secondaryTextColor,
+                            ),
+                            const SizedBox(height: AppSpacing.spacingMD),
+                            Text(
+                              'No tickets yet',
+                              style: AppTypography.h3.copyWith(color: textColor),
+                            ),
+                            const SizedBox(height: AppSpacing.spacingSM),
+                            Text(
+                              'Create a ticket to get help from support.',
+                              style: AppTypography.body
+                                  .copyWith(color: secondaryTextColor),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.spacingLG),
+                            GradientButton(
+                              onPressed: () => _showNewTicketBottomSheet(
+                                context,
+                                isDark,
+                                textColor,
+                                surfaceColor,
+                              ),
+                              text: 'New ticket',
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   : RefreshIndicator(
                       onRefresh: _loadTickets,
-                      child: ListView.builder(
-                        padding: EdgeInsets.all(AppSpacing.spacingMD),
-                        itemCount: _tickets.length,
-                        itemBuilder: (context, index) {
-                          final ticket = _tickets[index];
-                          return _TicketTile(
-                            ticket: ticket,
-                            textColor: textColor,
-                            secondaryTextColor: secondaryTextColor,
-                            surfaceColor: surfaceColor,
-                            borderColor: borderColor,
-                            onTap: () => _showTicketDetail(context, ticket, isDark, textColor, secondaryTextColor, surfaceColor, borderColor),
-                          );
-                        },
+                      child: AppSettingsDetailList(
+                        children: [
+                          PremiumSettingsGroup(
+                            title: 'Your tickets',
+                            children: [
+                              for (final ticket in _tickets)
+                                PremiumSettingsTile(
+                                  iconPath: AppIcons.document,
+                                  title: ticket.subject ?? 'Ticket #${ticket.id}',
+                                  subtitle: [
+                                    if (ticket.status != null) ticket.status,
+                                    if (ticket.createdAt != null) ticket.createdAt,
+                                  ].join(' · '),
+                                  onTap: () => _showTicketDetail(
+                                    context,
+                                    ticket,
+                                    isDark,
+                                    textColor,
+                                    secondaryTextColor,
+                                    surfaceColor,
+                                    borderColor,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-    );
-  }
-}
-
-class _TicketTile extends StatelessWidget {
-  final SupportTicketItem ticket;
-  final Color textColor;
-  final Color secondaryTextColor;
-  final Color surfaceColor;
-  final Color borderColor;
-  final VoidCallback onTap;
-
-  const _TicketTile({
-    required this.ticket,
-    required this.textColor,
-    required this.secondaryTextColor,
-    required this.surfaceColor,
-    required this.borderColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-      child: Material(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          child: Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(color: borderColor),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ticket.subject ?? 'Ticket #${ticket.id}',
-                        style: AppTypography.body.copyWith(color: textColor, fontWeight: FontWeight.w600),
-                      ),
-                      if (ticket.status != null || ticket.createdAt != null) ...[
-                        SizedBox(height: AppSpacing.spacingXS),
-                        Text(
-                          [if (ticket.status != null) ticket.status, if (ticket.createdAt != null) ticket.createdAt].join(' · '),
-                          style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: secondaryTextColor),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

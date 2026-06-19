@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/widgets/app_grouped_list_card.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../core/widgets/profile_age_badge.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 
@@ -38,7 +37,7 @@ class ProfileHubView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AppPageHeader(
+              PremiumPageHeader(
                 title: 'Profile',
                 action: TextButton(
                   onPressed: onViewProfile,
@@ -58,26 +57,20 @@ class ProfileHubView extends StatelessWidget {
                 age: age,
                 isVerified: isVerified,
               ),
-              const SizedBox(height: AppSpacing.spacingXL),
-              for (final section in sections)
-                AppGroupedListSection(
-                  title: section.title,
-                  padding: const EdgeInsets.fromLTRB(
-                    AppPageHeader.horizontalPadding,
-                    AppSpacing.spacingXL,
-                    AppPageHeader.horizontalPadding,
-                    0,
-                  ),
+              for (var i = 0; i < sections.length; i++) ...[
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
+                  title: sections[i].title,
                   children: [
-                    for (var i = 0; i < section.items.length; i++)
-                      AppGroupedListTile(
-                        iconPath: section.items[i].iconPath,
-                        label: section.items[i].label,
-                        onTap: section.items[i].onTap,
-                        showDivider: i < section.items.length - 1,
+                    for (final item in sections[i].items)
+                      PremiumSettingsTile(
+                        iconPath: item.iconPath,
+                        title: item.label,
+                        onTap: item.onTap,
                       ),
                   ],
                 ),
+              ],
               const SizedBox(height: AppSpacing.spacingXXL),
             ],
           ),

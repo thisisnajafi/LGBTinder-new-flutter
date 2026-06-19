@@ -8,8 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_subscription_plans.dart';
@@ -280,8 +279,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor =
@@ -291,10 +288,12 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     final borderColor =
         isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
-      title: 'Choose Plan',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return PremiumDetailScaffold(
+      title: 'Choose plan',
+      subtitle: 'Unlock premium features and enhance your experience',
+      bottomNavigationBar: (!_isLoading && !_hasError && _plans.isNotEmpty)
+          ? _buildSubscribeBar(isDark, textColor)
+          : null,
       body: _isLoading
           ? const SkeletonSubscriptionPlans()
           : _hasError && _plans.isEmpty
@@ -304,40 +303,31 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                 )
               : _plans.isEmpty
                   ? _buildEmptyState(secondaryTextColor, textColor)
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: RefreshIndicator(
-                            onRefresh: _loadPlans,
-                            child: ListView(
-                              padding: EdgeInsets.fromLTRB(
-                                AppSpacing.spacingLG,
-                                AppSpacing.spacingLG,
-                                AppSpacing.spacingLG,
-                                AppSpacing.spacingSM,
-                              ),
-                              children: [
-                                _buildHeader(textColor, secondaryTextColor),
-                                _buildPaymentBadge(borderColor, textColor),
-                                SizedBox(height: AppSpacing.spacingXL),
-                                ..._plans.map(
-                                  (plan) => _buildPlanCard(
-                                    plan,
-                                    surfaceColor,
-                                    borderColor,
-                                    textColor,
-                                    secondaryTextColor,
-                                    isDark,
-                                  ),
-                                ),
-                                _buildViewSubscriptionLink(textColor),
-                                SizedBox(height: AppSpacing.spacingMD),
-                              ],
+                  : RefreshIndicator(
+                      onRefresh: _loadPlans,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.spacingLG,
+                          AppSpacing.spacingSM,
+                          AppSpacing.spacingLG,
+                          AppSpacing.spacingXXL,
+                        ),
+                        children: [
+                          _buildPaymentBadge(borderColor, textColor),
+                          const SizedBox(height: AppSpacing.spacingXL),
+                          ..._plans.map(
+                            (plan) => _buildPlanCard(
+                              plan,
+                              surfaceColor,
+                              borderColor,
+                              textColor,
+                              secondaryTextColor,
+                              isDark,
                             ),
                           ),
-                        ),
-                        _buildSubscribeBar(isDark, textColor),
-                      ],
+                          _buildViewSubscriptionLink(textColor),
+                        ],
+                      ),
                     ),
     );
   }
@@ -357,7 +347,9 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         AppSpacing.spacingLG,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
         border: Border(
           top: BorderSide(
             color: isDark
@@ -365,13 +357,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                 : AppColors.borderMediumLight,
           ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
       ),
       child: SafeArea(
         top: false,
@@ -423,29 +408,6 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeader(Color textColor, Color secondaryTextColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Choose Your Plan',
-          style: AppTypography.h1.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        SizedBox(height: AppSpacing.spacingSM),
-        Text(
-          'Unlock premium features and enhance your experience.',
-          style: AppTypography.body.copyWith(
-            color: secondaryTextColor,
-            height: 1.4,
-          ),
-        ),
-      ],
     );
   }
 
@@ -501,8 +463,12 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     final themeData = getPlanTheme(plan.name);
     final accent = themeData.accent;
     final cardBg = isSelected
-        ? (isDark ? accent.withOpacity(0.12) : themeData.accentSoft)
-        : surfaceColor;
+        ? (isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight)
+        : (isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight);
     final border = isSelected ? accent : borderColor;
 
     return Padding(
@@ -621,15 +587,6 @@ class _PlanCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(color: border, width: isSelected ? 2 : 1),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: planTheme.accent.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -682,14 +639,6 @@ class _PlanCard extends StatelessWidget {
                                     gradient: planTheme.gradient,
                                     borderRadius: BorderRadius.circular(
                                         AppRadius.radiusSM),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: planTheme.accent
-                                            .withOpacity(0.35),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
                                   ),
                                   child: Text(
                                     'Most popular',

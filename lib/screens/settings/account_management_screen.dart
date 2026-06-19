@@ -5,8 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_grouped_list_card.dart';
 import '../../core/widgets/app_settings_detail.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/confirmation_dialog.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
@@ -224,45 +224,55 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
     return AppSettingsDetailScaffold(
       title: 'Account management',
+      subtitle: 'Update email, password, or delete account',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : AppSettingsDetailList(
               children: [
-                AppGroupedListSection(
+                PremiumSettingsGroup(
                   title: 'Email address',
-                  padding: AppSettingsLayout.firstSectionPadding,
                   children: [
-                    AppSettingsInset(
-                      child: TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.surfaceElevatedDark
-                          : AppColors.surfaceElevatedLight,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        borderSide: BorderSide(color: borderColor),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.surfaceElevatedDark
+                            : AppColors.surfaceElevatedLight,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentViolet,
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon:
+                            Icon(Icons.email, color: secondaryTextColor),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                      ),
-                      prefixIcon: Icon(Icons.email, color: secondaryTextColor),
-                    ),
-                    style: AppTypography.body.copyWith(color: textColor),
-                      ),
+                      style: AppTypography.body.copyWith(color: textColor),
                     ),
                   ],
                 ),
                 Padding(
-                  padding: AppSettingsLayout.sectionPadding,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSettingsLayout.horizontalPadding,
+                    AppSpacing.spacingXL,
+                    AppSettingsLayout.horizontalPadding,
+                    0,
+                  ),
                   child: GradientButton(
                     text: 'Update email',
                     onPressed: _handleChangeEmail,
@@ -270,97 +280,117 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     icon: Icons.save,
                   ),
                 ),
-                AppGroupedListSection(
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
                   title: 'Change password',
-                  padding: AppSettingsLayout.sectionPadding,
                   children: [
-                    AppSettingsInset(
-                      child: Column(
-                    children: [
-                      TextField(
-                        controller: _currentPasswordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'Current Password',
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                          ),
-                          prefixIcon: Icon(Icons.lock_outline, color: secondaryTextColor),
+                    TextField(
+                      controller: _currentPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Current password',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.surfaceElevatedDark
+                            : AppColors.surfaceElevatedLight,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
                         ),
-                        style: AppTypography.body.copyWith(color: textColor),
-                      ),
-                      SizedBox(height: AppSpacing.spacingMD),
-                      TextField(
-                        controller: _newPasswordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'New Password',
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                          ),
-                          prefixIcon: Icon(Icons.lock, color: secondaryTextColor),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
                         ),
-                        style: AppTypography.body.copyWith(color: textColor),
-                      ),
-                      SizedBox(height: AppSpacing.spacingMD),
-                      TextField(
-                        controller: _confirmPasswordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'Confirm New Password',
-                          filled: true,
-                          fillColor: isDark
-                              ? AppColors.surfaceElevatedDark
-                              : AppColors.surfaceElevatedLight,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: borderColor),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentViolet,
+                            width: 2,
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                          ),
-                          prefixIcon: Icon(Icons.lock, color: secondaryTextColor),
                         ),
-                        style: AppTypography.body.copyWith(color: textColor),
+                        prefixIcon: Icon(Icons.lock_outline,
+                            color: secondaryTextColor),
                       ),
-                    ],
+                      style: AppTypography.body.copyWith(color: textColor),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingMD),
+                    TextField(
+                      controller: _newPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'New password',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.surfaceElevatedDark
+                            : AppColors.surfaceElevatedLight,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentViolet,
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon:
+                            Icon(Icons.lock, color: secondaryTextColor),
                       ),
+                      style: AppTypography.body.copyWith(color: textColor),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingMD),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm new password',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.surfaceElevatedDark
+                            : AppColors.surfaceElevatedLight,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentViolet,
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon:
+                            Icon(Icons.lock, color: secondaryTextColor),
+                      ),
+                      style: AppTypography.body.copyWith(color: textColor),
                     ),
                   ],
                 ),
                 Padding(
-                  padding: AppSettingsLayout.sectionPadding,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSettingsLayout.horizontalPadding,
+                    AppSpacing.spacingXL,
+                    AppSettingsLayout.horizontalPadding,
+                    0,
+                  ),
                   child: GradientButton(
                     text: 'Change password',
                     onPressed: _handleChangePassword,
@@ -368,54 +398,50 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     icon: Icons.lock_reset,
                   ),
                 ),
-                AppGroupedListSection(
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
                   title: 'Danger zone',
-                  padding: AppSettingsLayout.sectionPadding,
                   children: [
-                    AppSettingsInset(
-                      child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.warning_amber,
-                            color: AppColors.notificationRed,
-                            size: 24,
-                          ),
-                          SizedBox(width: AppSpacing.spacingSM),
-                          Text(
-                            'Delete Account',
-                            style: AppTypography.h3.copyWith(
-                              color: AppColors.notificationRed,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: AppSpacing.spacingMD),
-                      Text(
-                        'Once you delete your account, there is no going back. Please be certain.',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber,
+                          color: AppColors.notificationRed,
+                          size: 24,
                         ),
-                      ),
-                      SizedBox(height: AppSpacing.spacingMD),
-                      OutlinedButton(
-                        onPressed: _handleDeleteAccount,
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
-                          side: BorderSide(color: AppColors.notificationRed, width: 2),
-                        ),
-                        child: Text(
-                          'Delete My Account',
-                          style: AppTypography.button.copyWith(
+                        const SizedBox(width: AppSpacing.spacingSM),
+                        Text(
+                          'Delete account',
+                          style: AppTypography.h3.copyWith(
                             color: AppColors.notificationRed,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.spacingMD),
+                    Text(
+                      'Once you delete your account, there is no going back. Please be certain.',
+                      style: AppTypography.body.copyWith(color: textColor),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingMD),
+                    OutlinedButton(
+                      onPressed: _handleDeleteAccount,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.spacingMD,
+                        ),
+                        side: const BorderSide(
+                          color: AppColors.notificationRed,
+                          width: 2,
+                        ),
                       ),
-                    ],
+                      child: Text(
+                        'Delete my account',
+                        style: AppTypography.button.copyWith(
+                          color: AppColors.notificationRed,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

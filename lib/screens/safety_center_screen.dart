@@ -1,14 +1,12 @@
 ﻿// Screen: SafetyCenterScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/buttons/gradient_button.dart';
 import 'nearby_safe_places_screen.dart';
 import 'blocked_users_screen.dart';
@@ -17,311 +15,188 @@ import 'emergency_contacts_screen.dart';
 
 /// Safety center screen - Safety tools and resources
 class SafetyCenterScreen extends ConsumerWidget {
-  const SafetyCenterScreen({Key? key}) : super(key: key);
+  const SafetyCenterScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-
-    return AppPageScaffold(
-      title: 'Safety Center',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Safety center',
+      subtitle: 'Tools and resources to help you stay safe',
+      body: AppSettingsDetailList(
         children: [
-          // Safety header
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingXXL),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.notificationRed.withOpacity(0.2),
-                  AppColors.accentPurple.withOpacity(0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            ),
+          PremiumShell(
             child: Column(
               children: [
-                Icon(
-                  Icons.shield,
-                  size: 64,
-                  color: AppColors.accentPurple,
+                AppSvgIcon(
+                  assetPath: AppIcons.shieldTick,
+                  size: 48,
+                  color: AppColors.accentViolet,
                 ),
-                SizedBox(height: AppSpacing.spacingMD),
+                const SizedBox(height: AppSpacing.spacingMD),
                 Text(
-                  'Your Safety Matters',
-                  style: AppTypography.h1.copyWith(color: textColor),
+                  'Your safety matters',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: AppSpacing.spacingSM),
+                const SizedBox(height: AppSpacing.spacingSM),
                 Text(
                   'We\'re here to help you stay safe while connecting',
-                  style: AppTypography.body.copyWith(color: secondaryTextColor),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-          SizedBox(height: AppSpacing.spacingXXL),
-
-          // Quick actions
-          SectionHeader(
-            title: 'Quick Actions',
-            icon: Icons.flash_on,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSafetyCard(
-            context: context,
-            icon: Icons.block,
-            title: 'Blocked Users',
-            description: 'View and manage blocked users',
-            color: AppColors.notificationRed,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BlockedUsersScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSafetyCard(
-            context: context,
-            icon: Icons.report,
-            title: 'Report History',
-            description: 'View your reports and their status',
-            color: AppColors.warningYellow,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReportHistoryScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSafetyCard(
-            context: context,
-            icon: Icons.place,
-            title: 'Nearby Safe Places',
-            description: 'Find hospitals, police, and fire stations near you',
-            color: AppColors.feedbackInfo,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NearbySafePlacesScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSafetyCard(
-            context: context,
-            icon: Icons.emergency,
-            title: 'Emergency Contacts',
-            description: 'Add trusted contacts for emergencies',
-            color: AppColors.onlineGreen,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EmergencyContactsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Safety tips
-          SectionHeader(
-            title: 'Safety Tips',
-            icon: Icons.lightbulb_outline,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildTipCard(
-            context: context,
-            tip: 'Never share personal information like your address or financial details',
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildTipCard(
-            context: context,
-            tip: 'Meet in public places for first dates and let someone know where you\'re going',
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildTipCard(
-            context: context,
-            tip: 'Trust your instincts - if something feels off, it probably is',
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-
-          // Report button
-          GradientButton(
-            text: 'Report a Problem',
-            onPressed: () {
-              // Open report problem dialog
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Text(
-                    'Report a Problem',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  content: Text(
-                    'For reporting specific users or content, please use the report buttons within the app. For general issues or technical problems, please contact our support team.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Cancel'),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Quick actions',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.block,
+                title: 'Blocked users',
+                subtitle: 'View and manage blocked users',
+                accent: AppColors.feedbackError,
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const BlockedUsersScreen(),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        // TODO: Navigate to help/support screen or open email client
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Support contact feature coming soon')),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
-                        foregroundColor: Colors.white,
+                  );
+                },
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.report,
+                title: 'Report history',
+                subtitle: 'View your reports and their status',
+                accent: AppColors.feedbackWarning,
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReportHistoryScreen(),
+                    ),
+                  );
+                },
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.location,
+                title: 'Nearby safe places',
+                subtitle: 'Hospitals, police, and fire stations near you',
+                accent: AppColors.feedbackInfo,
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NearbySafePlacesScreen(),
+                    ),
+                  );
+                },
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.call,
+                title: 'Emergency contacts',
+                subtitle: 'Add trusted contacts for emergencies',
+                accent: AppColors.feedbackSuccess,
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const EmergencyContactsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Safety tips',
+            children: [
+              for (final tip in const [
+                'Never share personal information like your address or financial details',
+                'Meet in public places for first dates and let someone know where you\'re going',
+                'Trust your instincts — if something feels off, it probably is',
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppSvgIcon(
+                        assetPath: AppIcons.tickCircle,
+                        size: 18,
+                        color: AppColors.feedbackSuccess,
                       ),
-                      child: Text('Contact Support'),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.spacingSM),
+                      Expanded(
+                        child: Text(
+                          tip,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            },
-            isFullWidth: true,
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSafetyCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String description,
-    required Color color,
-    required VoidCallback onTap,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              ),
-              child: Icon(icon, color: color, size: 32),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSettingsLayout.horizontalPadding,
+              AppSpacing.spacingXL,
+              AppSettingsLayout.horizontalPadding,
+              0,
             ),
-            SizedBox(width: AppSpacing.spacingLG),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTypography.h3.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
+            child: GradientButton(
+              text: 'Report a problem',
+              onPressed: () {
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: theme.colorScheme.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                    title: Text(
+                      'Report a problem',
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    content: Text(
+                      'For reporting specific users or content, use the report buttons in the app. For general issues, contact our support team.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Support contact feature coming soon'),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryLight,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Contact support'),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    description,
-                    style: AppTypography.body.copyWith(color: secondaryTextColor),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: secondaryTextColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTipCard({
-    required BuildContext context,
-    required String tip,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.check_circle,
-            color: AppColors.onlineGreen,
-            size: 20,
-          ),
-          SizedBox(width: AppSpacing.spacingMD),
-          Expanded(
-            child: Text(
-              tip,
-              style: AppTypography.body.copyWith(color: textColor),
+                );
+              },
+              isFullWidth: true,
             ),
           ),
         ],

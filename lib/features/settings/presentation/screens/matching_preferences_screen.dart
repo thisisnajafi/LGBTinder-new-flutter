@@ -1,15 +1,13 @@
 // Screen: MatchingPreferencesScreen (Task 4 — Matching/Discovery preferences)
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/border_radius_constants.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
-import 'package:flutter/foundation.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../widgets/common/section_header.dart';
+import '../../../../core/widgets/app_settings_detail.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
+import '../../../../widgets/buttons/gradient_button.dart';
 import '../../data/models/matching_preferences.dart';
 import '../../providers/settings_provider.dart';
 import '../../../../core/cache/cache_invalidator.dart';
@@ -167,202 +165,153 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
+    return AppSettingsDetailScaffold(
       title: 'Discovery preferences',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Age, distance, and who can see you',
       body: _loading && _error == null
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _load,
-              child: ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppPageHeader.horizontalPadding,
-              ),
-              children: [
-                if (_error != null) ...[
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentRed.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    ),
-                    child: Row(
+              child: AppSettingsDetailList(
+                children: [
+                  if (_error != null) ...[
+                    PremiumSettingsGroup(
+                      title: 'Could not load',
                       children: [
-                        Icon(Icons.error_outline, color: AppColors.accentRed, size: 24),
-                        SizedBox(width: AppSpacing.spacingSM),
-                        Expanded(
-                          child: Text(
-                            _error!,
-                            style: AppTypography.body.copyWith(color: AppColors.accentRed),
+                        Text(
+                          _error!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.feedbackError,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                ],
-                SectionHeader(
-                  title: 'Age range',
-                  iconPath: AppIcons.userOutline,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RangeSlider(
-                        values: RangeValues(_ageMin.toDouble(), _ageMax.toDouble()),
-                        min: 18,
-                        max: 100,
-                        divisions: 82,
-                        activeColor: AppColors.accentPurple,
-                        onChanged: _loading || _saving
-                            ? null
-                            : (v) {
-                                setState(() {
-                                  _ageMin = v.start.round().clamp(18, _ageMax);
-                                  _ageMax = v.end.round().clamp(_ageMin, 100);
-                                });
-                              },
-                      ),
-                      Text(
-                        '${_ageMin} – ${_ageMax} years',
-                        style: AppTypography.body.copyWith(color: secondaryTextColor),
-                      ),
-                      if (!_loading && !_saving)
-                        Padding(
-                          padding: EdgeInsets.only(top: AppSpacing.spacingXS),
-                          child: TextButton(
-                            onPressed: _resetAgeRange,
-                            child: Text(
-                              'Reset age range',
-                              style: AppTypography.labelMedium.copyWith(color: AppColors.accentPurple),
+                    const SizedBox(height: AppSpacing.spacingXL),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingLG,
+                    ),
+                    child: PremiumFilterSection(
+                      iconPath: AppIcons.userOutline,
+                      title: 'Age range',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RangeSlider(
+                            values: RangeValues(
+                              _ageMin.toDouble(),
+                              _ageMax.toDouble(),
+                            ),
+                            min: 18,
+                            max: 100,
+                            divisions: 82,
+                            activeColor: AppColors.accentPink,
+                            onChanged: _loading || _saving
+                                ? null
+                                : (v) {
+                                    setState(() {
+                                      _ageMin =
+                                          v.start.round().clamp(18, _ageMax);
+                                      _ageMax =
+                                          v.end.round().clamp(_ageMin, 100);
+                                    });
+                                  },
+                          ),
+                          Text(
+                            '$_ageMin – $_ageMax years',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: secondaryTextColor,
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                SectionHeader(
-                  title: 'Distance',
-                  iconPath: AppIcons.discover,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Slider(
-                        value: _distance.clamp(1.0, 500.0),
-                        min: 1,
-                        max: 500,
-                        divisions: 499,
-                        activeColor: AppColors.accentPurple,
-                        onChanged: _loading || _saving
-                            ? null
-                            : (v) => setState(() => _distance = v.roundToDouble()),
-                      ),
-                      Text(
-                        'Up to ${_distance.round()} km',
-                        style: AppTypography.body.copyWith(color: secondaryTextColor),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                SectionHeader(
-                  title: 'Discovery visibility',
-                  iconPath: AppIcons.lockOutline,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Who can see your profile in discovery',
-                        style: AppTypography.caption.copyWith(color: secondaryTextColor),
-                      ),
-                      SizedBox(height: AppSpacing.spacingSM),
-                      ...['everyone', 'people_i_like', 'hidden'].map((value) {
-                        final label = value == 'everyone'
-                            ? 'Everyone'
-                            : value == 'people_i_like'
-                                ? 'Only people I\'ve liked'
-                                : 'Hidden from discovery';
-                        final selected = _discoveryVisibility == value;
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: AppSpacing.spacingXS),
-                          child: Material(
-                            color: surfaceColor,
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                            child: InkWell(
-                              onTap: _loading || _saving
-                                  ? null
-                                  : () => setState(() => _discoveryVisibility = value),
-                              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.spacingMD, vertical: AppSpacing.spacingSM),
-                                child: Row(
-                                  children: [
-                                    Radio<String>(
-                                      value: value,
-                                      groupValue: _discoveryVisibility,
-                                      onChanged: _loading || _saving
-                                          ? null
-                                          : (v) => setState(() => _discoveryVisibility = v ?? value),
-                                      activeColor: AppColors.accentPurple,
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        label,
-                                        style: AppTypography.body.copyWith(color: textColor),
-                                      ),
-                                    ),
-                                  ],
+                          if (!_loading && !_saving)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton(
+                                onPressed: _resetAgeRange,
+                                child: Text(
+                                  'Reset age range',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: AppColors.accentViolet,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-                SizedBox(height: AppSpacing.spacingXL),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _loading || _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentPurple,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                        ],
                       ),
                     ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Save'),
                   ),
-                ),
-              ],
-            ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingLG,
+                    ),
+                    child: PremiumFilterSection(
+                      iconPath: AppIcons.discover,
+                      title: 'Distance',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Slider(
+                            value: _distance.clamp(1.0, 500.0),
+                            min: 1,
+                            max: 500,
+                            divisions: 499,
+                            activeColor: AppColors.accentPink,
+                            onChanged: _loading || _saving
+                                ? null
+                                : (v) => setState(
+                                      () => _distance = v.roundToDouble(),
+                                    ),
+                          ),
+                          Text(
+                            'Up to ${_distance.round()} km',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  PremiumSettingsGroup(
+                    title: 'Discovery visibility',
+                    subtitle: 'Who can see your profile in discovery',
+                    children: [
+                      for (final entry in const [
+                        ('everyone', 'Everyone'),
+                        ('people_i_like', 'Only people I\'ve liked'),
+                        ('hidden', 'Hidden from discovery'),
+                      ])
+                        PremiumSoundOptionTile(
+                          label: entry.$2,
+                          isSelected: _discoveryVisibility == entry.$1,
+                          onSelect: _loading || _saving
+                              ? null
+                              : () => setState(
+                                    () => _discoveryVisibility = entry.$1,
+                                  ),
+                        ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSettingsLayout.horizontalPadding,
+                      AppSpacing.spacingXL,
+                      AppSettingsLayout.horizontalPadding,
+                      0,
+                    ),
+                    child: GradientButton(
+                      text: 'Save preferences',
+                      onPressed: _loading || _saving ? () {} : _save,
+                      isFullWidth: true,
+                    ),
+                  ),
+                ],
               ),
+            ),
     );
   }
 }

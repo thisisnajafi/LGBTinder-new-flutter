@@ -2,12 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/utils/app_icons.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../features/settings/providers/settings_provider.dart';
 import '../features/settings/data/models/privacy_settings.dart';
@@ -165,318 +163,188 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-
-    return AppPageScaffold(
-      title: 'Safety Settings',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppPageHeader.horizontalPadding,
-        ),
+    return AppSettingsDetailScaffold(
+      title: 'Safety settings',
+      subtitle: 'Privacy, alerts, and emergency tools',
+      body: AppSettingsDetailList(
         children: [
-          // Privacy settings
-          SectionHeader(
-            compactLayout: true,
+          PremiumSettingsGroup(
             title: 'Privacy',
-            icon: Icons.lock,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Share Location in Discovery',
-            subtitle: 'Allow distance-based matching using your location',
-            value: _shareLocation,
-            onChanged: _privacyLoading || _privacySaving
-                ? null
-                : (value) => _togglePrivacy((p) => p.copyWith(locationSharing: value)),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSwitchTile(
-            title: 'Show Distance',
-            subtitle: 'Display distance to other users',
-            value: _showDistance,
-            onChanged: _privacyLoading || _privacySaving
-                ? null
-                : (value) => _togglePrivacy((p) => p.copyWith(showDistance: value)),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSwitchTile(
-            title: 'Allow Messages',
-            subtitle: 'Let others message you',
-            value: _allowMessages,
-            onChanged: _privacyLoading || _privacySaving
-                ? null
-                : (value) => _togglePrivacy((p) => p.copyWith(allowMessaging: value)),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSwitchTile(
-            title: 'Read Receipts',
-            subtitle: 'Show when messages are read',
-            value: _readReceipts,
-            onChanged: (value) {
-              setState(() {
-                _readReceipts = value;
-              });
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
+            children: [
+              PremiumToggleRow(
+                title: 'Share location in discovery',
+                subtitle: 'Allow distance-based matching using your location',
+                value: _shareLocation,
+                iconPath: AppIcons.location,
+                onChanged: (value) =>
+                    _togglePrivacy((p) => p.copyWith(locationSharing: value)),
+                enabled: !_privacyLoading && !_privacySaving,
+              ),
+              PremiumToggleRow(
+                title: 'Show distance',
+                subtitle: 'Display distance to other users',
+                value: _showDistance,
+                iconPath: AppIcons.map,
+                onChanged: (value) =>
+                    _togglePrivacy((p) => p.copyWith(showDistance: value)),
+                enabled: !_privacyLoading && !_privacySaving,
+              ),
+              PremiumToggleRow(
+                title: 'Allow messages',
+                subtitle: 'Let others message you',
+                value: _allowMessages,
+                iconPath: AppIcons.message,
+                onChanged: (value) =>
+                    _togglePrivacy((p) => p.copyWith(allowMessaging: value)),
+                enabled: !_privacyLoading && !_privacySaving,
+              ),
+              PremiumToggleRow(
+                title: 'Read receipts',
+                subtitle: 'Show when messages are read',
+                value: _readReceipts,
+                iconPath: AppIcons.tickCircle,
+                onChanged: (value) => setState(() => _readReceipts = value),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.spacingXL),
-
-          // Safety features
-          SectionHeader(
-            compactLayout: true,
-            title: 'Safety Features',
-            icon: Icons.shield,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Safety Alerts',
-            subtitle: 'Get notified about potential safety concerns',
-            value: _safetyAlerts,
-            onChanged: (value) {
-              setState(() {
-                _safetyAlerts = value;
-              });
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildSwitchTile(
-            title: 'Block Unknown Users',
-            subtitle: 'Only allow messages from matched users',
-            value: _blockUnknownUsers,
-            onChanged: _privacyLoading || _privacySaving
-                ? null
-                : (value) =>
-                    _togglePrivacy((p) => p.copyWith(blockUnknownMessages: value)),
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingMD),
-          _buildActionTile(
-            icon: Icons.my_location,
-            title: 'Share live location now',
-            subtitle: 'Send GPS to emergency contacts for a limited time',
-            onTap: _shareLiveLocationWithContacts,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildActionTile(
-            icon: Icons.place,
-            title: 'Nearby safe places',
-            subtitle: 'Hospitals, police, and fire stations near you',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NearbySafePlacesScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
+          PremiumSettingsGroup(
+            title: 'Safety features',
+            children: [
+              PremiumToggleRow(
+                title: 'Safety alerts',
+                subtitle: 'Get notified about potential safety concerns',
+                value: _safetyAlerts,
+                iconPath: AppIcons.shield,
+                onChanged: (value) => setState(() => _safetyAlerts = value),
+              ),
+              PremiumToggleRow(
+                title: 'Block unknown users',
+                subtitle: 'Only allow messages from matched users',
+                value: _blockUnknownUsers,
+                iconPath: AppIcons.block,
+                onChanged: (value) => _togglePrivacy(
+                      (p) => p.copyWith(blockUnknownMessages: value),
+                    ),
+                enabled: !_privacyLoading && !_privacySaving,
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.locationTick,
+                title: 'Share live location now',
+                subtitle: 'Send GPS to emergency contacts for a limited time',
+                onTap: _shareLiveLocationWithContacts,
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.location,
+                title: 'Nearby safe places',
+                subtitle: 'Hospitals, police, and fire stations near you',
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NearbySafePlacesScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.spacingXL),
-
-          // Safety actions
-          SectionHeader(
-            compactLayout: true,
-            title: 'Safety Actions',
-            icon: Icons.security,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildActionTile(
-            icon: Icons.block,
-            title: 'Blocked Users',
-            subtitle: 'Manage blocked users',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BlockedUsersScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildActionTile(
-            icon: Icons.report,
-            title: 'Report History',
-            subtitle: 'View your reports',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReportHistoryScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildActionTile(
-            icon: Icons.emergency,
-            title: 'Emergency Contacts',
-            subtitle: 'Set up emergency contacts',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EmergencyContactsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
+          PremiumSettingsGroup(
+            title: 'Safety actions',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.block,
+                title: 'Blocked users',
+                subtitle: 'Manage blocked users',
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const BlockedUsersScreen(),
+                    ),
+                  );
+                },
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.report,
+                title: 'Report history',
+                subtitle: 'View your reports',
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReportHistoryScreen(),
+                    ),
+                  );
+                },
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.call,
+                title: 'Emergency contacts',
+                subtitle: 'Set up emergency contacts',
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const EmergencyContactsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Account actions',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.delete,
+                title: 'Delete account',
+                subtitle: 'Permanently delete your account and all data',
+                destructive: true,
+                onTap: () async {
+                  final confirmed = await ConfirmationDialog.show(
+                    context,
+                    title: 'Delete account',
+                    message:
+                        'Are you sure you want to delete your account? This action cannot be undone.',
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel',
+                    isDestructive: true,
+                  );
+                  if (confirmed == true) {
+                    try {
+                      final settingsNotifier =
+                          ref.read(settingsProvider.notifier);
+                      await settingsNotifier.deleteAccount();
 
-          // Danger zone
-          SectionHeader(
-            compactLayout: true,
-            title: 'Account Actions',
-            icon: Icons.warning,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildDangerTile(
-            icon: Icons.delete_forever,
-            title: 'Delete Account',
-            subtitle: 'Permanently delete your account and all data',
-            onTap: () async {
-              final confirmed = await ConfirmationDialog.show(
-                context,
-                title: 'Delete Account',
-                message: 'Are you sure you want to delete your account? This action cannot be undone.',
-                confirmText: 'Delete',
-                cancelText: 'Cancel',
-                isDestructive: true,
-              );
-              if (confirmed == true) {
-                try {
-                  final settingsNotifier = ref.read(settingsProvider.notifier);
-                  await settingsNotifier.deleteAccount();
+                      if (mounted) {
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          '/welcome',
+                          (Route<dynamic> route) => false,
+                        );
 
-                  if (mounted) {
-                    // Navigate to login/welcome screen
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/welcome', // or your login route
-                      (Route<dynamic> route) => false,
-                    );
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Account deleted successfully')),
-                    );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Account deleted successfully'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to delete account: $e')),
+                        );
+                      }
+                    }
                   }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to delete account: $e')),
-                    );
-                  }
-                }
-              }
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
+                },
+              ),
+            ],
           ),
-          SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool>? onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-  }) {
-    return SwitchListTile(
-      title: Text(
-        title,
-        style: AppTypography.body.copyWith(
-          color: textColor,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTypography.caption.copyWith(color: secondaryTextColor),
-      ),
-      value: value,
-      onChanged: onChanged,
-      activeColor: AppColors.accentPurple,
-    );
-  }
-
-  Widget _buildActionTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    required Color textColor,
-    required Color secondaryTextColor,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: textColor),
-      title: Text(
-        title,
-        style: AppTypography.body.copyWith(
-          color: textColor,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTypography.caption.copyWith(color: secondaryTextColor),
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: secondaryTextColor,
-      ),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildDangerTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    required Color textColor,
-    required Color secondaryTextColor,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.notificationRed),
-      title: Text(
-        title,
-        style: AppTypography.body.copyWith(
-          color: AppColors.notificationRed,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTypography.caption.copyWith(color: secondaryTextColor),
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: secondaryTextColor,
-      ),
-      onTap: onTap,
     );
   }
 }

@@ -9,7 +9,7 @@ import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/metric_slider_tile.dart';
 import '../core/theme/spacing_constants.dart';
 import '../widgets/profile/edit/profile_image_editor.dart';
-import '../core/widgets/app_grouped_list_card.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/profile/avatar_upload.dart';
 import '../widgets/profile/profile_photo_source_sheet.dart';
@@ -619,7 +619,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return AppSettingsDetailScaffold(
-        title: 'Edit Profile',
+        title: 'Edit profile',
+        subtitle: 'Photos, bio, and details',
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -630,17 +631,16 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         : const AsyncValue<List<ReferenceItem>>.data([]);
 
     return AppSettingsDetailScaffold(
-      title: 'Edit Profile',
+      title: 'Edit profile',
+      subtitle: 'Photos, bio, and details',
       body: Form(
         key: _formKey,
         child: AppSettingsDetailList(
           children: [
-            AppGroupedListSection(
-              title: 'Profile Photo',
-              padding: AppSettingsLayout.firstSectionPadding,
+            PremiumSettingsGroup(
+              title: 'Profile photo',
               children: [
-                AppSettingsInset(
-                  child: Center(
+                Center(
                     child: AvatarUpload(
                       imageUrl: _avatarUrl,
                       name: _name,
@@ -652,94 +652,84 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                           _canPromoteAvatarToPrimary ? _setPrimaryFromAvatar : null,
                     ),
                   ),
-                ),
               ],
             ),
-            AppGroupedListSection(
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
               title: 'Photos',
-              padding: AppSettingsLayout.sectionPadding,
               children: [
-                AppSettingsInset(
-                  child: ProfileImageEditor(
-                    imageUrls: _images.map((img) => img.imageUrl).toList(),
-                    primaryIndex: _primaryImageIndex,
-                    maxImages: AppConstants.maxProfilePhotos,
-                    onImageAdd: (_) => _showGalleryImageSourceDialog(),
-                    onImageDelete: (index) {
-                      if (index < _images.length) {
-                        _deleteImage(_images[index].id, index);
-                      }
-                    },
-                    onImageReorder: _reorderImages,
-                    onImageSetPrimary: (index) {
-                      if (index < _images.length) {
-                        _setPrimaryImage(_images[index].id, index);
-                      }
-                    },
-                  ),
+                ProfileImageEditor(
+                  imageUrls: _images.map((img) => img.imageUrl).toList(),
+                  primaryIndex: _primaryImageIndex,
+                  maxImages: AppConstants.maxProfilePhotos,
+                  onImageAdd: (_) => _showGalleryImageSourceDialog(),
+                  onImageDelete: (index) {
+                    if (index < _images.length) {
+                      _deleteImage(_images[index].id, index);
+                    }
+                  },
+                  onImageReorder: _reorderImages,
+                  onImageSetPrimary: (index) {
+                    if (index < _images.length) {
+                      _setPrimaryImage(_images[index].id, index);
+                    }
+                  },
                 ),
               ],
             ),
-            AppGroupedListSection(
-              title: 'About Me',
-              padding: AppSettingsLayout.sectionPadding,
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'About me',
               children: [
-                AppSettingsInset(
-                  child: TextFormField(
-                    controller: _bioController,
-                    decoration: const InputDecoration(
-                      labelText: 'Bio',
-                      hintText: 'Tell others about yourself',
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 5,
-                    maxLength: 500,
-                    onChanged: (value) => _bio = value,
+                TextFormField(
+                  controller: _bioController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bio',
+                    hintText: 'Tell others about yourself',
+                    alignLabelWithHint: true,
                   ),
+                  maxLines: 5,
+                  maxLength: 500,
+                  onChanged: (value) => _bio = value,
                 ),
               ],
             ),
-            AppGroupedListSection(
-              title: 'Personal Details',
-              padding: AppSettingsLayout.sectionPadding,
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Personal details',
               children: [
-                AppSettingsInset(
-                  child: HeightSliderTile(
-                    value: _height ?? 170,
-                    onChanged: (value) => setState(() => _height = value),
-                  ),
+                HeightSliderTile(
+                  value: _height ?? 170,
+                  onChanged: (value) => setState(() => _height = value),
                 ),
-                const AppGroupedRowSeparator(),
-                AppSettingsInset(
-                  child: WeightSliderTile(
-                    value: _weight ?? 70,
-                    onChanged: (value) => setState(() => _weight = value),
-                  ),
+                const SizedBox(height: AppSpacing.spacingSM),
+                WeightSliderTile(
+                  value: _weight ?? 70,
+                  onChanged: (value) => setState(() => _weight = value),
                 ),
-                AppGroupedSwitchTile(
-                  label: 'Smoking',
+                PremiumToggleRow(
+                  title: 'Smoking',
                   subtitle: 'Do you smoke?',
                   value: _smoke,
                   onChanged: (value) => setState(() => _smoke = value),
                 ),
-                AppGroupedSwitchTile(
-                  label: 'Drinking',
+                PremiumToggleRow(
+                  title: 'Drinking',
                   subtitle: 'Do you drink alcohol?',
                   value: _drink,
                   onChanged: (value) => setState(() => _drink = value),
                 ),
-                AppGroupedSwitchTile(
-                  label: 'Gym',
+                PremiumToggleRow(
+                  title: 'Gym',
                   subtitle: 'Do you work out regularly?',
                   value: _gym,
                   onChanged: (value) => setState(() => _gym = value),
-                  showDivider: false,
                 ),
               ],
             ),
-            AppGroupedListSection(
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
               title: 'Location',
-              padding: AppSettingsLayout.sectionPadding,
               children: [
                 countriesAsync.when(
                   data: (countries) => ReferenceBottomSheetField(
@@ -756,11 +746,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     },
                     searchable: true,
                   ),
-                  loading: () => const AppGroupedInfoTile(
+                  loading: () => const PremiumInfoRow(
                     label: 'Country',
                     value: 'Loading...',
                   ),
-                  error: (e, _) => AppGroupedInfoTile(
+                  error: (e, _) => const PremiumInfoRow(
                     label: 'Country',
                     value: 'Failed to load',
                   ),
@@ -777,107 +767,97 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       enabled: cities.isNotEmpty,
                       searchable: true,
                     ),
-                    loading: () => const AppGroupedInfoTile(
+                    loading: () => const PremiumInfoRow(
                       label: 'City',
                       value: 'Loading...',
                     ),
-                    error: (e, _) => AppGroupedInfoTile(
+                    error: (e, _) => const PremiumInfoRow(
                       label: 'City',
                       value: 'Failed to load',
                     ),
                   ),
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Last updated',
                   value: _displayLocationUpdated(),
                 ),
-                AppSettingsInset(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      OutlinedButton(
-                        onPressed: _isUpdatingLocation ? null : _saveAdministrativeLocation,
-                        child: const Text('Save country & city'),
-                      ),
-                      const SizedBox(height: AppSpacing.spacingSM),
-                      FilledButton(
-                        onPressed: _isUpdatingLocation ? null : _updateGpsLocation,
-                        child: _isUpdatingLocation
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Update my GPS location'),
-                      ),
-                    ],
-                  ),
+                OutlinedButton(
+                  onPressed: _isUpdatingLocation ? null : _saveAdministrativeLocation,
+                  child: const Text('Save country & city'),
+                ),
+                const SizedBox(height: AppSpacing.spacingSM),
+                FilledButton(
+                  onPressed: _isUpdatingLocation ? null : _updateGpsLocation,
+                  child: _isUpdatingLocation
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Update my GPS location'),
                 ),
               ],
             ),
-            AppGroupedListSection(
-              title: 'Profile Info',
-              padding: AppSettingsLayout.sectionPadding,
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Profile info',
               children: [
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Name',
                   value: _displayName(),
                 ),
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Email',
                   value: _profile?.email.isNotEmpty == true
                       ? _profile!.email
                       : 'Not set',
                   badge: _profile?.isEmailVerified == true ? 'Verified' : null,
                 ),
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Gender',
                   value: (_profile?.gender?.isNotEmpty == true)
                       ? _profile!.gender!
                       : 'Not set',
                 ),
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Age',
                   value: _displayAge(),
-                  showDivider: false,
                 ),
               ],
             ),
             const AppSettingsSectionFootnote(
               text: 'Name, email, gender, and age are managed in account settings.',
             ),
-            AppGroupedListSection(
-              title: 'Work & Education',
-              padding: AppSettingsLayout.sectionPadding,
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Work & education',
               children: [
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Occupation',
                   value: _displayList(_profile?.jobTitles, _profile?.jobs),
                 ),
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Education',
                   value: _displayList(
                     _profile?.educationTitles,
                     _profile?.educations,
                   ),
-                  showDivider: false,
                 ),
               ],
             ),
-            AppGroupedListSection(
-              title: 'Interests & Languages',
-              padding: AppSettingsLayout.sectionPadding,
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Interests & languages',
               children: [
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Interests',
                   value: _displayList(
                     _profile?.interestTitles,
                     _interestsIds,
                   ),
                 ),
-                AppGroupedInfoTile(
+                PremiumInfoRow(
                   label: 'Languages',
                   value: _displayList(null, _profile?.languages),
-                  showDivider: false,
                 ),
               ],
             ),
@@ -886,9 +866,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   'Update interests and matching preferences from discovery settings.',
             ),
             Padding(
-              padding: AppSettingsLayout.sectionPadding,
+              padding: const EdgeInsets.fromLTRB(
+                AppSettingsLayout.horizontalPadding,
+                AppSpacing.spacingXL,
+                AppSettingsLayout.horizontalPadding,
+                0,
+              ),
               child: GradientButton(
-                text: 'Save Changes',
+                text: 'Save changes',
                 onPressed: _isSaving ? null : _saveProfile,
                 isLoading: _isSaving,
                 isFullWidth: true,
