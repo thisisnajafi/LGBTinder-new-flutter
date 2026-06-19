@@ -201,6 +201,7 @@ class ApiEndpoints {
   /// GET /settings — full settings summary (account, profile, discovery, etc.)
   static const String settings = '/settings';
   static const String userSettings = '/user/settings';
+  static const String userLocation = '/user/location';
   static const String privacySettings = '/privacy/settings';
   static const String preferencesMatching = '/preferences/matching';
   static const String preferencesAge = '/preferences/age';

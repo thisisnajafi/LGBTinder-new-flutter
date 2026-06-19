@@ -5,6 +5,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../discovery/discovery_swipe_action_button.dart';
 import '../../shared/models/match_reason.dart';
+import '../ui/distance_tag.dart';
 import 'swipeable_card.dart';
 
 /// Draggable profile detail sheet shown when user taps bio "more".
@@ -393,11 +394,9 @@ class ProfileSheetContent extends StatelessWidget {
                   dividerColor: dividerColor,
                 ),
               if (profile.distance != null)
-                _InfoPill(
-                  icon: AppIcons.getIconPath('location'),
-                  label: '${profile.distance!.round()} km away',
-                  surfaceVariant: surfaceVariant,
-                  dividerColor: dividerColor,
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: DistanceTag(distance: profile.distance!),
                 ),
             ],
           ),

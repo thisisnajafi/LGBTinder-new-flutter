@@ -6,18 +6,29 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_icons.dart';
 
-/// Distance tag widget
-/// Displays distance with location icon
+/// Visual style for [DistanceTag].
+enum DistanceTagVariant {
+  /// Light surface pill for sheets and lists.
+  light,
+
+  /// Semi-transparent pill for dark photo overlays.
+  onDark,
+}
+
+/// Distance tag widget — displays distance with location icon.
 class DistanceTag extends ConsumerWidget {
-  final double distance; // in kilometers
-  final String? unit; // "km" or "mi"
+  final double distance;
+  final String? unit;
+  final DistanceTagVariant variant;
 
   const DistanceTag({
-    Key? key,
+    super.key,
     required this.distance,
     this.unit,
-  }) : super(key: key);
+    this.variant = DistanceTagVariant.light,
+  }) : super();
 
   String _formatDistance() {
     final unitValue = unit ?? 'km';
@@ -34,12 +45,48 @@ class DistanceTag extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+
+    if (variant == DistanceTagVariant.onDark) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingSM,
+          vertical: AppSpacing.spacingXS,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSvgIcon(
+              assetPath: AppIcons.location,
+              size: 14,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+            const SizedBox(width: AppSpacing.spacingXS),
+            Text(
+              _formatDistance(),
+              style: AppTypography.caption.copyWith(
+                color: Colors.white.withValues(alpha: 0.95),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.spacingMD,
         vertical: AppSpacing.spacingSM,
       ),
@@ -51,12 +98,12 @@ class DistanceTag extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.location_on,
+          AppSvgIcon(
+            assetPath: AppIcons.location,
             size: 16,
             color: AppColors.accentPurple,
           ),
-          SizedBox(width: AppSpacing.spacingXS),
+          const SizedBox(width: AppSpacing.spacingXS),
           Text(
             _formatDistance(),
             style: AppTypography.caption.copyWith(

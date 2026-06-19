@@ -49,5 +49,7 @@
 	<string>This app needs camera access for video calling</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app needs microphone access for voice calling</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>LGBTinder uses your location to show people nearby and improve match suggestions.</string>
 </dict>
 </plist>

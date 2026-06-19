@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
@@ -35,6 +36,9 @@ import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
+import '../core/location/location_providers.dart';
+import '../core/location/widgets/location_permission_sheet.dart';
+import '../core/location/data/models/user_location.dart';
 import '../routes/app_router.dart';
 
 /// Discovery page - Main swiping/discovery screen
@@ -63,13 +67,19 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   bool _isProfileSheetOpen = false;
   late final DraggableScrollableController _sheetController;
 
+  Future<void> _bootstrapDiscoverLocationAndRefresh() async {
+    await runDiscoverLocationBootstrap(ref, context);
+    if (!mounted) return;
+    ref.read(profilePageCacheProvider.notifier).refresh();
+    ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
+  }
+
   @override
   void initState() {
     super.initState();
     _sheetController = DraggableScrollableController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(profilePageCacheProvider.notifier).refresh();
-      ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
+      unawaited(_bootstrapDiscoverLocationAndRefresh());
     });
   }
 
@@ -194,8 +204,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         oldWidget.discoveryTabIndex != null &&
         oldWidget.selectedTabIndex == oldWidget.discoveryTabIndex;
     if (nowSelected && !wasSelected) {
-      ref.read(profilePageCacheProvider.notifier).refresh();
-      ref.read(discoverCacheProvider.notifier).refresh(filters: _activeFilters);
+      unawaited(_bootstrapDiscoverLocationAndRefresh());
       ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
         threshold: kDiscoverStackBufferThreshold,
         filters: _activeFilters,
@@ -637,6 +646,93 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
   }
 
+  bool _hasCoordinates(UserLocation? location) {
+    return location?.latitude != null && location?.longitude != null;
+  }
+
+  bool _isLocationStale(UserLocation? location) {
+    final updated = location?.locationUpdatedAt;
+    if (updated == null) return true;
+    return DateTime.now().difference(updated).inDays > 7;
+  }
+
+  _DiscoverEmptyConfig _emptyStateConfig(UserLocation? location) {
+    if (!_hasCoordinates(location)) {
+      return _DiscoverEmptyConfig(
+        title: 'Turn on location for nearby matches',
+        subtitle:
+            'Enable location so we can find people near you, or expand your search radius.',
+        primaryLabel: 'Enable location',
+        onPrimary: _promptEnableLocation,
+        secondaryLabel: 'Increase distance + retry',
+        onSecondary: _expandRadiusAndRetry,
+        tertiaryLabel: 'Adjust filters',
+        onTertiary: _openFilters,
+      );
+    }
+
+    if (_isLocationStale(location)) {
+      return _DiscoverEmptyConfig(
+        title: 'No one nearby right now',
+        subtitle:
+            'Your location may be outdated. Update it or try a wider search radius.',
+        primaryLabel: 'Update location',
+        onPrimary: _forceUpdateLocation,
+        secondaryLabel: 'Increase distance + retry',
+        onSecondary: _expandRadiusAndRetry,
+        tertiaryLabel: 'Adjust filters',
+        onTertiary: _openFilters,
+      );
+    }
+
+    return _DiscoverEmptyConfig(
+      title: "You've seen everyone nearby",
+      subtitle: 'Check back soon or expand your filters to see more people',
+      primaryLabel: 'Adjust filters',
+      onPrimary: _openFilters,
+      secondaryLabel: 'Increase distance + retry',
+      onSecondary: _expandRadiusAndRetry,
+    );
+  }
+
+  Future<void> _promptEnableLocation() async {
+    final locationService = ref.read(locationServiceProvider);
+    final permission = await locationService.checkPermission();
+    final permanentlyDenied = permission == LocationPermission.deniedForever;
+
+    if (!mounted) return;
+    await LocationPermissionSheet.show(
+      context,
+      permanentlyDenied: permanentlyDenied,
+      onEnable: () async {
+        await ref.read(locationSyncServiceProvider).syncIfNeeded(force: true);
+        ref.invalidate(userLocationProvider);
+        await _bootstrapDiscoverLocationAndRefresh();
+      },
+      onUseCity: () async {
+        final profile = ref.read(profilePageCacheProvider).valueOrNull?.profile;
+        final cityId = profile?.cityId;
+        if (cityId != null) {
+          await ref
+              .read(locationApiServiceProvider)
+              .updateAdministrativeLocation(cityId: cityId);
+          ref.invalidate(userLocationProvider);
+          await _bootstrapDiscoverLocationAndRefresh();
+        }
+      },
+    );
+  }
+
+  Future<void> _forceUpdateLocation() async {
+    await ref.read(locationSyncServiceProvider).syncIfNeeded(force: true);
+    ref.invalidate(userLocationProvider);
+    await _bootstrapDiscoverLocationAndRefresh();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Location updated — refreshing discover')),
+    );
+  }
+
   void _showLimitError(dynamic e, String action) {
     if (e is ApiError) {
       final errorCode = e.responseData?['error_code'] as String?;
@@ -918,6 +1014,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     final showActionRow =
         !showSkeleton && cards.isNotEmpty && !_isProfileSheetOpen;
+    final emptyConfig = ref.watch(userLocationProvider).when(
+          data: _emptyStateConfig,
+          loading: () => _emptyStateConfig(null),
+          error: (_, __) => _emptyStateConfig(null),
+        );
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -964,10 +1065,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                 .read(discoverCacheProvider.notifier)
                                 .refresh(filters: _activeFilters);
                           },
-                          emptyActionLabel: 'Adjust filters',
-                          onEmptyAction: _openFilters,
-                          emptySecondaryActionLabel: 'Increase distance + retry',
-                          onEmptySecondaryAction: _expandRadiusAndRetry,
+                          emptyTitle: emptyConfig.title,
+                          emptySubtitle: emptyConfig.subtitle,
+                          emptyActionLabel: emptyConfig.primaryLabel,
+                          onEmptyAction: emptyConfig.onPrimary,
+                          emptySecondaryActionLabel: emptyConfig.secondaryLabel,
+                          onEmptySecondaryAction: emptyConfig.onSecondary,
+                          emptyTertiaryActionLabel: emptyConfig.tertiaryLabel,
+                          onEmptyTertiaryAction: emptyConfig.onTertiary,
                         ),
                 ),
                 if (showActionRow)
@@ -1031,4 +1136,48 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       ],
     );
   }
+}
+
+class _DiscoverEmptyConfig {
+  const _DiscoverEmptyConfig({
+    required this.title,
+    required this.subtitle,
+    required this.primaryLabel,
+    this.onPrimary,
+    this.secondaryLabel,
+    this.onSecondary,
+    this.tertiaryLabel,
+    this.onTertiary,
+  });
+
+  final String title;
+  final String subtitle;
+  final String primaryLabel;
+  final VoidCallback? onPrimary;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+  final String? tertiaryLabel;
+  final VoidCallback? onTertiary;
+}
+
+class _DiscoverEmptyConfig {
+  const _DiscoverEmptyConfig({
+    required this.title,
+    required this.subtitle,
+    required this.primaryLabel,
+    this.onPrimary,
+    this.secondaryLabel,
+    this.onSecondary,
+    this.tertiaryLabel,
+    this.onTertiary,
+  });
+
+  final String title;
+  final String subtitle;
+  final String primaryLabel;
+  final VoidCallback? onPrimary;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+  final String? tertiaryLabel;
+  final VoidCallback? onTertiary;
 }

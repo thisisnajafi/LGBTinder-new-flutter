@@ -142,11 +142,15 @@ class DiscoveryFilterMapper {
   }
 
   /// Seed filter screen UI defaults from stored API map.
-  static Map<String, dynamic> toUiSeed(Map<String, dynamic>? api) {
+  static Map<String, dynamic> toUiSeed(
+    Map<String, dynamic>? api, {
+    double? defaultMaxDistance,
+  }) {
+    final fallbackDistance = defaultMaxDistance ?? 50.0;
     if (api == null || api.isEmpty) {
       return {
         'ageRange': const RangeValues(18, 35),
-        'maxDistance': 50.0,
+        'maxDistance': fallbackDistance,
         'genderIds': <int>[],
         'verifiedOnly': false,
         'onlineOnly': false,
@@ -170,7 +174,8 @@ class DiscoveryFilterMapper {
 
     return {
       'ageRange': RangeValues(minAge.toDouble(), maxAge.toDouble()),
-      'maxDistance': (_parseInt(api['max_distance']) ?? 50).toDouble(),
+      'maxDistance': (_parseInt(api['max_distance']) ?? fallbackDistance.round())
+          .toDouble(),
       'genderIds': _parseIdList(api['gender_ids'] ?? api['genders']),
       'verifiedOnly': _parseBool(api['verified_only']),
       'onlineOnly': _parseBool(api['online_only']),

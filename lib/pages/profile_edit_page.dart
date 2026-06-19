@@ -17,6 +17,12 @@ import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../shared/models/api_error.dart';
+import '../features/reference_data/providers/reference_data_providers.dart';
+import '../widgets/common/reference_bottom_sheet_field.dart';
+import '../core/location/location_providers.dart';
+import '../core/location/widgets/location_permission_sheet.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 
 /// Profile edit page - Edit user's own profile
 class ProfileEditPage extends ConsumerStatefulWidget {
@@ -46,6 +52,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   bool _smoke = false;
   bool _drink = false;
   bool _gym = false;
+  int? _countryId;
+  int? _cityId;
+  DateTime? _locationUpdatedAt;
+  String? _locationSource;
+  bool _isUpdatingLocation = false;
   
   @override
   void dispose() {
@@ -91,8 +102,24 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           _smoke = profile.smoke ?? false;
           _drink = profile.drink ?? false;
           _gym = profile.gym ?? false;
+          _countryId = profile.countryId;
+          _cityId = profile.cityId;
+          _locationUpdatedAt = profile.locationUpdatedAt;
+          _locationSource = profile.locationSource;
         });
       }
+
+      try {
+        final location = await ref.read(locationApiServiceProvider).getLocation();
+        if (mounted) {
+          setState(() {
+            _countryId ??= location.countryId;
+            _cityId ??= location.cityId;
+            _locationUpdatedAt ??= location.locationUpdatedAt;
+            _locationSource ??= location.locationSource;
+          });
+        }
+      } catch (_) {}
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -464,6 +491,86 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   void _showGalleryImageSourceDialog() =>
       _showImageSourceDialog(setAsPrimary: false);
 
+  String _displayLocationUpdated() {
+    if (_locationUpdatedAt == null) return 'Never updated';
+    final formatted = DateFormat.yMMMd().add_jm().format(_locationUpdatedAt!.toLocal());
+    final source = _locationSource == 'gps' ? 'GPS' : 'City';
+    return '$formatted ($source)';
+  }
+
+  Future<void> _saveAdministrativeLocation() async {
+    if (_countryId == null || _cityId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select both country and city')),
+      );
+      return;
+    }
+
+    setState(() => _isUpdatingLocation = true);
+    try {
+      final updated = await ref.read(locationApiServiceProvider).updateAdministrativeLocation(
+            countryId: _countryId,
+            cityId: _cityId,
+          );
+      ref.invalidate(userLocationProvider);
+      if (mounted) {
+        setState(() {
+          _locationUpdatedAt = updated.locationUpdatedAt;
+          _locationSource = updated.locationSource ?? 'city';
+          _isUpdatingLocation = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUpdatingLocation = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update location: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateGpsLocation() async {
+    final locationService = ref.read(locationServiceProvider);
+    final permission = await locationService.checkPermission();
+    final permanentlyDenied = permission == LocationPermission.deniedForever;
+
+    if (!mounted) return;
+    await LocationPermissionSheet.show(
+      context,
+      permanentlyDenied: permanentlyDenied,
+      onEnable: () async {
+        setState(() => _isUpdatingLocation = true);
+        final result = await ref
+            .read(locationSyncServiceProvider)
+            .syncIfNeeded(discoverOpen: true, force: true);
+        ref.invalidate(userLocationProvider);
+        if (!mounted) return;
+        if (result == LocationSyncResult.success) {
+          try {
+            final location = await ref.read(locationApiServiceProvider).getLocation();
+            setState(() {
+              _locationUpdatedAt = location.locationUpdatedAt;
+              _locationSource = location.locationSource ?? 'gps';
+            });
+          } catch (_) {}
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('GPS location updated')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not get GPS location')),
+          );
+        }
+        setState(() => _isUpdatingLocation = false);
+      },
+      onUseCity: _saveAdministrativeLocation,
+    );
+  }
+
   String _displayName() {
     final name = _name.trim();
     return name.isEmpty ? 'Not set' : name;
@@ -508,6 +615,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+
+    final countriesAsync = ref.watch(countriesProvider);
+    final citiesAsync = _countryId != null
+        ? ref.watch(citiesProvider(_countryId!))
+        : const AsyncValue<List<ReferenceItem>>.data([]);
 
     return AppSettingsDetailScaffold(
       title: 'Edit Profile',
@@ -617,6 +729,84 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               ],
             ),
             AppGroupedListSection(
+              title: 'Location',
+              padding: AppSettingsLayout.sectionPadding,
+              children: [
+                countriesAsync.when(
+                  data: (countries) => ReferenceBottomSheetField(
+                    label: 'Country',
+                    hint: 'Select your country',
+                    selectedId: _countryId,
+                    items: countries,
+                    groupedStyle: true,
+                    onChanged: (value) {
+                      setState(() {
+                        _countryId = value;
+                        _cityId = null;
+                      });
+                    },
+                    searchable: true,
+                  ),
+                  loading: () => const AppGroupedInfoTile(
+                    label: 'Country',
+                    value: 'Loading...',
+                  ),
+                  error: (e, _) => AppGroupedInfoTile(
+                    label: 'Country',
+                    value: 'Failed to load',
+                  ),
+                ),
+                if (_countryId != null)
+                  citiesAsync.when(
+                    data: (cities) => ReferenceBottomSheetField(
+                      label: 'City',
+                      hint: 'Select your city',
+                      selectedId: _cityId,
+                      items: cities,
+                      groupedStyle: true,
+                      onChanged: (value) => setState(() => _cityId = value),
+                      enabled: cities.isNotEmpty,
+                      searchable: true,
+                    ),
+                    loading: () => const AppGroupedInfoTile(
+                      label: 'City',
+                      value: 'Loading...',
+                    ),
+                    error: (e, _) => AppGroupedInfoTile(
+                      label: 'City',
+                      value: 'Failed to load',
+                    ),
+                  ),
+                AppGroupedInfoTile(
+                  label: 'Last updated',
+                  value: _displayLocationUpdated(),
+                ),
+                AppSettingsInset(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      OutlinedButton(
+                        onPressed: _isUpdatingLocation ? null : _saveAdministrativeLocation,
+                        child: const Text('Save country & city'),
+                      ),
+                      const SizedBox(height: AppSpacing.spacingSM),
+                      FilledButton(
+                        onPressed: _isUpdatingLocation ? null : _updateGpsLocation,
+                        child: _isUpdatingLocation
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Update my GPS location'),
+                      ),
+                    ],
+                  ),
+                  showDivider: false,
+                ),
+              ],
+            ),
+            AppGroupedListSection(
               title: 'Profile Info',
               padding: AppSettingsLayout.sectionPadding,
               children: [
@@ -640,17 +830,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 AppGroupedInfoTile(
                   label: 'Age',
                   value: _displayAge(),
-                ),
-                AppGroupedInfoTile(
-                  label: 'Location',
-                  value: _displayLocation(),
                   showDivider: false,
                 ),
               ],
             ),
             const AppSettingsSectionFootnote(
-              text:
-                  'Name, email, gender, and location are managed in account settings.',
+              text: 'Name, email, gender, and age are managed in account settings.',
             ),
             AppGroupedListSection(
               title: 'Work & Education',

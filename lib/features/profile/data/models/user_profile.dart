@@ -46,6 +46,10 @@ class UserProfile {
   final DateTime? lastSeen;
   final int? matchPercentage;
   final List<MatchReason> matchReasons;
+  final double? latitude;
+  final double? longitude;
+  final DateTime? locationUpdatedAt;
+  final String? locationSource;
   final Map<String, dynamic>? additionalData;
 
   UserProfile({
@@ -89,6 +93,10 @@ class UserProfile {
     this.lastSeen,
     this.matchPercentage,
     this.matchReasons = const [],
+    this.latitude,
+    this.longitude,
+    this.locationUpdatedAt,
+    this.locationSource,
     this.additionalData,
   });
 
@@ -97,6 +105,12 @@ class UserProfile {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value.toString());
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   static String? _labelFromMap(Map<String, dynamic> map) {
@@ -288,6 +302,12 @@ class UserProfile {
               .map((e) => MatchReason.fromJson(Map<String, dynamic>.from(e)))
               .toList()
           : const [],
+      latitude: _parseDouble(json['latitude'] ?? json['lats']),
+      longitude: _parseDouble(json['longitude'] ?? json['longs']),
+      locationUpdatedAt: json['location_updated_at'] != null
+          ? DateTime.tryParse(json['location_updated_at'].toString())
+          : null,
+      locationSource: json['location_source']?.toString(),
       additionalData: json,
     );
   }

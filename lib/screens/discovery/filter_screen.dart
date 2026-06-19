@@ -1,4 +1,6 @@
 ﻿// Screen: FilterScreen
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,8 @@ import '../../core/widgets/app_page_header.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/discovery/filter_widgets.dart';
 import '../../features/discover/data/models/discovery_filter_mapper.dart';
+import '../../core/location/location_providers.dart';
+import '../../features/settings/providers/settings_provider.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../shared/utils/plan_guard.dart';
@@ -57,7 +61,11 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   @override
   void initState() {
     super.initState();
-    final seed = DiscoveryFilterMapper.toUiSeed(widget.initialFilters);
+    _applySeed(DiscoveryFilterMapper.toUiSeed(widget.initialFilters));
+    unawaited(_loadPreferredDefaultDistance());
+  }
+
+  void _applySeed(Map<String, dynamic> seed) {
     _ageRange = seed['ageRange'] as RangeValues;
     _maxDistance = seed['maxDistance'] as double;
     _selectedGenderIds = List<int>.from(seed['genderIds'] as List<int>);
@@ -73,6 +81,27 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     _matchSmoke = seed['matchSmoke'] as bool?;
     _matchDrink = seed['matchDrink'] as bool?;
     _matchGym = seed['matchGym'] as bool?;
+  }
+
+  Future<void> _loadPreferredDefaultDistance() async {
+    if (widget.initialFilters != null &&
+        widget.initialFilters!['max_distance'] != null) {
+      return;
+    }
+
+    double? defaultDistance;
+    try {
+      final prefs = await ref.read(matchingPreferencesProvider.future);
+      defaultDistance = prefs.distance;
+    } catch (_) {}
+
+    defaultDistance ??= await ref
+        .read(userLocationProvider.future)
+        .then((loc) => loc.radiusSearchKm)
+        .catchError((_) => null);
+
+    if (!mounted || defaultDistance == null) return;
+    setState(() => _maxDistance = defaultDistance!);
   }
 
   bool get _isPremium =>

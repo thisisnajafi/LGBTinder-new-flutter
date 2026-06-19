@@ -13,6 +13,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/match_percentage_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
+import '../ui/distance_tag.dart';
 
 /// Online status indicator — functional color permitted by design spec.
 const Color kDiscoveryOnlineGreen = Color(0xFF22C55E);
@@ -316,6 +317,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                       name: displayName,
                       age: widget.age,
                       city: widget.city,
+                      distance: widget.distance,
                       bio: widget.bio,
                       isOnline: widget.isOnline,
                       isVerified: widget.isVerified,
@@ -675,6 +677,7 @@ class _BottomTextBlock extends StatelessWidget {
     required this.name,
     required this.age,
     required this.city,
+    required this.distance,
     required this.bio,
     required this.isOnline,
     required this.isVerified,
@@ -687,6 +690,7 @@ class _BottomTextBlock extends StatelessWidget {
   final String name;
   final int? age;
   final String? city;
+  final double? distance;
   final String? bio;
   final bool isOnline;
   final bool isVerified;
@@ -768,26 +772,36 @@ class _BottomTextBlock extends StatelessWidget {
                   ],
                 ],
               ),
-              if (city != null && city!.isNotEmpty) ...[
+              if (city != null && city!.isNotEmpty || distance != null) ...[
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    AppSvgIcon(
-                      assetPath: AppIcons.getIconPath('location'),
-                      size: 13,
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        city!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.75),
+                    if (city != null && city!.isNotEmpty) ...[
+                      AppSvgIcon(
+                        assetPath: AppIcons.getIconPath('location'),
+                        size: 13,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          city!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
+                    if (distance != null) ...[
+                      if (city != null && city!.isNotEmpty)
+                        const SizedBox(width: 8),
+                      DistanceTag(
+                        distance: distance!,
+                        variant: DistanceTagVariant.onDark,
+                      ),
+                    ],
                   ],
                 ),
               ],

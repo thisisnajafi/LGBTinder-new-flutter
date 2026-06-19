@@ -83,7 +83,7 @@ class DiscoveryProfile {
       primaryImageUrl: _resolveImageUrl(
         json['primary_image_url']?.toString() ?? json['image_url']?.toString() ?? json['avatar_url']?.toString() ?? json['avatar']?.toString(),
       ),
-      distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
+      distance: _parseDistance(json),
       compatibilityScore: _parseInt(json['compatibility_score'] ?? json['match_score']),
       matchPercentage: _parseInt(json['match_percentage']),
       matchReasons: _parseMatchReasons(json['match_reasons']),
@@ -126,6 +126,13 @@ class DiscoveryProfile {
       if (isOnline != null) 'is_online': isOnline,
       if (lastActive != null) 'last_active': lastActive!.toIso8601String(),
     };
+  }
+
+  static double? _parseDistance(Map<String, dynamic> json) {
+    final raw = json['distance'] ?? json['distance_km'];
+    if (raw == null) return null;
+    if (raw is num) return raw.toDouble();
+    return double.tryParse(raw.toString());
   }
 
   static int? _parseInt(dynamic value) {

@@ -26,6 +26,10 @@ class CardStackManager extends ConsumerStatefulWidget {
   final VoidCallback? onEmptyAction;
   final String? emptySecondaryActionLabel;
   final VoidCallback? onEmptySecondaryAction;
+  final String? emptyTertiaryActionLabel;
+  final VoidCallback? onEmptyTertiaryAction;
+  final String? emptyTitle;
+  final String? emptySubtitle;
   final bool isSheetOpen;
   /// Resting position below header chrome; cards may paint above when swiping.
   final double contentTopInset;
@@ -46,6 +50,10 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.onEmptyAction,
     this.emptySecondaryActionLabel,
     this.onEmptySecondaryAction,
+    this.emptyTertiaryActionLabel,
+    this.onEmptyTertiaryAction,
+    this.emptyTitle,
+    this.emptySubtitle,
     this.isSheetOpen = false,
     this.contentTopInset = 0,
     this.contentBottomInset = 0,
@@ -224,7 +232,15 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
       return DiscoverEmptyState(
-        onAdjustFilters: widget.onEmptyAction ?? widget.onRefresh,
+        title: widget.emptyTitle ?? "You've seen everyone nearby",
+        subtitle: widget.emptySubtitle ??
+            'Check back soon or expand your filters to see more people',
+        primaryActionLabel: widget.emptyActionLabel ?? 'Adjust filters',
+        onPrimaryAction: widget.onEmptyAction ?? widget.onRefresh,
+        secondaryActionLabel: widget.emptySecondaryActionLabel,
+        onSecondaryAction: widget.onEmptySecondaryAction,
+        tertiaryActionLabel: widget.emptyTertiaryActionLabel,
+        onTertiaryAction: widget.onEmptyTertiaryAction,
       );
     }
 

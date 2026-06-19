@@ -11,6 +11,7 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../core/utils/app_logger.dart';
+import '../core/location/location_providers.dart';
 import '../routes/home_tab_routes.dart';
 
 /// Home page — main shell with tap-only tabs and bottom navigation.
@@ -39,6 +40,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (_pageController.hasClients && initialTab != 0) {
         _pageController.jumpToPage(initialTab);
       }
+      runStaleLocationBootstrap(ref);
     });
   }
 

@@ -476,6 +476,9 @@ class DiscoveryService {
           if (userMap['match_reasons'] == null && map['suggestion_reasons'] != null) {
             userMap['match_reasons'] = _legacySuggestionReasons(map['suggestion_reasons']);
           }
+          if (userMap['distance'] == null && map['distance_km'] != null) {
+            userMap['distance_km'] = map['distance_km'];
+          }
           return DiscoveryProfile.fromJson(userMap);
         })
         .whereType<DiscoveryProfile>()

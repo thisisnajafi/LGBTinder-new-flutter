@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
+import '../../../../widgets/ui/distance_tag.dart';
 import '../../data/models/discovery_profile.dart';
 
 /// Profile card widget for discovery
@@ -135,29 +136,38 @@ class ProfileCard extends ConsumerWidget {
           if (profile.city != null || profile.distance != null) ...[
             Row(
               children: [
-                AppSvgIcon(
-                  assetPath: AppIcons.location,
-                  size: 16,
-                  color: Colors.white.withOpacity(0.8),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    _buildLocationText(),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.3),
-                          offset: const Offset(0, 1),
-                          blurRadius: 2,
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                if (profile.city != null) ...[
+                  AppSvgIcon(
+                    assetPath: AppIcons.location,
+                    size: 16,
+                    color: Colors.white.withOpacity(0.8),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      profile.city!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.9),
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.3),
+                            offset: const Offset(0, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+                if (profile.distance != null) ...[
+                  if (profile.city != null) const SizedBox(width: 8),
+                  DistanceTag(
+                    distance: profile.distance!,
+                    variant: DistanceTagVariant.onDark,
+                  ),
+                ],
               ],
             ),
           ],
@@ -285,19 +295,5 @@ class ProfileCard extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  String _buildLocationText() {
-    final parts = <String>[];
-
-    if (profile.city != null) {
-      parts.add(profile.city!);
-    }
-
-    if (profile.distance != null) {
-      parts.add('${profile.distance!.toStringAsFixed(1)} km away');
-    }
-
-    return parts.join(' • ');
   }
 }
