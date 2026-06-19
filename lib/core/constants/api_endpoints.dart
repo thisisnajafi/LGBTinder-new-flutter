@@ -20,6 +20,7 @@ class ApiEndpoints {
   static const String resendVerification = '/auth/resend-verification';
   static const String resendVerificationExisting = '/auth/resend-verification-existing';
   static const String authRefresh = '/auth/refresh';
+  static const String logout = '/auth/logout';
   static const String completeRegistration = '/complete-registration';
 
   // OTP and Password Reset
@@ -29,6 +30,7 @@ class ApiEndpoints {
 
   // Social Authentication
   // FIXED: Updated to match backend routes (api.php lines 103-104)
+  static const String googleAuth = '/auth/google';
   static const String googleAuthUrl = '/auth/google/url';
   static const String googleCallback = '/auth/google/callback';
   static const String authLinkedAccounts = '/auth/linked-accounts';
