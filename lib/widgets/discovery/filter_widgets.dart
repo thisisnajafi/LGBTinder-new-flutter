@@ -4,6 +4,8 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
+import '../../features/reference_data/data/models/reference_item.dart';
+import '../common/selection_bottom_sheet.dart';
 
 /// Purple icon badge + section title (Filters screen).
 class FilterSectionHeader extends StatelessWidget {
@@ -366,16 +368,16 @@ class FilterPremiumGate extends StatelessWidget {
   }
 }
 
-/// Multi-select chips for reference-data filters.
-class FilterMultiSelectSection extends StatelessWidget {
+/// Multi-select filter field that opens a searchable bottom sheet dropdown.
+class FilterMultiSelectDropdown extends StatelessWidget {
   final String title;
   final String iconPath;
-  final List<({int id, String label})> options;
+  final List<ReferenceItem> options;
   final List<int> selectedIds;
   final ValueChanged<List<int>> onChanged;
   final bool enabled;
 
-  const FilterMultiSelectSection({
+  const FilterMultiSelectDropdown({
     super.key,
     required this.title,
     required this.iconPath,
@@ -385,36 +387,102 @@ class FilterMultiSelectSection extends StatelessWidget {
     this.enabled = true,
   });
 
+  String _summaryText() {
+    if (selectedIds.isEmpty) return 'Any';
+    final labels = options
+        .where((option) => selectedIds.contains(option.id))
+        .map((option) => option.title)
+        .toList();
+    if (labels.isEmpty) return 'Any';
+    if (labels.length <= 2) return labels.join(', ');
+    return '${labels.length} selected';
+  }
+
+  Future<void> _openPicker(BuildContext context) async {
+    if (!enabled || options.isEmpty) return;
+
+    final selectedItems = options
+        .where((option) => selectedIds.contains(option.id))
+        .toList();
+
+    final result = await SelectionBottomSheet.showMultiSelect<ReferenceItem>(
+      context: context,
+      title: title,
+      items: options,
+      getTitle: (item) => item.title,
+      selectedItems: selectedItems,
+      searchable: options.length > 8,
+      compareItems: (a, b) => a.id.compareTo(b.id),
+    );
+
+    if (result != null) {
+      onChanged(result.map((item) => item.id).toList());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (options.isEmpty) return const SizedBox.shrink();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
+    final summary = _summaryText();
+    final hasSelection = selectedIds.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         FilterSectionHeader(iconPath: iconPath, title: title),
         SizedBox(height: AppSpacing.spacingMD),
-        Wrap(
-          spacing: AppSpacing.spacingSM,
-          runSpacing: AppSpacing.spacingSM,
-          children: options.map((option) {
-            final isSelected = selectedIds.contains(option.id);
-            return FilterGenderChip(
-              label: option.label,
-              isSelected: isSelected,
-              onTap: enabled
-                  ? () {
-                      final next = List<int>.from(selectedIds);
-                      if (isSelected) {
-                        next.remove(option.id);
-                      } else {
-                        next.add(option.id);
-                      }
-                      onChanged(next);
-                    }
-                  : () {},
-            );
-          }).toList(),
+        Material(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+          child: InkWell(
+            onTap: enabled ? () => _openPicker(context) : null,
+            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingMD,
+                vertical: AppSpacing.spacingMD,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                border: Border.all(
+                  color: hasSelection ? AppColors.accentPurple : borderColor,
+                  width: hasSelection ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      summary,
+                      style: AppTypography.body.copyWith(
+                        color: hasSelection ? textColor : secondaryColor,
+                        fontWeight:
+                            hasSelection ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.spacingSM),
+                  AppSvgIcon(
+                    assetPath: AppIcons.arrowDown,
+                    size: 18,
+                    color: enabled ? AppColors.accentPurple : secondaryColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );

@@ -12,7 +12,6 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/discovery/filter_widgets.dart';
 import '../../features/discover/data/models/discovery_filter_mapper.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
-import '../../features/reference_data/data/models/reference_item.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../shared/utils/plan_guard.dart';
 import '../../routes/app_router.dart';
@@ -44,8 +43,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   bool? _matchSmoke;
   bool? _matchDrink;
   bool? _matchGym;
-  String _country = '';
-  String _city = '';
 
   static final String _iconCake = AppIcons.getIconOutline('cake');
   static final String _iconLocation = AppIcons.getIconOutline('location');
@@ -76,8 +73,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     _matchSmoke = seed['matchSmoke'] as bool?;
     _matchDrink = seed['matchDrink'] as bool?;
     _matchGym = seed['matchGym'] as bool?;
-    _country = seed['country'] as String;
-    _city = seed['city'] as String;
   }
 
   bool get _isPremium =>
@@ -101,8 +96,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       if (_matchSmoke != null) 'matchSmoke': _matchSmoke,
       if (_matchDrink != null) 'matchDrink': _matchDrink,
       if (_matchGym != null) 'matchGym': _matchGym,
-      'country': _country,
-      'city': _city,
     };
 
     final apiFilters = DiscoveryFilterMapper.fromUiResult(
@@ -131,8 +124,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       _matchSmoke = null;
       _matchDrink = null;
       _matchGym = null;
-      _country = '';
-      _city = '';
     });
   }
 
@@ -176,12 +167,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       return;
     }
     setState(() => _showPremiumOnly = true);
-  }
-
-  List<({int id, String label})> _mapOptions(List<ReferenceItem> items) {
-    return items
-        .map((item) => (id: item.id, label: item.title))
-        .toList(growable: false);
   }
 
   Widget _lifestyleToggle({
@@ -264,7 +249,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     final languagesAsync = ref.watch(languagesProvider);
     final musicAsync = ref.watch(musicGenresProvider);
     final goalsAsync = ref.watch(relationshipGoalsProvider);
-    final countriesAsync = ref.watch(countriesProvider);
 
     return AppPageScaffold(
       title: 'Filters',
@@ -428,10 +412,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                       const FilterSectionDivider(),
                       interestsAsync.when(
-                        data: (items) => FilterMultiSelectSection(
+                        data: (items) => FilterMultiSelectDropdown(
                           title: 'Interests',
                           iconPath: _iconHeart,
-                          options: _mapOptions(items),
+                          options: items,
                           selectedIds: _interestIds,
                           enabled: _isPremium,
                           onChanged: (ids) =>
@@ -442,10 +426,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                       SizedBox(height: AppSpacing.spacingMD),
                       goalsAsync.when(
-                        data: (items) => FilterMultiSelectSection(
+                        data: (items) => FilterMultiSelectDropdown(
                           title: 'Relationship Goals',
                           iconPath: _iconHeart,
-                          options: _mapOptions(items),
+                          options: items,
                           selectedIds: _relationGoalIds,
                           enabled: _isPremium,
                           onChanged: (ids) =>
@@ -456,10 +440,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                       SizedBox(height: AppSpacing.spacingMD),
                       jobsAsync.when(
-                        data: (items) => FilterMultiSelectSection(
+                        data: (items) => FilterMultiSelectDropdown(
                           title: 'Profession',
                           iconPath: _iconBriefcase,
-                          options: _mapOptions(items),
+                          options: items,
                           selectedIds: _jobIds,
                           enabled: _isPremium,
                           onChanged: (ids) => setState(() => _jobIds = ids),
@@ -469,10 +453,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                       SizedBox(height: AppSpacing.spacingMD),
                       educationAsync.when(
-                        data: (items) => FilterMultiSelectSection(
+                        data: (items) => FilterMultiSelectDropdown(
                           title: 'Education',
                           iconPath: _iconBook,
-                          options: _mapOptions(items),
+                          options: items,
                           selectedIds: _educationIds,
                           enabled: _isPremium,
                           onChanged: (ids) =>
@@ -483,10 +467,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                       SizedBox(height: AppSpacing.spacingMD),
                       languagesAsync.when(
-                        data: (items) => FilterMultiSelectSection(
+                        data: (items) => FilterMultiSelectDropdown(
                           title: 'Languages',
                           iconPath: _iconGlobal,
-                          options: _mapOptions(items),
+                          options: items,
                           selectedIds: _languageIds,
                           enabled: _isPremium,
                           onChanged: (ids) =>
@@ -497,10 +481,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                       SizedBox(height: AppSpacing.spacingMD),
                       musicAsync.when(
-                        data: (items) => FilterMultiSelectSection(
+                        data: (items) => FilterMultiSelectDropdown(
                           title: 'Music Taste',
                           iconPath: _iconMusic,
-                          options: _mapOptions(items),
+                          options: items,
                           selectedIds: _musicGenreIds,
                           enabled: _isPremium,
                           onChanged: (ids) =>
@@ -531,45 +515,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                         subtitle: 'Match gym preference',
                         value: _matchGym,
                         onChanged: (v) => setState(() => _matchGym = v),
-                      ),
-                      const FilterSectionDivider(),
-                      FilterSectionHeader(
-                        iconPath: _iconLocation,
-                        title: 'Location',
-                      ),
-                      SizedBox(height: AppSpacing.spacingMD),
-                      countriesAsync.when(
-                        data: (countries) {
-                          if (countries.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          return Wrap(
-                            spacing: AppSpacing.spacingSM,
-                            runSpacing: AppSpacing.spacingSM,
-                            children: [
-                              FilterGenderChip(
-                                label: 'Any country',
-                                isSelected: _country.isEmpty,
-                                onTap: () => setState(() {
-                                  _country = '';
-                                  _city = '';
-                                }),
-                              ),
-                              ...countries.take(12).map(
-                                    (country) => FilterGenderChip(
-                                      label: country.title,
-                                      isSelected: _country == country.title,
-                                      onTap: () => setState(() {
-                                        _country = country.title;
-                                        _city = '';
-                                      }),
-                                    ),
-                                  ),
-                            ],
-                          );
-                        },
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
                       ),
                     ],
                   ),

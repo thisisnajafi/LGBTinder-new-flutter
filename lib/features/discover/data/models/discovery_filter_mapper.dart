@@ -204,6 +204,8 @@ class DiscoveryFilterMapper {
     if (filters == null || filters.isEmpty) return 'default';
     return cacheKeySuffixFromQuery(toQueryParameters(filters));
   }
+
+  static Map<String, dynamic> stripPremiumKeys(Map<String, dynamic> api) {
     return Map<String, dynamic>.from(api)
       ..removeWhere((key, _) => premiumOnlyKeys.contains(key));
   }
