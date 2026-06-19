@@ -727,7 +727,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Future<void> _forceUpdateLocation() async {
-    await ref.read(locationSyncServiceProvider).syncIfNeeded(force: true);
+    await ref.read(locationSyncServiceProvider).syncIfNeeded(
+          discoverOpen: true,
+          force: true,
+        );
     ref.invalidate(userLocationProvider);
     await _bootstrapDiscoverLocationAndRefresh();
     if (!mounted) return;
@@ -1139,28 +1142,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       ],
     );
   }
-}
-
-class _DiscoverEmptyConfig {
-  const _DiscoverEmptyConfig({
-    required this.title,
-    required this.subtitle,
-    required this.primaryLabel,
-    this.onPrimary,
-    this.secondaryLabel,
-    this.onSecondary,
-    this.tertiaryLabel,
-    this.onTertiary,
-  });
-
-  final String title;
-  final String subtitle;
-  final String primaryLabel;
-  final VoidCallback? onPrimary;
-  final String? secondaryLabel;
-  final VoidCallback? onSecondary;
-  final String? tertiaryLabel;
-  final VoidCallback? onTertiary;
 }
 
 class _DiscoverEmptyConfig {

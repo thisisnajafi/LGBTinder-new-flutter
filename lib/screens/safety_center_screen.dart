@@ -10,6 +10,7 @@ import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/buttons/gradient_button.dart';
+import 'nearby_safe_places_screen.dart';
 import 'blocked_users_screen.dart';
 import 'report_history_screen.dart';
 import 'emergency_contacts_screen.dart';
@@ -106,6 +107,25 @@ class SafetyCenterScreen extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const ReportHistoryScreen(),
+                ),
+              );
+            },
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+            surfaceColor: surfaceColor,
+          ),
+          SizedBox(height: AppSpacing.spacingMD),
+          _buildSafetyCard(
+            context: context,
+            icon: Icons.place,
+            title: 'Nearby Safe Places',
+            description: 'Find hospitals, police, and fire stations near you',
+            color: AppColors.feedbackInfo,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NearbySafePlacesScreen(),
                 ),
               );
             },

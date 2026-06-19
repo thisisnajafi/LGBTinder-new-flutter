@@ -8,6 +8,7 @@ import 'location_bootstrap.dart';
 import 'location_service.dart';
 import 'location_sync_service.dart';
 import 'data/models/user_location.dart';
+import 'safety_location_service.dart';
 
 final locationServiceProvider = Provider<LocationService>((ref) {
   return LocationService();
@@ -37,6 +38,13 @@ final locationPermissionProvider = FutureProvider<LocationPermission>((ref) asyn
 
 final userLocationProvider = FutureProvider<UserLocation>((ref) async {
   return ref.watch(locationApiServiceProvider).getLocation();
+});
+
+final safetyLocationServiceProvider = Provider<SafetyLocationService>((ref) {
+  return SafetyLocationService(
+    locationService: ref.watch(locationServiceProvider),
+    safetyApi: ref.watch(safetyApiServiceProvider),
+  );
 });
 
 /// Runs discover-time location sync and optional permission prompt.

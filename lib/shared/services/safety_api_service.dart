@@ -33,6 +33,7 @@ class SafetyApiService {
     required double latitude,
     required double longitude,
     required int durationMinutes,
+    String? message,
   }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.safetyShareLocation,
@@ -40,6 +41,7 @@ class SafetyApiService {
         'latitude': latitude,
         'longitude': longitude,
         'duration_minutes': durationMinutes,
+        if (message != null && message.isNotEmpty) 'message': message,
       },
       fromJson: (json) => json as Map<String, dynamic>,
     );
@@ -47,15 +49,19 @@ class SafetyApiService {
     return response.data ?? {};
   }
 
-  /// GET safety/nearby-safe-places. Query: latitude, longitude.
+  /// GET safety/nearby-safe-places. Query: latitude, longitude, radius_km.
   Future<Map<String, dynamic>> getNearbySafePlaces({
     required double latitude,
     required double longitude,
+    int radiusKm = 5,
   }) async {
-    final path =
-        '${ApiEndpoints.safetyNearbySafePlaces}?latitude=$latitude&longitude=$longitude';
     final response = await _apiService.get<Map<String, dynamic>>(
-      path,
+      ApiEndpoints.safetyNearbySafePlaces,
+      queryParameters: {
+        'latitude': latitude,
+        'longitude': longitude,
+        'radius_km': radiusKm,
+      },
       fromJson: (json) => json as Map<String, dynamic>,
     );
     if (!response.isSuccess) throw Exception(response.message);

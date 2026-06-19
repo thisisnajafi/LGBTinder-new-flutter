@@ -18,6 +18,10 @@ import '../core/utils/country_phone_utils.dart';
 import '../core/widgets/inputs/country_phone_input.dart';
 import '../features/reference_data/data/models/reference_item.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
+import '../core/location/location_providers.dart';
+import '../core/location/location_required_exception.dart';
+import '../core/location/widgets/emergency_alert_countdown_dialog.dart';
+import '../core/location/widgets/location_permission_sheet.dart';
 import '../widgets/common/reference_bottom_sheet_field.dart';
 
 /// Emergency contacts screen - Manage emergency contacts
@@ -139,42 +143,49 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
     final confirmed = await ConfirmationDialog.show(
       context,
       title: 'Send Emergency Alert',
-      message: 'This will immediately notify all your emergency contacts. Only use this feature in genuine emergencies.',
-      confirmText: 'Send Alert',
+      message:
+          'This will immediately notify your primary emergency contacts with your live GPS location. Only use in genuine emergencies.',
+      confirmText: 'Continue',
       cancelText: 'Cancel',
       isDestructive: true,
     );
 
-    if (confirmed == true) {
-      try {
-        final apiService = ref.read(apiServiceProvider);
-        final response = await apiService.post<Map<String, dynamic>>(
-          ApiEndpoints.emergencyTrigger,
-          data: {
-            'message': 'Emergency alert triggered from LGBTFinder app',
-            'include_location': true,
-          },
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
+    if (confirmed != true || !mounted) return;
 
-        if (response.isSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Emergency alert sent to your contacts'),
-              backgroundColor: AppColors.onlineGreen,
-            ),
+    final proceed = await EmergencyAlertCountdownDialog.show(context);
+    if (proceed != true || !mounted) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(safetyLocationServiceProvider).sendEmergencyAlert(
+            alertType: 'emergency',
+            message: 'Emergency alert triggered from LGBTinder app',
           );
-        } else {
-          throw Exception('Failed to send emergency alert');
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send emergency alert: $e'),
-            backgroundColor: AppColors.notificationRed,
-          ),
-        );
-      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Emergency alert sent to your contacts'),
+          backgroundColor: AppColors.onlineGreen,
+        ),
+      );
+    } on LocationRequiredException catch (e) {
+      if (!mounted) return;
+      await LocationPermissionSheet.show(
+        context,
+        permanentlyDenied: e.permanentlyDenied,
+        onEnable: _handleEmergencyAlert,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send emergency alert: $e'),
+          backgroundColor: AppColors.notificationRed,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

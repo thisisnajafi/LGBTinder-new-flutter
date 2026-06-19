@@ -11,6 +11,10 @@ import '../widgets/common/section_header.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../features/settings/providers/settings_provider.dart';
 import '../features/settings/data/models/privacy_settings.dart';
+import '../core/location/location_providers.dart';
+import '../core/location/location_required_exception.dart';
+import '../core/location/widgets/location_permission_sheet.dart';
+import 'nearby_safe_places_screen.dart';
 import 'blocked_users_screen.dart';
 import 'report_history_screen.dart';
 import 'emergency_contacts_screen.dart';
@@ -92,6 +96,73 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     _savePrivacy(update(current));
   }
 
+  Future<void> _shareLiveLocationWithContacts() async {
+    final duration = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                child: Text(
+                  'Share live location',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                title: const Text('15 minutes'),
+                onTap: () => Navigator.pop(ctx, 15),
+              ),
+              ListTile(
+                title: const Text('30 minutes'),
+                onTap: () => Navigator.pop(ctx, 30),
+              ),
+              ListTile(
+                title: const Text('1 hour'),
+                onTap: () => Navigator.pop(ctx, 60),
+              ),
+              ListTile(
+                title: const Text('2 hours'),
+                onTap: () => Navigator.pop(ctx, 120),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (duration == null || !mounted) return;
+
+    try {
+      await ref.read(safetyLocationServiceProvider).shareLiveLocation(
+            durationMinutes: duration,
+            message: 'Sharing my live location with you',
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Location shared for $duration minutes'),
+          backgroundColor: AppColors.onlineGreen,
+        ),
+      );
+    } on LocationRequiredException catch (e) {
+      if (!mounted) return;
+      await LocationPermissionSheet.show(
+        context,
+        permanentlyDenied: e.permanentlyDenied,
+        onEnable: _shareLiveLocationWithContacts,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to share location: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -118,8 +189,8 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
           ),
           SizedBox(height: AppSpacing.spacingMD),
           _buildSwitchTile(
-            title: 'Share Location',
-            subtitle: 'Allow others to see your approximate location',
+            title: 'Share Location in Discovery',
+            subtitle: 'Allow distance-based matching using your location',
             value: _shareLocation,
             onChanged: _privacyLoading || _privacySaving
                 ? null
@@ -188,6 +259,30 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
                 ? null
                 : (value) =>
                     _togglePrivacy((p) => p.copyWith(blockUnknownMessages: value)),
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+          ),
+          const SizedBox(height: AppSpacing.spacingMD),
+          _buildActionTile(
+            icon: Icons.my_location,
+            title: 'Share live location now',
+            subtitle: 'Send GPS to emergency contacts for a limited time',
+            onTap: _shareLiveLocationWithContacts,
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+          ),
+          _buildActionTile(
+            icon: Icons.place,
+            title: 'Nearby safe places',
+            subtitle: 'Hospitals, police, and fire stations near you',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NearbySafePlacesScreen(),
+                ),
+              );
+            },
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
           ),
