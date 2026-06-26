@@ -206,7 +206,7 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
               top: 4,
               right: 4,
               child: IconButtonCircle(
-                icon: Icons.close,
+                svgIcon: AppIcons.close,
                 onTap: () => widget.onImageDelete?.call(index),
                 size: 32.0,
                 backgroundColor: Colors.black54,

@@ -2,11 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_settings_detail.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
+import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/common/call_quota_display.dart';
 import '../../features/calls/providers/call_provider.dart';
 import '../../features/calls/data/models/call_settings.dart';
@@ -15,7 +15,7 @@ import '../../shared/services/error_handler_service.dart';
 
 /// Call settings screen - Configure call preferences
 class CallSettingsScreen extends ConsumerStatefulWidget {
-  const CallSettingsScreen({Key? key}) : super(key: key);
+  const CallSettingsScreen({super.key});
 
   @override
   ConsumerState<CallSettingsScreen> createState() => _CallSettingsScreenState();
@@ -25,7 +25,6 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
   bool _isLoading = false;
   CallSettings? _settings;
 
-  // Form values
   bool _videoEnabled = true;
   bool _audioEnabled = true;
   bool _speakerEnabled = false;
@@ -106,8 +105,8 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Call settings saved successfully'),
+          const SnackBar(
+            content: Text('Call settings saved successfully'),
             backgroundColor: AppColors.onlineGreen,
           ),
         );
@@ -140,183 +139,81 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: CustomAppBar(
-        title: 'Call Settings',
-        onBack: () => Navigator.of(context).pop(),
-      ),
-      body: _isLoading
+    return AppSettingsDetailScaffold(
+      title: 'Call settings',
+      subtitle: 'Video, audio, and incoming call preferences',
+      body: _isLoading && _settings == null
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SectionHeader(title: 'Video & Audio'),
-                  SizedBox(height: AppSpacing.spacingMD),
-
-                  // Video enabled
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
+          : AppSettingsDetailList(
+              children: [
+                PremiumSettingsGroup(
+                  title: 'Video & audio',
+                  children: [
+                    PremiumToggleRow(
+                      title: 'Enable video',
+                      subtitle: 'Allow video during calls',
+                      value: _videoEnabled,
+                      iconPath: AppIcons.video,
+                      onChanged: (value) => setState(() => _videoEnabled = value),
+                      enabled: !_isLoading,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Enable Video',
-                          style: AppTypography.bodyMedium.copyWith(color: textColor),
-                        ),
-                        Switch(
-                          value: _videoEnabled,
-                          onChanged: (value) {
-                            setState(() {
-                              _videoEnabled = value;
-                            });
-                          },
-                          activeColor: AppColors.accentPurple,
-                        ),
-                      ],
+                    PremiumToggleRow(
+                      title: 'Enable audio',
+                      subtitle: 'Allow voice during calls',
+                      value: _audioEnabled,
+                      iconPath: AppIcons.microphone,
+                      onChanged: (value) => setState(() => _audioEnabled = value),
+                      enabled: !_isLoading,
                     ),
+                    PremiumToggleRow(
+                      title: 'Speaker mode',
+                      subtitle: 'Route audio through the speaker by default',
+                      value: _speakerEnabled,
+                      iconPath: AppIcons.getIconPath('volume-high'),
+                      onChanged: (value) =>
+                          setState(() => _speakerEnabled = value),
+                      enabled: !_isLoading,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
+                  title: 'Call behavior',
+                  children: [
+                    PremiumToggleRow(
+                      title: 'Auto accept calls',
+                      subtitle: 'Automatically accept incoming calls',
+                      value: _autoAcceptCalls,
+                      iconPath: AppIcons.callIncoming,
+                      onChanged: (value) =>
+                          setState(() => _autoAcceptCalls = value),
+                      enabled: !_isLoading,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
+                  title: 'Usage & limits',
+                  children: const [
+                    CallQuotaDisplay(),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSettingsLayout.horizontalPadding,
+                    AppSpacing.spacingXL,
+                    AppSettingsLayout.horizontalPadding,
+                    0,
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-
-                  // Audio enabled
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Enable Audio',
-                          style: AppTypography.bodyMedium.copyWith(color: textColor),
-                        ),
-                        Switch(
-                          value: _audioEnabled,
-                          onChanged: (value) {
-                            setState(() {
-                              _audioEnabled = value;
-                            });
-                          },
-                          activeColor: AppColors.accentPurple,
-                        ),
-                      ],
-                    ),
+                  child: GradientButton(
+                    text: 'Save settings',
+                    onPressed: _isLoading ? null : _saveSettings,
+                    isFullWidth: true,
+                    iconPath: AppIcons.tickCircle,
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-
-                  // Speaker enabled
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Speaker Mode',
-                          style: AppTypography.bodyMedium.copyWith(color: textColor),
-                        ),
-                        Switch(
-                          value: _speakerEnabled,
-                          onChanged: (value) {
-                            setState(() {
-                              _speakerEnabled = value;
-                            });
-                          },
-                          activeColor: AppColors.accentPurple,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-
-                  SectionHeader(title: 'Call Behavior'),
-                  SizedBox(height: AppSpacing.spacingMD),
-
-                  // Auto accept calls
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.spacingMD),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Auto Accept Calls',
-                                style: AppTypography.bodyMedium.copyWith(color: textColor),
-                              ),
-                              SizedBox(height: AppSpacing.spacingXS),
-                              Text(
-                                'Automatically accept incoming calls',
-                                style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Switch(
-                          value: _autoAcceptCalls,
-                          onChanged: (value) {
-                            setState(() {
-                              _autoAcceptCalls = value;
-                            });
-                          },
-                          activeColor: AppColors.accentPurple,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.spacingLG),
-
-                  SectionHeader(title: 'Usage & Limits'),
-                  SizedBox(height: AppSpacing.spacingMD),
-
-                  // Call quota display
-                  const CallQuotaDisplay(),
-                  SizedBox(height: AppSpacing.spacingXL),
-
-                  // Save button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _saveSettings,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentPurple,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppBorderRadius.radiusMD),
-                        ),
-                      ),
-                      child: const Text('Save Settings'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }
 }
-

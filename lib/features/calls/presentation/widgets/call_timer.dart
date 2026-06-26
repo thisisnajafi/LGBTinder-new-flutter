@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../providers/call_provider.dart';
 
 /// Call timer widget
@@ -226,21 +227,21 @@ class CallTimerOverlay extends ConsumerWidget {
 /// Call timer with icon
 class CallTimerWithIcon extends ConsumerWidget {
   final bool isActive;
-  final IconData icon;
+  final String iconPath;
   final Color? iconColor;
   final double iconSize;
   final TextStyle? textStyle;
   final MainAxisAlignment alignment;
 
   const CallTimerWithIcon({
-    Key? key,
+    super.key,
     this.isActive = true,
-    this.icon = Icons.access_time,
+    this.iconPath = AppIcons.timer,
     this.iconColor,
     this.iconSize = 16,
     this.textStyle,
     this.alignment = MainAxisAlignment.center,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -248,9 +249,9 @@ class CallTimerWithIcon extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: alignment,
       children: [
-        Icon(
-          icon,
-          color: iconColor ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+        AppSvgIcon(
+          assetPath: iconPath,
+          color: iconColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           size: iconSize,
         ),
 

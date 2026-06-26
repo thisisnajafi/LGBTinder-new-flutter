@@ -20,6 +20,113 @@ import '../images/optimized_image.dart';
 import '../../features/chat/data/models/message_delivery_status.dart';
 import 'message_status_indicator.dart';
 
+/// Premium-aligned decorations for chat bubbles (PremiumShell + brand gradient).
+class MessageBubbleChrome {
+  MessageBubbleChrome._();
+
+  static EdgeInsets margin({required bool isSent}) => EdgeInsets.only(
+        left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
+        right: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
+        top: AppSpacing.spacingXS,
+        bottom: AppSpacing.spacingXS,
+      );
+
+  static const BorderRadius _sentRadius = BorderRadius.only(
+    topLeft: Radius.circular(AppRadius.radiusLG),
+    topRight: Radius.circular(AppRadius.radiusLG),
+    bottomLeft: Radius.circular(AppRadius.radiusLG),
+    bottomRight: Radius.zero,
+  );
+
+  static const BorderRadius _receivedRadius = BorderRadius.only(
+    topLeft: Radius.circular(AppRadius.radiusLG),
+    topRight: Radius.circular(AppRadius.radiusLG),
+    bottomLeft: Radius.zero,
+    bottomRight: Radius.circular(AppRadius.radiusLG),
+  );
+
+  static BoxDecoration sent({bool isFailed = false}) {
+    if (isFailed) {
+      return BoxDecoration(
+        color: AppColors.feedbackError.withValues(alpha: 0.92),
+        borderRadius: _sentRadius,
+        border: Border.all(
+          color: AppColors.feedbackError.withValues(alpha: 0.55),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.feedbackError.withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+    }
+    return BoxDecoration(
+      gradient: AppColors.brandGradient,
+      borderRadius: _sentRadius,
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.accentViolet.withValues(alpha: 0.28),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.08),
+          blurRadius: 4,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration received({required bool isDark}) => BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: _receivedRadius,
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.14 : 0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+
+  static BoxDecoration locked({required bool isDark}) => received(isDark: isDark);
+
+  static BoxDecoration premiumGate({required bool isDark}) => BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: 0.22),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentViolet.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+
+  static BoxDecoration expired({required bool isDark}) => BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.1 : 0.08),
+        ),
+      );
+}
+
 /// Chat message bubble widget
 /// Displays a single message in the chat
 /// Data structure based on API: /api/chat/history
@@ -81,12 +188,7 @@ class MessageBubble extends ConsumerWidget {
       return Align(
         alignment: Alignment.centerLeft,
         child: Container(
-          margin: EdgeInsets.only(
-            left: AppSpacing.spacingSM,
-            right: AppSpacing.spacingXXL,
-            top: AppSpacing.spacingXS,
-            bottom: AppSpacing.spacingXS,
-          ),
+          margin: MessageBubbleChrome.margin(isSent: false),
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
@@ -94,19 +196,7 @@ class MessageBubble extends ConsumerWidget {
             horizontal: AppSpacing.spacingLG,
             vertical: AppSpacing.spacingMD,
           ),
-          decoration: BoxDecoration(
-            color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight).withOpacity(0.9),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppRadius.radiusMD),
-              topRight: Radius.circular(AppRadius.radiusMD),
-              bottomRight: Radius.circular(AppRadius.radiusMD),
-              bottomLeft: Radius.zero,
-            ),
-            border: Border.all(
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
-              width: 1,
-            ),
-          ),
+          decoration: MessageBubbleChrome.locked(isDark: isDark),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -155,20 +245,9 @@ class MessageBubble extends ConsumerWidget {
           child: GestureDetector(
             onTap: () => context.push(AppRoutes.subscriptionPlans),
             child: Container(
-              margin: EdgeInsets.only(
-                left: AppSpacing.spacingSM,
-                right: AppSpacing.spacingXXL,
-                top: AppSpacing.spacingXS,
-                bottom: AppSpacing.spacingXS,
-              ),
+              margin: MessageBubbleChrome.margin(isSent: false),
               padding: const EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(
-                  color: AppColors.primaryLight.withValues(alpha: 0.25),
-                ),
-              ),
+              decoration: MessageBubbleChrome.premiumGate(isDark: isDark),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 child: BackdropFilter(
@@ -179,7 +258,7 @@ class MessageBubble extends ConsumerWidget {
                       AppSvgIcon(
                         assetPath: AppIcons.lock,
                         size: 20,
-                        color: AppColors.primaryLight,
+                        color: AppColors.accentViolet,
                       ),
                       const SizedBox(width: AppSpacing.spacingSM),
                       Flexible(
@@ -250,66 +329,20 @@ class MessageBubble extends ConsumerWidget {
     }
 
     final isFailed = deliveryStatus == MessageDeliveryStatus.failed;
-    final sentDecoration = isSent && !isFailed
-        ? BoxDecoration(
-            gradient: AppColors.brandGradient,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(AppRadius.radiusLG),
-              topRight: const Radius.circular(AppRadius.radiusLG),
-              bottomLeft: const Radius.circular(AppRadius.radiusLG),
-              bottomRight: Radius.zero,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          )
-        : BoxDecoration(
-            color: isFailed
-                ? AppColors.feedbackError.withValues(alpha: 0.85)
-                : AppColors.primaryLight,
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(AppRadius.radiusLG),
-              topRight: const Radius.circular(AppRadius.radiusLG),
-              bottomLeft: const Radius.circular(AppRadius.radiusLG),
-              bottomRight: Radius.zero,
-            ),
-          );
-
-    final receivedDecoration = BoxDecoration(
-      color: isDark
-          ? Colors.white.withValues(alpha: 0.07)
-          : Colors.white.withValues(alpha: 0.82),
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(AppRadius.radiusLG),
-        topRight: Radius.circular(AppRadius.radiusLG),
-        bottomLeft: Radius.zero,
-        bottomRight: Radius.circular(AppRadius.radiusLG),
-      ),
-      border: Border.all(
-        color: AppColors.accentViolet.withValues(alpha: 0.12),
-      ),
-    );
 
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
         onTap: isFailed ? onRetry : null,
         child: Container(
-        margin: EdgeInsets.only(
-          left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
-          right: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
-          top: AppSpacing.spacingXS,
-          bottom: AppSpacing.spacingXS,
-        ),
+        margin: MessageBubbleChrome.margin(isSent: isSent),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         padding: EdgeInsets.all(AppSpacing.spacingMD),
-        decoration: isSent ? sentDecoration : receivedDecoration,
+        decoration: isSent
+            ? MessageBubbleChrome.sent(isFailed: isFailed)
+            : MessageBubbleChrome.received(isDark: isDark),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -655,23 +688,14 @@ class _ProfileLinkBubble extends StatelessWidget {
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.only(
-          left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
-          right: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
-          top: AppSpacing.spacingXS,
-          bottom: AppSpacing.spacingXS,
-        ),
+        margin: MessageBubbleChrome.margin(isSent: isSent),
         padding: const EdgeInsets.all(AppSpacing.spacingMD),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-        decoration: BoxDecoration(
-          color: isSent
-              ? AppColors.primaryLight
-              : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          border: Border.all(
-            color: AppColors.primaryLight.withValues(alpha: 0.2),
-          ),
-        ),
+        decoration: isSent
+            ? MessageBubbleChrome.sent(
+                isFailed: deliveryStatus == MessageDeliveryStatus.failed,
+              )
+            : MessageBubbleChrome.received(isDark: isDark),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -802,9 +826,6 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bubbleColor = isSent
-        ? AppColors.primaryLight
-        : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
     final label = isSent
         ? 'Self-destruct photo sent'
         : (canOpen ? 'Tap to view photo' : 'Self-destruct photo');
@@ -817,17 +838,13 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
         child: GestureDetector(
           onTap: canOpen ? onTap : null,
           child: Container(
-            margin: EdgeInsets.only(
-              left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
-              right: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
-              top: AppSpacing.spacingXS,
-              bottom: AppSpacing.spacingXS,
-            ),
+            margin: MessageBubbleChrome.margin(isSent: isSent),
             padding: const EdgeInsets.all(AppSpacing.spacingMD),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            ),
+            decoration: isSent
+                ? MessageBubbleChrome.sent(
+                    isFailed: deliveryStatus == MessageDeliveryStatus.failed,
+                  )
+                : MessageBubbleChrome.received(isDark: isDark),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -887,20 +904,9 @@ class _SelfDestructExpiredBubble extends StatelessWidget {
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.only(
-          left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
-          right: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
-          top: AppSpacing.spacingXS,
-          bottom: AppSpacing.spacingXS,
-        ),
+        margin: MessageBubbleChrome.margin(isSent: isSent),
         padding: const EdgeInsets.all(AppSpacing.spacingMD),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          border: Border.all(
-            color: isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight,
-          ),
-        ),
+        decoration: MessageBubbleChrome.expired(isDark: isDark),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

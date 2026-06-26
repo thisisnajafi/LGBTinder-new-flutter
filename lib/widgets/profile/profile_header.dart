@@ -152,8 +152,8 @@ class ProfileHeader extends ConsumerWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.location_on,
+                      AppSvgIcon(
+                        assetPath: AppIcons.location,
                         size: 16,
                         color: secondaryTextColor,
                       ),

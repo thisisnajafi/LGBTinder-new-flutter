@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
@@ -392,25 +393,44 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
 
   Widget _buildEmptyState(Color secondaryTextColor, Color textColor) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.star_outline,
-            size: 64,
-            color: secondaryTextColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: PremiumPageHeader.horizontalPadding,
+        ),
+        child: PremiumShell(
+          margin: EdgeInsets.zero,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accentViolet.withValues(alpha: 0.12),
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.star,
+                    size: 32,
+                    color: AppColors.accentViolet,
+                  ),
+                ),
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+              Text(
+                'No Plans Available',
+                style: AppTypography.h3.copyWith(color: textColor),
+              ),
+              SizedBox(height: AppSpacing.spacingSM),
+              Text(
+                'Subscription plans are not available at the moment.',
+                style: AppTypography.body.copyWith(color: secondaryTextColor),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Text(
-            'No Plans Available',
-            style: AppTypography.h3.copyWith(color: textColor),
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          Text(
-            'Subscription plans are not available at the moment.',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -434,9 +454,9 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.payment_rounded,
-                color: AppColors.accentPurple,
+              AppSvgIcon(
+                assetPath: AppIcons.card,
+                color: AppColors.accentViolet,
                 size: 20,
               ),
               SizedBox(width: AppSpacing.spacingSM),
@@ -693,8 +713,8 @@ class _PlanCard extends StatelessWidget {
                             : Colors.transparent,
                       ),
                       child: isSelected
-                          ? Icon(
-                              Icons.check_rounded,
+                          ? AppSvgIcon(
+                              assetPath: AppIcons.check,
                               size: 16,
                               color: planTheme.accent,
                             )
@@ -746,8 +766,8 @@ class _PlanCard extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.check_circle_rounded,
+                          AppSvgIcon(
+                            assetPath: AppIcons.checkCircle,
                             size: 20,
                             color: AppColors.onlineGreen,
                           ),

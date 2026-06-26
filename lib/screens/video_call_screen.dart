@@ -5,6 +5,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/utils/app_icons.dart';
 import '../core/widgets/profile_image_widget.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import '../widgets/buttons/icon_button_circle.dart';
@@ -557,31 +558,39 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(
-                    _isMuted ? Icons.mic_off : Icons.mic,
-                    color: _isMuted ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
+                  icon: AppSvgIcon(
+                    assetPath: _isMuted
+                        ? AppIcons.microphoneSlash
+                        : AppIcons.microphone,
+                    size: 20,
+                    color: _isMuted
+                        ? AppColors.notificationRed
+                        : Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: _toggleMute,
-                  iconSize: 20,
                 ),
                 IconButton(
-                  icon: Icon(
-                    _isVideoOff ? Icons.videocam_off : Icons.videocam,
-                    color: _isVideoOff ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
+                  icon: AppSvgIcon(
+                    assetPath: _isVideoOff
+                        ? AppIcons.getIconPath('video-slash')
+                        : AppIcons.video,
+                    size: 20,
+                    color: _isVideoOff
+                        ? AppColors.notificationRed
+                        : Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: _toggleVideo,
-                  iconSize: 20,
                 ),
                 IconButton(
-                  icon: Icon(
-                    Icons.call_end,
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.callMissed,
+                    size: 20,
                     color: AppColors.notificationRed,
                   ),
                   onPressed: () {
                     overlayEntry.remove();
                     _endCall();
                   },
-                  iconSize: 20,
                 ),
               ],
             ),
@@ -667,10 +676,10 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                   child: Container(
                     color: AppColors.surfaceDark,
                     child: Center(
-                      child: Icon(
-                        Icons.videocam,
-                        color: Colors.white70,
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.video,
                         size: 40,
+                        color: Colors.white70,
                       ),
                     ),
                   ),
@@ -727,7 +736,11 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                     ],
                   ),
                   IconButton(
-                    icon: Icon(Icons.minimize, color: textColor),
+                    icon: AppSvgIcon(
+                      assetPath: AppIcons.arrowDown2,
+                      size: 22,
+                      color: textColor,
+                    ),
                     onPressed: _minimizeCall,
                   ),
                 ],
@@ -751,14 +764,14 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           IconButtonCircle(
-                            icon: Icons.call_end,
+                            svgIcon: AppIcons.callMissed,
                             onTap: _endCall,
                             size: 64.0,
                             backgroundColor: AppColors.notificationRed,
                             iconColor: Colors.white,
                           ),
                           IconButtonCircle(
-                            icon: Icons.videocam,
+                            svgIcon: AppIcons.video,
                             onTap: _acceptCall,
                             size: 64.0,
                             backgroundColor: AppColors.onlineGreen,
@@ -772,7 +785,9 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           IconButtonCircle(
-                            icon: _isMuted ? Icons.mic_off : Icons.mic,
+                            svgIcon: _isMuted
+                                ? AppIcons.microphoneSlash
+                                : AppIcons.microphone,
                             onTap: _toggleMute,
                             size: 56.0,
                             backgroundColor: _isMuted
@@ -781,7 +796,9 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                             iconColor: textColor,
                           ),
                           IconButtonCircle(
-                            icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
+                            svgIcon: _isVideoOff
+                                ? AppIcons.getIconPath('video-slash')
+                                : AppIcons.video,
                             onTap: _toggleVideo,
                             size: 56.0,
                             backgroundColor: _isVideoOff
@@ -790,14 +807,16 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                             iconColor: textColor,
                           ),
                           IconButtonCircle(
-                            icon: Icons.flip_camera_ios,
+                            svgIcon: AppIcons.getIconPath('rotate-right'),
                             onTap: _switchCamera,
                             size: 56.0,
                             backgroundColor: Colors.white.withOpacity(0.2),
                             iconColor: textColor,
                           ),
                           IconButtonCircle(
-                            icon: _isSpeakerOn ? Icons.volume_up : Icons.volume_down,
+                            svgIcon: _isSpeakerOn
+                                ? AppIcons.getIconPath('volume-high')
+                                : AppIcons.getIconPath('volume-low'),
                             onTap: _toggleSpeaker,
                             size: 56.0,
                             backgroundColor: _isSpeakerOn
@@ -806,7 +825,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                             iconColor: textColor,
                           ),
                           IconButtonCircle(
-                            icon: Icons.call_end,
+                            svgIcon: AppIcons.callMissed,
                             onTap: _endCall,
                             size: 64.0,
                             backgroundColor: AppColors.notificationRed,

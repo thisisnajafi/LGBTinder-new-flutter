@@ -5,6 +5,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/utils/app_icons.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import '../widgets/buttons/icon_button_circle.dart';
 import '../features/calls/providers/call_provider.dart';
@@ -481,23 +482,27 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(
-                    _isMuted ? Icons.mic_off : Icons.mic,
-                    color: _isMuted ? AppColors.notificationRed : Theme.of(context).colorScheme.primary,
+                  icon: AppSvgIcon(
+                    assetPath: _isMuted
+                        ? AppIcons.microphoneSlash
+                        : AppIcons.microphone,
+                    size: 20,
+                    color: _isMuted
+                        ? AppColors.notificationRed
+                        : Theme.of(context).colorScheme.primary,
                   ),
                   onPressed: _toggleMute,
-                  iconSize: 20,
                 ),
                 IconButton(
-                  icon: Icon(
-                    Icons.call_end,
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.callMissed,
+                    size: 20,
                     color: AppColors.notificationRed,
                   ),
                   onPressed: () {
                     overlayEntry.remove();
                     _endCall();
                   },
-                  iconSize: 20,
                 ),
               ],
             ),
@@ -557,7 +562,11 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                     style: AppTypography.body.copyWith(color: secondaryTextColor),
                   ),
                   IconButton(
-                    icon: Icon(Icons.minimize, color: textColor),
+                    icon: AppSvgIcon(
+                      assetPath: AppIcons.arrowDown2,
+                      size: 22,
+                      color: textColor,
+                    ),
                     onPressed: _minimizeCall,
                   ),
                 ],
@@ -612,14 +621,14 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         IconButtonCircle(
-                          icon: Icons.call_end,
+                          svgIcon: AppIcons.callMissed,
                           onTap: _endCall,
                           size: 64.0,
                           backgroundColor: AppColors.notificationRed,
                           iconColor: Colors.white,
                         ),
                         IconButtonCircle(
-                          icon: Icons.call,
+                          svgIcon: AppIcons.call,
                           onTap: _acceptCall,
                           size: 64.0,
                           backgroundColor: AppColors.onlineGreen,
@@ -633,7 +642,9 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         IconButtonCircle(
-                          icon: _isMuted ? Icons.mic_off : Icons.mic,
+                          svgIcon: _isMuted
+                              ? AppIcons.microphoneSlash
+                              : AppIcons.microphone,
                           onTap: _toggleMute,
                           size: 56.0,
                           backgroundColor: _isMuted
@@ -644,7 +655,9 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                               : textColor,
                         ),
                         IconButtonCircle(
-                          icon: _isSpeakerOn ? Icons.volume_up : Icons.volume_down,
+                          svgIcon: _isSpeakerOn
+                              ? AppIcons.getIconPath('volume-high')
+                              : AppIcons.getIconPath('volume-low'),
                           onTap: _toggleSpeaker,
                           size: 56.0,
                           backgroundColor: _isSpeakerOn
@@ -655,7 +668,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                               : textColor,
                         ),
                         IconButtonCircle(
-                          icon: Icons.call_end,
+                          svgIcon: AppIcons.callMissed,
                           onTap: _endCall,
                           size: 64.0,
                           backgroundColor: AppColors.notificationRed,

@@ -9,6 +9,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       brightness: Brightness.dark,
       primaryColor: AppColors.accentPurple,
       scaffoldBackgroundColor: AppColors.backgroundDark,
@@ -35,6 +36,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       brightness: Brightness.light,
       primaryColor: AppColors.accentPurple,
       scaffoldBackgroundColor: AppColors.backgroundLight,

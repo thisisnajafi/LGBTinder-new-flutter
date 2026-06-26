@@ -3,29 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 
 /// Haptic feedback settings screen - Manage haptic feedback preferences
 class HapticFeedbackSettingsScreen extends ConsumerStatefulWidget {
-  const HapticFeedbackSettingsScreen({Key? key}) : super(key: key);
+  const HapticFeedbackSettingsScreen({super.key});
 
   @override
-  ConsumerState<HapticFeedbackSettingsScreen> createState() => _HapticFeedbackSettingsScreenState();
+  ConsumerState<HapticFeedbackSettingsScreen> createState() =>
+      _HapticFeedbackSettingsScreenState();
 }
 
-class _HapticFeedbackSettingsScreenState extends ConsumerState<HapticFeedbackSettingsScreen> {
-  // General haptic settings
+class _HapticFeedbackSettingsScreenState
+    extends ConsumerState<HapticFeedbackSettingsScreen> {
   bool _hapticEnabled = true;
-  String _hapticIntensity = 'medium'; // 'light', 'medium', 'heavy'
-  double _intensityValue = 0.5; // 0.0 to 1.0
+  String _hapticIntensity = 'medium';
+  double _intensityValue = 0.5;
 
-  // Specific haptic types
   bool _buttonHaptics = true;
   bool _swipeHaptics = true;
   bool _matchHaptics = true;
@@ -45,7 +43,6 @@ class _HapticFeedbackSettingsScreenState extends ConsumerState<HapticFeedbackSet
 
   Future<void> _saveSettings() async {
     try {
-      // TODO: Save settings via API or local storage
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,469 +60,296 @@ class _HapticFeedbackSettingsScreenState extends ConsumerState<HapticFeedbackSet
 
   void _testHaptic() {
     if (!_hapticEnabled) return;
-    
+
     switch (_hapticIntensity) {
       case 'light':
         HapticFeedback.lightImpact();
-        break;
       case 'medium':
         HapticFeedback.mediumImpact();
-        break;
       case 'heavy':
         HapticFeedback.heavyImpact();
-        break;
     }
+  }
+
+  void _setIntensity(String value) {
+    setState(() {
+      _hapticIntensity = value;
+      _intensityValue = switch (value) {
+        'light' => 0.3,
+        'heavy' => 0.8,
+        _ => 0.5,
+      };
+    });
+    _saveSettings();
+    _testHaptic();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
 
-    return AppPageScaffold(
-      title: 'Haptic Feedback',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Haptic feedback',
+      subtitle: 'Vibration strength and interaction types',
+      body: AppSettingsDetailList(
         children: [
-          // General settings
-          SectionHeader(
-            title: 'General Settings',
-            icon: Icons.vibration,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Enable Haptic Feedback',
-            subtitle: 'Enable haptic feedback for interactions',
-            value: _hapticEnabled,
-            onChanged: (value) {
-              setState(() {
-                _hapticEnabled = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_hapticEnabled) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Haptic Intensity',
-              subtitle: 'Choose the strength of haptic feedback',
-              value: _hapticIntensity,
-              options: [
-                {'value': 'light', 'label': 'Light'},
-                {'value': 'medium', 'label': 'Medium'},
-                {'value': 'heavy', 'label': 'Heavy'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _hapticIntensity = value;
-                  switch (value) {
-                    case 'light':
-                      _intensityValue = 0.3;
-                      break;
-                    case 'medium':
-                      _intensityValue = 0.5;
-                      break;
-                    case 'heavy':
-                      _intensityValue = 0.8;
-                      break;
-                  }
-                });
-                _saveSettings();
-                _testHaptic();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
+          PremiumSettingsGroup(
+            title: 'General',
+            children: [
+              PremiumToggleRow(
+                title: 'Enable haptic feedback',
+                subtitle: 'Vibration for taps, swipes, and alerts',
+                value: _hapticEnabled,
+                iconPath: AppIcons.fingerPrint,
+                onChanged: (value) {
+                  setState(() => _hapticEnabled = value);
+                  _saveSettings();
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Intensity Level',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${(_intensityValue * 100).toInt()}%',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+              if (_hapticEnabled) ...[
+                _IntensityOption(
+                  label: 'Light',
+                  isSelected: _hapticIntensity == 'light',
+                  onSelect: () => _setIntensity('light'),
+                ),
+                _IntensityOption(
+                  label: 'Medium',
+                  isSelected: _hapticIntensity == 'medium',
+                  onSelect: () => _setIntensity('medium'),
+                ),
+                _IntensityOption(
+                  label: 'Heavy',
+                  isSelected: _hapticIntensity == 'heavy',
+                  onSelect: () => _setIntensity('heavy'),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+                  padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                    border: Border.all(color: borderColor),
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
-                    value: _intensityValue,
-                    min: 0.0,
-                    max: 1.0,
-                    divisions: 10,
-                    label: '${(_intensityValue * 100).toInt()}%',
-                    activeColor: AppColors.accentPurple,
-                    onChanged: (value) {
-                      setState(() {
-                        _intensityValue = value;
-                        if (value < 0.4) {
-                          _hapticIntensity = 'light';
-                        } else if (value > 0.6) {
-                          _hapticIntensity = 'heavy';
-                        } else {
-                          _hapticIntensity = 'medium';
-                        }
-                      });
-                      _saveSettings();
-                    },
-                    onChangeEnd: (value) {
-                      _testHaptic();
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Light',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        'Heavy',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: AppColors.accentPurple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: AppColors.accentPurple),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Test Haptic',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Intensity level',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            '${(_intensityValue * 100).toInt()}%',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.accentViolet,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: AppSpacing.spacingXS),
-                      Text(
-                        'Tap to feel the current intensity',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
+                      Slider(
+                        value: _intensityValue,
+                        min: 0.0,
+                        max: 1.0,
+                        divisions: 10,
+                        label: '${(_intensityValue * 100).toInt()}%',
+                        activeColor: AppColors.accentViolet,
+                        onChanged: (value) {
+                          setState(() {
+                            _intensityValue = value;
+                            _hapticIntensity = value < 0.4
+                                ? 'light'
+                                : value > 0.6
+                                    ? 'heavy'
+                                    : 'medium';
+                          });
+                          _saveSettings();
+                        },
+                        onChangeEnd: (_) => _testHaptic(),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Light', style: theme.textTheme.bodySmall),
+                          Text('Heavy', style: theme.textTheme.bodySmall),
+                        ],
                       ),
                     ],
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.vibration,
-                      color: AppColors.accentPurple,
-                    ),
-                    onPressed: _testHaptic,
-                  ),
-                ],
+                ),
+                PremiumSettingsTile(
+                  iconPath: AppIcons.flash,
+                  title: 'Test haptic',
+                  subtitle: 'Feel the current intensity',
+                  accent: AppColors.accentViolet,
+                  onTap: _testHaptic,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Haptic types',
+            children: [
+              PremiumToggleRow(
+                title: 'Button presses',
+                subtitle: 'Feedback when pressing buttons',
+                value: _buttonHaptics,
+                iconPath: AppIcons.setting2,
+                enabled: _hapticEnabled,
+                onChanged: (value) {
+                  setState(() => _buttonHaptics = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Swipe gestures',
+                subtitle: 'Feedback when swiping cards',
+                value: _swipeHaptics,
+                iconPath: AppIcons.like,
+                enabled: _hapticEnabled,
+                onChanged: (value) {
+                  setState(() => _swipeHaptics = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'New matches',
+                subtitle: 'Feedback when you get a match',
+                value: _matchHaptics,
+                iconPath: AppIcons.heart,
+                enabled: _hapticEnabled,
+                onChanged: (value) {
+                  setState(() => _matchHaptics = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'New messages',
+                subtitle: 'Feedback when receiving messages',
+                value: _messageHaptics,
+                iconPath: AppIcons.message,
+                enabled: _hapticEnabled,
+                onChanged: (value) {
+                  setState(() => _messageHaptics = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Errors',
+                subtitle: 'Feedback for error states',
+                value: _errorHaptics,
+                iconPath: AppIcons.danger,
+                enabled: _hapticEnabled,
+                onChanged: (value) {
+                  setState(() => _errorHaptics = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Success actions',
+                subtitle: 'Feedback for successful actions',
+                value: _successHaptics,
+                iconPath: AppIcons.tickCircle,
+                enabled: _hapticEnabled,
+                onChanged: (value) {
+                  setState(() => _successHaptics = value);
+                  _saveSettings();
+                },
+              ),
+            ],
+          ),
+          if (!_hapticEnabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSettingsLayout.horizontalPadding,
+                AppSpacing.spacingMD,
+                AppSettingsLayout.horizontalPadding,
+                0,
+              ),
+              child: Text(
+                'Enable haptic feedback above to customize interaction types.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor,
+                ),
               ),
             ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Specific haptic types
-          SectionHeader(
-            title: 'Haptic Types',
-            icon: Icons.tune,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Button Presses',
-            subtitle: 'Haptic feedback when pressing buttons',
-            value: _buttonHaptics,
-            onChanged: _hapticEnabled
-                ? (value) {
-                    setState(() {
-                      _buttonHaptics = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Swipe Gestures',
-            subtitle: 'Haptic feedback when swiping cards',
-            value: _swipeHaptics,
-            onChanged: _hapticEnabled
-                ? (value) {
-                    setState(() {
-                      _swipeHaptics = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'New Matches',
-            subtitle: 'Haptic feedback when you get a match',
-            value: _matchHaptics,
-            onChanged: _hapticEnabled
-                ? (value) {
-                    setState(() {
-                      _matchHaptics = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'New Messages',
-            subtitle: 'Haptic feedback when receiving messages',
-            value: _messageHaptics,
-            onChanged: _hapticEnabled
-                ? (value) {
-                    setState(() {
-                      _messageHaptics = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Errors',
-            subtitle: 'Haptic feedback for error states',
-            value: _errorHaptics,
-            onChanged: _hapticEnabled
-                ? (value) {
-                    setState(() {
-                      _errorHaptics = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Success Actions',
-            subtitle: 'Haptic feedback for successful actions',
-            value: _successHaptics,
-            onChanged: _hapticEnabled
-                ? (value) {
-                    setState(() {
-                      _successHaptics = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool)? onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: onChanged == null
-                        ? secondaryTextColor
-                        : textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
-          ),
-        ],
-      ),
-    );
-  }
+class _IntensityOption extends StatelessWidget {
+  const _IntensityOption({
+    required this.label,
+    required this.isSelected,
+    required this.onSelect,
+  });
 
-  Widget _buildSelectorTile({
-    required String title,
-    String? subtitle,
-    required String value,
-    required List<Map<String, String>> options,
-    required Function(String) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
+
+    return PremiumTapScale(
+      onTap: onSelect,
+      semanticLabel: '$label intensity',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accentViolet
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
           ),
-          if (subtitle != null) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingMD),
-          ...options.map((option) {
-            final isSelected = value == option['value'];
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-              child: GestureDetector(
-                onTap: () => onChanged(option['value']!),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : backgroundColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option['label']!,
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
-                          size: 20,
-                        ),
-                    ],
-                  ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            );
-          }),
-        ],
+            ),
+            if (isSelected)
+              AppSvgIcon(
+                assetPath: AppIcons.tickCircle,
+                size: 20,
+                color: AppColors.accentViolet,
+              ),
+          ],
+        ),
       ),
     );
   }

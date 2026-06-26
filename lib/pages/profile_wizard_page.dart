@@ -12,8 +12,8 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
 import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/app_grouped_list_card.dart';
 import '../widgets/profile/profile_wizard_layout.dart';
 import '../widgets/profile/avatar_upload.dart';
@@ -915,9 +915,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: formatSettingsTitle('Setup Profile'),
-      showBackButton: _currentStep > 0,
+      subtitle: 'Step ${_currentStep + 1} of 7',
+      onBack: _currentStep > 0 ? _previousStep : () => context.pop(),
       body: Column(
         children: [
           // Progress indicator
@@ -969,10 +970,12 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           Container(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
+              color: isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight,
               border: Border(
                 top: BorderSide(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                  color: AppColors.accentViolet.withValues(alpha: 0.1),
                 ),
               ),
             ),

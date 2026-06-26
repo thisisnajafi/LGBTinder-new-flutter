@@ -21,7 +21,6 @@ import '../shared/providers/user_tier_provider.dart';
 import '../shared/models/user_tier.dart';
 import '../widgets/profile/profile_bio.dart';
 import '../widgets/profile/profile_info_sections.dart';
-import '../widgets/profile/profile_action_buttons.dart';
 import '../widgets/profile/safety_verification_section.dart';
 import '../core/widgets/loading_indicator.dart';
 import '../core/widgets/profile_stats_card.dart';
@@ -45,6 +44,7 @@ import '../shared/services/error_handler_service.dart';
 import '../pages/profile_edit_page.dart';
 import '../routes/app_router.dart';
 import '../core/utils/app_icons.dart';
+import '../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
 import '../features/profile/presentation/widgets/other_user_profile/profile_more_options_sheet.dart';
 import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../core/utils/app_logger.dart';
@@ -779,26 +779,71 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         onPhotoTap: _openImageViewer,
       );
     } else {
-      bodyContent = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppPageHeader(
-            title: 'Profile',
-            action: IconButton(
-              icon: AppSvgIcon(
-                assetPath: AppIcons.arrowLeft,
-                size: 24,
-                color: theme.colorScheme.onSurface,
-              ),
-              onPressed: () => context.go('${AppRoutes.home}/profile'),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: _buildProfileDetailContent(profile, isOwn: false),
-            ),
-          ),
-        ],
+      final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
+      final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
+      final educationsRef =
+          ref.watch(educationLevelsProvider).valueOrNull ?? const [];
+      final languagesRef = ref.watch(languagesProvider).valueOrNull ?? const [];
+      final preferredGendersRef =
+          ref.watch(preferredGendersProvider).valueOrNull ?? const [];
+      final relationGoalsRef =
+          ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
+      final musicRef = ref.watch(musicGenresProvider).valueOrNull ?? const [];
+      final gendersRef = ref.watch(gendersProvider).valueOrNull ?? const [];
+
+      bodyContent = OtherUserProfileView(
+        profile: profile,
+        locationLabel: profileLocationLabel(profile),
+        genderLabel: profileGenderLabel(profile, gendersRef),
+        interestLabels: profileLabelsFromRefs(
+          apiTitles: profile.interestTitles,
+          ids: profile.interests,
+          refs: interestsRef,
+        ),
+        jobLabels: profileLabelsFromRefs(
+          apiTitles: profile.jobTitles,
+          ids: profile.jobs,
+          refs: jobsRef,
+        ),
+        educationLabels: profileLabelsFromRefs(
+          apiTitles: profile.educationTitles,
+          ids: profile.educations,
+          refs: educationsRef,
+        ),
+        languageLabels: profileLabelsFromRefs(
+          ids: profile.languages,
+          refs: languagesRef,
+        ),
+        musicLabels: profileLabelsFromRefs(
+          ids: profile.musicGenres,
+          refs: musicRef,
+        ),
+        relationGoalLabels: profileLabelsFromRefs(
+          ids: profile.relationGoals,
+          refs: relationGoalsRef,
+        ),
+        preferredGenderLabels: profileLabelsFromRefs(
+          ids: profile.preferredGenders,
+          refs: preferredGendersRef,
+        ),
+        onMessage: widget.userId != null
+            ? () {
+                context.push(
+                  Uri(
+                    path: AppRoutes.chat,
+                    queryParameters: {
+                      'userId': widget.userId.toString(),
+                      if (_getFullName(profile).trim().isNotEmpty)
+                        'userName': _getFullName(profile).trim(),
+                    },
+                  ).toString(),
+                );
+              }
+            : null,
+        onLike: _handleLike,
+        onSuperlike: _handleSuperlike,
+        onMoreOptions: () => _showMoreOptions(context),
+        onRefresh: _loadProfile,
       );
     }
 
@@ -821,16 +866,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 child: bodyContent,
               ),
       ),
-      bottomNavigationBar: !isOwn && profile != null && !loading && !hasError
-          ? ProfileActionButtons(
-              onLike: _handleLike,
-              onDislike: () {},
-              onSuperlike: _handleSuperlike,
-              onMessage: widget.userId != null
-                  ? () => context.go('/chat?userId=${widget.userId}')
-                  : null,
-            )
-          : null,
     );
   }
 

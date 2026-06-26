@@ -7,6 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../buttons/gradient_button.dart';
+import '../../../core/utils/app_icons.dart';
 import 'profile_field_editor.dart';
 
 /// Profile section editor widget
@@ -154,8 +155,9 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search ${widget.sectionTitle.toLowerCase()}',
-                prefixIcon: Icon(
-                  Icons.search,
+                prefixIcon: AppSvgIcon(
+                  assetPath: AppIcons.search,
+                  size: 20,
                   color: secondaryTextColor,
                 ),
                 filled: true,
@@ -205,10 +207,10 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isSelected)
-                        Icon(
-                          Icons.check_circle,
+                        AppSvgIcon(
+                          assetPath: AppIcons.checkCircle,
                           size: 16,
-                          color: AppColors.accentPurple,
+                          color: AppColors.accentViolet,
                         ),
                       if (isSelected) SizedBox(width: AppSpacing.spacingXS),
                       Text(

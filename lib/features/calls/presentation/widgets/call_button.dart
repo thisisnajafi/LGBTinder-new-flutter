@@ -66,8 +66,9 @@ class CallButton extends ConsumerWidget {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : Icon(
-                        callType == 'video' ? Icons.videocam : Icons.call,
+                    : AppSvgIcon(
+                        assetPath:
+                            callType == 'video' ? AppIcons.video : AppIcons.call,
                         color: Colors.white,
                         size: size * 0.5,
                       ),
@@ -287,8 +288,9 @@ class PremiumCallButton extends ConsumerWidget {
               onTap: onUpgradePressed ?? () => _showUpgradeDialog(context),
               borderRadius: BorderRadius.circular(size / 2),
               child: Center(
-                child: Icon(
-                  callType == 'video' ? Icons.videocam : Icons.call,
+                child: AppSvgIcon(
+                  assetPath:
+                      callType == 'video' ? AppIcons.video : AppIcons.call,
                   color: Colors.white,
                   size: size * 0.4,
                 ),

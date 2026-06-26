@@ -24,7 +24,7 @@ import '../widgets/premium/upgrade_dialog.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/filter_screen.dart';
-import '../screens/premium/superlike_packs_screen.dart';
+import '../features/payments/presentation/screens/superlike_packs_screen.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/discovery/discovery_swipe_action_button.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';

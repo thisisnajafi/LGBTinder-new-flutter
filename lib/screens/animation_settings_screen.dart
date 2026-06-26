@@ -2,39 +2,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 
 /// Animation settings screen - Manage animation preferences
 class AnimationSettingsScreen extends ConsumerStatefulWidget {
-  const AnimationSettingsScreen({Key? key}) : super(key: key);
+  const AnimationSettingsScreen({super.key});
 
   @override
-  ConsumerState<AnimationSettingsScreen> createState() => _AnimationSettingsScreenState();
+  ConsumerState<AnimationSettingsScreen> createState() =>
+      _AnimationSettingsScreenState();
 }
 
-class _AnimationSettingsScreenState extends ConsumerState<AnimationSettingsScreen> {
-  // General animation settings
+class _AnimationSettingsScreenState
+    extends ConsumerState<AnimationSettingsScreen> {
   bool _animationsEnabled = true;
   bool _reduceMotion = false;
-  String _animationSpeed = 'normal'; // 'slow', 'normal', 'fast'
-  double _animationDuration = 1.0; // Multiplier: 0.5x to 2.0x
+  String _animationSpeed = 'normal';
+  double _animationDuration = 1.0;
+  String _animationCurve = 'easeOut';
 
-  // Specific animation types
   bool _pageTransitions = true;
   bool _buttonAnimations = true;
   bool _listAnimations = true;
   bool _cardAnimations = true;
   bool _loadingAnimations = true;
   bool _gestureAnimations = true;
-
-  // Animation curves
-  String _animationCurve = 'easeOut'; // 'linear', 'easeIn', 'easeOut', 'easeInOut', 'elastic', 'bounce'
 
   @override
   void initState() {
@@ -43,14 +39,12 @@ class _AnimationSettingsScreenState extends ConsumerState<AnimationSettingsScree
   }
 
   Future<void> _loadSettings() async {
-    // TODO: Load settings from API or local storage
     final mediaQuery = MediaQuery.of(context);
     _reduceMotion = mediaQuery.disableAnimations;
   }
 
   Future<void> _saveSettings() async {
     try {
-      // TODO: Save settings via API or local storage
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,451 +60,319 @@ class _AnimationSettingsScreenState extends ConsumerState<AnimationSettingsScree
     }
   }
 
+  void _setSpeed(String value) {
+    setState(() {
+      _animationSpeed = value;
+      _animationDuration = switch (value) {
+        'slow' => 0.5,
+        'fast' => 1.5,
+        _ => 1.0,
+      };
+    });
+    _saveSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
 
-    return AppPageScaffold(
-      title: 'Animation Settings',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Animation settings',
+      subtitle: 'Motion speed, curves, and interaction types',
+      body: AppSettingsDetailList(
         children: [
-          // General settings
-          SectionHeader(
-            title: 'General Animation Settings',
-            icon: Icons.animation,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Enable Animations',
-            subtitle: 'Turn animations on or off',
-            value: _animationsEnabled,
-            onChanged: (value) {
-              setState(() {
-                _animationsEnabled = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_animationsEnabled) ...[
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Reduce Motion',
-              subtitle: 'Minimize animations for better performance',
-              value: _reduceMotion,
-              onChanged: (value) {
-                setState(() {
-                  _reduceMotion = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Animation Speed',
-              subtitle: 'Control the speed of animations',
-              value: _animationSpeed,
-              options: [
-                {'value': 'slow', 'label': 'Slow (0.5x)'},
-                {'value': 'normal', 'label': 'Normal (1.0x)'},
-                {'value': 'fast', 'label': 'Fast (1.5x)'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _animationSpeed = value;
-                  switch (value) {
-                    case 'slow':
-                      _animationDuration = 0.5;
-                      break;
-                    case 'normal':
-                      _animationDuration = 1.0;
-                      break;
-                    case 'fast':
-                      _animationDuration = 1.5;
-                      break;
-                  }
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
+          PremiumSettingsGroup(
+            title: 'General',
+            children: [
+              PremiumToggleRow(
+                title: 'Enable animations',
+                subtitle: 'Turn motion effects on or off',
+                value: _animationsEnabled,
+                iconPath: AppIcons.magicStar,
+                onChanged: (value) {
+                  setState(() => _animationsEnabled = value);
+                  _saveSettings();
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              if (_animationsEnabled) ...[
+                PremiumToggleRow(
+                  title: 'Reduce motion',
+                  subtitle: 'Minimize animations for comfort or performance',
+                  value: _reduceMotion,
+                  iconPath: AppIcons.eyeSlash,
+                  onChanged: (value) {
+                    setState(() => _reduceMotion = value);
+                    _saveSettings();
+                  },
+                ),
+                _SettingOption(
+                  label: 'Slow (0.5x)',
+                  isSelected: _animationSpeed == 'slow',
+                  onSelect: () => _setSpeed('slow'),
+                ),
+                _SettingOption(
+                  label: 'Normal (1.0x)',
+                  isSelected: _animationSpeed == 'normal',
+                  onSelect: () => _setSpeed('normal'),
+                ),
+                _SettingOption(
+                  label: 'Fast (1.5x)',
+                  isSelected: _animationSpeed == 'fast',
+                  onSelect: () => _setSpeed('fast'),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+                  padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Animation Duration',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Animation duration',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            '${_animationDuration.toStringAsFixed(1)}x',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.accentViolet,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        '${_animationDuration.toStringAsFixed(1)}x',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Slider(
+                        value: _animationDuration,
+                        min: 0.5,
+                        max: 2.0,
+                        divisions: 15,
+                        label: '${_animationDuration.toStringAsFixed(1)}x',
+                        activeColor: AppColors.accentViolet,
+                        onChanged: (value) {
+                          setState(() {
+                            _animationDuration = value;
+                            _animationSpeed = value < 0.75
+                                ? 'slow'
+                                : value > 1.25
+                                    ? 'fast'
+                                    : 'normal';
+                          });
+                          _saveSettings();
+                        },
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('0.5x', style: theme.textTheme.bodySmall),
+                          Text('2.0x', style: theme.textTheme.bodySmall),
+                        ],
                       ),
                     ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
-                    value: _animationDuration,
-                    min: 0.5,
-                    max: 2.0,
-                    divisions: 15,
-                    label: '${_animationDuration.toStringAsFixed(1)}x',
-                    activeColor: AppColors.accentPurple,
-                    onChanged: (value) {
-                      setState(() {
-                        _animationDuration = value;
-                        if (value < 0.75) {
-                          _animationSpeed = 'slow';
-                        } else if (value > 1.25) {
-                          _animationSpeed = 'fast';
-                        } else {
-                          _animationSpeed = 'normal';
-                        }
-                      });
-                      _saveSettings();
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '0.5x',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        '2.0x',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Animation Curve',
-              subtitle: 'Choose the animation style',
-              value: _animationCurve,
-              options: [
-                {'value': 'linear', 'label': 'Linear'},
-                {'value': 'easeIn', 'label': 'Ease In'},
-                {'value': 'easeOut', 'label': 'Ease Out'},
-                {'value': 'easeInOut', 'label': 'Ease In Out'},
-                {'value': 'elastic', 'label': 'Elastic'},
-                {'value': 'bounce', 'label': 'Bounce'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _animationCurve = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Specific animation types
-          SectionHeader(
-            title: 'Animation Types',
-            icon: Icons.tune,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Page Transitions',
-            subtitle: 'Animate screen transitions',
-            value: _pageTransitions,
-            onChanged: _animationsEnabled
-                ? (value) {
-                    setState(() {
-                      _pageTransitions = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Button Animations',
-            subtitle: 'Animate button presses and interactions',
-            value: _buttonAnimations,
-            onChanged: _animationsEnabled
-                ? (value) {
-                    setState(() {
-                      _buttonAnimations = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'List Animations',
-            subtitle: 'Animate list items and scrolling',
-            value: _listAnimations,
-            onChanged: _animationsEnabled
-                ? (value) {
-                    setState(() {
-                      _listAnimations = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Card Animations',
-            subtitle: 'Animate card swipes and interactions',
-            value: _cardAnimations,
-            onChanged: _animationsEnabled
-                ? (value) {
-                    setState(() {
-                      _cardAnimations = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Loading Animations',
-            subtitle: 'Animate loading indicators and skeletons',
-            value: _loadingAnimations,
-            onChanged: _animationsEnabled
-                ? (value) {
-                    setState(() {
-                      _loadingAnimations = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Gesture Animations',
-            subtitle: 'Animate swipe and drag gestures',
-            value: _gestureAnimations,
-            onChanged: _animationsEnabled
-                ? (value) {
-                    setState(() {
-                      _gestureAnimations = value;
-                    });
-                    _saveSettings();
-                  }
-                : null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool)? onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: onChanged == null
-                        ? secondaryTextColor
-                        : textColor,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
+                _SettingOption(
+                  label: 'Linear',
+                  isSelected: _animationCurve == 'linear',
+                  onSelect: () => _setCurve('linear'),
+                ),
+                _SettingOption(
+                  label: 'Ease in',
+                  isSelected: _animationCurve == 'easeIn',
+                  onSelect: () => _setCurve('easeIn'),
+                ),
+                _SettingOption(
+                  label: 'Ease out',
+                  isSelected: _animationCurve == 'easeOut',
+                  onSelect: () => _setCurve('easeOut'),
+                ),
+                _SettingOption(
+                  label: 'Ease in out',
+                  isSelected: _animationCurve == 'easeInOut',
+                  onSelect: () => _setCurve('easeInOut'),
+                ),
+                _SettingOption(
+                  label: 'Elastic',
+                  isSelected: _animationCurve == 'elastic',
+                  onSelect: () => _setCurve('elastic'),
+                ),
+                _SettingOption(
+                  label: 'Bounce',
+                  isSelected: _animationCurve == 'bounce',
+                  onSelect: () => _setCurve('bounce'),
+                ),
               ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Animation types',
+            children: [
+              PremiumToggleRow(
+                title: 'Page transitions',
+                subtitle: 'Animate screen transitions',
+                value: _pageTransitions,
+                iconPath: AppIcons.arrowRight,
+                enabled: _animationsEnabled,
+                onChanged: (value) {
+                  setState(() => _pageTransitions = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Button animations',
+                subtitle: 'Animate button presses',
+                value: _buttonAnimations,
+                iconPath: AppIcons.setting2,
+                enabled: _animationsEnabled,
+                onChanged: (value) {
+                  setState(() => _buttonAnimations = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'List animations',
+                subtitle: 'Animate list items and scrolling',
+                value: _listAnimations,
+                iconPath: AppIcons.menu,
+                enabled: _animationsEnabled,
+                onChanged: (value) {
+                  setState(() => _listAnimations = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Card animations',
+                subtitle: 'Animate card swipes and interactions',
+                value: _cardAnimations,
+                iconPath: AppIcons.card,
+                enabled: _animationsEnabled,
+                onChanged: (value) {
+                  setState(() => _cardAnimations = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Loading animations',
+                subtitle: 'Animate loading indicators and skeletons',
+                value: _loadingAnimations,
+                iconPath: AppIcons.refreshCircle,
+                enabled: _animationsEnabled,
+                onChanged: (value) {
+                  setState(() => _loadingAnimations = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Gesture animations',
+                subtitle: 'Animate swipe and drag gestures',
+                value: _gestureAnimations,
+                iconPath: AppIcons.fingerPrint,
+                enabled: _animationsEnabled,
+                onChanged: (value) {
+                  setState(() => _gestureAnimations = value);
+                  _saveSettings();
+                },
+              ),
+            ],
+          ),
+          if (!_animationsEnabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSettingsLayout.horizontalPadding,
+                AppSpacing.spacingMD,
+                AppSettingsLayout.horizontalPadding,
+                0,
+              ),
+              child: Text(
+                'Enable animations above to customize motion types.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor,
+                ),
+              ),
             ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildSelectorTile({
-    required String title,
-    String? subtitle,
-    required String value,
-    required List<Map<String, String>> options,
-    required Function(String) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+  void _setCurve(String value) {
+    setState(() => _animationCurve = value);
+    _saveSettings();
+  }
+}
+
+class _SettingOption extends StatelessWidget {
+  const _SettingOption({
+    required this.label,
+    required this.isSelected,
+    required this.onSelect,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
+
+    return PremiumTapScale(
+      onTap: onSelect,
+      semanticLabel: label,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accentViolet
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
           ),
-          if (subtitle != null) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingMD),
-          ...options.map((option) {
-            final isSelected = value == option['value'];
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-              child: GestureDetector(
-                onTap: () => onChanged(option['value']!),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : backgroundColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option['label']!,
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
-                          size: 20,
-                        ),
-                    ],
-                  ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            );
-          }),
-        ],
+            ),
+            if (isSelected)
+              AppSvgIcon(
+                assetPath: AppIcons.tickCircle,
+                size: 20,
+                color: AppColors.accentViolet,
+              ),
+          ],
+        ),
       ),
     );
   }

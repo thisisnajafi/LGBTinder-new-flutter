@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_icons.dart';
 
 /// Profile bio section widget
 /// Displays user's profile bio with proper formatting
@@ -46,8 +46,8 @@ class ProfileBioSection extends ConsumerWidget {
                 const Spacer(),
                 IconButton(
                   onPressed: onEdit,
-                  icon: Icon(
-                    Icons.edit,
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.edit,
                     size: 20,
                     color: theme.colorScheme.primary,
                   ),

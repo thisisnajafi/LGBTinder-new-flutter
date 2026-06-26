@@ -10,7 +10,7 @@ import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../shared/analytics/app_event_tracker.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/error_handler_service.dart';
@@ -125,8 +125,6 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor =
@@ -139,10 +137,9 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
     final packsAsync = ref.watch(availableSuperlikePacksProvider);
     final remaining = ref.watch(superlikesRemainingProvider);
 
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: 'Superlikes',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      onBack: () => Navigator.of(context).maybePop(),
       body: packsAsync.when(
         loading: () => const SkeletonSubscriptionPlans(),
         error: (error, _) => ErrorDisplayWidget(
@@ -211,27 +208,43 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
   Widget _buildEmptyState(Color textColor, Color secondaryTextColor) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(AppSpacing.spacingXL),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AppSvgIcon(
-              assetPath: AppIcons.getIconPath('star'),
-              size: 64,
-              color: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Text(
-              'No Packs Available',
-              style: AppTypography.h3.copyWith(color: textColor),
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            Text(
-              'Superlike packs are not available at the moment. Check back soon.',
-              style: AppTypography.body.copyWith(color: secondaryTextColor),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        padding: const EdgeInsets.symmetric(
+          horizontal: PremiumPageHeader.horizontalPadding,
+        ),
+        child: PremiumShell(
+          margin: EdgeInsets.zero,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accentViolet.withValues(alpha: 0.12),
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.getIconPath('star', style: 'bold'),
+                    size: 32,
+                    color: AppColors.accentViolet,
+                  ),
+                ),
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+              Text(
+                'No Packs Available',
+                style: AppTypography.h3.copyWith(color: textColor),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSpacing.spacingSM),
+              Text(
+                'Superlike packs are not available at the moment. Check back soon.',
+                style: AppTypography.body.copyWith(color: secondaryTextColor),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

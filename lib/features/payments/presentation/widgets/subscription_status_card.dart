@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/subscription_plan.dart';
+import '../../data/models/subscription_plan.dart';
 
 /// Subscription status card widget
 /// Displays current subscription status and details
@@ -68,8 +68,8 @@ class SubscriptionStatusCard extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          _getStatusIcon(),
+                        AppSvgIcon(
+                          assetPath: _statusIconPath(),
                           size: 16,
                           color: _getStatusColor(),
                         ),
@@ -276,22 +276,22 @@ class SubscriptionStatusCard extends ConsumerWidget {
       case 'trial':
         return AppColors.feedbackWarning;
       default:
-        return AppColors.textSecondary;
+        return AppColors.textSecondaryLight;
     }
   }
 
-  IconData _getStatusIcon() {
+  String _statusIconPath() {
     switch (subscriptionStatus.status?.toLowerCase()) {
       case 'active':
-        return Icons.check_circle;
+        return AppIcons.checkCircle;
       case 'canceled':
-        return Icons.cancel;
+        return AppIcons.close;
       case 'expired':
-        return Icons.timer_off;
+        return AppIcons.timerPause;
       case 'trial':
-        return Icons.access_time;
+        return AppIcons.timer;
       default:
-        return Icons.info;
+        return AppIcons.infoCircle;
     }
   }
 

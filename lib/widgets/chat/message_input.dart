@@ -10,6 +10,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import 'voice_waveform_bars.dart';
 
 /// Message input field widget
@@ -283,20 +284,30 @@ class _MessageInputState extends ConsumerState<MessageInput>
                   SizedBox(width: AppSpacing.spacingSM),
                   if (widget.onMediaTap != null && !_isHoldingToRecord)
                     GestureDetector(
-                      onLongPress: widget.enabled ? widget.onMediaLongPress : null,
-                      child: IconButton(
-                        icon: AppSvgIcon(
-                          assetPath: AppIcons.attach,
-                          size: 22,
-                          color: secondaryTextColor,
+                      onLongPress:
+                          widget.enabled ? widget.onMediaLongPress : null,
+                      child: PremiumTapScale(
+                        onTap: widget.enabled ? widget.onMediaTap! : () {},
+                        semanticLabel: 'Attach media',
+                        child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.accentViolet.withValues(alpha: 0.1),
+                          border: Border.all(
+                            color: AppColors.accentViolet.withValues(alpha: 0.14),
+                          ),
                         ),
-                        onPressed: widget.enabled ? widget.onMediaTap : null,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 44,
-                          minHeight: 44,
+                        child: Center(
+                          child: AppSvgIcon(
+                            assetPath: AppIcons.attach,
+                            size: 20,
+                            color: AppColors.accentViolet,
+                          ),
                         ),
                       ),
+                    ),
                     ),
                   SizedBox(width: AppSpacing.spacingXS),
                   GestureDetector(

@@ -8,6 +8,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/buttons/gradient_button.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../../features/matching/data/models/match.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/avatar_widget.dart';
@@ -106,9 +107,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.lgbtGradient[0].withOpacity(0.12),
-              AppColors.lgbtGradient[2].withOpacity(0.08),
-              AppColors.lgbtGradient[4].withOpacity(0.1),
+              AppColors.lgbtGradient[0].withValues(alpha: 0.12),
+              AppColors.lgbtGradient[2].withValues(alpha: 0.08),
+              AppColors.lgbtGradient[4].withValues(alpha: 0.1),
               backgroundColor,
             ],
             stops: const [0.0, 0.35, 0.7, 1.0],
@@ -126,10 +127,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                     opacity: _confettiAnimation.value,
                     child: Transform.scale(
                       scale: 0.98 + (_confettiAnimation.value * 0.04),
-                      child: Icon(
-                        Icons.celebration,
-                        size: 200,
-                        color: AppColors.accentPink.withOpacity(0.3),
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.getIconPath('magic-star'),
+                        size: 160,
+                        color: AppColors.accentViolet.withValues(alpha: 0.22),
                       ),
                     ),
                   );
@@ -148,8 +149,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                         vertical: AppSpacing.spacingSM,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.accentPurple,
                         borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                        gradient: AppColors.brandGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentViolet.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Text(
                         '100% Match',
@@ -215,12 +223,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               scale: 0.5 + (_heartAnimation.value * 0.5),
                               child: Container(
                                 padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentPink,
+                                decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
+                                  gradient: AppColors.brandGradient,
                                 ),
                                 child: AppSvgIcon(
-                                  assetPath: AppIcons.favorite,
+                                  assetPath: AppIcons.heart,
                                   size: 40,
                                   color: Colors.white,
                                 ),
@@ -244,32 +252,43 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               // Action buttons
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXXL),
-                child: Column(
-                  children: [
-                    GradientButton(
-                      text: 'Hai Hello',
-                      onPressed: widget.onSendMessage,
-                      isFullWidth: true,
-                      iconPath: AppIcons.chatBubbleOutline,
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    OutlinedButton(
-                      onPressed: widget.onKeepSwiping,
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(
-                          vertical: AppSpacing.spacingMD,
-                        ),
-                        side: BorderSide(color: AppColors.accentPurple),
-                        minimumSize: const Size(double.infinity, 50),
+                child: PremiumShell(
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      GradientButton(
+                        text: 'Say Hello',
+                        onPressed: widget.onSendMessage,
+                        isFullWidth: true,
+                        iconPath: AppIcons.chatBubbleOutline,
                       ),
-                      child: Text(
-                        'Keep Swiping',
-                        style: AppTypography.button.copyWith(
-                          color: AppColors.accentPurple,
+                      SizedBox(height: AppSpacing.spacingMD),
+                      PremiumTapScale(
+                        onTap: widget.onKeepSwiping ?? () {},
+                        semanticLabel: 'Keep swiping',
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.spacingMD,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.radiusMD),
+                            border: Border.all(
+                              color: AppColors.accentViolet.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            'Keep Swiping',
+                            style: AppTypography.button.copyWith(
+                              color: AppColors.accentViolet,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -287,38 +306,34 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
     return Container(
       width: 120,
       height: 120,
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(3),
+      decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.accentPink,
-          width: 4,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentPink.withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
+        gradient: AppColors.brandGradient,
       ),
-      child: imageUrl != null
-            ? AvatarWidget(
-                imageUrl: imageUrl,
-                radius: 70,
-                fallbackInitial: fallbackInitial,
-              )
-            : Container(
-                color: isDark
-                    ? AppColors.surfaceDark
-                    : AppColors.surfaceLight,
-                child: Icon(
-                  Icons.person,
-                  size: 60,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+        ),
+        child: ClipOval(
+          child: imageUrl != null
+              ? AvatarWidget(
+                  imageUrl: imageUrl,
+                  radius: 56,
+                  fallbackInitial: fallbackInitial,
+                )
+              : Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.user,
+                    size: 48,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
                 ),
-              ),
+        ),
+      ),
     );
   }
 }

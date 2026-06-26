@@ -500,21 +500,28 @@ if (AppAnimations.animationsEnabled(context)) { /* animate */ }
 
 | # | Item | Status | Files / notes |
 |---|------|--------|---------------|
-| 11 | Discovery swipe overlay stamps (LIKE / NOPE / SUPER) | ⏳ Next | `widgets/cards/card_stack_manager.dart` — text-only borders; align with `DiscoverySwipeActionButton` gradients + SVG |
-| 12 | Chat message bubbles | Pending | `widgets/chat/message_bubble.dart` — `Icons.play_arrow`, `Icons.timer`; bubble chrome vs premium |
-| 13 | Chat message input polish | Pending | `widgets/chat/message_input.dart` — `PremiumTapScale` on attach/send wells |
-| 14 | Profile detail (other user) | Pending | `pages/profile_page.dart`, `screens/discovery/profile_detail_screen.dart` |
-| 15 | Profile wizard | Pending | `pages/profile_wizard_page.dart` |
-| 16 | Match celebration | Pending | `widgets/match/match_screen.dart` → `features/matching/.../match_celebration.dart` |
-| 17 | Subscription / payments screens | Pending | `subscription_management_page.dart`, `features/payments/presentation/screens/*` |
-| 18 | Superlike packs — remove legacy route import | Pending | `discovery_page.dart` → `screens/premium/superlike_packs_screen.dart` |
+| 11 | Discovery swipe overlay stamps (LIKE / NOPE / SUPER) | ✅ Done | `widgets/cards/card_stack_manager.dart` |
+| 12 | Chat message bubbles | ✅ Done | `widgets/chat/message_bubble.dart` — `MessageBubbleChrome` (gradient sent, PremiumShell received) |
+| 13 | Chat message input polish | ✅ Done | `widgets/chat/message_input.dart` — attach well + `PremiumTapScale` |
+| 14 | Profile detail (other user) | ✅ Done | `pages/profile_page.dart` → `OtherUserProfileView`; `profile_detail_screen.dart` premium loading/error |
+| 15 | Profile wizard | ✅ Done | `pages/profile_wizard_page.dart` — `PremiumDetailScaffold` + premium footer bar |
+| 16 | Match celebration | ✅ Done | `widgets/match/match_screen.dart` — brand gradient, SVG, `PremiumShell` CTAs |
+| 17 | Subscription / payments screens | ✅ Done | `subscription_plans_screen.dart`, `subscription_status_card.dart`; `subscription_management_page.dart` already premium |
+| 18 | Superlike packs — remove legacy route import | ✅ Done | `discovery_page.dart` → `features/payments/.../superlike_packs_screen.dart` |
 | 19 | Filter screen (discovery) | ✅ Done | `screens/discovery/filter_screen.dart` — `PremiumDetailScaffold` |
-| 20 | Notifications tab icon mapping | Pending | `features/notifications/.../notification_visuals.dart` — Material Icons |
-| 21 | Call UI (controls + full-screen) | Pending | `call_controls.dart`, `video_call_screen.dart`, `voice_call_screen.dart` |
-| 22 | Other-user profile sections | Pending | `other_user_profile_sections.dart` (33× `Icons.*`) |
-| 23 | Wire Inter font in `AppTheme` | Pending | `core/theme/app_theme.dart` |
-| 24 | App-wide Material Icons debt | Pending | ~250 files — track via `rg -c "Icons\." lib --glob "*.dart"` |
-| 25 | Legacy `screens/` scaffold migration | Pending | 64 screens — batch by domain (auth, settings, safety, payments) |
+| 20 | Notifications tab icon mapping | ✅ Done | `notification_visuals.dart` — already SVG via `AppIcons` |
+| 21 | Call UI (controls + full-screen) | ✅ Done | `call_controls.dart`, `call_button.dart`, `voice_call_screen.dart`, `video_call_screen.dart` — SVG + semantic colors |
+| 22 | Other-user profile sections | ✅ Done | `other_user_profile_sections.dart` — already SVG (`AppIcons`); audit regex was counting `AppIcons.*` |
+| 22b | Profile satellite widgets | ✅ Done | `profile_image_carousel.dart`, `profile_bio_section.dart`, `interest_chip_list.dart` |
+| 23 | Wire Inter font in `AppTheme` | ✅ Done | `core/theme/app_theme.dart` — `fontFamily: 'Inter'` |
+| 18b | Superlike packs screen shell | ✅ Done | `superlike_packs_screen.dart` — `PremiumDetailScaffold` + premium empty state |
+| 24 | App-wide Material Icons debt | ⏳ In progress | Legacy `widgets/profile/*` + call screens done; ~100 files still use `Icons.*` |
+| 24b | Legacy profile widgets icons | ✅ Done | `profile_header`, `safety_verification_section`, `profile_section_editor`, `profile_image_editor`, `call_timer` |
+| 24c | Call full-screen screens icons | ✅ Done | `voice_call_screen.dart`, `video_call_screen.dart` — `IconButtonCircle` + overlay SVG |
+| 25 | Legacy `screens/` scaffold migration | ⏳ In progress | Batch by domain; already premium: `blocked_users`, `help_support`, `emergency_contacts`, `safety_settings` |
+| 25a | Settings — call settings scaffold | ✅ Done | `screens/settings/call_settings_screen.dart` — `AppSettingsDetailScaffold` + `PremiumToggleRow` |
+| 25b | Settings — payment settings scaffold | ✅ Done | `screens/payment_settings_screen.dart` — premium groups, toggles, status rows, SVG |
+| 25c | Settings — haptic feedback scaffold | ✅ Done | `screens/haptic_feedback_settings_screen.dart` — `PremiumToggleRow` + intensity picker |
 
 ---
 

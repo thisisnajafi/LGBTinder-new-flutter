@@ -7,6 +7,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../badges/verification_badge.dart';
+import '../../core/utils/app_icons.dart';
 
 /// Safety verification section widget
 /// Displays safety and verification status
@@ -46,9 +47,9 @@ class SafetyVerificationSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.verified_user,
-                color: AppColors.accentPurple,
+              AppSvgIcon(
+                assetPath: AppIcons.verify,
+                color: AppColors.accentViolet,
                 size: 24,
               ),
               SizedBox(width: AppSpacing.spacingMD),
@@ -113,8 +114,8 @@ class SafetyVerificationSection extends ConsumerWidget {
   }) {
     return Row(
       children: [
-        Icon(
-          isVerified ? Icons.check_circle : Icons.circle_outlined,
+        AppSvgIcon(
+          assetPath: isVerified ? AppIcons.checkCircle : AppIcons.getIconPath('record-circle'),
           color: isVerified ? AppColors.onlineGreen : secondaryTextColor,
           size: 20,
         ),

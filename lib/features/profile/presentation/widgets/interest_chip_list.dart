@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_icons.dart';
 
 /// Interest chip list widget
 /// Displays a list of user interests as chips
@@ -54,8 +55,8 @@ class InterestChipList extends ConsumerWidget {
                 const Spacer(),
                 IconButton(
                   onPressed: onEdit,
-                  icon: Icon(
-                    Icons.edit,
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.edit,
                     size: 20,
                     color: theme.colorScheme.primary,
                   ),

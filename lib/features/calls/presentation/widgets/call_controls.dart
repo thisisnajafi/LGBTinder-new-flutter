@@ -65,45 +65,45 @@ class CallControls extends ConsumerWidget {
             children: [
               // Mute button
               _ControlButton(
-                icon: isMuted ? Icons.mic_off : Icons.mic,
+                iconPath: isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
                 label: isMuted ? 'Unmute' : 'Mute',
-                color: isMuted ? Colors.red : Colors.grey.shade600,
+                color: isMuted ? AppColors.feedbackError : AppColors.accentViolet,
                 onPressed: onToggleMute,
               ),
 
-              // Speaker button
               _ControlButton(
-                icon: isSpeakerOn ? Icons.volume_up : Icons.volume_down,
+                iconPath: isSpeakerOn
+                    ? AppIcons.getIconPath('volume-high')
+                    : AppIcons.getIconPath('volume-low'),
                 label: isSpeakerOn ? 'Speaker' : 'Earpiece',
-                color: isSpeakerOn ? AppColors.primaryLight : Colors.grey.shade600,
+                color: isSpeakerOn ? AppColors.accentViolet : AppColors.accentViolet.withValues(alpha: 0.55),
                 onPressed: onToggleSpeaker,
               ),
 
-              // Camera button (video calls only)
               if (isVideoCall) ...[
                 _ControlButton(
-                  icon: isCameraOn ? Icons.videocam : Icons.videocam_off,
+                  iconPath: isCameraOn
+                      ? AppIcons.video
+                      : AppIcons.getIconPath('video-slash'),
                   label: isCameraOn ? 'Camera' : 'Camera Off',
-                  color: isCameraOn ? Colors.green : Colors.red,
+                  color: isCameraOn ? AppColors.onlineGreen : AppColors.feedbackError,
                   onPressed: onToggleCamera,
                 ),
 
-                // Switch camera button (video calls only)
                 if (canSwitchCamera)
                   _ControlButton(
-                    icon: Icons.flip_camera_ios,
+                    iconPath: AppIcons.getIconPath('rotate-right'),
                     label: 'Switch',
-                    color: Colors.grey.shade600,
+                    color: AppColors.accentViolet.withValues(alpha: 0.7),
                     onPressed: onSwitchCamera,
                   ),
               ],
 
-              // End call button
               Container(
                 width: 64,
                 height: 64,
                 decoration: const BoxDecoration(
-                  color: Colors.red,
+                  color: AppColors.feedbackError,
                   shape: BoxShape.circle,
                 ),
                 child: Material(
@@ -111,9 +111,9 @@ class CallControls extends ConsumerWidget {
                   child: InkWell(
                     onTap: onEndCall ?? () => _endCall(context, ref),
                     borderRadius: BorderRadius.circular(32),
-                    child: const Center(
-                      child: Icon(
-                        Icons.call_end,
+                    child: Center(
+                      child: AppSvgIcon(
+                        assetPath: AppIcons.callMissed,
                         color: Colors.white,
                         size: 28,
                       ),
@@ -149,20 +149,20 @@ class CallControls extends ConsumerWidget {
 
 /// Individual control button
 class _ControlButton extends StatelessWidget {
-  final IconData icon;
+  final String iconPath;
   final String label;
   final Color color;
   final VoidCallback? onPressed;
   final double size;
 
   const _ControlButton({
-    Key? key,
-    required this.icon,
+    super.key,
+    required this.iconPath,
     required this.label,
     required this.color,
     this.onPressed,
     this.size = 56,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -182,8 +182,8 @@ class _ControlButton extends StatelessWidget {
               onTap: onPressed,
               borderRadius: BorderRadius.circular(size / 2),
               child: Center(
-                child: Icon(
-                  icon,
+                child: AppSvgIcon(
+                  assetPath: iconPath,
                   color: Colors.white,
                   size: size * 0.4,
                 ),
@@ -252,26 +252,25 @@ class MinimalCallControls extends ConsumerWidget {
           // Mute button
           IconButton(
             onPressed: onToggleMute,
-            icon: Icon(
-              isMuted ? Icons.mic_off : Icons.mic,
-              color: isMuted ? Colors.red : Colors.white,
+            icon: AppSvgIcon(
+              assetPath: isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
+              color: isMuted ? AppColors.feedbackError : Colors.white,
+              size: 24,
             ),
-            iconSize: 24,
           ),
 
-          // End call button
           Container(
             margin: const EdgeInsets.only(left: 8),
             width: 44,
             height: 44,
             decoration: const BoxDecoration(
-              color: Colors.red,
+              color: AppColors.feedbackError,
               shape: BoxShape.circle,
             ),
             child: IconButton(
               onPressed: onEndCall ?? () => _endCall(context, ref),
-              icon: const Icon(
-                Icons.call_end,
+              icon: AppSvgIcon(
+                assetPath: AppIcons.callMissed,
                 color: Colors.white,
                 size: 20,
               ),
@@ -383,22 +382,24 @@ class FloatingCallControls extends ConsumerWidget {
           // Mute button
           FloatingActionButton.small(
             onPressed: onToggleMute,
-            backgroundColor: isMuted ? Colors.red : Colors.grey.shade700,
-            child: Icon(
-              isMuted ? Icons.mic_off : Icons.mic,
+            backgroundColor:
+                isMuted ? AppColors.feedbackError : AppColors.accentViolet,
+            child: AppSvgIcon(
+              assetPath: isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
               color: Colors.white,
+              size: 20,
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // End call button
           FloatingActionButton(
             onPressed: onEndCall ?? () => _endCall(context, ref),
-            backgroundColor: Colors.red,
-            child: const Icon(
-              Icons.call_end,
+            backgroundColor: AppColors.feedbackError,
+            child: AppSvgIcon(
+              assetPath: AppIcons.callMissed,
               color: Colors.white,
+              size: 24,
             ),
           ),
         ],

@@ -17,7 +17,9 @@ import '../../features/safety/data/models/favorite.dart';
 import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../../widgets/error_handling/error_display_widget.dart';
+import '../../widgets/loading/skeleton_profile.dart';
 import '../../core/cache/cache_manager.dart' show notifyNewMatch;
 import '../../features/matching/providers/likes_providers.dart';
 import '../../features/matching/providers/matching_provider.dart';
@@ -275,16 +277,17 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     final profile = _profile;
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return PremiumDetailScaffold(
+        title: 'Profile',
+        onBack: () => context.pop(),
+        body: const SkeletonProfile(),
       );
     }
 
     if (_hasError) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.maybePop(context)),
-        ),
+      return PremiumDetailScaffold(
+        title: 'Profile',
+        onBack: () => context.pop(),
         body: ErrorDisplayWidget(
           errorMessage: _errorMessage ?? 'Failed to load profile',
           onRetry: _loadProfile,

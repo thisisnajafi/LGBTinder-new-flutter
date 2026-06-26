@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 import '../../data/models/user_image.dart';
 
@@ -38,10 +39,10 @@ class ProfileImageCarousel extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.photo_camera,
+              AppSvgIcon(
+                assetPath: AppIcons.gallery,
                 size: 48,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               ),
               const SizedBox(height: 8),
               Text(
@@ -132,8 +133,8 @@ class ProfileImageCarousel extends ConsumerWidget {
                     color: theme.colorScheme.error.withOpacity(0.8),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.close,
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.close,
                     size: 16,
                     color: theme.colorScheme.onError,
                   ),
