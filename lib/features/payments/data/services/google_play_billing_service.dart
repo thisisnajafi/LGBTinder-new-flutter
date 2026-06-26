@@ -8,6 +8,7 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../core/services/offline_payment_service.dart';
+import '../../../../core/services/app_logger.dart';
 import 'marketing_attribution_service.dart';
 
 /// Google Play Billing Service for handling in-app purchases and subscriptions
@@ -28,6 +29,11 @@ class GooglePlayBillingService {
 
   // Store offerId for purchases (keyed by productId, cleared after processing)
   final Map<String, String?> _pendingOfferIds = {};
+
+  /// Called after a subscription is activated or restored on the backend.
+  void Function()? onSubscriptionChanged;
+
+  static const String _packageName = 'com.lgbtfinder';
 
   GooglePlayBillingService(
     this._apiService,
@@ -78,6 +84,9 @@ class GooglePlayBillingService {
 
       // Process any pending purchases that were queued offline
       await processPendingPurchases();
+
+      // Re-process unfinished Play purchases from a prior session
+      await _processUnfinishedPurchases();
 
       // Sync subscription status on initialization
       await syncSubscriptionStatus();
@@ -141,16 +150,33 @@ class GooglePlayBillingService {
     try {
       debugPrint('Processing successful purchase: ${purchaseDetails.productID}');
 
-      // Validate purchase with backend (includes marketing attribution)
+      if (_isSubscriptionProduct(purchaseDetails.productID)) {
+        final result = await _activateSubscriptionWithBackend(purchaseDetails, offerId: offerId);
+
+        if (result['success'] == true) {
+          await _completePurchase(purchaseDetails);
+          onSubscriptionChanged?.call();
+          debugPrint('Subscription activated and completed: ${purchaseDetails.productID}');
+        } else {
+          debugPrint('Subscription activation failed: ${purchaseDetails.productID}');
+          if (result['error'] != null) {
+            _userFriendlyErrorController.add(Map<String, dynamic>.from(result['error'] as Map));
+          } else {
+            _errorController.add('Subscription activation failed: ${result['message'] ?? 'Unknown error'}');
+          }
+        }
+        return;
+      }
+
+      // One-time purchases: validate with legacy endpoint, then complete
       final validationResult = await _validatePurchaseWithBackend(purchaseDetails, offerId: offerId);
 
       if (validationResult['success'] == true) {
-        // Acknowledge the purchase
         await _acknowledgePurchase(purchaseDetails);
-        debugPrint('Purchase validated and acknowledged: ${purchaseDetails.productID}');
+        await _completePurchase(purchaseDetails);
+        debugPrint('Purchase validated and completed: ${purchaseDetails.productID}');
       } else {
         debugPrint('Purchase validation failed: ${purchaseDetails.productID}');
-        // Check if there's user-friendly error data
         if (validationResult['error'] != null) {
           _userFriendlyErrorController.add(validationResult['error']);
         } else {
@@ -168,25 +194,33 @@ class GooglePlayBillingService {
     try {
       debugPrint('Processing restored purchase: ${purchaseDetails.productID}');
 
-      // Validate restored purchase with backend
+      if (_isSubscriptionProduct(purchaseDetails.productID)) {
+        final result = await _restoreSubscriptionWithBackend(purchaseDetails);
+
+        if (result['success'] == true) {
+          await _completePurchase(purchaseDetails);
+          onSubscriptionChanged?.call();
+          debugPrint('Restored subscription validated: ${purchaseDetails.productID}');
+        } else {
+          debugPrint('Restored subscription failed: ${purchaseDetails.productID}');
+          _errorController.add('Restored purchase failed: ${result['message'] ?? 'Unknown error'}');
+        }
+        return;
+      }
+
       final validationResult = await _validatePurchaseWithBackend(purchaseDetails);
 
       if (validationResult['success'] == true) {
-        // For restored purchases, check if already acknowledged
-        // If not acknowledged, acknowledge it
         if (validationResult['data'] != null) {
           final data = validationResult['data'] as Map<String, dynamic>;
           final acknowledged = data['acknowledged'] ?? false;
-          
+
           if (!acknowledged) {
             await _acknowledgePurchase(purchaseDetails);
-            debugPrint('Restored purchase acknowledged: ${purchaseDetails.productID}');
-          } else {
-            debugPrint('Restored purchase already acknowledged: ${purchaseDetails.productID}');
           }
         }
-        
-        debugPrint('Restored purchase validated: ${purchaseDetails.productID}');
+        await _completePurchase(purchaseDetails);
+        debugPrint('Restored one-time purchase validated: ${purchaseDetails.productID}');
       } else {
         debugPrint('Restored purchase validation failed: ${purchaseDetails.productID}');
         _errorController.add('Restored purchase validation failed: ${validationResult['message'] ?? 'Unknown error'}');
@@ -202,7 +236,119 @@ class GooglePlayBillingService {
     final errorMessage = purchaseDetails.error?.message ?? 'Unknown error';
     debugPrint('Purchase error for ${purchaseDetails.productID}: $errorMessage');
 
+    AppLogger.error(
+      'Purchase failed',
+      tag: 'GooglePlayBilling',
+      error: purchaseDetails.error,
+    );
+
     _errorController.add('Purchase failed: $errorMessage');
+  }
+
+  /// Complete the purchase with Google Play — always call after backend success.
+  Future<void> _completePurchase(PurchaseDetails purchaseDetails) async {
+    if (purchaseDetails.pendingCompletePurchase) {
+      await _inAppPurchase.completePurchase(purchaseDetails);
+      debugPrint('completePurchase called for ${purchaseDetails.productID}');
+    }
+  }
+
+  /// Activate subscription via lifecycle API after Play purchase.
+  Future<Map<String, dynamic>> _activateSubscriptionWithBackend(
+    PurchaseDetails purchaseDetails, {
+    String? offerId,
+  }) async {
+    try {
+      final purchaseToken = _extractPurchaseToken(purchaseDetails);
+      if (purchaseToken.isEmpty) {
+        throw Exception('Unable to extract purchase token from purchase details');
+      }
+
+      if (offerId != null) {
+        await _marketingAttributionService.getAttributionData();
+      }
+
+      debugPrint('Activating subscription with backend: ${purchaseDetails.productID}');
+
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.subscriptionsActivate,
+        data: {
+          'purchase_token': purchaseToken,
+          'product_id': purchaseDetails.productID,
+          'package_name': _packageName,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess) {
+        final hasAttribution = await _marketingAttributionService.hasAttribution();
+        if (hasAttribution) {
+          await _marketingAttributionService.clearAttribution();
+        }
+        return {'success': true, 'data': response.data};
+      }
+
+      final errorData = response.data?['error'] ?? response.data;
+      if (errorData != null && errorData is Map) {
+        _userFriendlyErrorController.add(Map<String, dynamic>.from(errorData));
+      }
+
+      return {
+        'success': false,
+        'message': response.message,
+        'error': errorData,
+      };
+    } catch (e) {
+      debugPrint('Subscription activation error: $e');
+      return {
+        'success': false,
+        'message': 'Subscription activation failed: $e',
+      };
+    }
+  }
+
+  /// Restore subscription via lifecycle API.
+  Future<Map<String, dynamic>> _restoreSubscriptionWithBackend(
+    PurchaseDetails purchaseDetails,
+  ) async {
+    try {
+      final purchaseToken = _extractPurchaseToken(purchaseDetails);
+      if (purchaseToken.isEmpty) {
+        throw Exception('Unable to extract purchase token from purchase details');
+      }
+
+      debugPrint('Restoring subscription with backend: ${purchaseDetails.productID}');
+
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.subscriptionsRestore,
+        data: {'purchase_token': purchaseToken},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (response.isSuccess) {
+        return {'success': true, 'data': response.data};
+      }
+
+      return {
+        'success': false,
+        'message': response.message,
+      };
+    } catch (e) {
+      debugPrint('Subscription restore error: $e');
+      return {
+        'success': false,
+        'message': 'Subscription restore failed: $e',
+      };
+    }
+  }
+
+  /// Re-query Play for purchases that were not completed in a prior session.
+  Future<void> _processUnfinishedPurchases() async {
+    try {
+      await _inAppPurchase.restorePurchases();
+    } catch (e) {
+      debugPrint('Failed to process unfinished purchases on init: $e');
+    }
   }
 
   /// Validate purchase with backend API
@@ -224,7 +370,7 @@ class GooglePlayBillingService {
         'purchaseToken': purchaseToken,
         'productId': purchaseDetails.productID,
         'isSubscription': isSubscription,
-        'packageName': 'com.lgbtfinder.app', // Replace with actual package name
+        'packageName': _packageName,
         if (offerId != null) 'offerId': offerId,
         // Add marketing attribution if available
         if (hasAttribution) ...attributionData.map((key, value) => MapEntry(key, value ?? '')),
@@ -502,7 +648,9 @@ class GooglePlayBillingService {
 
   /// Check if a product ID represents a subscription
   bool _isSubscriptionProduct(String productId) {
-    return productId.contains('_base'); // bronze_base, silver_base, gold_base
+    if (productId.contains('_base')) return true;
+    if (productId.startsWith('lgbtfinder.')) return true;
+    return productId.contains('.silder.') || productId.contains('.golden.');
   }
 
   /// Get current purchases from backend and validate them

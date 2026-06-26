@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/providers/feature_flags_provider.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/services/offline_payment_service.dart';
 import '../../../shared/services/api_service.dart';
 import '../../../shared/services/connectivity_service.dart';
@@ -35,7 +36,12 @@ final googlePlayBillingServiceProvider = Provider<GooglePlayBillingService>((ref
   final apiService = ref.watch(apiServiceProvider);
   final offlineService = ref.watch(offlinePaymentServiceProvider);
   final marketingService = ref.watch(marketingAttributionServiceProvider);
-  return GooglePlayBillingService(apiService, offlineService, marketingService);
+  final service = GooglePlayBillingService(apiService, offlineService, marketingService);
+  service.onSubscriptionChanged = () {
+    ref.read(subscriptionRefreshProvider).refresh();
+  };
+  ref.onDispose(() => service.onSubscriptionChanged = null);
+  return service;
 });
 
 // Provider for Google Play Repository

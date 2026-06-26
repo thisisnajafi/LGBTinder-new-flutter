@@ -40,7 +40,7 @@ import '../screens/legal/terms_of_service_screen.dart';
 import '../screens/legal/privacy_policy_screen.dart';
 import '../screens/banned_account_screen.dart';
 import '../features/discover/presentation/screens/passport_screen.dart';
-import '../features/payments/presentation/screens/subscription_management_screen.dart';
+import '../features/payments/pages/subscription_management_page.dart';
 
 /// Route names constants
 class AppRoutes {
@@ -565,7 +565,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.subscriptionManagement,
         name: 'subscription-management',
         pageBuilder: (context, state) =>
-            slideFadePage(state, const SubscriptionManagementScreen()),
+            slideFadePage(state, const SubscriptionManagementPage()),
       ),
 
       // Outgoing / active call (requires auth)

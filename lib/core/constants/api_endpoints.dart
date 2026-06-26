@@ -236,6 +236,9 @@ class ApiEndpoints {
   static const String subscriptionRefresh = '/subscriptions/refresh';
   static const String subscriptionCancel = '/subscriptions/cancel';
   static const String subscriptionReactivate = '/subscriptions/reactivate';
+  static const String subscriptionsActivate = '/subscriptions/activate';
+  static const String subscriptionsRestore = '/subscriptions/restore';
+  static const String subscriptionsHistory = '/subscriptions/history';
   static const String userPaymentMethods = '/user/payment-methods';
   static const String userPaymentMethodsDefault = '/user/payment-methods/default';
   static const String userPaymentsHistory = '/user/payments/history';

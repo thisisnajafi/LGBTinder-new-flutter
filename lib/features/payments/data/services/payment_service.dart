@@ -646,6 +646,96 @@ class PaymentService {
     }
   }
 
+  /// Activate subscription after Google Play purchase (POST /subscriptions/activate).
+  Future<Map<String, dynamic>> activateSubscription({
+    required String purchaseToken,
+    required String productId,
+    String packageName = 'com.lgbtfinder',
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.subscriptionsActivate,
+      data: {
+        'purchase_token': purchaseToken,
+        'product_id': productId,
+        'package_name': packageName,
+      },
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    return response.data ?? {};
+  }
+
+  /// Restore subscription from Google Play purchase token (POST /subscriptions/restore).
+  Future<Map<String, dynamic>> restoreSubscriptionWithToken(String purchaseToken) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.subscriptionsRestore,
+      data: {'purchase_token': purchaseToken},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    return response.data ?? {};
+  }
+
+  /// Cancel subscription via lifecycle API (POST /subscriptions/cancel).
+  Future<Map<String, dynamic>> cancelLifecycleSubscription({bool immediately = false}) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.subscriptionCancel,
+      data: {'immediately': immediately},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    return response.data ?? {};
+  }
+
+  /// Paginated subscription history (GET /subscriptions/history).
+  Future<({List<Map<String, dynamic>> items, Map<String, dynamic> pagination})>
+      getSubscriptionHistory({int page = 1}) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      '${ApiEndpoints.subscriptionsHistory}?page=$page',
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+
+    final data = response.data!;
+    final items = (data['items'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    final pagination = data['pagination'] is Map<String, dynamic>
+        ? data['pagination'] as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    return (items: items, pagination: pagination);
+  }
+
+  /// Refresh subscription from provider (POST /subscriptions/refresh).
+  Future<Map<String, dynamic>> refreshSubscription() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.subscriptionRefresh,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    return response.data ?? {};
+  }
+
   /// Upgrade subscription
   Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
     try {

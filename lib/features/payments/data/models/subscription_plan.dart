@@ -300,6 +300,8 @@ class SubscriptionStatus {
   final String? status; // 'active', 'canceled', 'expired', 'trial'
   final String? stripeSubscriptionId;
   final bool autoRenew;
+  final bool cancelAtPeriodEnd;
+  final String? provider;
 
   SubscriptionStatus({
     this.isActive = false,
@@ -312,6 +314,8 @@ class SubscriptionStatus {
     this.status,
     this.stripeSubscriptionId,
     this.autoRenew = true,
+    this.cancelAtPeriodEnd = false,
+    this.provider,
   });
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
@@ -347,11 +351,17 @@ class SubscriptionStatus {
       planId: parseInt(json['plan_id']),
       tier: json['tier']?.toString(),
       startDate: parseDateTime(json['start_date']),
-      endDate: parseDateTime(json['end_date'] ?? json['ends_at'] ?? json['expiry_date']),
-      nextBillingDate: parseDateTime(json['next_billing_date']),
+      endDate: parseDateTime(json['end_date'] ??
+          json['ends_at'] ??
+          json['expiry_date'] ??
+          json['current_period_end']),
+      nextBillingDate: parseDateTime(
+          json['next_billing_date'] ?? json['current_period_end']),
       status: json['status']?.toString() ?? json['subscription_status']?.toString(),
       stripeSubscriptionId: json['stripe_subscription_id']?.toString(),
       autoRenew: parseBoolean(json['auto_renew'] ?? json['will_auto_renew'], defaultValue: true),
+      cancelAtPeriodEnd: parseBoolean(json['cancel_at_period_end']),
+      provider: json['provider']?.toString(),
     );
   }
 
