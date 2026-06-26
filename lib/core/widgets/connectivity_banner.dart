@@ -52,7 +52,9 @@ class ConnectivityBanner extends ConsumerWidget {
                       bottom: false,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        child: _FloatingBanner(state: state),
+                        child: visible
+                            ? _FloatingBanner(state: state)
+                            : const SizedBox.shrink(),
                       ),
                     ),
                   ),

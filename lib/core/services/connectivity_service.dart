@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 
+import '../constants/api_endpoints.dart';
 import 'app_logger.dart';
 
 /// Real-time connection quality states for UI and retry coordination.
@@ -36,12 +37,16 @@ class ConnectivityService {
   Stream<NetworkConnectionState> get onStateChange =>
       _stateController.stream;
 
-  NetworkConnectionState _current = NetworkConnectionState.connected;
+  NetworkConnectionState _current = NetworkConnectionState.checking;
   NetworkConnectionState get current => _current;
   bool get isConnected => _current == NetworkConnectionState.connected;
 
   /// Backward-compatible online flag used by [ApiService] and [SyncService].
-  bool get isOnline => isConnected;
+  /// Treats [checking] and [weak] as online so startup/re-verify does not block API calls.
+  bool get isOnline =>
+      _current == NetworkConnectionState.connected ||
+      _current == NetworkConnectionState.checking ||
+      _current == NetworkConnectionState.weak;
 
   /// Backward-compatible bool stream for existing listeners.
   Stream<bool> get connectivityStream => onStateChange.map(
@@ -111,6 +116,7 @@ class ConnectivityService {
     const probes = [
       'https://www.google.com/generate_204',
       'https://connectivitycheck.gstatic.com/generate_204',
+      ApiEndpoints.apiOrigin,
     ];
 
     for (final url in probes) {

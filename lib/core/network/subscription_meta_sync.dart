@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import '../../features/payments/data/models/plan_limits.dart';
+import '../../features/payments/data/models/subscription_plan.dart';
+import '../subscription/subscription_access.dart';
 import '../../shared/models/subscription_status.dart';
 
 /// Bridges Dio interceptors (no Ref) to Riverpod + disk cache.
@@ -19,5 +22,15 @@ class SubscriptionMetaSync {
     } catch (_) {
       // Never block API responses on parse failures.
     }
+  }
+
+  /// Sync from GET /subscriptions/status (legacy payment model).
+  void syncFromLegacy(
+    SubscriptionStatus status, {
+    PlanLimits? planLimits,
+  }) {
+    final appStatus = appSubscriptionFromLegacy(status, planLimits: planLimits);
+    unawaited(onCache?.call(appStatus));
+    onUpdate?.call(appStatus);
   }
 }

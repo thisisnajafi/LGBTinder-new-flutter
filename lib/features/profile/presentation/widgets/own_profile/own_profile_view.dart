@@ -19,6 +19,8 @@ import '../../../../../screens/active_sessions_screen.dart';
 import '../../../../../screens/privacy_settings_screen.dart';
 import '../../../../../screens/profile/profile_verification_screen.dart';
 import '../../../../../shared/models/user_tier.dart';
+import '../../../../../core/subscription/subscription_access.dart';
+import '../../../../../core/providers/subscription_provider.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
 import 'profile_details_sections.dart';
 import 'profile_hero_section.dart';
@@ -52,20 +54,12 @@ class OwnProfileView extends ConsumerWidget {
         : null;
     final isVerified = profile.isVerified == true;
 
-    final UserTier fallbackTier = ref.watch(userTierProvider);
+    final UserTier tier = ref.watch(userTierProvider);
     final superlikes = ref.watch(superlikesRemainingProvider);
 
+    final globalSub = ref.watch(subscriptionProvider);
     final cacheData = ref.watch(profilePageCacheProvider).valueOrNull;
-    final sessionCache = ref.watch(sessionDataCacheServiceProvider);
-    final cachedSub = sessionCache.getSubscriptionStatusSync();
-    final subAsync = ref.watch(subscriptionStatusProvider);
-    final subscription =
-        cacheData?.subscription ?? cachedSub ?? subAsync.valueOrNull;
-    final tier = _resolveTier(
-      subscription: subscription,
-      planLimits: cacheData?.planLimits,
-      fallback: fallbackTier,
-    );
+    final subscription = cacheData?.subscription;
 
     final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
     final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
@@ -127,7 +121,7 @@ class OwnProfileView extends ConsumerWidget {
                 isVerified: isVerified,
                 tier: tier,
                 locationLabel: locationLabel,
-                isOnline: profile.isOnline ?? false,
+                isOnline: profile.isOnline != false,
                 viewsCount: profile.viewsCount ?? 0,
                 superlikesRemaining: superlikes,
                 onEditProfile: () => _openEdit(context),

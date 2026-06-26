@@ -639,9 +639,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       ),
     );
     if (result != null) {
-      final isPremium =
-          ref.read(planLimitsProvider).valueOrNull?.features.advancedFilters ??
-              false;
+      final isPremium = ref.read(hasAdvancedFiltersProvider);
       final filters = isPremium
           ? result
           : DiscoveryFilterMapper.stripPremiumKeys(result);

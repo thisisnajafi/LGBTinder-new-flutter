@@ -18,6 +18,7 @@ class SessionDataCacheService {
 
   static const String superlikesRemainingKey = 'superlikes:remaining';
   static const String superlikesPacksKey = 'superlikes:packs';
+  static const String legacySubscriptionStatusKey = 'subscription:legacy';
   static const String subscriptionStatusKey = 'subscription:status';
   static const String userTierKey = 'user:tier';
   static const String subscriptionMetaSavedAtKey = 'subscription:status:savedAt';
@@ -107,7 +108,7 @@ class SessionDataCacheService {
 
   SubscriptionStatus? getSubscriptionStatusSync() {
     return _readObjectEntry<SubscriptionStatus>(
-      subscriptionStatusKey,
+      legacySubscriptionStatusKey,
       subscriptionStatusTtl,
       SubscriptionStatus.fromJson,
     );
@@ -125,12 +126,15 @@ class SessionDataCacheService {
 
   Future<void> setSubscriptionStatus(SubscriptionStatus status) async {
     await _writeObjectEntry(
-      subscriptionStatusKey,
+      legacySubscriptionStatusKey,
       status,
       subscriptionStatusTtl,
       (s) => s.toJson(),
     );
-    AppLogger.info('Cache write: $subscriptionStatusKey', tag: 'SessionCache');
+    AppLogger.info(
+      'Cache write: $legacySubscriptionStatusKey',
+      tag: 'SessionCache',
+    );
   }
 
   /// Persist global subscription meta (from API meta.subscription).
@@ -258,6 +262,7 @@ class SessionDataCacheService {
     for (final key in [
       superlikesRemainingKey,
       superlikesPacksKey,
+      legacySubscriptionStatusKey,
       subscriptionStatusKey,
       userTierKey,
     ]) {

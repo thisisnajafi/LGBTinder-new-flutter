@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/payments/data/models/plan_limits.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/payments/providers/payment_providers.dart';
 import '../../shared/models/user_tier.dart';
 import '../cache/cache_manager.dart';
 import '../cache/session_cache_providers.dart';
+import '../../core/subscription/subscription_access.dart';
 import '../providers/subscription_provider.dart';
 import '../services/app_logger.dart';
 
@@ -99,6 +101,15 @@ class StartupCacheService {
               .key;
       await sessionCache.setUserTier(tier);
       _ref.read(cachedUserTierProvider.notifier).setTier(tier);
+
+      PlanLimits? limits;
+      try {
+        limits = await _ref.read(planLimitsServiceProvider).getPlanLimits();
+      } catch (_) {}
+
+      final appStatus = appSubscriptionFromLegacy(status, planLimits: limits);
+      await sessionCache.saveSubscription(appStatus);
+      _ref.read(subscriptionProvider.notifier).update(appStatus);
     } catch (e, stack) {
       AppLogger.error(
         'Failed to cache subscription status',

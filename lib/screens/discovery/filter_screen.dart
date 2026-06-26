@@ -17,6 +17,7 @@ import '../../core/location/location_providers.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
+import '../../core/subscription/subscription_access.dart';
 import '../../shared/utils/plan_guard.dart';
 import '../../routes/app_router.dart';
 
@@ -104,9 +105,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     setState(() => _maxDistance = defaultDistance!);
   }
 
-  bool get _isPremium =>
-      ref.watch(planLimitsProvider).valueOrNull?.features.advancedFilters ??
-      false;
+  bool get _isPremium => ref.watch(hasAdvancedFiltersProvider);
 
   void _applyFilters() {
     final uiResult = <String, dynamic>{

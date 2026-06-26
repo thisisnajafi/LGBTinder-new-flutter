@@ -16,7 +16,7 @@ import '../../payments/data/services/plan_limits_service.dart';
 import '../data/models/user_profile.dart';
 import '../data/services/profile_service.dart';
 import '../../../shared/models/user_tier.dart';
-import '../../payments/providers/payment_providers.dart';
+import '../../../core/network/subscription_meta_sync.dart';
 import 'profile_providers.dart';
 
 /// Immutable snapshot of Profile page data (only cached values are shown in UI).
@@ -263,6 +263,10 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
               planName: subscription.planName ?? planLimits.planInfo.planName,
             ).key;
         await _sessionCache.setUserTier(tierKey);
+        SubscriptionMetaSync.instance.syncFromLegacy(
+          subscription,
+          planLimits: planLimits,
+        );
       } catch (e, st) {
         profileLogError('refresh subscriptionStatus', e, st);
         subscription = state.valueOrNull?.subscription;

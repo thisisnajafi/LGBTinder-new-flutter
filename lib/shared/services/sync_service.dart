@@ -85,6 +85,13 @@ class SyncService {
                 queryParameters: request.queryParameters,
               );
               break;
+            case 'PATCH':
+              response = await _dioClient.dio.patch(
+                request.endpoint,
+                data: request.data,
+                queryParameters: request.queryParameters,
+              );
+              break;
             case 'DELETE':
               response = await _dioClient.dio.delete(
                 request.endpoint,
