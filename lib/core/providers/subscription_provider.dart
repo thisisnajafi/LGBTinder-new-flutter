@@ -6,6 +6,7 @@ import '../cache/session_data_cache_service.dart';
 import '../network/subscription_meta_sync.dart';
 import '../providers/api_providers.dart';
 import '../services/app_logger.dart';
+import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../shared/models/subscription_status.dart';
 import '../../shared/models/user_tier.dart';
 
@@ -119,6 +120,7 @@ class SubscriptionRefreshService {
       await cache.saveSubscription(sub);
       _ref.read(subscriptionProvider.notifier).update(sub);
       await _ref.read(cachedUserTierProvider.notifier).setTier(sub.tier.key);
+      await _ref.read(planLimitsProvider.notifier).refresh();
 
       AppLogger.info(
         'Subscription refreshed from server: ${sub.tier.key}',

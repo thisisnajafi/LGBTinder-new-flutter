@@ -18,7 +18,7 @@ import '../features/profile/providers/profile_page_cache_provider.dart';
 import '../features/matching/data/models/match.dart' as match_models;
 import '../features/matching/widgets/lost_match_dialog.dart';
 import '../features/matching/widgets/match_celebration_launcher.dart';
-import '../features/payments/data/services/plan_limits_service.dart';
+import '../core/subscription/subscription_access.dart';
 import '../widgets/premium/upgrade_dialog.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';

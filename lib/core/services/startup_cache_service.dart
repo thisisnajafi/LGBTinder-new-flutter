@@ -110,6 +110,7 @@ class StartupCacheService {
       final appStatus = appSubscriptionFromLegacy(status, planLimits: limits);
       await sessionCache.saveSubscription(appStatus);
       _ref.read(subscriptionProvider.notifier).update(appStatus);
+      await _ref.read(planLimitsProvider.notifier).refresh();
     } catch (e, stack) {
       AppLogger.error(
         'Failed to cache subscription status',

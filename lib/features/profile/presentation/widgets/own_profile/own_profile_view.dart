@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../../core/cache/session_cache_providers.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
-import '../../../../payments/data/models/plan_limits.dart';
 import '../../../../payments/data/models/subscription_plan.dart';
-import '../../../../payments/providers/payment_providers.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../providers/profile_page_cache_provider.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
@@ -19,8 +16,6 @@ import '../../../../../screens/active_sessions_screen.dart';
 import '../../../../../screens/privacy_settings_screen.dart';
 import '../../../../../screens/profile/profile_verification_screen.dart';
 import '../../../../../shared/models/user_tier.dart';
-import '../../../../../core/subscription/subscription_access.dart';
-import '../../../../../core/providers/subscription_provider.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
 import 'profile_details_sections.dart';
 import 'profile_hero_section.dart';
@@ -57,7 +52,6 @@ class OwnProfileView extends ConsumerWidget {
     final UserTier tier = ref.watch(userTierProvider);
     final superlikes = ref.watch(superlikesRemainingProvider);
 
-    final globalSub = ref.watch(subscriptionProvider);
     final cacheData = ref.watch(profilePageCacheProvider).valueOrNull;
     final subscription = cacheData?.subscription;
 
@@ -164,35 +158,6 @@ class OwnProfileView extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  UserTier _resolveTier({
-    required SubscriptionStatus? subscription,
-    required PlanLimits? planLimits,
-    required UserTier fallback,
-  }) {
-    if (subscription != null) {
-      if (subscription.tier != null && subscription.tier!.isNotEmpty) {
-        return UserTier.values.firstWhere(
-          (t) => t.key == subscription.tier,
-          orElse: () => userTierFromPlan(
-            planId: subscription.planId,
-            planName: subscription.planName,
-          ),
-        );
-      }
-      return userTierFromPlan(
-        planId: subscription.planId,
-        planName: subscription.planName,
-      );
-    }
-    if (planLimits != null) {
-      return userTierFromPlan(
-        planId: planLimits.planInfo.planId,
-        planName: planLimits.planInfo.planName,
-      );
-    }
-    return fallback;
   }
 
   List<ProfileHubActionData> _buildHubActions(
