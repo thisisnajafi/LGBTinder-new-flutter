@@ -43,8 +43,9 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
     final backgroundColor = widget.lightStyle
         ? Colors.white
         : (isDark ? AppColors.surfaceDark : Colors.white);
-    final foregroundColor =
-        widget.lightStyle ? Colors.black87 : AppColors.textPrimaryLight;
+    final foregroundColor = widget.lightStyle
+        ? Colors.black87
+        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
     final borderColor = widget.lightStyle
         ? Colors.white.withValues(alpha: 0.55)
         : (isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight);
@@ -57,11 +58,9 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          elevation: widget.lightStyle ? 0 : 2,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              widget.lightStyle ? AppRadius.radiusRound : AppRadius.radiusLG,
-            ),
+            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
             side: BorderSide(color: borderColor, width: 1.2),
           ),
           padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),

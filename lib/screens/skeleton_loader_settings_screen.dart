@@ -2,39 +2,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 
 /// Skeleton loader settings screen - Manage skeleton loader preferences
 class SkeletonLoaderSettingsScreen extends ConsumerStatefulWidget {
-  const SkeletonLoaderSettingsScreen({Key? key}) : super(key: key);
+  const SkeletonLoaderSettingsScreen({super.key});
 
   @override
-  ConsumerState<SkeletonLoaderSettingsScreen> createState() => _SkeletonLoaderSettingsScreenState();
+  ConsumerState<SkeletonLoaderSettingsScreen> createState() =>
+      _SkeletonLoaderSettingsScreenState();
 }
 
-class _SkeletonLoaderSettingsScreenState extends ConsumerState<SkeletonLoaderSettingsScreen> {
-  // General settings
+class _SkeletonLoaderSettingsScreenState
+    extends ConsumerState<SkeletonLoaderSettingsScreen> {
   bool _skeletonLoadersEnabled = true;
-  String _skeletonStyle = 'shimmer'; // 'shimmer', 'pulse', 'wave'
-  double _animationSpeed = 1.0; // 0.5 to 2.0
+  String _skeletonStyle = 'shimmer';
+  double _animationSpeed = 1.0;
 
-  // Visual settings
-  String _baseColor = 'surface'; // 'surface', 'gray', 'custom'
-  Color _customBaseColor = AppColors.surfaceDark;
-  String _highlightColor = 'elevated'; // 'elevated', 'accent', 'custom'
-  Color _customHighlightColor = AppColors.surfaceElevatedDark;
-  double _opacity = 0.7; // 0.0 to 1.0
+  String _baseColor = 'surface';
+  String _highlightColor = 'elevated';
+  double _opacity = 0.7;
 
-  // Behavior settings
   bool _showOnInitialLoad = true;
   bool _showOnRefresh = true;
-  int _minDisplayDuration = 500; // milliseconds
+  int _minDisplayDuration = 500;
 
   @override
   void initState() {
@@ -48,7 +43,6 @@ class _SkeletonLoaderSettingsScreenState extends ConsumerState<SkeletonLoaderSet
 
   Future<void> _saveSettings() async {
     try {
-      // TODO: Save settings via API or local storage
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,499 +58,327 @@ class _SkeletonLoaderSettingsScreenState extends ConsumerState<SkeletonLoaderSet
     }
   }
 
+  void _setStyle(String value) {
+    setState(() => _skeletonStyle = value);
+    _saveSettings();
+  }
+
+  void _setBaseColor(String value) {
+    setState(() => _baseColor = value);
+    _saveSettings();
+  }
+
+  void _setHighlightColor(String value) {
+    setState(() => _highlightColor = value);
+    _saveSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
-      title: 'Skeleton Loaders',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Skeleton loaders',
+      subtitle: 'Placeholder style, colors, and timing',
+      body: AppSettingsDetailList(
         children: [
-          // General settings
-          SectionHeader(
-            title: 'General Settings',
-            icon: Icons.auto_awesome,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Enable Skeleton Loaders',
-            subtitle: 'Show skeleton loaders while content loads',
-            value: _skeletonLoadersEnabled,
-            onChanged: (value) {
-              setState(() {
-                _skeletonLoadersEnabled = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_skeletonLoadersEnabled) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Skeleton Style',
-              subtitle: 'Choose the animation style',
-              value: _skeletonStyle,
-              options: [
-                {'value': 'shimmer', 'label': 'Shimmer'},
-                {'value': 'pulse', 'label': 'Pulse'},
-                {'value': 'wave', 'label': 'Wave'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _skeletonStyle = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
+          PremiumSettingsGroup(
+            title: 'General',
+            children: [
+              PremiumToggleRow(
+                title: 'Enable skeleton loaders',
+                subtitle: 'Show placeholders while content loads',
+                value: _skeletonLoadersEnabled,
+                iconPath: AppIcons.magicStar,
+                onChanged: (value) {
+                  setState(() => _skeletonLoadersEnabled = value);
+                  _saveSettings();
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Animation Speed',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${_animationSpeed.toStringAsFixed(1)}x',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+              if (_skeletonLoadersEnabled) ...[
+                _SettingOption(
+                  label: 'Shimmer',
+                  isSelected: _skeletonStyle == 'shimmer',
+                  onSelect: () => _setStyle('shimmer'),
+                ),
+                _SettingOption(
+                  label: 'Pulse',
+                  isSelected: _skeletonStyle == 'pulse',
+                  onSelect: () => _setStyle('pulse'),
+                ),
+                _SettingOption(
+                  label: 'Wave',
+                  isSelected: _skeletonStyle == 'wave',
+                  onSelect: () => _setStyle('wave'),
+                ),
+                _SliderCard(
+                  title: 'Animation speed',
+                  valueLabel: '${_animationSpeed.toStringAsFixed(1)}x',
+                  child: Slider(
                     value: _animationSpeed,
                     min: 0.5,
                     max: 2.0,
                     divisions: 15,
                     label: '${_animationSpeed.toStringAsFixed(1)}x',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _animationSpeed = value;
-                      });
+                      setState(() => _animationSpeed = value);
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Slow',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        'Fast',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Visual settings
+                  minLabel: 'Slow',
+                  maxLabel: 'Fast',
+                ),
+              ],
+            ],
+          ),
           if (_skeletonLoadersEnabled) ...[
-            SectionHeader(
-              title: 'Visual Settings',
-              icon: Icons.palette,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Base Color',
-              subtitle: 'Color of the skeleton base',
-              value: _baseColor,
-              options: [
-                {'value': 'surface', 'label': 'Surface Color'},
-                {'value': 'gray', 'label': 'Gray'},
-                {'value': 'custom', 'label': 'Custom'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _baseColor = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Highlight Color',
-              subtitle: 'Color of the skeleton highlight',
-              value: _highlightColor,
-              options: [
-                {'value': 'elevated', 'label': 'Elevated Surface'},
-                {'value': 'accent', 'label': 'Accent Color'},
-                {'value': 'custom', 'label': 'Custom'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _highlightColor = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Opacity',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${(_opacity * 100).toInt()}%',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Visual',
+              children: [
+                _SettingOption(
+                  label: 'Surface color',
+                  isSelected: _baseColor == 'surface',
+                  onSelect: () => _setBaseColor('surface'),
+                ),
+                _SettingOption(
+                  label: 'Gray',
+                  isSelected: _baseColor == 'gray',
+                  onSelect: () => _setBaseColor('gray'),
+                ),
+                _SettingOption(
+                  label: 'Custom base',
+                  isSelected: _baseColor == 'custom',
+                  onSelect: () => _setBaseColor('custom'),
+                ),
+                _SettingOption(
+                  label: 'Elevated surface',
+                  isSelected: _highlightColor == 'elevated',
+                  onSelect: () => _setHighlightColor('elevated'),
+                ),
+                _SettingOption(
+                  label: 'Accent color',
+                  isSelected: _highlightColor == 'accent',
+                  onSelect: () => _setHighlightColor('accent'),
+                ),
+                _SettingOption(
+                  label: 'Custom highlight',
+                  isSelected: _highlightColor == 'custom',
+                  onSelect: () => _setHighlightColor('custom'),
+                ),
+                _SliderCard(
+                  title: 'Opacity',
+                  valueLabel: '${(_opacity * 100).toInt()}%',
+                  child: Slider(
                     value: _opacity,
                     min: 0.0,
                     max: 1.0,
                     divisions: 10,
                     label: '${(_opacity * 100).toInt()}%',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _opacity = value;
-                      });
+                      setState(() => _opacity = value);
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Transparent',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        'Opaque',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                  minLabel: 'Transparent',
+                  maxLabel: 'Opaque',
+                ),
+              ],
             ),
-            DividerCustom(),
-            SizedBox(height: AppSpacing.spacingLG),
-          ],
-
-          // Behavior settings
-          if (_skeletonLoadersEnabled) ...[
-            SectionHeader(
-              title: 'Behavior Settings',
-              icon: Icons.tune,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSwitchTile(
-              title: 'Show on Initial Load',
-              subtitle: 'Show skeleton loaders on first load',
-              value: _showOnInitialLoad,
-              onChanged: (value) {
-                setState(() {
-                  _showOnInitialLoad = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            _buildSwitchTile(
-              title: 'Show on Refresh',
-              subtitle: 'Show skeleton loaders when refreshing',
-              value: _showOnRefresh,
-              onChanged: (value) {
-                setState(() {
-                  _showOnRefresh = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Min Display Duration',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${_minDisplayDuration}ms',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Behavior',
+              children: [
+                PremiumToggleRow(
+                  title: 'Show on initial load',
+                  subtitle: 'Display skeletons on first load',
+                  value: _showOnInitialLoad,
+                  iconPath: AppIcons.documentText,
+                  onChanged: (value) {
+                    setState(() => _showOnInitialLoad = value);
+                    _saveSettings();
+                  },
+                ),
+                PremiumToggleRow(
+                  title: 'Show on refresh',
+                  subtitle: 'Display skeletons when refreshing lists',
+                  value: _showOnRefresh,
+                  iconPath: AppIcons.refreshCircle,
+                  onChanged: (value) {
+                    setState(() => _showOnRefresh = value);
+                    _saveSettings();
+                  },
+                ),
+                _SliderCard(
+                  title: 'Min display duration',
+                  valueLabel: '${_minDisplayDuration}ms',
+                  child: Slider(
                     value: _minDisplayDuration.toDouble(),
                     min: 0,
                     max: 2000,
                     divisions: 20,
                     label: '${_minDisplayDuration}ms',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _minDisplayDuration = value.toInt();
-                      });
+                      setState(() => _minDisplayDuration = value.toInt());
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '0ms',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        '2000ms',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  minLabel: '0ms',
+                  maxLabel: '2000ms',
                 ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
-          ),
+          ],
+          if (!_skeletonLoadersEnabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSettingsLayout.horizontalPadding,
+                AppSpacing.spacingMD,
+                AppSettingsLayout.horizontalPadding,
+                0,
+              ),
+              child: Text(
+                'Enable skeleton loaders above to customize appearance and behavior.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSelectorTile({
-    required String title,
-    String? subtitle,
-    required String value,
-    required List<Map<String, String>> options,
-    required Function(String) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+class _SliderCard extends StatelessWidget {
+  const _SliderCard({
+    required this.title,
+    required this.valueLabel,
+    required this.child,
+    required this.minLabel,
+    required this.maxLabel,
+  });
+
+  final String title;
+  final String valueLabel;
+  final Widget child;
+  final String minLabel;
+  final String maxLabel;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
+
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (subtitle != null) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingMD),
-          ...options.map((option) {
-            final isSelected = value == option['value'];
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-              child: GestureDetector(
-                onTap: () => onChanged(option['value']!),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : backgroundColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option['label']!,
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
-                          size: 20,
-                        ),
-                    ],
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            );
-          }),
+              Text(
+                valueLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentViolet,
+                ),
+              ),
+            ],
+          ),
+          child,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(minLabel, style: theme.textTheme.bodySmall),
+              Text(maxLabel, style: theme.textTheme.bodySmall),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingOption extends StatelessWidget {
+  const _SettingOption({
+    required this.label,
+    required this.isSelected,
+    required this.onSelect,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return PremiumTapScale(
+      onTap: onSelect,
+      semanticLabel: label,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accentViolet
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (isSelected)
+              AppSvgIcon(
+                assetPath: AppIcons.tickCircle,
+                size: 20,
+                color: AppColors.accentViolet,
+              ),
+          ],
+        ),
       ),
     );
   }

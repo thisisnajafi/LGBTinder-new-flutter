@@ -512,10 +512,12 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(height: AppSpacing.spacingXXL),
-          Icon(
-            Icons.verified_user,
-            size: 80,
-            color: AppColors.accentPurple,
+          Center(
+            child: AppSvgIcon(
+              assetPath: AppIcons.shieldTick,
+              size: 80,
+              color: AppColors.accentViolet,
+            ),
           ),
           SizedBox(height: AppSpacing.spacingXL),
           Text(
@@ -549,7 +551,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
             onPressed: _isVerifyingOtp ? null : _verifyOtp,
             isLoading: _isVerifyingOtp,
             isFullWidth: true,
-            icon: Icons.verified,
+            iconPath: AppIcons.shieldTick,
           ),
           SizedBox(height: AppSpacing.spacingLG),
           Row(
@@ -622,8 +624,11 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
                 color: secondaryTextColor,
               ),
               suffixIcon: IconButton(
-                icon: Icon(
-                  _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                icon: AppSvgIcon(
+                  assetPath: _isPasswordVisible
+                      ? AppIcons.eye
+                      : AppIcons.eyeSlash,
+                  size: 20,
                   color: secondaryTextColor,
                 ),
                 onPressed: () {
@@ -653,8 +658,11 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
                 color: secondaryTextColor,
               ),
               suffixIcon: IconButton(
-                icon: Icon(
-                  _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                icon: AppSvgIcon(
+                  assetPath: _isConfirmPasswordVisible
+                      ? AppIcons.eye
+                      : AppIcons.eyeSlash,
+                  size: 20,
                   color: secondaryTextColor,
                 ),
                 onPressed: () {

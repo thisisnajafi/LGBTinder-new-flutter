@@ -5,22 +5,18 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/empty_state.dart';
-import '../widgets/loading/skeleton_loader.dart';
-import '../core/constants/api_endpoints.dart';
 import '../features/payments/providers/payment_providers.dart';
-import '../shared/models/api_response.dart';
 
 /// Billing history screen - View payment transactions
 class BillingHistoryScreen extends ConsumerStatefulWidget {
-  const BillingHistoryScreen({Key? key}) : super(key: key);
+  const BillingHistoryScreen({super.key});
 
   @override
-  ConsumerState<BillingHistoryScreen> createState() => _BillingHistoryScreenState();
+  ConsumerState<BillingHistoryScreen> createState() =>
+      _BillingHistoryScreenState();
 }
 
 class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
@@ -39,7 +35,8 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
     });
 
     try {
-      final historyList = await ref.read(paymentServiceProvider).getPaymentHistory();
+      final historyList =
+          await ref.read(paymentServiceProvider).getPaymentHistory();
 
       setState(() {
         _transactions = historyList.map((item) {
@@ -50,12 +47,11 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
             'amount': item.amount,
             'currency': item.currency,
             'status': item.status,
-            'method': item.type, // Use type as method (subscription, superlike_pack, etc.)
+            'method': item.type,
           };
         }).toList();
       });
     } catch (e) {
-      // Handle error - keep empty list
       setState(() {
         _transactions = [];
       });
@@ -78,12 +74,12 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
     switch (status.toLowerCase()) {
       case 'completed':
       case 'succeeded':
-        return AppColors.onlineGreen;
+        return AppColors.feedbackSuccess;
       case 'pending':
-        return AppColors.warningYellow;
+        return AppColors.feedbackWarning;
       case 'failed':
       case 'cancelled':
-        return AppColors.notificationRed;
+        return AppColors.feedbackError;
       default:
         return AppColors.textSecondaryLight;
     }
@@ -92,89 +88,135 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: 'Billing History',
-      showBackButton: true,
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      subtitle: 'Your payment transactions',
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : _transactions.isEmpty
-              ? EmptyState(
+              ? const EmptyState(
                   title: 'No Transactions',
                   message: 'Your payment history will appear here.',
-                  icon: Icons.receipt_long,
+                  iconPath: AppIcons.receipt,
                 )
               : RefreshIndicator(
                   onRefresh: _loadBillingHistory,
                   child: ListView.builder(
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingLG,
+                      vertical: AppSpacing.spacingSM,
+                    ),
                     itemCount: _transactions.length,
                     itemBuilder: (context, index) {
                       final transaction = _transactions[index];
-                      return Container(
-                        margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                        padding: EdgeInsets.all(AppSpacing.spacingLG),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(color: borderColor),
+                      final statusColor =
+                          _getStatusColor(transaction['status'] as String);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: AppSpacing.spacingMD,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
+                        child: PremiumShell(
+                          margin: EdgeInsets.zero,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accentViolet
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.radiusMD,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: AppSvgIcon(
+                                        assetPath: AppIcons.receipt,
+                                        size: 20,
+                                        color: AppColors.accentViolet,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: AppSpacing.spacingMD,
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      transaction['description'] as String,
+                                      style: AppTypography.bodyLarge.copyWith(
+                                        color: textColor,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatCurrency(
+                                      transaction['amount'] as double,
+                                      transaction['currency'] as String,
+                                    ),
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      color: textColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.spacingSM),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatDate(
+                                      transaction['date'] as DateTime,
+                                    ),
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: secondaryTextColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    transaction['method'] as String,
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: secondaryTextColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.spacingSM),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.spacingSM,
+                                    vertical: AppSpacing.spacingXS,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.radiusSM,
+                                    ),
+                                  ),
                                   child: Text(
-                                    transaction['description'],
-                                    style: AppTypography.bodyLarge.copyWith(color: textColor, fontWeight: FontWeight.w600),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                    transaction['status'] as String,
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: statusColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  _formatCurrency(transaction['amount'], transaction['currency']),
-                                  style: AppTypography.bodyLarge.copyWith(color: textColor, fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: AppSpacing.spacingXS),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _formatDate(transaction['date']),
-                                  style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
-                                ),
-                                Text(
-                                  transaction['method'],
-                                  style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: AppSpacing.spacingXS),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM, vertical: AppSpacing.spacingXS),
-                                decoration: BoxDecoration(
-                                  color: _getStatusColor(transaction['status']).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                ),
-                                child: Text(
-                                  transaction['status'],
-                                  style: AppTypography.bodySmall.copyWith(color: _getStatusColor(transaction['status'])),
-                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },

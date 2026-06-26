@@ -8,6 +8,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/buttons/gradient_button.dart';
@@ -165,8 +166,8 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
           context,
           title: '2FA Disabled',
           message: 'Two-factor authentication has been disabled',
-          icon: Icons.info,
-          iconColor: AppColors.warningYellow,
+          iconPath: AppIcons.info,
+          iconColor: AppColors.feedbackWarning,
         );
       } catch (e) {
         setState(() {
@@ -203,7 +204,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
           context,
           title: '2FA Enabled',
           message: 'Two-factor authentication has been successfully enabled. Make sure to save your backup codes.',
-          icon: Icons.verified,
+          iconPath: AppIcons.shieldTick,
           iconColor: AppColors.onlineGreen,
         );
       } else {
@@ -298,7 +299,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                       text: 'Enable 2FA',
                       onPressed: _enable2FA,
                       isFullWidth: true,
-                      icon: Icons.security,
+                      iconPath: AppIcons.shield,
                     ),
                   ),
                 ] else ...[
@@ -319,8 +320,8 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                                 width: 200,
                                 height: 200,
                                 color: surfaceColor,
-                                child: Icon(
-                                  Icons.qr_code,
+                                child: AppSvgIcon(
+                                  assetPath: AppIcons.getIconPath('scan-barcode'),
                                   size: 100,
                                   color: secondaryTextColor,
                                 ),
@@ -347,8 +348,9 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                           decoration: InputDecoration(
                             labelText: 'Verification code',
                             hintText: '000000',
-                            prefixIcon: Icon(
-                              Icons.lock_clock,
+                            prefixIcon: AppSvgIcon(
+                              assetPath: AppIcons.timer,
+                              size: 20,
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
@@ -400,8 +402,8 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: Icon(
-                                    Icons.copy,
+                                  icon: AppSvgIcon(
+                                    assetPath: AppIcons.copy,
                                     size: 20,
                                     color: AppColors.accentViolet,
                                   ),

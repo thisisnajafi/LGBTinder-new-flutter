@@ -2,35 +2,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 
 /// Media picker settings screen - Manage media picker preferences
 class MediaPickerSettingsScreen extends ConsumerStatefulWidget {
-  const MediaPickerSettingsScreen({Key? key}) : super(key: key);
+  const MediaPickerSettingsScreen({super.key});
 
   @override
-  ConsumerState<MediaPickerSettingsScreen> createState() => _MediaPickerSettingsScreenState();
+  ConsumerState<MediaPickerSettingsScreen> createState() =>
+      _MediaPickerSettingsScreenState();
 }
 
-class _MediaPickerSettingsScreenState extends ConsumerState<MediaPickerSettingsScreen> {
-  // Source settings
+class _MediaPickerSettingsScreenState
+    extends ConsumerState<MediaPickerSettingsScreen> {
   bool _allowCamera = true;
   bool _allowGallery = true;
-  String _defaultSource = 'gallery'; // 'camera', 'gallery'
+  String _defaultSource = 'gallery';
 
-  // Media type settings
   bool _allowPhotos = true;
   bool _allowVideos = true;
   bool _allowMultiple = true;
   int _maxSelections = 10;
 
-  // Preview settings
   bool _showPreview = true;
   bool _enableCropping = true;
   bool _enableFilters = false;
@@ -47,7 +44,6 @@ class _MediaPickerSettingsScreenState extends ConsumerState<MediaPickerSettingsS
 
   Future<void> _saveSettings() async {
     try {
-      // TODO: Save settings via API or local storage
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,408 +59,286 @@ class _MediaPickerSettingsScreenState extends ConsumerState<MediaPickerSettingsS
     }
   }
 
+  void _setDefaultSource(String value) {
+    setState(() => _defaultSource = value);
+    _saveSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    return AppPageScaffold(
-      title: 'Media Picker',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Media picker',
+      subtitle: 'Sources, types, and preview options',
+      body: AppSettingsDetailList(
         children: [
-          // Source settings
-          SectionHeader(
-            title: 'Source Settings',
-            icon: Icons.photo_library,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Allow Camera',
-            subtitle: 'Enable camera as a media source',
-            value: _allowCamera,
-            onChanged: (value) {
-              setState(() {
-                _allowCamera = value;
-                if (!value && _defaultSource == 'camera') {
-                  _defaultSource = 'gallery';
-                }
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Allow Gallery',
-            subtitle: 'Enable gallery as a media source',
-            value: _allowGallery,
-            onChanged: (value) {
-              setState(() {
-                _allowGallery = value;
-                if (!value && _defaultSource == 'gallery') {
-                  _defaultSource = 'camera';
-                }
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSelectorTile(
-            title: 'Default Source',
-            subtitle: 'Default media source when opening picker',
-            value: _defaultSource,
-            options: [
-              if (_allowCamera) {'value': 'camera', 'label': 'Camera'},
-              if (_allowGallery) {'value': 'gallery', 'label': 'Gallery'},
-            ],
-            onChanged: (value) {
-              setState(() {
-                _defaultSource = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Media type settings
-          SectionHeader(
-            title: 'Media Types',
-            icon: Icons.perm_media,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Allow Photos',
-            subtitle: 'Enable photo selection',
-            value: _allowPhotos,
-            onChanged: (value) {
-              setState(() {
-                _allowPhotos = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Allow Videos',
-            subtitle: 'Enable video selection',
-            value: _allowVideos,
-            onChanged: (value) {
-              setState(() {
-                _allowVideos = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Multiple Selection',
-            subtitle: 'Allow selecting multiple media items',
-            value: _allowMultiple,
-            onChanged: (value) {
-              setState(() {
-                _allowMultiple = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_allowMultiple) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
+          PremiumSettingsGroup(
+            title: 'Source',
+            children: [
+              PremiumToggleRow(
+                title: 'Allow camera',
+                subtitle: 'Enable camera as a media source',
+                value: _allowCamera,
+                iconPath: AppIcons.camera,
+                onChanged: (value) {
+                  setState(() {
+                    _allowCamera = value;
+                    if (!value && _defaultSource == 'camera') {
+                      _defaultSource = 'gallery';
+                    }
+                  });
+                  _saveSettings();
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Max Selections',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '$_maxSelections',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+              PremiumToggleRow(
+                title: 'Allow gallery',
+                subtitle: 'Enable gallery as a media source',
+                value: _allowGallery,
+                iconPath: AppIcons.gallery,
+                onChanged: (value) {
+                  setState(() {
+                    _allowGallery = value;
+                    if (!value && _defaultSource == 'gallery') {
+                      _defaultSource = 'camera';
+                    }
+                  });
+                  _saveSettings();
+                },
+              ),
+              if (_allowCamera)
+                _SettingOption(
+                  label: 'Camera',
+                  isSelected: _defaultSource == 'camera',
+                  onSelect: () => _setDefaultSource('camera'),
+                ),
+              if (_allowGallery)
+                _SettingOption(
+                  label: 'Gallery',
+                  isSelected: _defaultSource == 'gallery',
+                  onSelect: () => _setDefaultSource('gallery'),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Media types',
+            children: [
+              PremiumToggleRow(
+                title: 'Allow photos',
+                subtitle: 'Enable photo selection',
+                value: _allowPhotos,
+                iconPath: AppIcons.image,
+                onChanged: (value) {
+                  setState(() => _allowPhotos = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Allow videos',
+                subtitle: 'Enable video selection',
+                value: _allowVideos,
+                iconPath: AppIcons.video,
+                onChanged: (value) {
+                  setState(() => _allowVideos = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Multiple selection',
+                subtitle: 'Allow selecting multiple media items',
+                value: _allowMultiple,
+                iconPath: AppIcons.galleryAdd,
+                onChanged: (value) {
+                  setState(() => _allowMultiple = value);
+                  _saveSettings();
+                },
+              ),
+              if (_allowMultiple)
+                _SliderCard(
+                  title: 'Max selections',
+                  valueLabel: '$_maxSelections',
+                  minLabel: '1',
+                  maxLabel: '20',
+                  slider: Slider(
                     value: _maxSelections.toDouble(),
                     min: 1,
                     max: 20,
                     divisions: 19,
                     label: '$_maxSelections',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _maxSelections = value.toInt();
-                      });
+                      setState(() => _maxSelections = value.toInt());
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '1',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        '20',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Preview settings
-          SectionHeader(
-            title: 'Preview & Editing',
-            icon: Icons.preview,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Show Preview',
-            subtitle: 'Show preview before confirming selection',
-            value: _showPreview,
-            onChanged: (value) {
-              setState(() {
-                _showPreview = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Enable Cropping',
-            subtitle: 'Allow cropping images before upload',
-            value: _enableCropping,
-            onChanged: (value) {
-              setState(() {
-                _enableCropping = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Enable Filters',
-            subtitle: 'Allow applying filters to images',
-            value: _enableFilters,
-            onChanged: (value) {
-              setState(() {
-                _enableFilters = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            ],
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Preview & editing',
+            children: [
+              PremiumToggleRow(
+                title: 'Show preview',
+                subtitle: 'Preview before confirming selection',
+                value: _showPreview,
+                iconPath: AppIcons.eye,
+                onChanged: (value) {
+                  setState(() => _showPreview = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Enable cropping',
+                subtitle: 'Allow cropping images before upload',
+                value: _enableCropping,
+                iconPath: AppIcons.galleryEdit,
+                onChanged: (value) {
+                  setState(() => _enableCropping = value);
+                  _saveSettings();
+                },
+              ),
+              PremiumToggleRow(
+                title: 'Enable filters',
+                subtitle: 'Allow applying filters to images',
+                value: _enableFilters,
+                iconPath: AppIcons.filter,
+                onChanged: (value) {
+                  setState(() => _enableFilters = value);
+                  _saveSettings();
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSelectorTile({
-    required String title,
-    String? subtitle,
-    required String value,
-    required List<Map<String, String>> options,
-    required Function(String) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+class _SliderCard extends StatelessWidget {
+  const _SliderCard({
+    required this.title,
+    required this.valueLabel,
+    required this.minLabel,
+    required this.maxLabel,
+    required this.slider,
+  });
+
+  final String title;
+  final String valueLabel;
+  final String minLabel;
+  final String maxLabel;
+  final Widget slider;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
+
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (subtitle != null) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingMD),
-          ...options.map((option) {
-            final isSelected = value == option['value'];
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-              child: GestureDetector(
-                onTap: () => onChanged(option['value']!),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : backgroundColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option['label']!,
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
-                          size: 20,
-                        ),
-                    ],
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            );
-          }),
+              Text(
+                valueLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentViolet,
+                ),
+              ),
+            ],
+          ),
+          slider,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(minLabel, style: theme.textTheme.bodySmall),
+              Text(maxLabel, style: theme.textTheme.bodySmall),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingOption extends StatelessWidget {
+  const _SettingOption({
+    required this.label,
+    required this.isSelected,
+    required this.onSelect,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return PremiumTapScale(
+      onTap: onSelect,
+      semanticLabel: label,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accentViolet
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (isSelected)
+              AppSvgIcon(
+                assetPath: AppIcons.tickCircle,
+                size: 20,
+                color: AppColors.accentViolet,
+              ),
+          ],
+        ),
       ),
     );
   }

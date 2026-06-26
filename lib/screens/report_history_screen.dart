@@ -2,23 +2,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
 
 /// Report history screen - View report history
 class ReportHistoryScreen extends ConsumerStatefulWidget {
-  const ReportHistoryScreen({Key? key}) : super(key: key);
+  const ReportHistoryScreen({super.key});
 
   @override
-  ConsumerState<ReportHistoryScreen> createState() => _ReportHistoryScreenState();
+  ConsumerState<ReportHistoryScreen> createState() =>
+      _ReportHistoryScreenState();
 }
 
 class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
@@ -80,11 +79,11 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
       case 'resolved':
         return AppColors.onlineGreen;
       case 'under review':
-        return AppColors.warningYellow;
+        return AppColors.feedbackWarning;
       case 'dismissed':
         return AppColors.textSecondaryDark;
       default:
-        return AppColors.accentPurple;
+        return AppColors.accentViolet;
     }
   }
 
@@ -104,109 +103,146 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    return AppPageScaffold(
-      title: 'Report History',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Report history',
+      subtitle: 'Reports you have submitted',
+      action: IconButton(
+        icon: AppSvgIcon(
+          assetPath: AppIcons.getIconPath('refresh'),
+          size: 22,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        onPressed: _loadReports,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _reports.isEmpty
-              ? EmptyState(
-                  title: 'No Reports',
+              ? const EmptyState(
+                  title: 'No reports',
                   message: 'You haven\'t reported any users yet',
-                  icon: Icons.report,
+                  iconPath: AppIcons.report,
                 )
-              : ListView.builder(
-                  padding: EdgeInsets.all(AppSpacing.spacingLG),
-                  itemCount: _reports.length,
-                  itemBuilder: (context, index) {
-                    final report = _reports[index];
-                    final statusColor = _getStatusColor(report['status']);
-                    return Container(
-                      margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                      padding: EdgeInsets.all(AppSpacing.spacingLG),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      report['user_name'],
-                                      style: AppTypography.h3.copyWith(
-                                        color: textColor,
-                                      ),
-                                    ),
-                                    SizedBox(height: AppSpacing.spacingXS),
-                                    Text(
-                                      report['reason'],
-                                      style: AppTypography.body.copyWith(
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.spacingSM,
-                                  vertical: AppSpacing.spacingXS,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                ),
-                                child: Text(
-                                  report['status'],
-                                  style: AppTypography.caption.copyWith(
-                                    color: statusColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
+              : AppSettingsDetailList(
+                  children: [
+                    PremiumSettingsGroup(
+                      title: 'Your reports',
+                      subtitle: '${_reports.length} ${_reports.length == 1 ? 'report' : 'reports'}',
+                      children: [
+                        for (final report in _reports)
+                          _ReportRow(
+                            userName: report['user_name'] as String,
+                            reason: report['reason'] as String,
+                            status: report['status'] as String,
+                            statusColor: _getStatusColor(report['status'] as String),
+                            reportedLabel:
+                                'Reported ${_formatTime(report['reported_at'] as DateTime)}',
                           ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          DividerCustom(),
-                          SizedBox(height: AppSpacing.spacingSM),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 16,
-                                color: secondaryTextColor,
-                              ),
-                              SizedBox(width: AppSpacing.spacingXS),
-                              Text(
-                                'Reported ${_formatTime(report['reported_at'])}',
-                                style: AppTypography.caption.copyWith(
-                                  color: secondaryTextColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                      ],
+                    ),
+                  ],
                 ),
+    );
+  }
+}
+
+class _ReportRow extends StatelessWidget {
+  const _ReportRow({
+    required this.userName,
+    required this.reason,
+    required this.status,
+    required this.statusColor,
+    required this.reportedLabel,
+  });
+
+  final String userName;
+  final String reason;
+  final String status;
+  final Color statusColor;
+  final String reportedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      reason,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spacingSM,
+                  vertical: AppSpacing.spacingXS,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  status,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: statusColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingSM),
+          Row(
+            children: [
+              AppSvgIcon(
+                assetPath: AppIcons.clock,
+                size: 14,
+                color: secondaryTextColor,
+              ),
+              const SizedBox(width: AppSpacing.spacingXS),
+              Text(
+                reportedLabel,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

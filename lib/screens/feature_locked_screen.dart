@@ -6,12 +6,12 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../routes/app_router.dart';
 import '../shared/models/user_tier.dart';
 import '../shared/analytics/app_event_tracker.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
 
 class FeatureLockedScreen extends StatelessWidget {
   final String featureTitle;
@@ -19,16 +19,18 @@ class FeatureLockedScreen extends StatelessWidget {
   final UserTier minTier;
 
   const FeatureLockedScreen({
-    Key? key,
+    super.key,
     required this.featureTitle,
     required this.minTier,
     this.featureDescription,
-  }) : super(key: key);
+  });
 
   static UserTier _parseTier(String? value) {
     final v = (value ?? '').toLowerCase().trim();
     if (v == 'golden' || v == 'gold') return UserTier.golden;
-    if (v == 'silder' || v == 'silver' || v == 'premium') return UserTier.silder;
+    if (v == 'silder' || v == 'silver' || v == 'premium') {
+      return UserTier.silder;
+    }
     return UserTier.basid;
   }
 
@@ -47,10 +49,9 @@ class FeatureLockedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     final tierLabel = switch (minTier) {
       UserTier.basid => 'Basid',
@@ -70,179 +71,200 @@ class FeatureLockedScreen extends StatelessWidget {
             },
           );
         });
-        return AppPageScaffold(
-      title: 'Upgrade required',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.spacingLG),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                padding: EdgeInsets.all(AppSpacing.spacingLG),
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                  border: Border.all(
-                    color: AppColors.accentPurple.withOpacity(isDark ? 0.35 : 0.25),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.accentPurple, AppColors.accentPink],
+
+        return PremiumDetailScaffold(
+          title: 'Upgrade required',
+          subtitle: 'Unlock premium features',
+          onBack: () => context.pop(),
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PremiumShell(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.brandGradient,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.radiusMD),
                             ),
-                            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          ),
-                          child: const Icon(
-                            Icons.workspace_premium_rounded,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.spacingMD),
-                        Expanded(
-                          child: Text(
-                            featureTitle,
-                            style: AppTypography.h2.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w800,
+                            child: Center(
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.crown,
+                                size: 24,
+                                color: Colors.white,
+                              ),
                             ),
+                          ),
+                          const SizedBox(width: AppSpacing.spacingMD),
+                          Expanded(
+                            child: Text(
+                              featureTitle,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (featureDescription != null) ...[
+                        const SizedBox(height: AppSpacing.spacingMD),
+                        Text(
+                          featureDescription!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: secondaryTextColor,
+                            height: 1.5,
                           ),
                         ),
                       ],
-                    ),
-                    if (featureDescription != null) ...[
-                      SizedBox(height: AppSpacing.spacingMD),
-                      Text(
-                        featureDescription!,
-                        style: AppTypography.body.copyWith(
-                          color: secondaryTextColor,
-                          height: 1.5,
+                      const SizedBox(height: AppSpacing.spacingMD),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingMD,
+                          vertical: AppSpacing.spacingSM,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentViolet.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          'Required tier: $tierLabel',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: AppColors.accentViolet,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingMD,
-                        vertical: AppSpacing.spacingSM,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentPurple.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                      ),
-                      child: Text(
-                        'Required tier: $tierLabel',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.spacingXL),
+                PremiumSettingsGroup(
+                  title: 'Upgrade to unlock',
+                  children: const [
+                    _BenefitRow(text: 'See who liked you'),
+                    _BenefitRow(text: 'Advanced filters'),
+                    _BenefitRow(text: 'Boosts and superlikes'),
+                    _BenefitRow(text: 'More control + better matches'),
                   ],
                 ),
-              ),
-              SizedBox(height: AppSpacing.spacingXL),
-              Text(
-                'Upgrade to unlock:',
-                style: AppTypography.h3.copyWith(color: textColor),
-              ),
-              SizedBox(height: AppSpacing.spacingMD),
-              _Bullet(text: 'See who liked you'),
-              _Bullet(text: 'Advanced filters'),
-              _Bullet(text: 'Boosts and superlikes'),
-              _Bullet(text: 'More control + better matches'),
-              const Spacer(),
-              GradientButton(
-                text: 'View plans',
-                onPressed: () {
-                  ref.read(appEventTrackerProvider).track(
-                    'paywall_cta',
-                    meta: {'cta': 'view_plans', 'feature': featureTitle, 'min_tier': minTier.key},
-                  );
-                  context.push(AppRoutes.subscriptionPlans);
-                },
-                isFullWidth: true,
-              ),
-              SizedBox(height: AppSpacing.spacingMD),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
+              ],
+            ),
+          ),
+          bottomNavigationBar: SafeArea(
+            minimum: const EdgeInsets.fromLTRB(
+              AppSpacing.spacingLG,
+              AppSpacing.spacingSM,
+              AppSpacing.spacingLG,
+              AppSpacing.spacingLG,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                GradientButton(
+                  text: 'View plans',
+                  iconPath: AppIcons.crown,
+                  onPressed: () {
+                    ref.read(appEventTrackerProvider).track(
+                      'paywall_cta',
+                      meta: {
+                        'cta': 'view_plans',
+                        'feature': featureTitle,
+                        'min_tier': minTier.key,
+                      },
+                    );
+                    context.push(AppRoutes.subscriptionPlans);
+                  },
+                  isFullWidth: true,
+                ),
+                const SizedBox(height: AppSpacing.spacingMD),
+                OutlinedButton(
                   onPressed: () => context.push(AppRoutes.tierComparison),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.accentPurple,
-                    side: BorderSide(color: AppColors.accentPurple.withOpacity(0.65)),
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
+                    foregroundColor: AppColors.accentViolet,
+                    side: BorderSide(
+                      color: AppColors.accentViolet.withValues(
+                        alpha: isDark ? 0.45 : 0.35,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.spacingMD,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                     ),
                   ),
                   child: Text(
                     'Compare tiers',
-                    style: AppTypography.button.copyWith(fontWeight: FontWeight.w700),
+                    style: AppTypography.button.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: AppSpacing.spacingSM),
-              TextButton(
-                onPressed: () {
-                  ref.read(appEventTrackerProvider).track(
-                    'paywall_dismiss',
-                    meta: {'feature': featureTitle, 'min_tier': minTier.key},
-                  );
-                  context.pop();
-                },
-                child: Text(
-                  'Not now',
-                  style: AppTypography.button.copyWith(
-                    color: secondaryTextColor,
-                    fontWeight: FontWeight.w600,
+                TextButton(
+                  onPressed: () {
+                    ref.read(appEventTrackerProvider).track(
+                      'paywall_dismiss',
+                      meta: {
+                        'feature': featureTitle,
+                        'min_tier': minTier.key,
+                      },
+                    );
+                    context.pop();
+                  },
+                  child: Text(
+                    'Not now',
+                    style: AppTypography.button.copyWith(
+                      color: secondaryTextColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
-    );
+        );
       },
     );
   }
 }
 
-class _Bullet extends StatelessWidget {
-  final String text;
+class _BenefitRow extends StatelessWidget {
+  const _BenefitRow({required this.text});
 
-  const _Bullet({required this.text});
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.only(top: 3),
-            child: Icon(Icons.check_circle_rounded, size: 18, color: AppColors.onlineGreen),
+            padding: EdgeInsets.only(top: 2),
+            child: AppSvgIcon(
+              assetPath: AppIcons.tickCircle,
+              size: 18,
+              color: AppColors.onlineGreen,
+            ),
           ),
-          SizedBox(width: AppSpacing.spacingSM),
+          const SizedBox(width: AppSpacing.spacingSM),
           Expanded(
             child: Text(
               text,
-              style: AppTypography.body.copyWith(color: textColor, height: 1.35),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.35,
+                  ),
             ),
           ),
         ],
@@ -250,4 +272,3 @@ class _Bullet extends StatelessWidget {
     );
   }
 }
-

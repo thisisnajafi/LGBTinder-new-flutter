@@ -129,6 +129,8 @@ const Set<String> _publicRoutes = {
   AppRoutes.forgotPassword,
   AppRoutes.emailVerification,
   AppRoutes.onboarding,
+  AppRoutes.termsOfService,
+  AppRoutes.privacyPolicy,
 };
 
 const Set<String> _authEntryRoutes = {

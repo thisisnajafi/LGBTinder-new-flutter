@@ -423,7 +423,7 @@ Use these as templates when refactoring:
 - `core/widgets/app_grouped_list_card.dart` — settings lists
 - `widgets/buttons/gradient_button.dart` — CTA with `AppAnimations`, `AppColors`, SVG
 - `widgets/discovery/filter_widgets.dart` — heavy `AppColors` + `AppSpacing` usage
-- `screens/auth/login_screen.dart` — `AuthPageScaffold` + tokens (icons still need SVG migration)
+- `screens/auth/login_screen.dart` — `AuthPageScaffold` + `AuthTextField` + SVG icons
 - `features/discover/widgets/discover_empty_state.dart` — empty state pattern
 - `core/widgets/connectivity_banner.dart` — banner pattern with `AppSvgIcon`
 
@@ -522,6 +522,27 @@ if (AppAnimations.animationsEnabled(context)) { /* animate */ }
 | 25a | Settings — call settings scaffold | ✅ Done | `screens/settings/call_settings_screen.dart` — `AppSettingsDetailScaffold` + `PremiumToggleRow` |
 | 25b | Settings — payment settings scaffold | ✅ Done | `screens/payment_settings_screen.dart` — premium groups, toggles, status rows, SVG |
 | 25c | Settings — haptic feedback scaffold | ✅ Done | `screens/haptic_feedback_settings_screen.dart` — `PremiumToggleRow` + intensity picker |
+| 25d | Settings — animation settings scaffold | ✅ Done | `screens/animation_settings_screen.dart` — premium toggles, speed/curve pickers |
+| 25e | Settings — pull to refresh scaffold | ✅ Done | `screens/pull_to_refresh_settings_screen.dart` — premium groups + SVG |
+| 25f | Settings — skeleton loader scaffold | ✅ Done | `screens/skeleton_loader_settings_screen.dart` — premium toggles + slider cards |
+| 25g | Settings — media picker scaffold | ✅ Done | `screens/media_picker_settings_screen.dart` — premium groups + SVG |
+| 25h | Settings — image compression scaffold | ✅ Done | `screens/image_compression_settings_screen.dart` — quality/format pickers |
+| 25i | Settings — accessibility scaffold | ✅ Done | `screens/accessibility_settings_screen.dart` — text/motion/touch/audio groups |
+| 25j | Settings — rainbow theme scaffold | ✅ Done | `screens/rainbow_theme_settings_screen.dart` — pride colors from `AppColors.lgbtGradient` |
+| 25k | Settings — group notifications scaffold | ✅ Done | `screens/group_notification_settings_screen.dart` — global/group/DND premium groups |
+| 25l | Safety — report history scaffold | ✅ Done | `screens/report_history_screen.dart` — premium list rows + SVG |
+| 25m | Calls — call history scaffold | ✅ Done | `screens/call_history_screen.dart` — premium call rows + SVG |
+| 24d | 2FA screen icons | ✅ Done | `screens/two_factor_auth_screen.dart` — remaining `Icons.*` → SVG |
+| 24e | Email verification icons | ✅ Done | `screens/auth/email_verification_screen.dart` — SVG icons on premium auth shell |
+| 25n | Paywall — feature locked scaffold | ✅ Done | `screens/feature_locked_screen.dart` — `PremiumDetailScaffold` + `PremiumShell` |
+| 25o | Auth — banned account scaffold | ✅ Done | `screens/banned_account_screen.dart` — `PremiumDetailScaffold` + premium CTA |
+| 25p | Payments — tier comparison scaffold | ✅ Done | `screens/tier_comparison_screen.dart` — `PremiumDetailScaffold` + `PremiumShell` tier cards |
+| 24f | Auth — register screen icons | ✅ Done | `screens/auth/register_screen.dart` — form field SVG icons |
+| 24g | Auth — password reset icons | ✅ Done | `screens/auth/password_reset_flow_screen.dart` — remaining `Icons.*` → SVG |
+| 25q | Chat — message search scaffold | ✅ Done | `screens/message_search_screen.dart` — `PremiumDetailScaffold` + premium search bar |
+| 25r | Community — forum scaffold | ✅ Done | `screens/community_forum_screen.dart` — `PremiumDetailScaffold` + `PremiumCategoryChips` + SVG |
+| 25s | Payments — billing history scaffold | ✅ Done | `screens/billing_history_screen.dart` — `PremiumDetailScaffold` + `PremiumShell` transaction rows |
+| 25t | Auth — login/register polish | ✅ Done | `AuthTextField` + `AuthVisibilityToggle`; Google button contrast; email→`sms` icon; terms/privacy links; removed duplicate headers |
 
 ---
 

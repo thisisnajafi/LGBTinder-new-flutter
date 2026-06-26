@@ -5,11 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:email_validator/email_validator.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
 import '../../core/widgets/auth_page_scaffold.dart';
-import '../../core/navigation/auth_navigation.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/providers/auth_provider.dart';
@@ -296,11 +293,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return AuthPageScaffold(
       title: 'Sign In',
@@ -312,54 +308,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AuthFormHeader(
-                  title: 'Welcome Back',
-                  subtitle: 'Sign in to continue',
-                ),
-                SizedBox(height: AppSpacing.spacingXXL),
-                // Email field
-                TextFormField(
+                AuthTextField(
                   controller: _emailController,
+                  labelText: 'Email',
+                  hintText: 'Enter your email',
                   keyboardType: TextInputType.emailAddress,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter your email',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: AppSpacing.spacingMD,
-                      horizontal: AppSpacing.spacingLG,
-                    ),
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: AppSvgIcon(
-                        assetPath: AppIcons.email,
-                        size: 20,
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                  ),
+                  prefixIconPath: AppIcons.email,
+                  autocorrect: false,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -371,65 +326,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   },
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
-                // Password field
-                TextFormField(
+                AuthTextField(
                   controller: _passwordController,
+                  labelText: 'Password',
+                  hintText: 'Enter your password',
                   obscureText: _obscurePassword,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter your password',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: AppSpacing.spacingMD,
-                      horizontal: AppSpacing.spacingLG,
-                    ),
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: AppSvgIcon(
-                        assetPath: AppIcons.lockOutlined,
-                        size: 20,
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                    suffixIcon: IconButton(
-                      padding: const EdgeInsets.all(12.0),
-                      constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
-                      ),
-                      icon: AppSvgIcon(
-                        assetPath: _obscurePassword ? AppIcons.visibility : AppIcons.visibilityOff,
-                        size: 20,
-                        color: secondaryTextColor,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
+                  prefixIconPath: AppIcons.lockOutlined,
+                  suffixIcon: AuthVisibilityToggle(
+                    obscure: _obscurePassword,
+                    onToggle: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -459,7 +368,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         Text(
                           'Remember me',
-                          style: AppTypography.body.copyWith(color: textColor),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: textColor,
+                          ),
                         ),
                       ],
                     ),
@@ -469,8 +380,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       },
                       child: Text(
                         'Forgot Password?',
-                        style: AppTypography.button.copyWith(
-                          color: AppColors.accentPurple,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppColors.accentViolet,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -497,7 +409,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Text(
                       'Don\'t have an account? ',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: secondaryTextColor,
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
@@ -505,8 +419,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       },
                       child: Text(
                         'Sign Up',
-                        style: AppTypography.button.copyWith(
-                          color: AppColors.accentPurple,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppColors.accentViolet,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

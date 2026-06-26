@@ -2,13 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/avatar/avatar_with_status.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
@@ -18,7 +16,7 @@ import '../features/calls/data/models/call.dart';
 
 /// Call history screen - View call history
 class CallHistoryScreen extends ConsumerStatefulWidget {
-  const CallHistoryScreen({Key? key}) : super(key: key);
+  const CallHistoryScreen({super.key});
 
   @override
   ConsumerState<CallHistoryScreen> createState() => _CallHistoryScreenState();
@@ -54,11 +52,11 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
     }
   }
 
-  String _formatDuration(int seconds) {
-    if (seconds == 0) return 'Missed';
-    final minutes = seconds ~/ 60;
-    final secs = seconds % 60;
-    return '${minutes}:${secs.toString().padLeft(2, '0')}';
+  String _formatDuration(Call call) {
+    if (call.isMissed || call.duration == null || call.duration!.inSeconds == 0) {
+      return 'Missed';
+    }
+    return call.formattedDuration;
   }
 
   String _formatTime(DateTime time) {
@@ -77,135 +75,181 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    return AppPageScaffold(
-      title: 'Call History',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+    return AppSettingsDetailScaffold(
+      title: 'Call history',
+      subtitle: 'Recent voice and video calls',
+      action: IconButton(
+        icon: AppSvgIcon(
+          assetPath: AppIcons.getIconPath('refresh'),
+          size: 22,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        onPressed: _loadCallHistory,
+      ),
       body: _isLoading
           ? ListView.builder(
               itemCount: 5,
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: const EdgeInsets.all(AppSpacing.spacingLG),
               itemBuilder: (context, index) {
                 return Container(
-                  margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
                   child: SkeletonLoader(
                     width: double.infinity,
                     height: 80,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
                   ),
                 );
               },
             )
           : _calls.isEmpty
-              ? EmptyState(
-                  title: 'No Call History',
+              ? const EmptyState(
+                  title: 'No call history',
                   message: 'Your call history will appear here',
-                  icon: Icons.call,
+                  iconPath: AppIcons.call,
                 )
-              : ListView.builder(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
-                  itemCount: _calls.length,
-                  itemBuilder: (context, index) {
-                    final call = _calls[index];
-                    return _buildCallItem(
-                      call: call,
-                      textColor: textColor,
-                      secondaryTextColor: secondaryTextColor,
-                      surfaceColor: surfaceColor,
-                      borderColor: borderColor,
-                    );
-                  },
+              : AppSettingsDetailList(
+                  children: [
+                    PremiumSettingsGroup(
+                      title: 'Recent calls',
+                      subtitle:
+                          '${_calls.length} ${_calls.length == 1 ? 'call' : 'calls'}',
+                      children: [
+                        for (final call in _calls)
+                          _CallHistoryRow(
+                            call: call,
+                            formatDuration: _formatDuration,
+                            formatTime: _formatTime,
+                            onOpenChat: () {
+                              final isOutgoing = call.callerId == 0;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatPage(
+                                    userId: isOutgoing
+                                        ? call.receiverId
+                                        : call.callerId,
+                                  ),
+                                ),
+                              );
+                            },
+                            onCallAgain: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Call initiation will be implemented',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
     );
   }
+}
 
-  Widget _buildCallItem({
-    required Call call,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+class _CallHistoryRow extends StatelessWidget {
+  const _CallHistoryRow({
+    required this.call,
+    required this.formatDuration,
+    required this.formatTime,
+    required this.onOpenChat,
+    required this.onCallAgain,
+  });
+
+  final Call call;
+  final String Function(Call) formatDuration;
+  final String Function(DateTime) formatTime;
+  final VoidCallback onOpenChat;
+  final VoidCallback onCallAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
     final isMissed = call.status == 'missed';
-    final isOutgoing = call.callerId == 0; // Assuming current user has ID 0 for demo, need to get from auth
-    final callType = call.isVideoCall ? Icons.videocam : Icons.call;
+    final isOutgoing = call.callerId == 0;
+    final callIcon =
+        call.isVideoCall ? AppIcons.video : AppIcons.call;
+    final directionIcon = isOutgoing
+        ? AppIcons.callOutgoing
+        : AppIcons.callIncoming;
     final iconColor = isMissed
-        ? AppColors.notificationRed
-        : (isOutgoing ? AppColors.onlineGreen : AppColors.accentPurple);
+        ? AppColors.feedbackError
+        : (isOutgoing ? AppColors.onlineGreen : AppColors.accentViolet);
+    final displayName = isOutgoing
+        ? '${call.receiver?.firstName ?? 'Unknown'} ${call.receiver?.lastName ?? 'User'}'
+        : '${call.caller?.firstName ?? 'Unknown'} ${call.caller?.lastName ?? 'User'}';
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatPage(userId: isOutgoing ? call.receiverId : call.callerId),
-          ),
-        );
-      },
+    return PremiumTapScale(
+      onTap: onOpenChat,
+      semanticLabel: 'Open chat with $displayName',
       child: Container(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.all(AppSpacing.spacingMD),
         decoration: BoxDecoration(
-          color: surfaceColor,
-          border: Border(
-            bottom: BorderSide(color: borderColor, width: 1),
+          color: isDark
+              ? AppColors.cardBackgroundDark
+              : AppColors.cardBackgroundLight,
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
           ),
         ),
         child: Row(
           children: [
             AvatarWithStatus(
-              imageUrl: isOutgoing ? call.receiver?.avatarUrl : call.caller?.avatarUrl,
-              name: isOutgoing
-                  ? '${call.receiver?.firstName ?? 'Unknown'} ${call.receiver?.lastName ?? 'User'}'
-                  : '${call.caller?.firstName ?? 'Unknown'} ${call.caller?.lastName ?? 'User'}',
+              imageUrl: isOutgoing
+                  ? call.receiver?.avatarUrl
+                  : call.caller?.avatarUrl,
+              name: displayName,
               isOnline: false,
-              size: 56.0,
+              size: 52,
             ),
-            SizedBox(width: AppSpacing.spacingMD),
+            const SizedBox(width: AppSpacing.spacingMD),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        isOutgoing ? Icons.call_made : Icons.call_received,
-                        size: 16,
+                      AppSvgIcon(
+                        assetPath: directionIcon,
+                        size: 14,
                         color: iconColor,
                       ),
-                      SizedBox(width: AppSpacing.spacingXS),
+                      const SizedBox(width: AppSpacing.spacingXS),
                       Expanded(
                         child: Text(
-                          isOutgoing
-                              ? '${call.receiver?.firstName ?? 'Unknown'} ${call.receiver?.lastName ?? 'User'}'
-                              : '${call.caller?.firstName ?? 'Unknown'} ${call.caller?.lastName ?? 'User'}',
-                          style: AppTypography.h3.copyWith(
-                            color: isMissed ? AppColors.notificationRed : textColor,
-                            fontWeight: FontWeight.w600,
+                          displayName,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: isMissed
+                                ? AppColors.feedbackError
+                                : theme.colorScheme.onSurface,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: AppSpacing.spacingXS),
+                  const SizedBox(height: AppSpacing.spacingXS),
                   Row(
                     children: [
-                      Icon(
-                        callType,
+                      AppSvgIcon(
+                        assetPath: callIcon,
                         size: 14,
                         color: secondaryTextColor,
                       ),
-                      SizedBox(width: AppSpacing.spacingXS),
+                      const SizedBox(width: AppSpacing.spacingXS),
                       Text(
-                        _formatDuration(call.duration ?? 0),
-                        style: AppTypography.caption.copyWith(
+                        formatDuration(call),
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: secondaryTextColor,
                         ),
                       ),
@@ -218,25 +262,18 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formatTime(call.startedAt ?? DateTime.now()),
-                  style: AppTypography.caption.copyWith(
+                  formatTime(call.startedAt),
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: secondaryTextColor,
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingXS),
                 IconButton(
-                  icon: Icon(
-                    callType,
-                    color: AppColors.accentPurple,
+                  icon: AppSvgIcon(
+                    assetPath: callIcon,
+                    size: 22,
+                    color: AppColors.accentViolet,
                   ),
-                  onPressed: () {
-                    // Initiate call - implementation needed
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Call initiation will be implemented'),
-                      ),
-                    );
-                  },
+                  onPressed: onCallAgain,
                 ),
               ],
             ),

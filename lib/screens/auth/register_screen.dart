@@ -1,13 +1,12 @@
 // Screen: RegisterScreen
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:email_validator/email_validator.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_icons.dart';
 import '../../core/widgets/auth_page_scaffold.dart';
-import '../../core/navigation/auth_navigation.dart';
 import '../../features/auth/presentation/widgets/social_login_button.dart';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -38,9 +37,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _agreeToTerms = false;
+  late final TapGestureRecognizer _termsTap;
+  late final TapGestureRecognizer _privacyTap;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsTap = TapGestureRecognizer();
+    _privacyTap = TapGestureRecognizer();
+  }
 
   @override
   void dispose() {
+    _termsTap.dispose();
+    _privacyTap.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -146,11 +156,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final linkStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: AppColors.accentViolet,
+      decoration: TextDecoration.underline,
+    );
+
+    _termsTap.onTap = () => context.push(AppRoutes.termsOfService);
+    _privacyTap.onTap = () => context.push(AppRoutes.privacyPolicy);
 
     return AuthPageScaffold(
       title: 'Create Account',
@@ -162,41 +178,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AuthFormHeader(
-                  title: 'Join LGBTFinder',
-                  subtitle: 'Create your account to get started',
-                ),
-                SizedBox(height: AppSpacing.spacingXXL),
-                // First Name field
-                TextFormField(
+                AuthTextField(
                   controller: _firstNameController,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'First Name',
-                    hintText: 'Enter your first name',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.person_outline,
-                      color: secondaryTextColor,
-                    ),
-                  ),
+                  labelText: 'First Name',
+                  hintText: 'Enter your first name',
+                  prefixIconPath: AppIcons.user,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your first name';
@@ -208,36 +194,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
-                // Last Name field
-                TextFormField(
+                AuthTextField(
                   controller: _lastNameController,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Last Name',
-                    hintText: 'Enter your last name',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.person_outline,
-                      color: secondaryTextColor,
-                    ),
-                  ),
+                  labelText: 'Last Name',
+                  hintText: 'Enter your last name',
+                  prefixIconPath: AppIcons.user,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your last name';
@@ -249,37 +210,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
-                // Email field
-                TextFormField(
+                AuthTextField(
                   controller: _emailController,
+                  labelText: 'Email',
+                  hintText: 'Enter your email',
                   keyboardType: TextInputType.emailAddress,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'Enter your email',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.email_outlined,
-                      color: secondaryTextColor,
-                    ),
-                  ),
+                  prefixIconPath: AppIcons.emailOutlined,
+                  autocorrect: false,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -291,47 +228,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
-                // Password field
-                TextFormField(
+                AuthTextField(
                   controller: _passwordController,
+                  labelText: 'Password',
+                  hintText: 'Enter your password',
                   obscureText: _obscurePassword,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter your password',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.lock_outlined,
-                      color: secondaryTextColor,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: secondaryTextColor,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
+                  prefixIconPath: AppIcons.lockOutlined,
+                  suffixIcon: AuthVisibilityToggle(
+                    obscure: _obscurePassword,
+                    onToggle: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -344,47 +253,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
-                // Confirm password field
-                TextFormField(
+                AuthTextField(
                   controller: _confirmPasswordController,
+                  labelText: 'Confirm Password',
+                  hintText: 'Confirm your password',
                   obscureText: _obscureConfirmPassword,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    hintText: 'Confirm your password',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.lock_outlined,
-                      color: secondaryTextColor,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: secondaryTextColor,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
+                  prefixIconPath: AppIcons.lockOutlined,
+                  suffixIcon: AuthVisibilityToggle(
+                    obscure: _obscureConfirmPassword,
+                    onToggle: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -416,22 +297,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         child: Text.rich(
                           TextSpan(
                             text: 'I agree to the ',
-                            style: AppTypography.body.copyWith(color: textColor),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: textColor,
+                            ),
                             children: [
                               TextSpan(
                                 text: 'Terms of Service',
-                                style: AppTypography.body.copyWith(
-                                  color: AppColors.accentPurple,
-                                  decoration: TextDecoration.underline,
+                                style: linkStyle,
+                                recognizer: _termsTap,
+                              ),
+                              TextSpan(
+                                text: ' and ',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: textColor,
                                 ),
                               ),
-                              TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: AppTypography.body.copyWith(
-                                  color: AppColors.accentPurple,
-                                  decoration: TextDecoration.underline,
-                                ),
+                                style: linkStyle,
+                                recognizer: _privacyTap,
                               ),
                             ],
                           ),
@@ -459,7 +343,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: AppTypography.body.copyWith(color: secondaryTextColor),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: secondaryTextColor,
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
@@ -467,8 +353,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       },
                       child: Text(
                         'Sign In',
-                        style: AppTypography.button.copyWith(
-                          color: AppColors.accentPurple,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppColors.accentViolet,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

@@ -2,38 +2,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 
 /// Rainbow theme settings screen - Customize rainbow theme
 class RainbowThemeSettingsScreen extends ConsumerStatefulWidget {
-  const RainbowThemeSettingsScreen({Key? key}) : super(key: key);
+  const RainbowThemeSettingsScreen({super.key});
 
   @override
-  ConsumerState<RainbowThemeSettingsScreen> createState() => _RainbowThemeSettingsScreenState();
+  ConsumerState<RainbowThemeSettingsScreen> createState() =>
+      _RainbowThemeSettingsScreenState();
 }
 
-class _RainbowThemeSettingsScreenState extends ConsumerState<RainbowThemeSettingsScreen> {
-  // Theme settings
+class _RainbowThemeSettingsScreenState
+    extends ConsumerState<RainbowThemeSettingsScreen> {
   bool _rainbowThemeEnabled = false;
-  String _rainbowStyle = 'gradient'; // 'gradient', 'solid', 'animated'
-  double _rainbowIntensity = 0.5; // 0.0 to 1.0
-  double _animationSpeed = 1.0; // 0.5 to 2.0
+  String _rainbowStyle = 'gradient';
+  double _rainbowIntensity = 0.5;
+  double _animationSpeed = 1.0;
 
-  // Color settings
-  List<bool> _enabledColors = [true, true, true, true, true, true]; // Red, Orange, Yellow, Green, Blue, Purple
-  final List<Map<String, dynamic>> _rainbowColors = [
-    {'name': 'Red', 'color': Colors.red, 'index': 0},
-    {'name': 'Orange', 'color': Colors.orange, 'index': 1},
-    {'name': 'Yellow', 'color': Colors.yellow, 'index': 2},
-    {'name': 'Green', 'color': Colors.green, 'index': 3},
-    {'name': 'Blue', 'color': Colors.blue, 'index': 4},
-    {'name': 'Purple', 'color': Colors.purple, 'index': 5},
+  final List<bool> _enabledColors = [true, true, true, true, true, true];
+  static const _colorNames = [
+    'Red',
+    'Orange',
+    'Yellow',
+    'Green',
+    'Blue',
+    'Purple',
   ];
 
   @override
@@ -48,7 +46,6 @@ class _RainbowThemeSettingsScreenState extends ConsumerState<RainbowThemeSetting
 
   Future<void> _saveSettings() async {
     try {
-      // TODO: Save settings via API or local storage
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,413 +61,297 @@ class _RainbowThemeSettingsScreenState extends ConsumerState<RainbowThemeSetting
     }
   }
 
+  void _setStyle(String value) {
+    setState(() => _rainbowStyle = value);
+    _saveSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
 
-    return AppPageScaffold(
-      title: 'Rainbow Theme',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Rainbow theme',
+      subtitle: 'Pride colors, style, and intensity',
+      body: AppSettingsDetailList(
         children: [
-          // Enable/disable
-          SectionHeader(
-            title: 'Theme Settings',
-            icon: Icons.palette,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Enable Rainbow Theme',
-            subtitle: 'Apply rainbow colors throughout the app',
-            value: _rainbowThemeEnabled,
-            onChanged: (value) {
-              setState(() {
-                _rainbowThemeEnabled = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_rainbowThemeEnabled) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Rainbow Style',
-              subtitle: 'Choose how rainbow colors are applied',
-              value: _rainbowStyle,
-              options: [
-                {'value': 'gradient', 'label': 'Gradient'},
-                {'value': 'solid', 'label': 'Solid Colors'},
-                {'value': 'animated', 'label': 'Animated'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _rainbowStyle = value;
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
+          PremiumSettingsGroup(
+            title: 'Theme',
+            children: [
+              PremiumToggleRow(
+                title: 'Enable rainbow theme',
+                subtitle: 'Apply pride colors throughout the app',
+                value: _rainbowThemeEnabled,
+                iconPath: AppIcons.magicStar,
+                onChanged: (value) {
+                  setState(() => _rainbowThemeEnabled = value);
+                  _saveSettings();
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Rainbow Intensity',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${(_rainbowIntensity * 100).toInt()}%',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+              if (_rainbowThemeEnabled) ...[
+                _SettingOption(
+                  label: 'Gradient',
+                  isSelected: _rainbowStyle == 'gradient',
+                  onSelect: () => _setStyle('gradient'),
+                ),
+                _SettingOption(
+                  label: 'Solid colors',
+                  isSelected: _rainbowStyle == 'solid',
+                  onSelect: () => _setStyle('solid'),
+                ),
+                _SettingOption(
+                  label: 'Animated',
+                  isSelected: _rainbowStyle == 'animated',
+                  onSelect: () => _setStyle('animated'),
+                ),
+                _SliderCard(
+                  title: 'Rainbow intensity',
+                  valueLabel: '${(_rainbowIntensity * 100).toInt()}%',
+                  minLabel: 'Subtle',
+                  maxLabel: 'Vibrant',
+                  slider: Slider(
                     value: _rainbowIntensity,
                     min: 0.0,
                     max: 1.0,
                     divisions: 10,
                     label: '${(_rainbowIntensity * 100).toInt()}%',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _rainbowIntensity = value;
-                      });
+                      setState(() => _rainbowIntensity = value);
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Subtle',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        'Vibrant',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (_rainbowStyle == 'animated') ...[
-              SizedBox(height: AppSpacing.spacingMD),
-              Container(
-                padding: EdgeInsets.all(AppSpacing.spacingMD),
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  border: Border.all(color: borderColor),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Animation Speed',
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '${_animationSpeed.toStringAsFixed(1)}x',
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.accentPurple,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Slider(
+                if (_rainbowStyle == 'animated')
+                  _SliderCard(
+                    title: 'Animation speed',
+                    valueLabel: '${_animationSpeed.toStringAsFixed(1)}x',
+                    minLabel: 'Slow',
+                    maxLabel: 'Fast',
+                    slider: Slider(
                       value: _animationSpeed,
                       min: 0.5,
                       max: 2.0,
                       divisions: 15,
                       label: '${_animationSpeed.toStringAsFixed(1)}x',
-                      activeColor: AppColors.accentPurple,
+                      activeColor: AppColors.accentViolet,
                       onChanged: (value) {
-                        setState(() {
-                          _animationSpeed = value;
-                        });
+                        setState(() => _animationSpeed = value);
                         _saveSettings();
                       },
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Slow',
-                          style: AppTypography.caption.copyWith(
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                        Text(
-                          'Fast',
-                          style: AppTypography.caption.copyWith(
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Color selection
-          if (_rainbowThemeEnabled) ...[
-            SectionHeader(
-              title: 'Rainbow Colors',
-              icon: Icons.color_lens,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Select Colors',
-                    style: AppTypography.body.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Wrap(
+              ],
+            ],
+          ),
+          if (_rainbowThemeEnabled) ...[
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Rainbow colors',
+              subtitle: 'Tap to include or exclude each stripe',
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Wrap(
                     spacing: AppSpacing.spacingSM,
                     runSpacing: AppSpacing.spacingSM,
-                    children: _rainbowColors.map((colorData) {
-                      final index = colorData['index'] as int;
+                    children: List.generate(_colorNames.length, (index) {
                       final isEnabled = _enabledColors[index];
-                      return GestureDetector(
+                      final color = AppColors.lgbtGradient[index];
+                      return PremiumTapScale(
                         onTap: () {
-                          setState(() {
-                            _enabledColors[index] = !_enabledColors[index];
-                          });
+                          setState(() => _enabledColors[index] = !isEnabled);
                           _saveSettings();
                         },
+                        semanticLabel: '${_colorNames[index]} color',
                         child: Container(
-                          width: 60,
-                          height: 60,
+                          width: 56,
+                          height: 56,
                           decoration: BoxDecoration(
-                            color: (colorData['color'] as Color).withOpacity(
-                              isEnabled ? 1.0 : 0.3,
-                            ),
+                            color: color.withValues(alpha: isEnabled ? 1 : 0.35),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isEnabled
                                   ? Colors.white
                                   : borderColor,
-                              width: isEnabled ? 3 : 1,
+                              width: isEnabled ? 2.5 : 1,
                             ),
                           ),
                           child: isEnabled
-                              ? Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 24,
+                              ? Center(
+                                  child: AppSvgIcon(
+                                    assetPath: AppIcons.tickCircle,
+                                    size: 22,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : null,
                         ),
                       );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
+                    }),
                   ),
                 ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
-          ),
+          ],
+          if (!_rainbowThemeEnabled)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSettingsLayout.horizontalPadding,
+                AppSpacing.spacingMD,
+                AppSettingsLayout.horizontalPadding,
+                0,
+              ),
+              child: Text(
+                'Enable rainbow theme above to customize style and colors.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSelectorTile({
-    required String title,
-    String? subtitle,
-    required String value,
-    required List<Map<String, String>> options,
-    required Function(String) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+class _SliderCard extends StatelessWidget {
+  const _SliderCard({
+    required this.title,
+    required this.valueLabel,
+    required this.minLabel,
+    required this.maxLabel,
+    required this.slider,
+  });
+
+  final String title;
+  final String valueLabel;
+  final String minLabel;
+  final String maxLabel;
+  final Widget slider;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
+
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (subtitle != null) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingMD),
-          ...options.map((option) {
-            final isSelected = value == option['value'];
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-              child: GestureDetector(
-                onTap: () => onChanged(option['value']!),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : backgroundColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option['label']!,
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
-                          size: 20,
-                        ),
-                    ],
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            );
-          }),
+              Text(
+                valueLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentViolet,
+                ),
+              ),
+            ],
+          ),
+          slider,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(minLabel, style: theme.textTheme.bodySmall),
+              Text(maxLabel, style: theme.textTheme.bodySmall),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingOption extends StatelessWidget {
+  const _SettingOption({
+    required this.label,
+    required this.isSelected,
+    required this.onSelect,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return PremiumTapScale(
+      onTap: onSelect,
+      semanticLabel: label,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accentViolet
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (isSelected)
+              AppSvgIcon(
+                assetPath: AppIcons.tickCircle,
+                size: 20,
+                color: AppColors.accentViolet,
+              ),
+          ],
+        ),
       ),
     );
   }

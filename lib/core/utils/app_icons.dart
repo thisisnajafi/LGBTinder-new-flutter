@@ -150,8 +150,8 @@ class AppIcons {
   static const String send = '$_basePath/send.svg';
   static String get sendIcon => getIconPath('send'); // For send icon
   static const String send2 = '$_basePath/send-2.svg';
-  static String get email => getIconPath('message'); // For email icon (use message icon)
-  static String get emailOutlined => getIconPath('message'); // For email_outlined
+  static String get email => getIconPath('sms');
+  static String get emailOutlined => getIconPath('sms');
   static const String attach = '$_basePath/attach-circle.svg';
   static const String attachSquare = '$_basePath/attach-square.svg';
   static const String emoji = '$_basePath/emoji-happy.svg';

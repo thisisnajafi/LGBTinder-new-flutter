@@ -1,5 +1,4 @@
 // Screen: MessageSearchScreen
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,8 +6,9 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/utils/app_icons.dart';
+import '../core/providers/api_providers.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/chat/chat_list_item.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
@@ -17,10 +17,11 @@ import '../pages/chat_page.dart';
 
 /// Message search screen - Search messages
 class MessageSearchScreen extends ConsumerStatefulWidget {
-  const MessageSearchScreen({Key? key}) : super(key: key);
+  const MessageSearchScreen({super.key});
 
   @override
-  ConsumerState<MessageSearchScreen> createState() => _MessageSearchScreenState();
+  ConsumerState<MessageSearchScreen> createState() =>
+      _MessageSearchScreenState();
 }
 
 class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
@@ -44,7 +45,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       _prefs = await SharedPreferences.getInstance();
       _loadRecentSearches();
     } catch (e) {
-      // Fallback to empty recent searches if SharedPreferences fails
       debugPrint('Failed to initialize SharedPreferences: $e');
       setState(() {
         _recentSearches = [];
@@ -59,6 +59,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   }
 
   void _onSearchChanged() {
+    setState(() {});
     final query = _searchController.text.trim();
     if (query.isEmpty) {
       setState(() {
@@ -90,7 +91,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         final data = response.data!['data'] as Map<String, dynamic>?;
         final messages = data?['messages'] as List<dynamic>? ?? [];
 
-        // Group messages by chat/conversation
         final groupedResults = <Map<String, dynamic>>[];
         final chatMap = <int, Map<String, dynamic>>{};
 
@@ -106,10 +106,10 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
               'avatar_url': otherUser['avatar_url'],
               'last_message': messageData['message'],
               'last_message_time': DateTime.parse(messageData['created_at']),
-              'unread_count': 0, // Could be calculated from API
-              'is_online': false, // Could be added to API response
-              'is_verified': false, // Could be added to API response
-              'is_premium': false, // Could be added to API response
+              'unread_count': 0,
+              'is_online': false,
+              'is_verified': false,
+              'is_premium': false,
               'chat_id': chatId,
             };
             groupedResults.add(chatMap[chatId]!);
@@ -121,7 +121,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
           _isLoading = false;
         });
 
-        // Save to recent searches
         await _saveRecentSearch(query);
       } else {
         setState(() {
@@ -162,14 +161,9 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
 
     try {
       final searches = _prefs!.getStringList(_recentSearchesKey) ?? [];
-
-      // Remove if already exists
       searches.remove(query);
-
-      // Add to beginning
       searches.insert(0, query);
 
-      // Keep only max recent searches
       if (searches.length > _maxRecentSearches) {
         searches.removeRange(_maxRecentSearches, searches.length);
       }
@@ -178,7 +172,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       _loadRecentSearches();
     } catch (e) {
       debugPrint('Failed to save recent search: $e');
-      // Continue without saving to avoid crashes
     }
   }
 
@@ -192,7 +185,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       _loadRecentSearches();
     } catch (e) {
       debugPrint('Failed to remove recent search: $e');
-      // Continue without removing to avoid crashes
     }
   }
 
@@ -209,7 +201,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       _loadRecentSearches();
     } catch (e) {
       debugPrint('Failed to clear recent searches: $e');
-      // Continue with empty list
       setState(() {
         _recentSearches = [];
       });
@@ -225,86 +216,95 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     );
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchResults = [];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: 'Search Messages',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Find conversations by keyword',
       body: Column(
         children: [
-          // Search bar
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              border: Border(
-                bottom: BorderSide(color: borderColor, width: 1),
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              PremiumPageHeader.horizontalPadding,
+              AppSpacing.spacingSM,
+              PremiumPageHeader.horizontalPadding,
+              AppSpacing.spacingSM,
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.surfaceElevatedDark
-                    : AppColors.surfaceElevatedLight,
-                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                border: Border.all(color: borderColor),
+            child: PremiumShell(
+              margin: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingMD,
+                vertical: AppSpacing.spacingXS,
               ),
-              child: TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Search conversations...',
-                  hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: secondaryTextColor,
+              child: Row(
+                children: [
+                  AppSvgIcon(
+                    assetPath: AppIcons.search,
+                    size: 20,
+                    color: AppColors.accentViolet,
                   ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(
-                            Icons.clear,
-                            color: secondaryTextColor,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchResults = [];
-                            });
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingMD,
+                  const SizedBox(width: AppSpacing.spacingSM),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      style: AppTypography.body.copyWith(color: textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Search conversations...',
+                        hintStyle:
+                            AppTypography.body.copyWith(color: secondaryTextColor),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.spacingSM,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                style: AppTypography.body.copyWith(color: textColor),
+                  if (_searchController.text.isNotEmpty)
+                    PremiumTapScale(
+                      onTap: _clearSearch,
+                      semanticLabel: 'Clear search',
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.spacingXS),
+                        child: AppSvgIcon(
+                          assetPath: AppIcons.close,
+                          size: 18,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-          // Results
           Expanded(
             child: _isLoading
                 ? ListView.builder(
                     itemCount: 5,
-                    padding: EdgeInsets.all(AppSpacing.spacingLG),
+                    padding: const EdgeInsets.all(AppSpacing.spacingLG),
                     itemBuilder: (context, index) {
                       return Container(
-                        margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
+                        margin: const EdgeInsets.only(
+                          bottom: AppSpacing.spacingMD,
+                        ),
                         child: SkeletonLoader(
                           width: double.infinity,
                           height: 80,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
                         ),
                       );
                     },
@@ -313,27 +313,39 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                     ? _recentSearches.isEmpty
                         ? EmptyState(
                             title: 'Search Messages',
-                            message: 'Enter a name or keyword to search your conversations',
-                            icon: Icons.search,
+                            message:
+                                'Enter a name or keyword to search your conversations',
+                            iconPath: AppIcons.search,
                           )
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                padding: EdgeInsets.all(AppSpacing.spacingLG),
+                                padding: const EdgeInsets.fromLTRB(
+                                  PremiumPageHeader.horizontalPadding,
+                                  AppSpacing.spacingSM,
+                                  PremiumPageHeader.horizontalPadding,
+                                  AppSpacing.spacingSM,
+                                ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'Recent Searches',
-                                      style: AppTypography.h3.copyWith(color: textColor),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: textColor,
+                                      ),
                                     ),
                                     TextButton(
                                       onPressed: _clearRecentSearches,
                                       child: Text(
                                         'Clear All',
                                         style: AppTypography.body.copyWith(
-                                          color: AppColors.accentPurple,
+                                          color: AppColors.accentViolet,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ),
@@ -342,33 +354,70 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                               ),
                               Expanded(
                                 child: ListView.builder(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.spacingLG,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal:
+                                        PremiumPageHeader.horizontalPadding,
                                   ),
                                   itemCount: _recentSearches.length,
                                   itemBuilder: (context, index) {
                                     final search = _recentSearches[index];
-                                    return ListTile(
-                                      leading: Icon(
-                                        Icons.search,
-                                        color: secondaryTextColor,
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: AppSpacing.spacingSM,
                                       ),
-                                      title: Text(
-                                        search['query'],
-                                        style: AppTypography.body.copyWith(color: textColor),
-                                      ),
-                                      trailing: IconButton(
-                                        icon: Icon(
-                                          Icons.close,
-                                          color: secondaryTextColor,
-                                          size: 20,
+                                      child: PremiumShell(
+                                        margin: EdgeInsets.zero,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.spacingMD,
+                                          vertical: AppSpacing.spacingSM,
                                         ),
-                                        onPressed: () => _removeRecentSearch(search['query']),
+                                        child: InkWell(
+                                          onTap: () {
+                                            _searchController.text =
+                                                search['query'];
+                                            _performSearch(search['query']);
+                                          },
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadius.radiusMD,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              AppSvgIcon(
+                                                assetPath: AppIcons.search,
+                                                size: 18,
+                                                color: secondaryTextColor,
+                                              ),
+                                              const SizedBox(
+                                                width: AppSpacing.spacingMD,
+                                              ),
+                                              Expanded(
+                                                child: Text(
+                                                  search['query'],
+                                                  style: AppTypography.body
+                                                      .copyWith(color: textColor),
+                                                ),
+                                              ),
+                                              PremiumTapScale(
+                                                onTap: () => _removeRecentSearch(
+                                                  search['query'],
+                                                ),
+                                                semanticLabel: 'Remove search',
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(
+                                                    AppSpacing.spacingXS,
+                                                  ),
+                                                  child: AppSvgIcon(
+                                                    assetPath: AppIcons.close,
+                                                    size: 16,
+                                                    color: secondaryTextColor,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                      onTap: () {
-                                        _searchController.text = search['query'];
-                                        _performSearch(search['query']);
-                                      },
                                     );
                                   },
                                 ),
@@ -379,10 +428,10 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                         ? EmptyState(
                             title: 'No Results',
                             message: 'Try a different search term',
-                            icon: Icons.search_off,
+                            iconPath: AppIcons.searchZoomOut,
                           )
                         : ListView.builder(
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.spacingSM,
                             ),
                             itemCount: _searchResults.length,

@@ -292,11 +292,12 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(height: AppSpacing.spacingXXL),
-              // Icon
-              Icon(
-                Icons.email_outlined,
-                size: 80,
-                color: AppColors.accentPurple,
+              Center(
+                child: AppSvgIcon(
+                  assetPath: AppIcons.message,
+                  size: 80,
+                  color: AppColors.accentViolet,
+                ),
               ),
               SizedBox(height: AppSpacing.spacingXL),
               // Title
@@ -348,7 +349,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 onPressed: _isVerifying ? null : _verifyCode,
                 isLoading: _isVerifying,
                 isFullWidth: true,
-                icon: Icons.verified,
+                iconPath: AppIcons.shieldTick,
               ),
               SizedBox(height: AppSpacing.spacingLG),
               // Resend code
@@ -394,9 +395,9 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: AppColors.accentPurple,
+                    AppSvgIcon(
+                      assetPath: AppIcons.info,
+                      color: AppColors.accentViolet,
                       size: 20,
                     ),
                     SizedBox(width: AppSpacing.spacingMD),

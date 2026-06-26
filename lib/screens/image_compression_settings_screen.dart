@@ -2,32 +2,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 
 /// Image compression settings screen - Manage image quality and compression
 class ImageCompressionSettingsScreen extends ConsumerStatefulWidget {
-  const ImageCompressionSettingsScreen({Key? key}) : super(key: key);
+  const ImageCompressionSettingsScreen({super.key});
 
   @override
-  ConsumerState<ImageCompressionSettingsScreen> createState() => _ImageCompressionSettingsScreenState();
+  ConsumerState<ImageCompressionSettingsScreen> createState() =>
+      _ImageCompressionSettingsScreenState();
 }
 
-class _ImageCompressionSettingsScreenState extends ConsumerState<ImageCompressionSettingsScreen> {
-  // Compression settings
+class _ImageCompressionSettingsScreenState
+    extends ConsumerState<ImageCompressionSettingsScreen> {
   bool _autoCompress = true;
-  String _imageQuality = 'high'; // 'low', 'medium', 'high', 'original'
-  int _qualityPercentage = 85; // 0-100
-  int _maxImageSize = 2048; // Max dimension in pixels
-  int _maxFileSize = 5; // Max file size in MB
+  String _imageQuality = 'high';
+  int _qualityPercentage = 85;
+  int _maxImageSize = 2048;
+  int _maxFileSize = 5;
 
-  // Format settings
-  String _preferredFormat = 'auto'; // 'auto', 'jpeg', 'webp', 'png'
+  String _preferredFormat = 'auto';
   bool _useWebP = true;
 
   @override
@@ -42,7 +40,6 @@ class _ImageCompressionSettingsScreenState extends ConsumerState<ImageCompressio
 
   Future<void> _saveSettings() async {
     try {
-      // TODO: Save settings via API or local storage
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -58,475 +55,316 @@ class _ImageCompressionSettingsScreenState extends ConsumerState<ImageCompressio
     }
   }
 
+  void _setQuality(String value) {
+    setState(() {
+      _imageQuality = value;
+      _qualityPercentage = switch (value) {
+        'low' => 60,
+        'medium' => 75,
+        'high' => 85,
+        'original' => 100,
+        _ => 85,
+      };
+    });
+    _saveSettings();
+  }
+
+  void _setFormat(String value) {
+    setState(() => _preferredFormat = value);
+    _saveSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final secondaryTextColor =
+        theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
-      title: 'Image Compression',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
+    return AppSettingsDetailScaffold(
+      title: 'Image compression',
+      subtitle: 'Quality, size limits, and upload format',
+      body: AppSettingsDetailList(
         children: [
-          // Auto compression
-          SectionHeader(
-            title: 'Compression Settings',
-            icon: Icons.compress,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSwitchTile(
-            title: 'Auto Compress Images',
-            subtitle: 'Automatically compress images when uploading',
-            value: _autoCompress,
-            onChanged: (value) {
-              setState(() {
-                _autoCompress = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          if (_autoCompress) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildSelectorTile(
-              title: 'Image Quality',
-              subtitle: 'Balance between quality and file size',
-              value: _imageQuality,
-              options: [
-                {'value': 'low', 'label': 'Low (Smaller files)'},
-                {'value': 'medium', 'label': 'Medium (Balanced)'},
-                {'value': 'high', 'label': 'High (Better quality)'},
-                {'value': 'original', 'label': 'Original (No compression)'},
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _imageQuality = value;
-                  switch (value) {
-                    case 'low':
-                      _qualityPercentage = 60;
-                      break;
-                    case 'medium':
-                      _qualityPercentage = 75;
-                      break;
-                    case 'high':
-                      _qualityPercentage = 85;
-                      break;
-                    case 'original':
-                      _qualityPercentage = 100;
-                      break;
-                  }
-                });
-                _saveSettings();
-              },
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            if (_imageQuality != 'original') ...[
-              SizedBox(height: AppSpacing.spacingMD),
-              Container(
-                padding: EdgeInsets.all(AppSpacing.spacingMD),
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  border: Border.all(color: borderColor),
+          PremiumSettingsGroup(
+            title: 'Compression',
+            children: [
+              PremiumToggleRow(
+                title: 'Auto compress images',
+                subtitle: 'Compress images automatically when uploading',
+                value: _autoCompress,
+                iconPath: AppIcons.image,
+                onChanged: (value) {
+                  setState(() => _autoCompress = value);
+                  _saveSettings();
+                },
+              ),
+              if (_autoCompress) ...[
+                _SettingOption(
+                  label: 'Low (smaller files)',
+                  isSelected: _imageQuality == 'low',
+                  onSelect: () => _setQuality('low'),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Quality Percentage',
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '$_qualityPercentage%',
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.accentPurple,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Slider(
+                _SettingOption(
+                  label: 'Medium (balanced)',
+                  isSelected: _imageQuality == 'medium',
+                  onSelect: () => _setQuality('medium'),
+                ),
+                _SettingOption(
+                  label: 'High (better quality)',
+                  isSelected: _imageQuality == 'high',
+                  onSelect: () => _setQuality('high'),
+                ),
+                _SettingOption(
+                  label: 'Original (no compression)',
+                  isSelected: _imageQuality == 'original',
+                  onSelect: () => _setQuality('original'),
+                ),
+                if (_imageQuality != 'original')
+                  _SliderCard(
+                    title: 'Quality percentage',
+                    valueLabel: '$_qualityPercentage%',
+                    minLabel: '50%',
+                    maxLabel: '100%',
+                    slider: Slider(
                       value: _qualityPercentage.toDouble(),
                       min: 50,
                       max: 100,
                       divisions: 10,
                       label: '$_qualityPercentage%',
-                      activeColor: AppColors.accentPurple,
+                      activeColor: AppColors.accentViolet,
                       onChanged: (value) {
                         setState(() {
                           _qualityPercentage = value.toInt();
-                          if (value < 65) {
-                            _imageQuality = 'low';
-                          } else if (value < 80) {
-                            _imageQuality = 'medium';
-                          } else {
-                            _imageQuality = 'high';
-                          }
+                          _imageQuality = value < 65
+                              ? 'low'
+                              : value < 80
+                                  ? 'medium'
+                                  : 'high';
                         });
                         _saveSettings();
                       },
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '50%',
-                          style: AppTypography.caption.copyWith(
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                        Text(
-                          '100%',
-                          style: AppTypography.caption.copyWith(
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Max Image Size',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${_maxImageSize}px',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                   ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+                _SliderCard(
+                  title: 'Max image size',
+                  valueLabel: '${_maxImageSize}px',
+                  minLabel: '1024px',
+                  maxLabel: '4096px',
+                  slider: Slider(
                     value: _maxImageSize.toDouble(),
                     min: 1024,
                     max: 4096,
                     divisions: 6,
                     label: '${_maxImageSize}px',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _maxImageSize = value.toInt();
-                      });
+                      setState(() => _maxImageSize = value.toInt());
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '1024px',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        '4096px',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Max File Size',
-                        style: AppTypography.body.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '$_maxFileSize MB',
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.spacingMD),
-                  Slider(
+                ),
+                _SliderCard(
+                  title: 'Max file size',
+                  valueLabel: '$_maxFileSize MB',
+                  minLabel: '1 MB',
+                  maxLabel: '10 MB',
+                  slider: Slider(
                     value: _maxFileSize.toDouble(),
                     min: 1,
                     max: 10,
                     divisions: 9,
                     label: '$_maxFileSize MB',
-                    activeColor: AppColors.accentPurple,
+                    activeColor: AppColors.accentViolet,
                     onChanged: (value) {
-                      setState(() {
-                        _maxFileSize = value.toInt();
-                      });
+                      setState(() => _maxFileSize = value.toInt());
                       _saveSettings();
                     },
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '1 MB',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      Text(
-                        '10 MB',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
+              ],
+            ],
+          ),
+          if (_autoCompress) const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Format',
+            children: [
+              _SettingOption(
+                label: 'Auto (best format)',
+                isSelected: _preferredFormat == 'auto',
+                onSelect: () => _setFormat('auto'),
+              ),
+              _SettingOption(
+                label: 'JPEG',
+                isSelected: _preferredFormat == 'jpeg',
+                onSelect: () => _setFormat('jpeg'),
+              ),
+              _SettingOption(
+                label: 'WebP',
+                isSelected: _preferredFormat == 'webp',
+                onSelect: () => _setFormat('webp'),
+              ),
+              _SettingOption(
+                label: 'PNG',
+                isSelected: _preferredFormat == 'png',
+                onSelect: () => _setFormat('png'),
+              ),
+              PremiumToggleRow(
+                title: 'Prefer WebP',
+                subtitle: 'Use WebP when available for better compression',
+                value: _useWebP,
+                iconPath: AppIcons.documentText,
+                onChanged: (value) {
+                  setState(() => _useWebP = value);
+                  _saveSettings();
+                },
+              ),
+            ],
+          ),
+          if (!_autoCompress)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSettingsLayout.horizontalPadding,
+                AppSpacing.spacingMD,
+                AppSettingsLayout.horizontalPadding,
+                0,
+              ),
+              child: Text(
+                'Enable auto compress above to adjust quality and size limits.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor,
+                ),
               ),
             ),
-          ],
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
-
-          // Format settings
-          SectionHeader(
-            title: 'Format Settings',
-            icon: Icons.image,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          _buildSelectorTile(
-            title: 'Preferred Format',
-            subtitle: 'Choose the image format for uploads',
-            value: _preferredFormat,
-            options: [
-              {'value': 'auto', 'label': 'Auto (Best format)'},
-              {'value': 'jpeg', 'label': 'JPEG'},
-              {'value': 'webp', 'label': 'WebP'},
-              {'value': 'png', 'label': 'PNG'},
-            ],
-            onChanged: (value) {
-              setState(() {
-                _preferredFormat = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildSwitchTile(
-            title: 'Prefer WebP',
-            subtitle: 'Use WebP format when available for better compression',
-            value: _useWebP,
-            onChanged: (value) {
-              setState(() {
-                _useWebP = value;
-              });
-              _saveSettings();
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSwitchTile({
-    required String title,
-    String? subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppSpacing.spacingXS),
-                  Text(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentPurple,
-          ),
-        ],
-      ),
-    );
-  }
+class _SliderCard extends StatelessWidget {
+  const _SliderCard({
+    required this.title,
+    required this.valueLabel,
+    required this.minLabel,
+    required this.maxLabel,
+    required this.slider,
+  });
 
-  Widget _buildSelectorTile({
-    required String title,
-    String? subtitle,
-    required String value,
-    required List<Map<String, String>> options,
-    required Function(String) onChanged,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
+  final String title;
+  final String valueLabel;
+  final String minLabel;
+  final String maxLabel;
+  final Widget slider;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    
+    final surfaceColor = isDark
+        ? AppColors.cardBackgroundDark
+        : AppColors.cardBackgroundLight;
+    final borderColor =
+        AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1);
+
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
         border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (subtitle != null) ...[
-            SizedBox(height: AppSpacing.spacingXS),
-            Text(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: secondaryTextColor,
-              ),
-            ),
-          ],
-          SizedBox(height: AppSpacing.spacingMD),
-          ...options.map((option) {
-            final isSelected = value == option['value'];
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
-              child: GestureDetector(
-                onTap: () => onChanged(option['value']!),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingMD),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.accentPurple.withOpacity(0.2)
-                        : backgroundColor,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.accentPurple
-                          : borderColor,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option['label']!,
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
-                          size: 20,
-                        ),
-                    ],
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            );
-          }),
+              Text(
+                valueLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentViolet,
+                ),
+              ),
+            ],
+          ),
+          slider,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(minLabel, style: theme.textTheme.bodySmall),
+              Text(maxLabel, style: theme.textTheme.bodySmall),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingOption extends StatelessWidget {
+  const _SettingOption({
+    required this.label,
+    required this.isSelected,
+    required this.onSelect,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return PremiumTapScale(
+      onTap: onSelect,
+      semanticLabel: label,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM + 2,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.12)
+              : (isDark
+                  ? AppColors.cardBackgroundDark
+                  : AppColors.cardBackgroundLight),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accentViolet
+                : AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (isSelected)
+              AppSvgIcon(
+                assetPath: AppIcons.tickCircle,
+                size: 20,
+                color: AppColors.accentViolet,
+              ),
+          ],
+        ),
       ),
     );
   }
