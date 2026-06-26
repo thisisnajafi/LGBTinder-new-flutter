@@ -13,6 +13,7 @@ import '../../payments/data/models/plan_limits.dart';
 import '../../payments/data/models/subscription_plan.dart';
 import '../../payments/data/services/payment_service.dart';
 import '../../payments/data/services/plan_limits_service.dart';
+import '../../payments/providers/payment_providers.dart';
 import '../data/models/user_profile.dart';
 import '../data/services/profile_service.dart';
 import '../../../shared/models/user_tier.dart';

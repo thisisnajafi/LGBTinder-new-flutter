@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/payments/data/models/plan_limits.dart';
 import '../../features/payments/data/models/subscription_plan.dart';
-import '../../features/payments/providers/payment_providers.dart';
+import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../shared/models/subscription_status.dart';
 import '../../shared/models/user_tier.dart';
 import '../../shared/providers/user_tier_provider.dart';
@@ -61,7 +61,7 @@ AppSubscriptionStatus appSubscriptionFromLegacy(
     features: SubscriptionFeatures(
       unlimitedLikes: tier.atLeast(UserTier.silder),
       seeWhoLikedYou: features?.seeWhoLikedMe ?? tier.atLeast(UserTier.silder),
-      videoCalls: features?.videoCalls ?? tier == UserTier.golden,
+      videoCallsEnabled: features?.videoCalls ?? tier == UserTier.golden,
       advancedFilters: features?.advancedFilters ?? tier.atLeast(UserTier.silder),
       profileBoost: features?.boost ?? tier.atLeast(UserTier.silder),
       chatMessagesVisible: null,
