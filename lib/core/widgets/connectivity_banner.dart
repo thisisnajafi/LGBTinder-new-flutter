@@ -7,11 +7,17 @@ import '../services/connectivity_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_icons.dart';
 
-/// Persistent top banner reflecting real-time connectivity state.
+/// Overlays a floating connectivity pill when offline or weak.
+/// [NetworkConnectionState.checking] runs silently — no UI is shown.
 class ConnectivityBanner extends ConsumerWidget {
   final Widget child;
 
   const ConnectivityBanner({required this.child, super.key});
+
+  static bool _shouldShowBanner(NetworkConnectionState state) {
+    return state == NetworkConnectionState.disconnected ||
+        state == NetworkConnectionState.weak;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,26 +27,49 @@ class ConnectivityBanner extends ConsumerWidget {
     return connectivity.when(
       loading: () => child,
       error: (_, __) => child,
-      data: (state) => Column(
-        children: [
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            child: state == NetworkConnectionState.connected
-                ? const SizedBox.shrink()
-                : _Banner(state: state),
-          ),
-          Expanded(child: child),
-        ],
-      ),
+      data: (state) {
+        final visible = _shouldShowBanner(state);
+
+        return Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            child,
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: !visible,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  offset: visible ? Offset.zero : const Offset(0, -1.2),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 250),
+                    opacity: visible ? 1 : 0,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: _FloatingBanner(state: state),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _Banner extends StatelessWidget {
+class _FloatingBanner extends StatelessWidget {
   final NetworkConnectionState state;
 
-  const _Banner({required this.state});
+  const _FloatingBanner({required this.state});
 
   @override
   Widget build(BuildContext context) {
@@ -54,17 +83,13 @@ class _Banner extends StatelessWidget {
           'No internet connection',
         ),
       NetworkConnectionState.weak => (
-          AppColors.feedbackWarning.withValues(alpha: 0.85),
+          AppColors.feedbackWarning.withValues(alpha: 0.92),
           AppIcons.wifiWeak,
           'Connection is slow — retrying...',
         ),
-      NetworkConnectionState.checking => (
-          colorScheme.surfaceContainerHighest,
-          AppIcons.wifi,
-          'Checking connection...',
-        ),
+      NetworkConnectionState.checking ||
       NetworkConnectionState.connected =>
-        throw StateError('Connected state hides banner'),
+        throw StateError('Only offline/weak states render the floating banner'),
     };
 
     final onBannerColor = state == NetworkConnectionState.weak
@@ -72,41 +97,48 @@ class _Banner extends StatelessWidget {
         : colorScheme.onErrorContainer;
 
     return Material(
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.18),
       color: bgColor,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-          child: Row(
-            children: [
-              AppSvgIcon(
-                assetPath: icon,
-                size: 16,
-                color: onBannerColor,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            AppSvgIcon(
+              assetPath: icon,
+              size: 18,
+              color: onBannerColor,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: onBannerColor,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
+            ),
+            if (state == NetworkConnectionState.disconnected)
+              TextButton(
+                onPressed: () =>
+                    ConnectivityService.instance.verifyConnection(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 child: Text(
-                  message,
+                  'Retry',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: onBannerColor,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              if (state == NetworkConnectionState.disconnected)
-                TextButton(
-                  onPressed: () =>
-                      ConnectivityService.instance.verifyConnection(),
-                  child: Text(
-                    'Retry',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: onBannerColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
