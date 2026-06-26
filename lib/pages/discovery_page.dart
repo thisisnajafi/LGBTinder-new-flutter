@@ -7,7 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
 import '../widgets/loading/skeleton_discovery.dart';
@@ -25,7 +25,6 @@ import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../screens/premium/superlike_packs_screen.dart';
-import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../widgets/discovery/discovery_swipe_action_button.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';
@@ -36,6 +35,8 @@ import '../features/discover/data/models/discovery_filter_mapper.dart';
 import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
+import '../features/discover/widgets/discover_active_filters_bar.dart';
+import '../features/discover/widgets/discover_swipe_limit_banner.dart';
 import '../features/discover/widgets/discover_ambient_background.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../core/location/location_providers.dart';
@@ -62,7 +63,7 @@ class DiscoveryPage extends ConsumerStatefulWidget {
 }
 
 /// Shared horizontal inset for discover chrome (greeting + profile card).
-const double _kDiscoverHorizontalPadding = AppSpacing.contentPadding;
+const double _kDiscoverHorizontalPadding = PremiumPageHeader.horizontalPadding;
 
 class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   // Filter state
@@ -632,6 +633,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     }
   }
 
+  Future<void> _clearActiveFilters() async {
+    setState(() => _activeFilters = null);
+    ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
+    await ref
+        .read(discoverCacheProvider.notifier)
+        .clearAndRefresh(filters: _discoverQueryFilters());
+  }
+
   Future<void> _openFilters() async {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -836,80 +845,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   /// Build limit indicator showing remaining swipes
   Widget _buildLimitIndicator() {
     final planLimits = ref.watch(planLimitsProvider);
-    
+
     return planLimits.when(
-      data: (limits) {
-        if (limits.usage.swipes.isUnlimited) {
-          return const SizedBox.shrink();
-        }
-        
-        final remaining = limits.usage.swipes.remaining;
-        final used = limits.usage.swipes.usedToday;
-        final limit = limits.usage.swipes.limit;
-        
-        // Don't show if user has plenty of swipes left
-        if (remaining > limit * 0.5) {
-          return const SizedBox.shrink();
-        }
-        
-        return Container(
-          margin: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.contentPadding,
-            vertical: AppSpacing.spacingSM,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: remaining > 3
-                ? AppColors.onlineGreen.withValues(alpha: 0.1)
-                : AppColors.warningYellow.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-            border: Border.all(
-              color: remaining > 3
-                  ? AppColors.onlineGreen.withValues(alpha: 0.3)
-                  : AppColors.warningYellow.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Row(
-            children: [
-              AppSvgIcon(
-                assetPath: remaining > 3
-                    ? AppIcons.getIconPath('heart')
-                    : AppIcons.getIconPath('warning-2'),
-                size: 20,
-                color: remaining > 3
-                    ? AppColors.onlineGreen
-                    : AppColors.warningYellow,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '$remaining swipes remaining today ($used/$limit used)',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: remaining > 3 ? AppColors.onlineGreen : AppColors.warningYellow,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (!limits.planInfo.isPremium)
-                TextButton(
-                  onPressed: () {
-                    context.push(AppRoutes.subscriptionPlans);
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  ),
-                  child: Text(
-                    'Upgrade',
-                    style: TextStyle(
-                      color: remaining > 3 ? AppColors.onlineGreen : AppColors.warningYellow,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+      data: (limits) => DiscoverSwipeLimitBanner(limits: limits),
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
@@ -944,13 +882,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     }
   }
 
-  Widget _buildHeaderActions(BuildContext context, bool isDark) {
-    final iconColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final iconBackgroundColor = Theme.of(context).colorScheme.onSurface.withValues(
-      alpha: 0.08,
-    );
-
+  Widget _buildHeaderActions(BuildContext context) {
     final canUsePassport =
         ref.watch(planLimitsProvider).valueOrNull?.features.passport ?? false;
 
@@ -961,8 +893,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           _buildHeaderIconButton(
             context: context,
             iconPath: AppIcons.map,
-            iconColor: iconColor,
-            backgroundColor: iconBackgroundColor,
             semanticLabel: 'Passport — change discovery location',
             onTap: _openPassport,
             showBadge: ref.watch(passportLocationProvider).active,
@@ -983,8 +913,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             return _buildHeaderIconButton(
               context: context,
               iconPath: AppIcons.notification,
-              iconColor: iconColor,
-              backgroundColor: iconBackgroundColor,
               semanticLabel: 'Notifications',
               onTap: () => context.go('${AppRoutes.home}/notifications'),
               showBadge: hasUnreadNotifications,
@@ -995,8 +923,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         _buildHeaderIconButton(
           context: context,
           iconPath: AppIcons.filter,
-          iconColor: iconColor,
-          backgroundColor: iconBackgroundColor,
           semanticLabel: 'Open filters',
           onTap: _openFilters,
           showBadge: _activeFilters != null && _activeFilters!.isNotEmpty,
@@ -1008,66 +934,58 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Widget _buildHeaderIconButton({
     required BuildContext context,
     required String iconPath,
-    required Color iconColor,
-    required Color backgroundColor,
     required String semanticLabel,
     required VoidCallback onTap,
     bool showBadge = false,
   }) {
-    return Semantics(
-      button: true,
-      label: semanticLabel,
+    final theme = Theme.of(context);
+
+    return PremiumTapScale(
+      onTap: onTap,
+      semanticLabel: semanticLabel,
       child: SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: Ink(
+        width: 44,
+        height: 44,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                shape: BoxShape.circle,
+                color: AppColors.accentViolet.withValues(alpha: 0.12),
                 border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.1),
+                  color: AppColors.accentViolet.withValues(alpha: 0.16),
                 ),
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  InkWell(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                    onTap: onTap,
-                    child: Center(
-                      child: AppSvgIcon(
-                        assetPath: iconPath,
-                        size: 22,
-                        color: iconColor,
-                      ),
-                    ),
-                  ),
-                  if (showBadge)
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
+              child: Center(
+                child: AppSvgIcon(
+                  assetPath: iconPath,
+                  size: 20,
+                  color: AppColors.accentViolet,
+                ),
               ),
             ),
-          ),
+            if (showBadge)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRose,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: theme.colorScheme.surface,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1075,8 +993,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final cacheState = ref.watch(discoverCacheProvider);
     final stack = cacheState.stack;
     final cards = stack.map(_profileToCardMap).toList();
@@ -1104,13 +1020,19 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppPageHeader(
+                PremiumPageHeader(
                   title: 'Discover',
-                  action: _buildHeaderActions(context, isDark),
+                  subtitle: 'Swipe and connect with people nearby',
+                  action: _buildHeaderActions(context),
                 ),
+                const SizedBox(height: AppSpacing.spacingMD),
                 const DiscoverGreetingWidget(),
                 if (_activeFilters != null && _activeFilters!.isNotEmpty)
-                  _buildActiveFiltersBar(context),
+                  DiscoverActiveFiltersBar(
+                    labels: _activeFilterLabels(),
+                    onEdit: _openFilters,
+                    onClear: _clearActiveFilters,
+                  ),
                 DiscoverPassportBanner(
                   passport: passport,
                   isClearing: _isClearingPassport,
@@ -1188,82 +1110,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           ],
         ),
       ),
-      ),
-    );
-  }
-
-  Widget _buildActiveFiltersBar(BuildContext context) {
-    final theme = Theme.of(context);
-    final chips = _activeFilterLabels();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        _kDiscoverHorizontalPadding,
-        0,
-        _kDiscoverHorizontalPadding,
-        AppSpacing.spacingSM,
-      ),
-      child: Material(
-        color: theme.colorScheme.surface.withValues(alpha: 0.72),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.spacingSM,
-            vertical: AppSpacing.spacingXS,
-          ),
-          child: Row(
-            children: [
-              AppSvgIcon(
-                assetPath: AppIcons.filter,
-                size: 16,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: AppSpacing.spacingSM),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: chips
-                        .map(
-                          (label) => Padding(
-                            padding: const EdgeInsets.only(
-                              right: AppSpacing.spacingXS,
-                            ),
-                            child: Chip(
-                              label: Text(label),
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              side: BorderSide.none,
-                              backgroundColor: theme.colorScheme.primary
-                                  .withValues(alpha: 0.12),
-                              labelStyle: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _openFilters,
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                child: const Text('Edit'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

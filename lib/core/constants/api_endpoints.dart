@@ -275,6 +275,7 @@ class ApiEndpoints {
   static const String sessionsStore = '/sessions/store';
   static const String sessionActivity = '/sessions/activity';
   static String sessionRevoke(int id) => '/sessions/revoke/$id';
+  static const String sessionsRevokeAll = '/sessions/revoke-all';
   // API tokens (list, current, validate, revoke)
   static const String tokens = '/tokens';
   static const String tokensCurrent = '/tokens/current';

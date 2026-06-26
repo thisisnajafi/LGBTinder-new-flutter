@@ -206,6 +206,20 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     }
   }
 
+  /// Log out all other device sessions
+  Future<int?> revokeAllOtherDeviceSessions() async {
+    try {
+      final revokedCount = await _settingsRepository.revokeAllOtherDeviceSessions();
+      final currentSessions =
+          state.deviceSessions.where((session) => session.isCurrentDevice).toList();
+      state = state.copyWith(deviceSessions: currentSessions);
+      return revokedCount;
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+      return null;
+    }
+  }
+
   /// Trust device session
   Future<bool> trustDeviceSession(int sessionId) async {
     try {

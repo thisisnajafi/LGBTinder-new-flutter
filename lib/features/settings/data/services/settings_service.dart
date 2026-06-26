@@ -92,13 +92,17 @@ class SettingsService {
       );
 
       List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
+      if (response.data is List) {
         dataList = response.data as List;
+      } else if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['data'] is List) {
+          dataList = data['data'] as List;
+        } else if (data['sessions'] is List) {
+          dataList = data['sessions'] as List;
+        }
+      } else if (response.meta?['sessions'] is List) {
+        dataList = response.meta!['sessions'] as List;
       }
 
       if (dataList != null) {
@@ -117,12 +121,38 @@ class SettingsService {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.sessionRevoke(request.sessionId),
+        data: {},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (!response.isSuccess) {
         throw Exception(response.message);
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Log out all other devices (backend: POST /sessions/revoke-all).
+  Future<int> revokeAllOtherDeviceSessions() async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.sessionsRevokeAll,
+        data: {},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+
+      final data = response.data;
+      if (data is Map<String, dynamic> && data['revoked_count'] != null) {
+        final count = data['revoked_count'];
+        if (count is int) return count;
+        return int.tryParse(count.toString()) ?? 0;
+      }
+      return 0;
     } catch (e) {
       rethrow;
     }

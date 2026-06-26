@@ -25,6 +25,8 @@ import '../features/chat/data/models/message.dart';
 import '../features/chat/data/models/message_delivery_status.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
+import '../features/chat/presentation/widgets/chat_empty_conversation.dart';
+import '../features/chat/presentation/widgets/chat_muted_banner.dart';
 import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
 import '../features/chat/presentation/widgets/self_destruct_viewer.dart';
 import '../features/chat/providers/chat_pusher_providers.dart';
@@ -1464,28 +1466,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ),
       body: Column(
         children: [
-          if (_conversationMuted)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppColors.feedbackWarning.withValues(alpha: 0.15),
-              child: Row(
-                children: [
-                  AppSvgIcon(
-                    assetPath: AppIcons.bellSlash,
-                    size: 16,
-                    color: AppColors.feedbackWarning,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Notifications muted for this chat',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          if (_conversationMuted) const ChatMutedBanner(),
           Expanded(
             child: Stack(
         fit: StackFit.expand,
@@ -1523,15 +1504,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: SizedBox(
                                 height: MediaQuery.of(context).size.height * 0.5,
-                                child: Center(
-                                  child: Text(
-                                    'No messages yet',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: isDark
-                                          ? AppColors.textSecondaryDark
-                                          : AppColors.textSecondaryLight,
-                                    ),
-                                  ),
+                                child: ChatEmptyConversation(
+                                  peerName: _peerDisplayName,
                                 ),
                               ),
                             ),

@@ -354,10 +354,10 @@ class MessageBubble extends ConsumerWidget {
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
+                        child: AppSvgIcon(
+                          assetPath: AppIcons.playCircle,
                           size: 32,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -411,8 +411,8 @@ class MessageBubble extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.timer,
+                    AppSvgIcon(
+                      assetPath: AppIcons.timer,
                       size: 12,
                       color: isSent ? Colors.white70 : AppColors.textSecondaryDark,
                     ),

@@ -4,7 +4,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/widgets/premium/premium_page.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_icons.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../shared/models/match_reason.dart';
@@ -58,7 +61,7 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.isSheetOpen = false,
     this.contentTopInset = 0,
     this.contentBottomInset = 0,
-    this.horizontalPadding = AppSpacing.contentPadding,
+    this.horizontalPadding = PremiumPageHeader.horizontalPadding,
   });
 
   @override
@@ -482,17 +485,17 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   }
 
   Widget _buildSwipeOverlay() {
-    final theme = Theme.of(context);
     final likeOpacity = (_dragOffset.dx / 80.0).clamp(0.0, 1.0);
     final nopeOpacity = ((-_dragOffset.dx) / 80.0).clamp(0.0, 1.0);
     final superOpacity = ((-_dragOffset.dy) / 60.0).clamp(0.0, 1.0);
-    final likeColor = theme.colorScheme.tertiary;
-    final nopeColor = theme.colorScheme.error;
-    final superColor = AppColors.warningYellow;
 
-    Widget label({
+    Widget stamp({
       required String text,
-      required Color color,
+      required String iconPath,
+      required Gradient gradient,
+      required Color borderColor,
+      required Color iconColor,
+      required Color textColor,
       required double opacity,
       required double angle,
     }) {
@@ -501,20 +504,37 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         child: Transform.rotate(
           angle: angle,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(
-                color: color,
-                width: 2.5,
-              ),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+              gradient: gradient,
+              border: Border.all(color: borderColor, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: borderColor.withValues(alpha: 0.4),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: Text(
-              text,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppSvgIcon(
+                  assetPath: iconPath,
+                  size: 20,
+                  color: iconColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  text,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                ),
+              ],
             ),
           ),
         ),
@@ -525,33 +545,45 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       child: Stack(
         children: [
           Positioned(
-            top: 20,
+            top: 24,
             left: 20,
-            child: label(
+            child: stamp(
               text: 'LIKE',
-              color: likeColor,
+              iconPath: AppIcons.heart,
+              gradient: AppColors.discoverLikeGradient,
+              borderColor: const Color(0xFFBBF7D0),
+              iconColor: Colors.white,
+              textColor: Colors.white,
               opacity: likeOpacity,
-              angle: -0.2,
+              angle: -0.18,
             ),
           ),
           Positioned(
-            top: 20,
+            top: 24,
             right: 20,
-            child: label(
+            child: stamp(
               text: 'NOPE',
-              color: nopeColor,
+              iconPath: AppIcons.close,
+              gradient: AppColors.discoverDislikeGradient,
+              borderColor: const Color(0xFFFFB4BC),
+              iconColor: Colors.white,
+              textColor: Colors.white,
               opacity: nopeOpacity,
-              angle: 0.2,
+              angle: 0.18,
             ),
           ),
           Positioned(
-            top: 20,
+            top: 24,
             left: 0,
             right: 0,
             child: Center(
-              child: label(
+              child: stamp(
                 text: 'SUPER',
-                color: superColor,
+                iconPath: AppIcons.star,
+                gradient: AppColors.discoverSuperlikeGradient,
+                borderColor: const Color(0xFFFEF9C3),
+                iconColor: const Color(0xFF78350F),
+                textColor: const Color(0xFF78350F),
                 opacity: superOpacity,
                 angle: 0,
               ),

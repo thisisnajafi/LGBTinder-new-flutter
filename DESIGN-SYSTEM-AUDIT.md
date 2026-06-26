@@ -231,13 +231,13 @@ Legend:
 
 | File | Issues |
 |------|--------|
-| `discovery_page.dart` | Icons (6), imports legacy `screens/premium/superlike_packs_screen.dart` |
-| `chat_list_page.dart` | Icons (2) |
-| `chat_page.dart` | Icons (6), uses legacy `widgets/chat/*` stack |
-| `profile_page.dart` | Icons (3) |
-| `profile_wizard_page.dart` | Icons (5) |
-| `search_page.dart` | Icons (6) |
-| `chat_conversation_info_page.dart` | Icons (7) |
+| `discovery_page.dart` | ✅ Premium header/chrome done; legacy `screens/premium/superlike_packs_screen.dart` import remains |
+| `chat_list_page.dart` | ✅ `PremiumTabPageLayout` — aligned |
+| `chat_page.dart` | ✅ Premium conversation chrome done; `message_bubble.dart` styling/icons pending |
+| `profile_page.dart` | Icons (3), other-user profile not fully premium |
+| `profile_wizard_page.dart` | Icons (5), legacy scaffold |
+| `search_page.dart` | ✅ Done |
+| `chat_conversation_info_page.dart` | ✅ Done |
 | `subscription_management_page.dart` | Icons (9), hardcoded colors† |
 | `home_page.dart` | ✅ Uses `AppBottomNavBar` — aligned |
 | `splash_page.dart` | Pride gradient — aligned |
@@ -479,4 +479,43 @@ if (AppAnimations.animationsEnabled(context)) { /* animate */ }
 
 ---
 
-*This audit is a snapshot. Re-run `rg -c "Icons\." lib --glob "*.dart"` after migration batches to track progress.*
+## 9. Premium UI migration tracker
+
+**Baseline:** Own profile (`OwnProfileView`) + Settings (`PremiumTabPageLayout` / `PremiumShell`) in `lib/core/widgets/premium/`.
+
+| # | Item | Status | Files |
+|---|------|--------|-------|
+| 1 | Matches screen | ✅ Done | `features/matching/presentation/screens/matches_screen.dart` |
+| 2 | Likes received screen | ✅ Done | `screens/discovery/likes_received_screen.dart` |
+| 3 | Discovery tab header | ✅ Done | `pages/discovery_page.dart`, `discover_greeting_widget.dart` |
+| 4 | Discovery active filters bar | ✅ Done | `discover_active_filters_bar.dart`, `discovery_page.dart` |
+| 5 | Discovery empty state | ✅ Done | `discover_empty_state.dart` |
+| 6 | Discovery passport banner | ✅ Done | `discover_passport_banner.dart` |
+| 7 | Discovery swipe limit banner | ✅ Done | `discover_swipe_limit_banner.dart`, `discovery_page.dart` |
+| 8 | Discovery card stack / swipe cards | ✅ Done (radius + inset) | `swipeable_card.dart`, `card_stack_manager.dart` — overlay stamps → #11 |
+| 9 | Chat conversation page | ✅ Done | `pages/chat_page.dart`, `chat_header.dart`, `pinned_messages_banner.dart`, `chat_empty_conversation.dart`, `chat_muted_banner.dart`, `chat_conversation_info_page.dart` |
+| 10 | Search page | ✅ Done | `pages/search_page.dart` |
+
+### 9.1 Remaining premium / design-system gaps
+
+| # | Item | Status | Files / notes |
+|---|------|--------|---------------|
+| 11 | Discovery swipe overlay stamps (LIKE / NOPE / SUPER) | ⏳ Next | `widgets/cards/card_stack_manager.dart` — text-only borders; align with `DiscoverySwipeActionButton` gradients + SVG |
+| 12 | Chat message bubbles | Pending | `widgets/chat/message_bubble.dart` — `Icons.play_arrow`, `Icons.timer`; bubble chrome vs premium |
+| 13 | Chat message input polish | Pending | `widgets/chat/message_input.dart` — `PremiumTapScale` on attach/send wells |
+| 14 | Profile detail (other user) | Pending | `pages/profile_page.dart`, `screens/discovery/profile_detail_screen.dart` |
+| 15 | Profile wizard | Pending | `pages/profile_wizard_page.dart` |
+| 16 | Match celebration | Pending | `widgets/match/match_screen.dart` → `features/matching/.../match_celebration.dart` |
+| 17 | Subscription / payments screens | Pending | `subscription_management_page.dart`, `features/payments/presentation/screens/*` |
+| 18 | Superlike packs — remove legacy route import | Pending | `discovery_page.dart` → `screens/premium/superlike_packs_screen.dart` |
+| 19 | Filter screen (discovery) | ✅ Done | `screens/discovery/filter_screen.dart` — `PremiumDetailScaffold` |
+| 20 | Notifications tab icon mapping | Pending | `features/notifications/.../notification_visuals.dart` — Material Icons |
+| 21 | Call UI (controls + full-screen) | Pending | `call_controls.dart`, `video_call_screen.dart`, `voice_call_screen.dart` |
+| 22 | Other-user profile sections | Pending | `other_user_profile_sections.dart` (33× `Icons.*`) |
+| 23 | Wire Inter font in `AppTheme` | Pending | `core/theme/app_theme.dart` |
+| 24 | App-wide Material Icons debt | Pending | ~250 files — track via `rg -c "Icons\." lib --glob "*.dart"` |
+| 25 | Legacy `screens/` scaffold migration | Pending | 64 screens — batch by domain (auth, settings, safety, payments) |
+
+---
+
+*Re-run `rg -c "Icons\." lib --glob "*.dart"` after migration batches to track icon debt.*

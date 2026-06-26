@@ -28,12 +28,31 @@ class SessionApiService {
     if (!response.isSuccess) throw Exception(response.message);
   }
 
-  /// POST sessions/revoke/:id
+  /// POST sessions/revoke/:id — log out a specific device session.
   Future<void> revokeSession(int sessionId) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.sessionRevoke(sessionId),
+      data: {},
       fromJson: (json) => json as Map<String, dynamic>,
     );
     if (!response.isSuccess) throw Exception(response.message);
+  }
+
+  /// POST sessions/revoke-all — log out every other device; keeps the current session.
+  Future<int> revokeAllOtherSessions() async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.sessionsRevokeAll,
+      data: {},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+
+    final data = response.data;
+    if (data is Map<String, dynamic> && data['revoked_count'] != null) {
+      final count = data['revoked_count'];
+      if (count is int) return count;
+      return int.tryParse(count.toString()) ?? 0;
+    }
+    return 0;
   }
 }

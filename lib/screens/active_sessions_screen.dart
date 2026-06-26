@@ -9,11 +9,15 @@ import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../shared/models/api_error.dart';
+import '../shared/models/api_response.dart';
+import '../shared/services/error_handler_service.dart';
 import '../widgets/error_handling/empty_state.dart';
+import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 
-/// Active sessions screen - Manage active sessions
+/// Active sessions screen — view and remotely log out signed-in devices.
 class ActiveSessionsScreen extends ConsumerStatefulWidget {
   const ActiveSessionsScreen({super.key});
 
@@ -24,6 +28,9 @@ class ActiveSessionsScreen extends ConsumerStatefulWidget {
 
 class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
   bool _isLoading = false;
+  bool _isRevokingAll = false;
+  int? _revokingSessionId;
+  String? _loadError;
   List<Map<String, dynamic>> _sessions = [];
 
   @override
@@ -32,113 +39,204 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     _loadSessions();
   }
 
+  int _sessionId(Map<String, dynamic> session) {
+    final raw = session['id'] ?? session['token_id'] ?? session['session_id'];
+    if (raw is int) return raw;
+    return int.parse(raw.toString());
+  }
+
+  String _deviceLabel(Map<String, dynamic> session) {
+    return session['device']?.toString() ??
+        session['device_name']?.toString() ??
+        'Unknown device';
+  }
+
+  List<Map<String, dynamic>> _parseSessions(ApiResponse<dynamic> response) {
+    final data = response.data;
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((session) => Map<String, dynamic>.from(session))
+          .toList();
+    }
+    if (data is Map) {
+      final nested = data['data'] ?? data['sessions'];
+      if (nested is List) {
+        return nested
+            .whereType<Map>()
+            .map((session) => Map<String, dynamic>.from(session))
+            .toList();
+      }
+    }
+    final metaSessions = response.meta?['sessions'];
+    if (metaSessions is List) {
+      return metaSessions
+          .whereType<Map>()
+          .map((session) => Map<String, dynamic>.from(session))
+          .toList();
+    }
+    return [];
+  }
+
   Future<void> _loadSessions() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
 
     try {
       final apiService = ref.read(apiServiceProvider);
-      final response = await apiService.get<Map<String, dynamic>>(
+      final response = await apiService.get<dynamic>(
         ApiEndpoints.userSessions,
-        fromJson: (json) => json as Map<String, dynamic>,
+        forceRefresh: true,
       );
 
-      if (response.isSuccess && response.data != null) {
-        final root = response.data!;
-        final dataField = root['data'];
-        List<dynamic> rawList = [];
-        if (dataField is List) {
-          rawList = dataField;
-        } else if (dataField is Map && dataField['sessions'] is List) {
-          rawList = dataField['sessions'] as List;
-        } else if (root['meta'] is Map &&
-            (root['meta'] as Map)['sessions'] is List) {
-          rawList = (root['meta'] as Map)['sessions'] as List;
-        }
-        setState(() {
-          _sessions = rawList
-              .map((session) => session as Map<String, dynamic>)
-              .toList();
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
+      if (!mounted) return;
+      setState(() {
+        if (response.isSuccess) {
+          _sessions = _parseSessions(response);
+        } else {
           _sessions = [];
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+          _loadError = response.message.isNotEmpty
+              ? response.message
+              : 'Could not load active sessions';
+        }
+        _isLoading = false;
+      });
+    } on ApiError catch (e) {
+      if (!mounted) return;
       setState(() {
         _sessions = [];
+        _loadError = ErrorHandlerService.getUserFriendlyMessage(e);
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sessions = [];
+        _loadError = e.toString();
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _handleTerminateSession(String sessionId) async {
+  void _removeSessionLocally(int sessionId) {
+    setState(() {
+      _sessions = _sessions.where((s) => _sessionId(s) != sessionId).toList();
+    });
+  }
+
+  void _removeOtherSessionsLocally() {
+    setState(() {
+      _sessions =
+          _sessions.where((s) => s['is_current'] == true).toList();
+    });
+  }
+
+  Future<void> _handleLogOutSession(Map<String, dynamic> session) async {
+    final sessionId = _sessionId(session);
+    final deviceName = _deviceLabel(session);
+
     final confirmed = await ConfirmationDialog.show(
       context,
-      title: 'Terminate Session',
-      message: 'Are you sure you want to terminate this session?',
-      confirmText: 'Terminate',
+      title: 'Log out device',
+      message:
+          'Log out "$deviceName"? That device will need to sign in again.',
+      confirmText: 'Log out',
       cancelText: 'Cancel',
       isDestructive: true,
     );
 
-    if (confirmed == true) {
-      try {
-        final apiService = ref.read(apiServiceProvider);
-        await apiService.post<Map<String, dynamic>>(
-          '${ApiEndpoints.userSessions}/revoke/$sessionId',
-          data: {},
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
-        await _loadSessions();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Session terminated')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to terminate session: $e')),
-          );
-        }
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _revokingSessionId = sessionId);
+
+    try {
+      await ref.read(sessionApiServiceProvider).revokeSession(sessionId);
+      if (!mounted) return;
+
+      _removeSessionLocally(sessionId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logged out $deviceName'),
+          backgroundColor: AppColors.feedbackSuccess,
+        ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ErrorHandlerService.showErrorSnackBar(
+        context,
+        e,
+        customMessage: 'Failed to log out device',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to log out device: $e'),
+          backgroundColor: AppColors.feedbackError,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _revokingSessionId = null);
       }
     }
   }
 
-  Future<void> _handleTerminateAllSessions() async {
+  Future<void> _handleLogOutAllOtherSessions() async {
+    final otherCount =
+        _sessions.where((s) => s['is_current'] != true).length;
+    if (otherCount == 0) return;
+
     final confirmed = await ConfirmationDialog.show(
       context,
-      title: 'Terminate All Sessions',
+      title: 'Log out all other devices',
       message:
-          'Are you sure you want to terminate all other sessions? You will remain logged in on this device.',
-      confirmText: 'Terminate All',
+          'Log out $otherCount other device${otherCount == 1 ? '' : 's'}? '
+          'You will stay signed in on this device.',
+      confirmText: 'Log out all',
       cancelText: 'Cancel',
       isDestructive: true,
     );
 
-    if (confirmed == true) {
-      try {
-        final apiService = ref.read(apiServiceProvider);
-        await apiService.post<Map<String, dynamic>>(
-          '${ApiEndpoints.userSessions}/revoke-all',
-          data: {},
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
-        await _loadSessions();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('All other sessions terminated')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to terminate sessions: $e')),
-          );
-        }
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isRevokingAll = true);
+
+    try {
+      final revokedCount =
+          await ref.read(sessionApiServiceProvider).revokeAllOtherSessions();
+      if (!mounted) return;
+
+      _removeOtherSessionsLocally();
+      final countLabel = revokedCount > 0 ? '$revokedCount ' : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Logged out ${countLabel}other device${revokedCount == 1 ? '' : 's'}',
+          ),
+          backgroundColor: AppColors.feedbackSuccess,
+        ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ErrorHandlerService.showErrorSnackBar(
+        context,
+        e,
+        customMessage: 'Failed to log out other devices',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to log out other devices: $e'),
+          backgroundColor: AppColors.feedbackError,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRevokingAll = false);
       }
     }
   }
@@ -167,9 +265,35 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildBody(ThemeData theme) {
+    if (_isLoading) {
+      return ListView.builder(
+        padding: AppSettingsLayout.firstSectionPadding,
+        itemCount: 3,
+        itemBuilder: (context, index) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+          child: SkeletonLoader(
+            width: double.infinity,
+            height: 140,
+            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+          ),
+        ),
+      );
+    }
+
+    if (_loadError != null) {
+      return ListView(
+        padding: AppSettingsLayout.firstSectionPadding,
+        children: [
+          ErrorDisplayWidget(
+            errorMessage: _loadError,
+            onRetry: _loadSessions,
+            title: 'Could not load sessions',
+          ),
+        ],
+      );
+    }
+
     final otherSessions =
         _sessions.where((s) => s['is_current'] != true).toList();
     final currentMatches =
@@ -177,87 +301,87 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     final currentSession =
         currentMatches.isEmpty ? null : currentMatches.first;
 
-    return AppSettingsDetailScaffold(
-      title: 'Active sessions',
-      subtitle: 'Devices where your account is signed in',
-      body: _isLoading
-          ? ListView.builder(
-              padding: AppSettingsLayout.firstSectionPadding,
-              itemCount: 3,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                child: SkeletonLoader(
-                  width: double.infinity,
-                  height: 120,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                ),
-              ),
-            )
-          : AppSettingsDetailList(
-              children: [
-                PremiumSettingsGroup(
-                  title: 'This device',
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingLG,
+    return RefreshIndicator(
+      onRefresh: _loadSessions,
+      child: AppSettingsDetailList(
+        children: [
+          PremiumSettingsGroup(
+            title: 'This device',
+            margin: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingLG,
+            ),
+            children: [
+              if (currentSession != null)
+                _SessionTile(
+                  session: currentSession,
+                  isCurrent: true,
+                  platformIconPath: _platformIconPath(
+                    currentSession['platform']?.toString() ?? '',
                   ),
-                  children: [
-                    if (currentSession != null)
-                      _SessionTile(
-                        session: currentSession,
-                        isCurrent: true,
-                        platformIconPath: _platformIconPath(
-                          currentSession['platform']?.toString() ?? '',
-                        ),
-                        formatTime: _formatTime,
-                      )
-                    else
-                      Text(
-                        'No current session',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                        ),
-                      ),
-                  ],
+                  formatTime: _formatTime,
+                )
+              else
+                Text(
+                  'No current session',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
                 ),
-                if (otherSessions.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.spacingXL),
-                  PremiumSettingsGroup(
-                    title: 'Other devices',
-                    trailing: TextButton(
-                      onPressed: _handleTerminateAllSessions,
+            ],
+          ),
+          if (otherSessions.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.spacingXL),
+            PremiumSettingsGroup(
+              title: 'Other devices',
+              trailing: _isRevokingAll
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton(
+                      onPressed: _handleLogOutAllOtherSessions,
                       child: Text(
-                        'Terminate all',
+                        'Log out all',
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: AppColors.feedbackError,
                         ),
                       ),
                     ),
-                    children: [
-                      for (var i = 0; i < otherSessions.length; i++)
-                        _SessionTile(
-                          session: otherSessions[i],
-                          isCurrent: false,
-                          platformIconPath: _platformIconPath(
-                            otherSessions[i]['platform']?.toString() ?? '',
-                          ),
-                          formatTime: _formatTime,
-                          onTerminate: () => _handleTerminateSession(
-                            otherSessions[i]['id'].toString(),
-                          ),
-                        ),
-                    ],
-                  ),
-                ] else
-                  Padding(
-                    padding: AppSettingsLayout.sectionPadding,
-                    child: EmptyState(
-                      title: 'No other sessions',
-                      message: 'You\'re only logged in on this device',
-                      iconPath: AppIcons.tickCircle,
+              children: [
+                for (final session in otherSessions)
+                  _SessionTile(
+                    session: session,
+                    isCurrent: false,
+                    platformIconPath: _platformIconPath(
+                      session['platform']?.toString() ?? '',
                     ),
+                    formatTime: _formatTime,
+                    isRevoking: _revokingSessionId == _sessionId(session),
+                    onLogOut: () => _handleLogOutSession(session),
                   ),
               ],
             ),
+          ] else
+            Padding(
+              padding: AppSettingsLayout.sectionPadding,
+              child: EmptyState(
+                title: 'No other sessions',
+                message: 'You\'re only logged in on this device',
+                iconPath: AppIcons.tickCircle,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSettingsDetailScaffold(
+      title: 'Active sessions',
+      subtitle: 'Devices where your account is signed in',
+      body: _buildBody(Theme.of(context)),
     );
   }
 }
@@ -267,20 +391,26 @@ class _SessionTile extends StatelessWidget {
   final bool isCurrent;
   final String platformIconPath;
   final String Function(dynamic) formatTime;
-  final VoidCallback? onTerminate;
+  final bool isRevoking;
+  final VoidCallback? onLogOut;
 
   const _SessionTile({
     required this.session,
     required this.isCurrent,
     required this.platformIconPath,
     required this.formatTime,
-    this.onTerminate,
+    this.isRevoking = false,
+    this.onLogOut,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final deviceName = session['device']?.toString() ??
+        session['device_name']?.toString() ??
+        'Unknown device';
+    final location = session['location']?.toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
@@ -325,7 +455,7 @@ class _SessionTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            session['device']?.toString() ?? 'Unknown device',
+                            deviceName,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -341,26 +471,19 @@ class _SessionTile extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      session['location']?.toString() ?? '',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                    if (location != null && location.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.spacingXS),
+                      Text(
+                        location,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.55),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-              if (!isCurrent && onTerminate != null)
-                IconButton(
-                  tooltip: 'Terminate session',
-                  onPressed: onTerminate,
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.close,
-                    size: 18,
-                    color: AppColors.feedbackError,
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: AppSpacing.spacingMD),
@@ -379,6 +502,36 @@ class _SessionTile extends StatelessWidget {
               ),
             ],
           ),
+          if (!isCurrent && onLogOut != null) ...[
+            const SizedBox(height: AppSpacing.spacingMD),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isRevoking ? null : onLogOut,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.feedbackError,
+                  side: BorderSide(
+                    color: AppColors.feedbackError.withValues(alpha: 0.45),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.spacingSM,
+                  ),
+                ),
+                icon: isRevoking
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : AppSvgIcon(
+                        assetPath: AppIcons.logout,
+                        size: 16,
+                        color: AppColors.feedbackError,
+                      ),
+                label: Text(isRevoking ? 'Logging out…' : 'Log out device'),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -5,8 +5,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/widgets/premium/premium_design_system.dart';
+import '../../../widgets/buttons/gradient_button.dart';
 
-/// Empty discover stack with configurable actions for filters, distance, and location.
+/// Empty discover stack with premium styling and configurable actions.
 class DiscoverEmptyState extends StatelessWidget {
   const DiscoverEmptyState({
     super.key,
@@ -33,68 +35,109 @@ class DiscoverEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
     final reduceMotion = !AppAnimations.animationsEnabled(context);
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _EmptyIllustration(
-              primary: primary,
-              animate: !reduceMotion,
-            ),
-            const SizedBox(height: AppSpacing.spacingXL),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface,
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spacingSM),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spacingXL),
-            if (onPrimaryAction != null)
-              _ActionButton(
-                label: primaryActionLabel,
-                iconPath: AppIcons.filter,
-                filled: true,
-                onPressed: onPrimaryAction!,
-              ),
-            if (secondaryActionLabel != null && onSecondaryAction != null) ...[
-              const SizedBox(height: AppSpacing.spacingSM),
-              _ActionButton(
-                label: secondaryActionLabel!,
-                iconPath: AppIcons.location,
-                filled: false,
-                onPressed: onSecondaryAction!,
-              ),
-            ],
-            if (tertiaryActionLabel != null && onTertiaryAction != null) ...[
-              const SizedBox(height: AppSpacing.spacingXS),
-              TextButton.icon(
-                onPressed: onTertiaryAction,
-                icon: AppSvgIcon(
-                  assetPath: AppIcons.filter,
-                  size: 18,
-                  color: primary,
+        padding: const EdgeInsets.symmetric(
+          horizontal: PremiumPageHeader.horizontalPadding,
+        ),
+        child: PremiumShell(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.all(AppSpacing.spacingXL),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _EmptyIllustration(animate: !reduceMotion),
+              const SizedBox(height: AppSpacing.spacingXL),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                  height: 1.2,
                 ),
-                label: Text(tertiaryActionLabel!),
               ),
+              const SizedBox(height: AppSpacing.spacingSM),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.spacingXL),
+              if (onPrimaryAction != null)
+                GradientButton(
+                  text: primaryActionLabel,
+                  iconPath: AppIcons.filter,
+                  onPressed: onPrimaryAction,
+                  isFullWidth: true,
+                ),
+              if (secondaryActionLabel != null && onSecondaryAction != null) ...[
+                const SizedBox(height: AppSpacing.spacingSM),
+                PremiumTapScale(
+                  onTap: onSecondaryAction!,
+                  semanticLabel: secondaryActionLabel!,
+                  child: Container(
+                    width: double.infinity,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                      border: Border.all(
+                        color: AppColors.accentViolet.withValues(alpha: 0.35),
+                      ),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : AppColors.accentViolet.withValues(alpha: 0.06),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppSvgIcon(
+                          assetPath: AppIcons.location,
+                          size: 18,
+                          color: AppColors.accentViolet,
+                        ),
+                        const SizedBox(width: AppSpacing.spacingSM),
+                        Text(
+                          secondaryActionLabel!,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: AppColors.accentViolet,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (tertiaryActionLabel != null && onTertiaryAction != null) ...[
+                const SizedBox(height: AppSpacing.spacingSM),
+                PremiumTapScale(
+                  onTap: onTertiaryAction!,
+                  semanticLabel: tertiaryActionLabel!,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.spacingXS,
+                    ),
+                    child: Text(
+                      tertiaryActionLabel!,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: AppColors.accentRose,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -102,12 +145,8 @@ class DiscoverEmptyState extends StatelessWidget {
 }
 
 class _EmptyIllustration extends StatefulWidget {
-  const _EmptyIllustration({
-    required this.primary,
-    required this.animate,
-  });
+  const _EmptyIllustration({required this.animate});
 
-  final Color primary;
   final bool animate;
 
   @override
@@ -145,111 +184,46 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
         return Transform.scale(scale: scale, child: child);
       },
       child: Container(
-        width: 112,
-        height: 112,
+        width: 104,
+        height: 104,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              widget.primary.withValues(alpha: 0.18),
-              AppColors.accentPink.withValues(alpha: 0.12),
+              AppColors.accentViolet.withValues(alpha: 0.16),
+              AppColors.accentRose.withValues(alpha: 0.12),
             ],
           ),
           border: Border.all(
-            color: widget.primary.withValues(alpha: 0.22),
-            width: 1,
+            color: AppColors.accentViolet.withValues(alpha: 0.2),
           ),
           boxShadow: [
             BoxShadow(
-              color: widget.primary.withValues(alpha: 0.12),
-              blurRadius: 24,
-              spreadRadius: 2,
+              color: AppColors.accentViolet.withValues(alpha: 0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Center(
           child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
+            width: 60,
+            height: 60,
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.brandGradient,
             ),
             child: Center(
               child: AppSvgIcon(
                 assetPath: AppIcons.search,
-                size: 30,
+                size: 28,
                 color: Colors.white,
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.label,
-    required this.iconPath,
-    required this.filled,
-    required this.onPressed,
-  });
-
-  final String label;
-  final String iconPath;
-  final bool filled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final child = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppSvgIcon(
-          assetPath: iconPath,
-          size: 18,
-          color: filled ? theme.colorScheme.onPrimary : theme.colorScheme.primary,
-        ),
-        const SizedBox(width: AppSpacing.spacingSM),
-        Text(label),
-      ],
-    );
-
-    return Semantics(
-      button: true,
-      label: label,
-      child: SizedBox(
-        width: double.infinity,
-        child: filled
-            ? FilledButton(
-                onPressed: onPressed,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  ),
-                ),
-                child: child,
-              )
-            : OutlinedButton(
-                onPressed: onPressed,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  side: BorderSide(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.45),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  ),
-                ),
-                child: child,
-              ),
       ),
     );
   }

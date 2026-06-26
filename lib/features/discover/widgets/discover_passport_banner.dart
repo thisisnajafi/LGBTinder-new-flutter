@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/location/data/models/passport_location.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
-import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/widgets/premium/premium_design_system.dart';
 
 /// Shown on discover when a premium passport search location is active.
 class DiscoverPassportBanner extends StatelessWidget {
@@ -25,68 +24,78 @@ class DiscoverPassportBanner extends StatelessWidget {
     if (!passport.active) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final label = passport.displayLabel;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.contentPadding,
+        PremiumPageHeader.horizontalPadding,
         0,
-        AppSpacing.contentPadding,
+        PremiumPageHeader.horizontalPadding,
         AppSpacing.spacingSM,
       ),
-      child: Material(
-        color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          onTap: isClearing ? null : onReturnHome,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingMD,
-              vertical: AppSpacing.spacingSM,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.35),
+      child: PremiumTapScale(
+        onTap: isClearing ? () {} : onReturnHome,
+        semanticLabel: 'Return from passport location',
+        child: PremiumShell(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingMD,
+            vertical: AppSpacing.spacingSM,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.brandGradient,
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.map,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
+              const SizedBox(width: AppSpacing.spacingSM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Passport active',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.accentRose,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Exploring $label',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (isClearing)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
                 AppSvgIcon(
-                  assetPath: AppIcons.map,
-                  size: 20,
-                  color: theme.colorScheme.primary,
+                  assetPath: AppIcons.getIconPath('arrow-right-3'),
+                  size: 18,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
                 ),
-                const SizedBox(width: AppSpacing.spacingSM),
-                Expanded(
-                  child: Text(
-                    'Passport active — exploring $label',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (isClearing)
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Text(
-                    'Return home',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),

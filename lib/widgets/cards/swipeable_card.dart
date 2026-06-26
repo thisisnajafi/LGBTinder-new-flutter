@@ -63,7 +63,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.hideBioMore = false,
   });
 
-  static const double cardRadius = AppRadius.radiusLG;
+  static const double cardRadius = AppRadius.radiusXL;
   /// Wider/shorter discover card (width ÷ height).
   static const double cardAspectRatio = 0.76;
   static const Duration imageCarouselInterval = Duration(seconds: 5);

@@ -1,25 +1,26 @@
-﻿// Screen: SearchPage
+﻿// Screen: SearchPage — premium search and filter profiles
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
-import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/ui/filter_chip.dart';
-import '../widgets/cards/card_preview_widget.dart';
-import '../core/widgets/loading_indicator.dart';
-import '../widgets/error_handling/error_display_widget.dart';
-import '../pages/profile_page.dart';
-import '../features/discover/providers/discovery_providers.dart';
-import '../features/discover/data/models/discovery_profile.dart';
-import '../shared/models/api_error.dart';
-import '../shared/services/error_handler_service.dart';
+import 'package:go_router/go_router.dart';
 
-/// Search page - Search and filter profiles
+import '../core/theme/app_colors.dart';
+import '../core/theme/border_radius_constants.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/theme/typography.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../features/discover/data/models/discovery_profile.dart';
+import '../features/discover/providers/discovery_providers.dart';
+import '../routes/app_router.dart';
+import '../shared/models/api_error.dart';
+import '../widgets/cards/card_preview_widget.dart';
+import '../widgets/error_handling/error_display_widget.dart';
+import '../core/widgets/loading_indicator.dart';
+
+/// Search page — search and filter profiles with premium shell UI.
 class SearchPage extends ConsumerStatefulWidget {
-  const SearchPage({Key? key}) : super(key: key);
+  const SearchPage({super.key});
 
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
@@ -33,6 +34,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   bool _hasError = false;
   String? _errorMessage;
   List<DiscoveryProfile> _results = [];
+
+  static const _filters = <({String id, String label, String? iconPath})>[
+    (id: 'all', label: 'All', iconPath: null),
+    (id: 'verified', label: 'Verified', iconPath: null),
+    (id: 'premium', label: 'Premium', iconPath: null),
+    (id: 'online', label: 'Online', iconPath: null),
+  ];
 
   @override
   void initState() {
@@ -55,15 +63,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     try {
       final discoveryService = ref.read(discoveryServiceProvider);
-      
-      // Build filters based on search query and selected filter
       final Map<String, dynamic> filters = {};
-      
+
       if (_searchQuery.isNotEmpty) {
         filters['query'] = _searchQuery;
       }
-      
-      // Apply filter type
+
       if (_selectedFilter == 'verified') {
         filters['verified_only'] = true;
       } else if (_selectedFilter == 'premium') {
@@ -71,10 +76,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       } else if (_selectedFilter == 'online') {
         filters['online_only'] = true;
       }
-      
+
       final profiles = await discoveryService.getAdvancedMatches(
         filters: filters.isNotEmpty ? filters : null,
-        limit: 50, // Load more results for search
+        limit: 50,
       );
 
       if (mounted) {
@@ -103,203 +108,313 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   void _handleSearch(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
+    setState(() => _searchQuery = query);
     _loadResults();
   }
 
   void _handleFilterTap(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+    setState(() => _selectedFilter = filter);
     _loadResults();
+  }
+
+  void _openProfile(DiscoveryProfile profile) {
+    final target = Uri(
+      path: AppRoutes.profileDetail,
+      queryParameters: {'userId': profile.id.toString()},
+    ).toString();
+    context.push(target);
+  }
+
+  String? _filterIconPath(String id) {
+    return switch (id) {
+      'verified' => AppIcons.verify,
+      'premium' => AppIcons.star,
+      'online' => null,
+      _ => null,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return AppPageScaffold(
+    return AppSettingsDetailScaffold(
       title: 'Search',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
       body: Column(
         children: [
-          // Search bar
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              border: Border(
-                bottom: BorderSide(color: borderColor, width: 1),
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              PremiumPageHeader.horizontalPadding,
+              AppSpacing.spacingSM,
+              PremiumPageHeader.horizontalPadding,
+              AppSpacing.spacingSM,
             ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _handleSearch,
-              style: AppTypography.body.copyWith(color: textColor),
-              decoration: InputDecoration(
-                hintText: 'Search profiles...',
-                hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: secondaryTextColor,
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
+            child: PremiumShell(
+              margin: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingMD,
+                vertical: AppSpacing.spacingXS,
+              ),
+              child: Row(
+                children: [
+                  AppSvgIcon(
+                    assetPath: AppIcons.search,
+                    size: 20,
+                    color: AppColors.accentViolet,
+                  ),
+                  const SizedBox(width: AppSpacing.spacingSM),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _handleSearch,
+                      style: AppTypography.body.copyWith(color: textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Search profiles...',
+                        hintStyle:
+                            AppTypography.body.copyWith(color: secondaryTextColor),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.spacingSM,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    PremiumTapScale(
+                      onTap: () {
+                        _searchController.clear();
+                        _handleSearch('');
+                      },
+                      semanticLabel: 'Clear search',
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.spacingXS),
+                        child: AppSvgIcon(
+                          assetPath: AppIcons.close,
+                          size: 18,
                           color: secondaryTextColor,
                         ),
-                        onPressed: () {
-                          _searchController.clear();
-                          _handleSearch('');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: isDark
-                    ? AppColors.surfaceElevatedDark
-                    : AppColors.surfaceElevatedLight,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingMD,
-                  vertical: AppSpacing.spacingMD,
-                ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-          // Filter chips
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingLG,
-              vertical: AppSpacing.spacingMD,
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: PremiumPageHeader.horizontalPadding,
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  FilterChip(
-                    label: 'All',
-                    isSelected: _selectedFilter == 'all',
-                    onTap: () => _handleFilterTap('all'),
-                  ),
-                  SizedBox(width: AppSpacing.spacingSM),
-                  FilterChip(
-                    label: 'Verified',
-                    isSelected: _selectedFilter == 'verified',
-                    onTap: () => _handleFilterTap('verified'),
-                    icon: Icons.verified,
-                  ),
-                  SizedBox(width: AppSpacing.spacingSM),
-                  FilterChip(
-                    label: 'Premium',
-                    isSelected: _selectedFilter == 'premium',
-                    onTap: () => _handleFilterTap('premium'),
-                    icon: Icons.star,
-                  ),
-                  SizedBox(width: AppSpacing.spacingSM),
-                  FilterChip(
-                    label: 'Online',
-                    isSelected: _selectedFilter == 'online',
-                    onTap: () => _handleFilterTap('online'),
-                    icon: Icons.circle,
-                  ),
+                  for (var i = 0; i < _filters.length; i++) ...[
+                    if (i > 0) const SizedBox(width: AppSpacing.spacingSM),
+                    _SearchFilterChip(
+                      label: _filters[i].label,
+                      iconPath: _filterIconPath(_filters[i].id),
+                      showOnlineDot: _filters[i].id == 'online',
+                      isSelected: _selectedFilter == _filters[i].id,
+                      onTap: () => _handleFilterTap(_filters[i].id),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
-          // Results
+          const SizedBox(height: AppSpacing.spacingSM),
           Expanded(
             child: _isLoading
-                ? LoadingIndicator(message: 'Searching...')
+                ? const LoadingIndicator(message: 'Searching...')
                 : _hasError
                     ? ErrorDisplayWidget(
-                        errorMessage: _errorMessage ?? 'Failed to load results',
+                        errorMessage:
+                            _errorMessage ?? 'Failed to load results',
                         onRetry: _loadResults,
                       )
                     : _results.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.search_off,
-                                  size: 64,
-                                  color: secondaryTextColor,
-                                ),
-                                SizedBox(height: AppSpacing.spacingMD),
-                                Text(
-                                  'No results found',
-                                  style: AppTypography.h3.copyWith(
-                                    color: textColor,
-                                  ),
-                                ),
-                                SizedBox(height: AppSpacing.spacingSM),
-                                Text(
-                                  'Try adjusting your search or filters',
-                                  style: AppTypography.body.copyWith(
-                                    color: secondaryTextColor,
-                                  ),
-                                ),
-                              ],
-                            ),
+                        ? _SearchEmptyState(
+                            secondaryTextColor: secondaryTextColor,
+                            textColor: textColor,
                           )
                         : RefreshIndicator(
                             onRefresh: _loadResults,
                             child: GridView.builder(
-                              padding: EdgeInsets.all(AppSpacing.spacingLG),
+                              padding: const EdgeInsets.all(
+                                PremiumPageHeader.horizontalPadding,
+                              ),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
+                                crossAxisSpacing: AppSpacing.spacingMD,
+                                mainAxisSpacing: AppSpacing.spacingMD,
                                 childAspectRatio: 0.75,
                               ),
                               itemCount: _results.length,
-                            itemBuilder: (context, index) {
-                              final profile = _results[index];
-                              return CardPreviewWidget(
-                                userId: profile.id,
-                                name: profile.firstName,
-                                age: profile.age,
-                                avatarUrl: profile.primaryImageUrl,
-                                isVerified: false, // DiscoveryProfile doesn't have isVerified yet
-                                isPremium: false, // DiscoveryProfile doesn't have isPremium yet
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ProfilePage(
-                                        userId: profile.id,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
+                              itemBuilder: (context, index) {
+                                final profile = _results[index];
+                                return PremiumTapScale(
+                                  onTap: () => _openProfile(profile),
+                                  semanticLabel: 'Open ${profile.firstName}',
+                                  child: CardPreviewWidget(
+                                    userId: profile.id,
+                                    name: profile.firstName,
+                                    age: profile.age,
+                                    avatarUrl: profile.primaryImageUrl,
+                                    isVerified: false,
+                                    isPremium: false,
+                                    onTap: () => _openProfile(profile),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SearchFilterChip extends StatelessWidget {
+  const _SearchFilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.iconPath,
+    this.showOnlineDot = false,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final String? iconPath;
+  final bool showOnlineDot;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PremiumTapScale(
+      onTap: onTap,
+      semanticLabel: 'Filter $label',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingSM,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          gradient: isSelected ? AppColors.brandGradient : null,
+          color: isSelected
+              ? null
+              : AppColors.accentViolet.withValues(alpha: 0.08),
+          border: Border.all(
+            color: isSelected
+                ? Colors.transparent
+                : AppColors.accentViolet.withValues(alpha: 0.22),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showOnlineDot) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.onlineGreen,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.spacingXS),
+            ] else if (iconPath != null) ...[
+              AppSvgIcon(
+                assetPath: iconPath!,
+                size: 14,
+                color: isSelected ? Colors.white : AppColors.accentViolet,
+              ),
+              const SizedBox(width: AppSpacing.spacingXS),
+            ],
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : AppColors.accentViolet,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchEmptyState extends StatelessWidget {
+  const _SearchEmptyState({
+    required this.textColor,
+    required this.secondaryTextColor,
+  });
+
+  final Color textColor;
+  final Color secondaryTextColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: PremiumPageHeader.horizontalPadding,
+        ),
+        child: PremiumShell(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.all(AppSpacing.spacingXL),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accentViolet.withValues(alpha: 0.12),
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.search,
+                    size: 32,
+                    color: AppColors.accentViolet,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.spacingLG),
+              Text(
+                'No results found',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w800,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.spacingSM),
+              Text(
+                'Try adjusting your search or filters',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: secondaryTextColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

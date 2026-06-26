@@ -39,6 +39,11 @@ class SettingsRepository {
     return await _settingsService.revokeDeviceSession(request);
   }
 
+  /// Log out all other device sessions
+  Future<int> revokeAllOtherDeviceSessions() async {
+    return await _settingsService.revokeAllOtherDeviceSessions();
+  }
+
   /// Trust device session
   Future<void> trustDeviceSession(TrustDeviceRequest request) async {
     return await _settingsService.trustDeviceSession(request);

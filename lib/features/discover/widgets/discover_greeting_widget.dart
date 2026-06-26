@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
+import '../../../core/widgets/premium/premium_page.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/widgets/profile_image_widget.dart';
 import '../../../features/profile/providers/profile_page_cache_provider.dart';
@@ -42,23 +43,29 @@ class DiscoverGreetingWidget extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.contentPadding,
+        horizontal: PremiumPageHeader.horizontalPadding,
       ),
       child: Container(
-        margin: const EdgeInsets.only(
-          top: AppSpacing.spacingSM,
-          bottom: AppSpacing.spacingXS,
-        ),
+        margin: const EdgeInsets.only(bottom: AppSpacing.spacingXS),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.spacingMD,
           vertical: AppSpacing.spacingSM,
         ),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          color: isDark
+              ? AppColors.cardBackgroundDark.withValues(alpha: 0.92)
+              : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(AppRadius.radiusXL),
           border: Border.all(
-            color: theme.colorScheme.outline.withValues(alpha: 0.12),
+            color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.08),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.16 : 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [

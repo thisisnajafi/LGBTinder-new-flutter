@@ -1,37 +1,34 @@
 ﻿// Screen: LikesReceivedScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/avatar/avatar_with_status.dart';
-import '../../widgets/badges/verification_badge.dart';
-import '../../widgets/badges/premium_badge.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/buttons/like_button.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../core/constants/api_endpoints.dart';
-import '../../widgets/buttons/dislike_button.dart';
+import '../../core/providers/api_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_settings_detail.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
+import '../../core/widgets/profile_image_widget.dart';
+import '../../features/payments/data/services/plan_limits_service.dart';
+import '../../features/profile/widgets/tier_badge.dart';
+import '../../routes/app_router.dart';
+import '../../shared/utils/plan_guard.dart';
+import '../../widgets/badges/verification_badge.dart';
+import '../../widgets/discovery/discovery_swipe_action_button.dart';
 import '../../widgets/error_handling/empty_state.dart';
 import '../../widgets/loading/skeleton_loader.dart';
-import '../../widgets/modals/bottom_sheet_custom.dart';
-import '../discovery/profile_detail_screen.dart';
-import '../../core/providers/api_providers.dart';
-import '../../features/payments/data/services/plan_limits_service.dart';
-import '../../shared/utils/plan_guard.dart';
-import 'package:go_router/go_router.dart';
-import '../../routes/app_router.dart';
+import 'profile_detail_screen.dart';
 
-/// Likes received screen - View users who liked you
+/// Likes received — premium list of users who liked you (accept / pass).
 class LikesReceivedScreen extends ConsumerStatefulWidget {
-  const LikesReceivedScreen({Key? key}) : super(key: key);
+  const LikesReceivedScreen({super.key});
 
   @override
-  ConsumerState<LikesReceivedScreen> createState() => _LikesReceivedScreenState();
+  ConsumerState<LikesReceivedScreen> createState() =>
+      _LikesReceivedScreenState();
 }
 
 class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
@@ -55,7 +52,8 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
           path: AppRoutes.featureLocked,
           queryParameters: {
             'title': 'See who liked you',
-            'desc': 'Unlock this feature to view everyone who has liked your profile.',
+            'desc':
+                'Unlock this feature to view everyone who has liked your profile.',
             'minTier': 'silder',
           },
         ).toString();
@@ -69,9 +67,7 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
   }
 
   Future<void> _loadLikes() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final apiService = ref.read(apiServiceProvider);
@@ -79,6 +75,8 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
         ApiEndpoints.likesPending,
         fromJson: (json) => json as Map<String, dynamic>,
       );
+
+      if (!mounted) return;
 
       if (response.isSuccess && response.data != null) {
         final data = response.data!['data'] as Map<String, dynamic>?;
@@ -94,7 +92,7 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
               'avatar_url': user['avatar_url'],
               'is_verified': user['is_verified'] ?? false,
               'is_premium': user['is_premium'] ?? false,
-              'liked_at': DateTime.parse(like['created_at']),
+              'liked_at': DateTime.parse(like['created_at'] as String),
               'age': user['age'],
               'distance': user['distance'],
               'bio': user['bio'],
@@ -108,7 +106,8 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
         _likes = [];
         _isLoading = false;
@@ -116,61 +115,72 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
     }
   }
 
-  void _handleLike(int userId) async {
+  Future<void> _handleLike(int likeId) async {
     try {
       final apiService = ref.read(apiServiceProvider);
       final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesRespond,
-        data: {
-          'like_id': userId,
-          'action': 'accept',
-        },
+        data: {'like_id': likeId, 'action': 'accept'},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
+      if (!mounted) return;
+
       if (response.isSuccess) {
-        setState(() {
-          _likes.removeWhere((like) => like['id'] == userId);
-        });
+        setState(() => _likes.removeWhere((like) => like['id'] == likeId));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('It\'s a match!')),
+          const SnackBar(
+            content: Text('It\'s a match!'),
+            backgroundColor: AppColors.onlineGreen,
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to accept like: ${response.message}')),
+          SnackBar(
+            content: Text('Failed to accept like: ${response.message}'),
+            backgroundColor: AppColors.feedbackError,
+          ),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to accept like: $e')),
+        SnackBar(
+          content: Text('Failed to accept like: $e'),
+          backgroundColor: AppColors.feedbackError,
+        ),
       );
     }
   }
 
-  void _handleDislike(int userId) async {
+  Future<void> _handleDislike(int likeId) async {
     try {
       final apiService = ref.read(apiServiceProvider);
       final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesRespond,
-        data: {
-          'like_id': userId,
-          'action': 'reject',
-        },
+        data: {'like_id': likeId, 'action': 'reject'},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
+      if (!mounted) return;
+
       if (response.isSuccess) {
-        setState(() {
-          _likes.removeWhere((like) => like['id'] == userId);
-        });
+        setState(() => _likes.removeWhere((like) => like['id'] == likeId));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reject like: ${response.message}')),
+          SnackBar(
+            content: Text('Failed to reject like: ${response.message}'),
+            backgroundColor: AppColors.feedbackError,
+          ),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to reject like: $e')),
+        SnackBar(
+          content: Text('Failed to reject like: $e'),
+          backgroundColor: AppColors.feedbackError,
+        ),
       );
     }
   }
@@ -178,7 +188,7 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
   void _handleProfileTap(int userId) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (context) => ProfileDetailScreen(
           userId: userId,
           showInteractionActions: true,
@@ -188,187 +198,254 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
   }
 
   String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
+    final difference = DateTime.now().difference(time);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    return '${difference.inDays}d ago';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
-      title: 'Likes You',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: _isLoading
-          ? ListView.builder(
-              itemCount: 5,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppPageHeader.horizontalPadding,
+    return AppSettingsDetailScaffold(
+      title: 'Likes you',
+      subtitle: 'People who liked your profile',
+      action: IconButton(
+        icon: AppSvgIcon(
+          assetPath: AppIcons.getIconPath('refresh'),
+          size: 22,
+          color: theme.colorScheme.onSurface,
+        ),
+        onPressed: _guardAndLoad,
+      ),
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+        children: [
+          for (var i = 0; i < 3; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+              child: SkeletonLoader(
+                width: double.infinity,
+                height: 168,
+                borderRadius: BorderRadius.circular(AppRadius.radiusXL),
               ),
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                  child: SkeletonLoader(
-                    width: double.infinity,
-                    height: 200,
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  ),
-                );
-              },
-            )
-          : _likes.isEmpty
-              ? EmptyState(
-                  title: 'No Likes Yet',
-                  message: 'Keep swiping to get more likes!',
-                  icon: Icons.favorite_border,
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppPageHeader.horizontalPadding,
-                  ),
-                  itemCount: _likes.length,
-                  itemBuilder: (context, index) {
-                    final like = _likes[index];
-                    return Container(
-                      margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // User info
-                          InkWell(
-                            onTap: () => _handleProfileTap(like['id']),
-                            child: Padding(
-                              padding: EdgeInsets.all(AppSpacing.spacingLG),
-                              child: Row(
-                                children: [
-                                  Stack(
-                                    children: [
-                                      AvatarWithStatus(
-                                        imageUrl: like['avatar_url'],
-                                        name: like['name'],
-                                        isOnline: false,
-                                        size: 64.0,
-                                      ),
-                                      if (like['is_verified'] == true)
-                                        Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: VerificationBadge(
-                                            isVerified: true,
-                                            size: 20,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  SizedBox(width: AppSpacing.spacingMD),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                '${like['name']}, ${like['age']}',
-                                                style: AppTypography.h3.copyWith(
-                                                  color: textColor,
-                                                ),
-                                              ),
-                                            ),
-                                            if (like['is_premium'] == true)
-                                              PremiumBadge(
-                                                isPremium: true,
-                                                fontSize: 10,
-                                              ),
-                                          ],
-                                        ),
-                                        SizedBox(height: AppSpacing.spacingXS),
-                                        if (like['distance'] != null)
-                                          Text(
-                                            '${like['distance'].toStringAsFixed(1)} km away',
-                                            style: AppTypography.caption.copyWith(
-                                              color: secondaryTextColor,
-                                            ),
-                                          ),
-                                        SizedBox(height: AppSpacing.spacingXS),
-                                        Text(
-                                          'Liked you ${_formatTime(like['liked_at'])}',
-                                          style: AppTypography.caption.copyWith(
-                                            color: AppColors.accentPurple,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+            ),
+        ],
+      );
+    }
+
+    if (_likes.isEmpty) {
+      return EmptyState(
+        title: 'No likes yet',
+        message: 'Keep swiping to get more likes!',
+        iconPath: AppIcons.heart,
+        actionLabel: 'Start discovering',
+        onAction: () => context.go('${AppRoutes.home}/discovery'),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadLikes,
+      child: AppSettingsDetailList(
+        children: [
+          PremiumSettingsGroup(
+            title: 'Pending likes',
+            subtitle:
+                '${_likes.length} ${_likes.length == 1 ? 'person' : 'people'}',
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+            children: [
+              for (final like in _likes)
+                _LikeCard(
+                  like: like,
+                  formatTime: _formatTime,
+                  onProfileTap: () =>
+                      _handleProfileTap(like['user_id'] as int),
+                  onPass: () => _handleDislike(like['id'] as int),
+                  onAccept: () => _handleLike(like['id'] as int),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LikeCard extends StatelessWidget {
+  const _LikeCard({
+    required this.like,
+    required this.formatTime,
+    required this.onProfileTap,
+    required this.onPass,
+    required this.onAccept,
+  });
+
+  final Map<String, dynamic> like;
+  final String Function(DateTime) formatTime;
+  final VoidCallback onProfileTap;
+  final VoidCallback onPass;
+  final VoidCallback onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final name = like['name']?.toString() ?? 'User';
+    final age = like['age'];
+    final title = age != null ? '$name, $age' : name;
+    final bio = like['bio']?.toString();
+    final distance = like['distance'];
+    final likedAt = like['liked_at'] as DateTime;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          border: Border.all(
+            color: AppColors.accentPink.withValues(alpha: 0.22),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PremiumTapScale(
+              onTap: onProfileTap,
+              semanticLabel: 'View $name\'s profile',
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ClipOval(
+                          child: ProfileImageWidget(
+                            imageUrl: like['avatar_url'] as String?,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
                           ),
-                          // Bio preview
-                          if (like['bio'] != null && like['bio'].toString().isNotEmpty)
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.spacingLG,
-                                vertical: AppSpacing.spacingSM,
-                              ),
-                              child: Text(
-                                like['bio'],
-                                style: AppTypography.body.copyWith(
-                                  color: textColor,
+                        ),
+                        if (like['is_verified'] == true)
+                          const Positioned(
+                            right: -2,
+                            top: -2,
+                            child: VerificationBadge(isVerified: true, size: 18),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: AppSpacing.spacingMD),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (like['is_premium'] == true)
+                                TierBadge.fromPremium(true),
+                            ],
+                          ),
+                          if (distance != null) ...[
+                            const SizedBox(height: AppSpacing.spacingXS),
+                            Text(
+                              '${(distance as num).toStringAsFixed(1)} km away',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.55),
                               ),
                             ),
-                          DividerCustom(),
-                          // Action buttons
-                          Padding(
-                            padding: EdgeInsets.all(AppSpacing.spacingMD),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Expanded(
-                                  child: DislikeButton(
-                                    onTap: () => _handleDislike(like['id']),
-                                    size: 56.0,
-                                  ),
-                                ),
-                                SizedBox(width: AppSpacing.spacingMD),
-                                Expanded(
-                                  child: LikeButton(
-                                    onTap: () => _handleLike(like['id']),
-                                    size: 56.0,
-                                  ),
-                                ),
-                              ],
+                          ],
+                          const SizedBox(height: AppSpacing.spacingXS),
+                          Text(
+                            'Liked you ${formatTime(likedAt)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.accentRose,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                    AppSvgIcon(
+                      assetPath: AppIcons.getIconPath('arrow-right-3'),
+                      size: 18,
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.35),
+                    ),
+                  ],
                 ),
+              ),
+            ),
+            if (bio != null && bio.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.spacingMD,
+                  0,
+                  AppSpacing.spacingMD,
+                  AppSpacing.spacingSM,
+                ),
+                child: Text(
+                  bio,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            Divider(
+              height: 1,
+              color: AppColors.accentViolet.withValues(alpha: 0.12),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingLG,
+                vertical: AppSpacing.spacingMD,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  DiscoverySwipeActionButton(
+                    type: DiscoverySwipeActionType.dislike,
+                    size: 52,
+                    onPressed: onPass,
+                  ),
+                  const SizedBox(width: AppSpacing.spacingXL),
+                  DiscoverySwipeActionButton(
+                    type: DiscoverySwipeActionType.like,
+                    size: 52,
+                    onPressed: onAccept,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

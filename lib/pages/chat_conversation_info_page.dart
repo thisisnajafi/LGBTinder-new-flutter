@@ -21,7 +21,9 @@ import '../features/safety/presentation/screens/report_user_screen.dart';
 import '../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../routes/app_router.dart';
 import '../shared/models/api_error.dart';
-import '../widgets/avatar/avatar_with_status.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/widgets/profile_image_widget.dart';
+import '../widgets/buttons/gradient_button.dart';
 
 /// Full-screen chat peer details: profile summary, shared media, view profile.
 class ChatConversationInfoPage extends ConsumerStatefulWidget {
@@ -310,36 +312,35 @@ class _ChatConversationInfoPageState
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor =
         isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Chat info'),
-        centerTitle: true,
-      ),
+    return PremiumDetailScaffold(
+      title: 'Chat info',
+      onBack: () => context.pop(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.spacingXL),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Could not load info',
-                          style: AppTypography.body.copyWith(color: textColor),
-                        ),
-                        const SizedBox(height: AppSpacing.spacingMD),
-                        FilledButton(
-                          onPressed: _loadData,
-                          child: const Text('Retry'),
-                        ),
-                      ],
+                    child: PremiumShell(
+                      margin: EdgeInsets.zero,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Could not load info',
+                            style: AppTypography.body.copyWith(color: textColor),
+                          ),
+                          const SizedBox(height: AppSpacing.spacingMD),
+                          GradientButton(
+                            text: 'Retry',
+                            onPressed: _loadData,
+                            isFullWidth: false,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 )
@@ -347,130 +348,123 @@ class _ChatConversationInfoPageState
                   onRefresh: _loadData,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.spacingLG,
+                      PremiumPageHeader.horizontalPadding,
                       AppSpacing.spacingMD,
-                      AppSpacing.spacingLG,
+                      PremiumPageHeader.horizontalPadding,
                       AppSpacing.spacingXXL,
                     ),
                     children: [
-                      Center(
-                        child: AvatarWithStatus(
-                          imageUrl: _displayAvatar,
-                          name: _displayName,
-                          isOnline: widget.isOnline,
-                          size: 96,
-                          showRing: true,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.spacingMD),
-                      Center(
-                        child: Text(
-                          _displayName,
-                          style: AppTypography.h2.copyWith(color: textColor),
-                          textAlign: TextAlign.center,
+                      PremiumShell(
+                        margin: EdgeInsets.zero,
+                        child: Column(
+                          children: [
+                            _InfoAvatar(
+                              imageUrl: _displayAvatar,
+                              isOnline: widget.isOnline,
+                            ),
+                            const SizedBox(height: AppSpacing.spacingMD),
+                            Text(
+                              _displayName,
+                              style: AppTypography.h2.copyWith(color: textColor),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_profile != null &&
+                                _locationLabel(_profile!) != null) ...[
+                              const SizedBox(height: AppSpacing.spacingXS),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  AppSvgIcon(
+                                    assetPath: AppIcons.location,
+                                    size: 16,
+                                    color: secondaryTextColor,
+                                  ),
+                                  const SizedBox(width: AppSpacing.spacingXS),
+                                  Text(
+                                    _locationLabel(_profile!)!,
+                                    style: AppTypography.caption
+                                        .copyWith(color: secondaryTextColor),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       if (_profile != null) ...[
-                        if (_locationLabel(_profile!) != null) ...[
-                          const SizedBox(height: AppSpacing.spacingXS),
-                          Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        if (_profile!.profileBio != null &&
+                            _profile!.profileBio!.trim().isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.spacingLG),
+                          PremiumShell(
+                            margin: EdgeInsets.zero,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                AppSvgIcon(
-                                  assetPath: AppIcons.location,
-                                  size: 16,
-                                  color: secondaryTextColor,
-                                ),
-                                const SizedBox(width: AppSpacing.spacingXS),
+                                PremiumSectionHeader(title: 'About'),
+                                const SizedBox(height: AppSpacing.spacingSM),
                                 Text(
-                                  _locationLabel(_profile!)!,
-                                  style: AppTypography.caption
+                                  _profile!.profileBio!.trim(),
+                                  style: AppTypography.body
                                       .copyWith(color: secondaryTextColor),
                                 ),
                               ],
                             ),
                           ),
                         ],
-                        if (_profile!.profileBio != null &&
-                            _profile!.profileBio!.trim().isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.spacingLG),
-                          Text(
-                            'About',
-                            style: AppTypography.labelMedium
-                                .copyWith(color: textColor),
-                          ),
-                          const SizedBox(height: AppSpacing.spacingSM),
-                          Text(
-                            _profile!.profileBio!.trim(),
-                            style: AppTypography.body
-                                .copyWith(color: secondaryTextColor),
-                          ),
-                        ],
                         if (_interestLabels(_profile!).isNotEmpty) ...[
                           const SizedBox(height: AppSpacing.spacingLG),
-                          Text(
-                            'Interests',
-                            style: AppTypography.labelMedium
-                                .copyWith(color: textColor),
-                          ),
-                          const SizedBox(height: AppSpacing.spacingSM),
-                          Wrap(
-                            spacing: AppSpacing.spacingSM,
-                            runSpacing: AppSpacing.spacingSM,
-                            children: _interestLabels(_profile!)
-                                .map(
-                                  (label) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.spacingMD,
-                                      vertical: AppSpacing.spacingXS,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadius.radiusRound,
-                                      ),
-                                      border: Border.all(
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.28),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      label,
-                                      style: AppTypography.caption.copyWith(
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                          PremiumShell(
+                            margin: EdgeInsets.zero,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                PremiumSectionHeader(title: 'Interests'),
+                                const SizedBox(height: AppSpacing.spacingSM),
+                                Wrap(
+                                  spacing: AppSpacing.spacingSM,
+                                  runSpacing: AppSpacing.spacingSM,
+                                  children: _interestLabels(_profile!)
+                                      .map(
+                                        (label) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.spacingMD,
+                                            vertical: AppSpacing.spacingXS,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accentViolet
+                                                .withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.radiusRound,
+                                            ),
+                                            border: Border.all(
+                                              color: AppColors.accentViolet
+                                                  .withValues(alpha: 0.28),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            label,
+                                            style: AppTypography.caption.copyWith(
+                                              color: AppColors.accentViolet,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ],
                       const SizedBox(height: AppSpacing.spacingXL),
-                      FilledButton.icon(
+                      GradientButton(
+                        text: 'View profile',
+                        iconPath: AppIcons.user,
                         onPressed: _openProfile,
-                        icon: AppSvgIcon(
-                          assetPath: AppIcons.user,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                        label: const Text('View profile'),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusMD),
-                          ),
-                        ),
                       ),
                       const SizedBox(height: AppSpacing.spacingXL),
-                      Text(
-                        'Shared media',
-                        style:
-                            AppTypography.labelMedium.copyWith(color: textColor),
-                      ),
+                      PremiumSectionHeader(title: 'Shared media'),
                       const SizedBox(height: AppSpacing.spacingMD),
                       if (_isLoadingMedia)
                         const Padding(
@@ -478,15 +472,8 @@ class _ChatConversationInfoPageState
                           child: Center(child: CircularProgressIndicator()),
                         )
                       else if (_sharedMedia.isEmpty)
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(AppSpacing.spacingLG),
-                          decoration: BoxDecoration(
-                            color: surfaceColor,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusMD),
-                            border: Border.all(color: borderColor),
-                          ),
+                        PremiumShell(
+                          margin: EdgeInsets.zero,
                           child: Text(
                             'No photos or videos shared yet',
                             style: AppTypography.bodySmall
@@ -507,8 +494,9 @@ class _ChatConversationInfoPageState
                           ),
                           itemBuilder: (context, index) {
                             final item = _sharedMedia[index];
-                            return GestureDetector(
+                            return PremiumTapScale(
                               onTap: () => _openMediaViewer(index),
+                              semanticLabel: 'Open shared media',
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(
                                   AppRadius.radiusSM,
@@ -535,11 +523,11 @@ class _ChatConversationInfoPageState
                                       Container(
                                         color: Colors.black
                                             .withValues(alpha: 0.35),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.play_circle_fill,
-                                            color: Colors.white,
+                                        child: Center(
+                                          child: AppSvgIcon(
+                                            assetPath: AppIcons.playCircle,
                                             size: 32,
+                                            color: Colors.white,
                                           ),
                                         ),
                                       ),
@@ -550,26 +538,38 @@ class _ChatConversationInfoPageState
                           },
                         ),
                       const SizedBox(height: AppSpacing.spacingXL),
-                      Wrap(
-                        spacing: AppSpacing.spacingSM,
-                        runSpacing: AppSpacing.spacingSM,
+                      PremiumSettingsGroup(
+                        title: 'Actions',
+                        margin: EdgeInsets.zero,
                         children: [
-                          _InfoActionChip(
-                            label: _isMuted ? 'Unmute' : 'Mute',
-                            iconPath: _isMuted ? AppIcons.bellSlash : AppIcons.bell,
-                            onTap: _isMuting ? null : _toggleMute,
-                            isLoading: _isMuting,
+                          PremiumSettingsTile(
+                            iconPath:
+                                _isMuted ? AppIcons.bellSlash : AppIcons.bell,
+                            title: _isMuted
+                                ? 'Unmute notifications'
+                                : 'Mute notifications',
+                            onTap: _isMuting ? () {} : _toggleMute,
+                            trailing: _isMuting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : null,
                           ),
-                          _InfoActionChip(
-                            label: 'Report',
+                          PremiumSettingsTile(
                             iconPath: AppIcons.report,
+                            title: 'Report user',
                             onTap: _openReport,
+                            accent: AppColors.feedbackWarning,
                           ),
-                          _InfoActionChip(
-                            label: 'Block',
+                          PremiumSettingsTile(
                             iconPath: AppIcons.block,
+                            title: 'Block user',
                             onTap: _openBlock,
-                            isDestructive: true,
+                            destructive: true,
                           ),
                         ],
                       ),
@@ -580,60 +580,69 @@ class _ChatConversationInfoPageState
   }
 }
 
-class _InfoActionChip extends StatelessWidget {
-  const _InfoActionChip({
-    required this.label,
-    required this.iconPath,
-    this.onTap,
-    this.isLoading = false,
-    this.isDestructive = false,
+class _InfoAvatar extends ConsumerWidget {
+  const _InfoAvatar({
+    required this.imageUrl,
+    required this.isOnline,
   });
 
-  final String label;
-  final String iconPath;
-  final VoidCallback? onTap;
-  final bool isLoading;
-  final bool isDestructive;
+  final String? imageUrl;
+  final bool isOnline;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final color =
-        isDestructive ? AppColors.feedbackError : theme.colorScheme.primary;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.spacingMD,
-          vertical: AppSpacing.spacingSM,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-          border: Border.all(color: color.withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isLoading)
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: color),
-              )
-            else
-              AppSvgIcon(assetPath: iconPath, size: 16, color: color),
-            const SizedBox(width: AppSpacing.spacingXS),
-            Text(
-              label,
-              style: AppTypography.caption.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (isOnline)
+            Container(
+              width: 94,
+              height: 94,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppColors.brandGradient,
               ),
             ),
-          ],
-        ),
+          Container(
+            width: 88,
+            height: 88,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.surface,
+            ),
+            child: ClipOval(
+              child: ProfileImageWidget(
+                imageUrl: imageUrl,
+                width: 82,
+                height: 82,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          if (isOnline)
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: AppColors.onlineGreen,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.surface,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
