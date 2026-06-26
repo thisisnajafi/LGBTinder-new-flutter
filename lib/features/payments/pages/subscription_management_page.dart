@@ -544,15 +544,12 @@ class _SubscriptionManagementPageState
       title: 'Subscription history',
       children: [
         PremiumSettingsTile(
+          iconPath: AppIcons.documentText,
           title: _historyExpanded ? 'Hide history' : 'Show history',
           subtitle: _history.isEmpty && !_historyExpanded
               ? 'Tap to load past subscriptions'
               : '${_history.length} record(s)',
-          leading: AppSvgIcon(
-            assetPath: AppIcons.documentText,
-            size: 22,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          accent: theme.colorScheme.onSurfaceVariant,
           onTap: () async {
             final expand = !_historyExpanded;
             setState(() => _historyExpanded = expand);
