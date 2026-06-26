@@ -146,7 +146,6 @@ class DeepLinkingService {
       if (payload.containsKey('utm_term')) utmParams['utm_term'] = payload['utm_term'].toString();
       if (payload.containsKey('utm_content')) utmParams['utm_content'] = payload['utm_content'].toString();
       if (payload.containsKey('campaign_id')) utmParams['campaign_id'] = payload['campaign_id'].toString();
-      if (payload.containsKey('referral_code')) utmParams['referral_code'] = payload['referral_code'].toString();
       if (payload.containsKey('marketing_source')) {
         utmParams['marketing_source'] = payload['marketing_source'].toString();
       }
@@ -204,7 +203,6 @@ class DeepLinkingService {
       queryParams.forEach((key, value) {
         if (key.startsWith('utm_') ||
             key == 'campaign_id' ||
-            key == 'referral_code' ||
             key == 'marketing_source') {
           utmParams[key] = value;
         }

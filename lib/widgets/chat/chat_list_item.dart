@@ -11,8 +11,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
-import '../../shared/models/user_tier.dart';
-import '../../shared/providers/user_tier_provider.dart';
+import '../../core/providers/subscription_provider.dart';
 import '../../features/chat/utils/chat_message_preview.dart';
 import 'typing_indicator.dart';
 
@@ -49,8 +48,7 @@ class ChatListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final tier = ref.watch(userTierProvider);
-    final isLocked = tier == UserTier.basid;
+    final isLocked = !ref.watch(isPremiumProvider);
     final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final displayName = name.trim().isNotEmpty ? name.trim() : 'User';
 

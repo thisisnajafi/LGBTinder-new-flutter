@@ -82,6 +82,7 @@ dependencies:
   permission_handler: ^11.1.0
   geolocator: ^13.0.4
   connectivity_plus: ^5.0.2
+  # internet_connection_checker_plus: ^2.0.0  # enable after pub get succeeds; HTTP ping used meanwhile
   device_info_plus: ^10.1.0
   file_picker: ^8.1.2
 
@@ -174,6 +175,7 @@ flutter:
     # Only bundle icon styles used by AppIcons (outline + bold for nav)
     - assets/icons/outline/
     - assets/icons/bold/
+    - assets/icons/broken/wifi.svg
     - assets/sounds/
 
   # Custom Fonts

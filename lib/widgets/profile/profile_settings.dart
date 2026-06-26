@@ -14,7 +14,7 @@ class ProfileSettings extends ConsumerWidget {
   final Function()? onEditProfile;
   final Function()? onPrivacySettings;
   final Function()? onBlockedUsers;
-  final Function()? onDeleteAccount;
+  final Function()? onContactSupport;
   final Function()? onLogout;
 
   const ProfileSettings({
@@ -22,7 +22,7 @@ class ProfileSettings extends ConsumerWidget {
     this.onEditProfile,
     this.onPrivacySettings,
     this.onBlockedUsers,
-    this.onDeleteAccount,
+    this.onContactSupport,
     this.onLogout,
   }) : super(key: key);
 
@@ -76,15 +76,14 @@ class ProfileSettings extends ConsumerWidget {
         ),
         _buildSettingItem(
           context: context,
-          iconPath: AppIcons.delete,
-          title: 'Delete Account',
-          subtitle: 'Permanently delete your account',
-          onTap: onDeleteAccount,
-          textColor: AppColors.notificationRed,
+          iconPath: AppIcons.help,
+          title: 'Contact Support',
+          subtitle: 'Request account help or removal',
+          onTap: onContactSupport,
+          textColor: textColor,
           secondaryTextColor: secondaryTextColor,
           surfaceColor: surfaceColor,
           borderColor: borderColor,
-          isDestructive: true,
         ),
         _buildSettingItem(
           context: context,

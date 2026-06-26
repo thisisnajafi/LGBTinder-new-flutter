@@ -100,7 +100,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               'lastName': _lastNameController.text.trim(),
             },
           ).toString();
-          context.go(target);
+          context.push(target);
         }
       }
     } on ApiError catch (e) {
@@ -152,10 +152,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return AppPageScaffold(
+    return AuthPageScaffold(
       title: 'Create Account',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Join the community',
       body: SingleChildScrollView(
           padding: EdgeInsets.all(AppSpacing.spacingLG),
           child: Form(
@@ -163,17 +162,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: AppSpacing.spacingXL),
-                Text(
-                  'Join LGBTFinder',
-                  style: AppTypography.h1.copyWith(color: textColor),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppSpacing.spacingSM),
-                Text(
-                  'Create your account to get started',
-                  style: AppTypography.body.copyWith(color: secondaryTextColor),
-                  textAlign: TextAlign.center,
+                const AuthFormHeader(
+                  title: 'Join LGBTFinder',
+                  subtitle: 'Create your account to get started',
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
                 // First Name field
@@ -405,38 +396,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return null;
                   },
                 ),
-                SizedBox(height: AppSpacing.spacingLG),
-                // Referral code field (optional)
-                TextFormField(
-                  controller: _referralCodeController,
-                  style: AppTypography.body.copyWith(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Referral Code (Optional)',
-                    hintText: 'Enter referral code if you have one',
-                    labelStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                    filled: true,
-                    fillColor: isDark
-                        ? AppColors.surfaceElevatedDark
-                        : AppColors.surfaceElevatedLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.card_giftcard_outlined,
-                      color: secondaryTextColor,
-                    ),
-                  ),
-                ),
                 SizedBox(height: AppSpacing.spacingMD),
                 // Terms agreement
                 Row(
@@ -490,6 +449,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   isFullWidth: true,
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
+                const AuthOrDivider(),
+                SizedBox(height: AppSpacing.spacingLG),
+                SocialLoginButton(getDeviceName: _getDeviceName),
+                SizedBox(height: AppSpacing.spacingLG),
                 // Sign in link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -500,7 +463,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        context.go(AppRoutes.login);
+                        context.push(AppRoutes.login);
                       },
                       child: Text(
                         'Sign In',

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/payments/data/models/plan_limits.dart';
 import '../../features/payments/data/models/subscription_plan.dart';
 import '../../features/payments/data/models/superlike_pack.dart';
+import '../../shared/models/subscription_status.dart';
+import '../../shared/models/user_tier.dart';
 import '../services/app_logger.dart';
 import 'cache_config.dart';
 
@@ -18,10 +20,12 @@ class SessionDataCacheService {
   static const String superlikesPacksKey = 'superlikes:packs';
   static const String subscriptionStatusKey = 'subscription:status';
   static const String userTierKey = 'user:tier';
+  static const String subscriptionMetaSavedAtKey = 'subscription:status:savedAt';
 
   static const Duration superlikesRemainingTtl = Duration(minutes: 30);
   static const Duration superlikesPacksTtl = Duration(hours: 1);
   static const Duration subscriptionStatusTtl = Duration(minutes: 15);
+  static const Duration subscriptionMetaTtl = Duration(minutes: 15);
   static const Duration userTierTtl = Duration(minutes: 15);
 
   int? _memoryRemaining;
@@ -127,6 +131,71 @@ class SessionDataCacheService {
       (s) => s.toJson(),
     );
     AppLogger.info('Cache write: $subscriptionStatusKey', tag: 'SessionCache');
+  }
+
+  /// Persist global subscription meta (from API meta.subscription).
+  Future<void> saveSubscription(AppSubscriptionStatus sub) async {
+    await _prefs.setString(
+      _diskKey(subscriptionStatusKey),
+      jsonEncode({
+        'value': sub.toJson(),
+        'cached_at': DateTime.now().toIso8601String(),
+        'ttl_ms': subscriptionMetaTtl.inMilliseconds,
+      }),
+    );
+    await _prefs.setString(
+      _diskKey(userTierKey),
+      jsonEncode({
+        'value': sub.tier.key,
+        'cached_at': DateTime.now().toIso8601String(),
+        'ttl_ms': userTierTtl.inMilliseconds,
+      }),
+    );
+    await _prefs.setInt(
+      _diskKey(subscriptionMetaSavedAtKey),
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    AppLogger.info(
+      'Subscription cached: ${sub.tier.key}',
+      tag: 'SessionCache',
+    );
+  }
+
+  AppSubscriptionStatus? loadCachedSubscriptionSync() {
+    return _readObjectEntry<AppSubscriptionStatus>(
+      subscriptionStatusKey,
+      subscriptionMetaTtl,
+      AppSubscriptionStatus.fromJson,
+    );
+  }
+
+  Future<AppSubscriptionStatus?> loadCachedSubscription() async {
+    final savedAt = _prefs.getInt(_diskKey(subscriptionMetaSavedAtKey)) ?? 0;
+    final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+
+    if (age > subscriptionMetaTtl.inMilliseconds) {
+      AppLogger.info('Subscription cache expired', tag: 'SessionCache');
+      return null;
+    }
+
+    final json = _prefs.getString(_diskKey(subscriptionStatusKey));
+    if (json == null) return loadCachedSubscriptionSync();
+
+    try {
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      final value = map['value'];
+      if (value is Map<String, dynamic>) {
+        return AppSubscriptionStatus.fromJson(value);
+      }
+      return AppSubscriptionStatus.fromJson(map);
+    } catch (e) {
+      AppLogger.error(
+        'Failed to parse cached subscription',
+        tag: 'SessionCache',
+        error: e,
+      );
+      return null;
+    }
   }
 
   // ── User tier ─────────────────────────────────────────────────────────────

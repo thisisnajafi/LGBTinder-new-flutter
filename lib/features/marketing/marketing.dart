@@ -30,7 +30,6 @@ export 'presentation/widgets/badge_achievement_popup.dart';
 export 'presentation/screens/enhanced_plans_screen.dart';
 export 'presentation/screens/daily_rewards_screen.dart';
 export 'presentation/screens/badges_screen.dart';
-export 'presentation/screens/referral_screen.dart';
 
 // Integration Helpers
 export 'presentation/integration/marketing_integration.dart';

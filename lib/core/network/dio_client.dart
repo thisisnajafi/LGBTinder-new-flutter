@@ -9,6 +9,8 @@ import '../auth/banned_handler.dart';
 import '../auth/unauthorized_handler.dart';
 import '../utils/app_logger.dart';
 import 'app_dio_logger.dart';
+import 'subscription_meta_interceptor.dart';
+import 'retry_interceptor.dart';
 
 /// Max chars of response/request body to log; longer content is truncated.
 const int _kLogBodyMaxChars = 400;
@@ -73,11 +75,15 @@ class DioClient {
     );
 
     _setupInterceptors();
-    _dio.interceptors.add(AppDioLogger());
   }
 
   void _setupInterceptors() {
-    // Request Interceptor - Add auth token
+    _dio.interceptors.addAll([
+      RetryInterceptor(_dio),
+      AppDioLogger(),
+    ]);
+
+    // Auth, logging, and error handling
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -248,7 +254,7 @@ class DioClient {
       ),
     );
 
-    // Verbose LogInterceptor disabled; we use summarized logging in InterceptorsWrapper above
+    _dio.interceptors.add(SubscriptionMetaInterceptor());
   }
 
   /// Get Dio instance

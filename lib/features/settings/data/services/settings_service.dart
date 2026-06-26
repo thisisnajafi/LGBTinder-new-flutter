@@ -155,26 +155,6 @@ class SettingsService {
     }
   }
 
-  /// Delete account
-  Future<void> deleteAccount(String password, String reason) async {
-    try {
-      final response = await _apiService.delete<Map<String, dynamic>>(
-        ApiEndpoints.deleteAccount,
-        data: {
-          'password': password,
-          'reason': reason,
-        },
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (!response.isSuccess) {
-        throw Exception(response.message);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   /// Export user data
   Future<Map<String, dynamic>> exportUserData() async {
     try {

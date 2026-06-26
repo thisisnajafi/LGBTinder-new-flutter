@@ -5,12 +5,19 @@ import '../../features/payments/data/models/plan_limits.dart';
 import '../../features/payments/providers/payment_providers.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../models/user_tier.dart';
+import '../../core/providers/subscription_provider.dart';
 
 /// Best-effort tier provider (does not throw):
-/// - prefers cached `user:tier`
+/// - prefers global [subscriptionProvider] (synced on every API response)
+/// - then cached `user:tier`
 /// - then `PlanLimits.planInfo`
-/// - falls back to `SubscriptionStatus`
+/// - falls back to legacy `SubscriptionStatus`
 final userTierProvider = Provider<UserTier>((ref) {
+  final subscription = ref.watch(subscriptionProvider);
+  if (subscription != null) {
+    return subscription.tier;
+  }
+
   final cachedTier = ref.watch(cachedUserTierProvider);
   if (cachedTier != null) {
     return UserTier.values.firstWhere(
@@ -45,6 +52,11 @@ final userTierProvider = Provider<UserTier>((ref) {
   return UserTier.basid;
 });
 
+/// Feature-aware guards — prefer [subscriptionProvider.notifier] getters in UI.
+final subscriptionAccessProvider = Provider<SubscriptionNotifier>((ref) {
+  return ref.watch(subscriptionProvider.notifier);
+});
+
 /// Helper for guarding features/pages by tier.
 bool tierAllows(UserTier current, {required UserTier min}) => current.atLeast(min);
 
@@ -55,4 +67,3 @@ bool featureAllowsByLimits(PlanLimits? limits, String featureName) {
   if (limits == null) return false;
   return limits.hasFeature(featureName);
 }
-

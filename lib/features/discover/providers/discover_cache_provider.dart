@@ -278,6 +278,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function()? onTheyLikedYou,
     void Function()? onLostMatch,
     void Function()? onSuperlikeSent,
+    void Function()? onOfflineQueued,
   }) {
     final idx = state.items.indexWhere((e) => e.profile.id == userId);
     if (idx < 0) return;
@@ -327,6 +328,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         onTheyLikedYou,
         onLostMatch,
         onSuperlikeSent,
+        onOfflineQueued,
       ),
     );
   }
@@ -342,6 +344,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function()? onTheyLikedYou,
     void Function()? onLostMatch,
     void Function()? onSuperlikeSent,
+    void Function()? onOfflineQueued,
   ) async {
     try {
       switch (action) {
@@ -434,6 +437,10 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         stackTrace: stack,
       );
       final err = e;
+      if (err is ApiError && err.code == 0) {
+        onOfflineQueued?.call();
+        return;
+      }
       final isLimit = _isLimitError(err);
       if (isLimit) {
         if (action == 'superlike') {

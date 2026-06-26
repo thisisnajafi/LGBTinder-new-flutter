@@ -78,31 +78,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (mounted) context.go(AppRoutes.welcome);
   }
 
-  Future<void> _confirmDeleteAccount() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete account?'),
-        content: const Text(
-          'This permanently deletes your profile, matches, and messages. '
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
-            child: const Text('Delete account'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account deletion is available under Account Management.')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
@@ -248,13 +223,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 iconPath: AppIcons.logout,
                 title: 'Log out',
                 onTap: _confirmLogout,
-                destructive: true,
-              ),
-              PremiumSettingsTile(
-                iconPath: AppIcons.delete,
-                title: 'Delete account',
-                subtitle: 'Permanent — cannot be undone',
-                onTap: _confirmDeleteAccount,
                 destructive: true,
               ),
             ],

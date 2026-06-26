@@ -16,6 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'core/auth/banned_handler.dart';
 import 'core/auth/unauthorized_handler.dart';
 import 'core/services/app_logger.dart';
+import 'core/services/connectivity_service.dart';
 import 'routes/app_router.dart';
 import 'widgets/error_handling/error_boundary.dart';
 import 'shared/services/push_notification_service.dart';
@@ -97,6 +98,7 @@ Future<void> _bootstrap() async {
   };
 
   WidgetsFlutterBinding.ensureInitialized();
+  ConnectivityService.instance.initialize();
   startupLog('2. Flutter bindings initialized');
 
   SystemChrome.setSystemUIOverlayStyle(

@@ -1,6 +1,7 @@
 // Screen: AccountManagementScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -8,12 +9,11 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/widgets/app_settings_detail.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/confirmation_dialog.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../routes/app_router.dart';
 import '../../core/providers/api_providers.dart';
 import '../../features/profile/providers/profile_page_cache_provider.dart';
-import '../../features/profile/providers/profile_provider.dart';
 import '../../features/profile/providers/profile_providers.dart';
 
 /// Account management screen - Manage account settings
@@ -162,56 +162,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     }
   }
 
-  Future<void> _handleDeleteAccount() async {
-    final confirmed = await ConfirmationDialog.show(
-      context,
-      title: 'Delete Account',
-      message: 'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.',
-      confirmText: 'Delete Account',
-      cancelText: 'Cancel',
-      isDestructive: true,
-    );
-
-    if (confirmed == true) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        final apiService = ref.read(apiServiceProvider);
-        await apiService.delete<Map<String, dynamic>>(
-          ApiEndpoints.deleteAccount,
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
-
-        if (mounted) {
-          AlertDialogCustom.show(
-            context,
-            title: 'Account Deleted',
-            message: 'Your account has been permanently deleted. You will now be logged out.',
-            icon: Icons.delete_forever,
-            iconColor: AppColors.notificationRed,
-          ).then((_) {
-            // Navigate to login/welcome screen and clear auth state
-            Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete account: $e')),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -224,7 +174,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
     return AppSettingsDetailScaffold(
       title: 'Account management',
-      subtitle: 'Update email, password, or delete account',
+      subtitle: 'Update email and password',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : AppSettingsDetailList(
@@ -400,49 +350,19 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                 ),
                 const SizedBox(height: AppSpacing.spacingXL),
                 PremiumSettingsGroup(
-                  title: 'Danger zone',
+                  title: 'Need help with your account?',
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber,
-                          color: AppColors.notificationRed,
-                          size: 24,
-                        ),
-                        const SizedBox(width: AppSpacing.spacingSM),
-                        Text(
-                          'Delete account',
-                          style: AppTypography.h3.copyWith(
-                            color: AppColors.notificationRed,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.spacingMD),
                     Text(
-                      'Once you delete your account, there is no going back. Please be certain.',
+                      'To request account removal, contact our support team. '
+                      'An administrator will review your request.',
                       style: AppTypography.body.copyWith(color: textColor),
                     ),
                     const SizedBox(height: AppSpacing.spacingMD),
-                    OutlinedButton(
-                      onPressed: _handleDeleteAccount,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.spacingMD,
-                        ),
-                        side: const BorderSide(
-                          color: AppColors.notificationRed,
-                          width: 2,
-                        ),
-                      ),
-                      child: Text(
-                        'Delete my account',
-                        style: AppTypography.button.copyWith(
-                          color: AppColors.notificationRed,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    GradientButton(
+                      text: 'Contact support',
+                      onPressed: () => context.push(AppRoutes.supportTickets),
+                      isFullWidth: true,
+                      icon: Icons.support_agent,
                     ),
                   ],
                 ),

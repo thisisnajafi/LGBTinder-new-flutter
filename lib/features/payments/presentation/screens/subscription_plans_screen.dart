@@ -14,6 +14,7 @@ import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_subscription_plans.dart';
 import '../../providers/payment_providers.dart';
 import '../../providers/google_play_billing_provider.dart';
+import '../../../../core/providers/subscription_provider.dart';
 import '../../data/models/subscription_plan.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
@@ -170,6 +171,9 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
             'plan_id': _selectedPlanId,
             'sub_plan_id': _selectedSubPlanId,
           });
+          unawaited(
+            ref.read(subscriptionRefreshProvider).refresh(),
+          );
           unawaited(
             ref
                 .read(subscriptionSyncProvider)

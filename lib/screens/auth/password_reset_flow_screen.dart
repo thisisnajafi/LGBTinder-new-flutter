@@ -328,7 +328,13 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     return AuthPageScaffold(
       title: 'Reset Password',
       subtitle: 'Recover access to your account',
-      onBack: _currentStep > 0 ? _previousStep : null,
+      onBack: () {
+        if (_currentStep > 0) {
+          _previousStep();
+        } else {
+          AuthNavigation.popOrWelcome(context);
+        }
+      },
       body: Column(
         children: [
           // Progress indicator

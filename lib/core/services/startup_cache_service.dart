@@ -6,6 +6,7 @@ import '../../features/payments/providers/payment_providers.dart';
 import '../../shared/models/user_tier.dart';
 import '../cache/cache_manager.dart';
 import '../cache/session_cache_providers.dart';
+import '../providers/subscription_provider.dart';
 import '../services/app_logger.dart';
 
 /// Coordinates one-time (per session) startup cache priming.
@@ -32,6 +33,7 @@ class StartupCacheService {
         _fetchAndCacheSuperlikePacks(),
         _fetchAndCacheSubscription(),
         _fetchAndCacheOwnProfile(),
+        _ref.read(subscriptionRefreshProvider).refresh(),
       ]);
       _lastPrimeAt = DateTime.now();
       AppLogger.info('Startup cache primed', tag: 'StartupCache');

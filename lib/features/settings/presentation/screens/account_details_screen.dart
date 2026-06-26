@@ -113,7 +113,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                     PremiumSettingsTile(
                       iconPath: AppIcons.setting,
                       title: 'Account management',
-                      subtitle: 'Change email, password, or delete account',
+                      subtitle: 'Change email and password',
                       onTap: _openAccountManagement,
                     ),
                   ],

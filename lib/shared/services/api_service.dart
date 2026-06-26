@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/services/action_queue_service.dart';
 import '../../core/network/dio_client.dart';
 import '../models/api_response.dart';
 import '../models/api_error.dart';
@@ -235,17 +236,26 @@ class ApiService {
   }) async {
     if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
-        await _queueService.queueRequest(
-          QueuedRequest(
-            id: _uuid.v4(),
-            method: 'POST',
+        if (data is Map<String, dynamic> &&
+            ActionQueueService.instance.isQueueableEndpoint(endpoint)) {
+          await ActionQueueService.instance.enqueuePost(
             endpoint: endpoint,
-            data: data,
-            createdAt: DateTime.now(),
-          ),
-        );
+            body: data,
+          );
+        } else {
+          await _queueService.queueRequest(
+            QueuedRequest(
+              id: _uuid.v4(),
+              method: 'POST',
+              endpoint: endpoint,
+              data: data,
+              createdAt: DateTime.now(),
+            ),
+          );
+        }
         throw ApiError(
-          message: 'No internet connection. Request queued and will be sent when online.',
+          message:
+              'No internet connection. Request queued and will be sent when online.',
           code: 0,
         );
       } else {
@@ -582,6 +592,42 @@ class ApiService {
     }
   }
 
+  /// Default upload [Options] — extended timeouts, limited retries.
+  Options _uploadOptions([Options? options]) {
+    final base = options ?? Options();
+    return Options(
+      method: base.method,
+      headers: base.headers ??
+          {
+            'Content-Type': 'multipart/form-data',
+          },
+      sendTimeout: base.sendTimeout ?? const Duration(minutes: 3),
+      receiveTimeout: base.receiveTimeout ?? const Duration(minutes: 3),
+      extra: {
+        '_retryCount': 0,
+        '_maxRetries': 1,
+        ...?base.extra,
+      },
+    );
+  }
+
+  ProgressCallback? _retryAwareSendProgress(
+    Options options,
+    ProgressCallback? onSendProgress,
+  ) {
+    if (onSendProgress == null) return null;
+
+    var lastAttempt = options.extra?['_retryCount'] as int? ?? 0;
+    return (sent, total) {
+      final attempt = options.extra?['_retryCount'] as int? ?? 0;
+      if (attempt > lastAttempt) {
+        lastAttempt = attempt;
+        onSendProgress(0, total);
+      }
+      onSendProgress(sent, total);
+    };
+  }
+
   /// POST request with FormData (multipart/form-data)
   /// 
   /// Use this for uploading files or sending mixed data (files + fields)
@@ -603,15 +649,12 @@ class ApiService {
     }
 
     try {
+      final uploadOptions = _uploadOptions(options);
       final response = await _dioClient.dio.post(
         endpoint,
         data: data,
-        options: options ?? Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
-        onSendProgress: onSendProgress,
+        options: uploadOptions,
+        onSendProgress: _retryAwareSendProgress(uploadOptions, onSendProgress),
       );
 
       return _handleResponse<T>(response, fromJson);
@@ -649,15 +692,12 @@ class ApiService {
         if (fields != null) ...fields,
       });
 
+      final uploadOptions = _uploadOptions(options);
       final response = await _dioClient.dio.post(
         endpoint,
         data: formData,
-        options: options ?? Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
-        onSendProgress: onSendProgress,
+        options: uploadOptions,
+        onSendProgress: _retryAwareSendProgress(uploadOptions, onSendProgress),
       );
 
       return _handleResponse<T>(response, fromJson);
@@ -699,15 +739,12 @@ class ApiService {
         if (fields != null) ...fields,
       });
 
+      final uploadOptions = _uploadOptions(options);
       final response = await _dioClient.dio.post(
         endpoint,
         data: formData,
-        options: options ?? Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
-        onSendProgress: onSendProgress,
+        options: uploadOptions,
+        onSendProgress: _retryAwareSendProgress(uploadOptions, onSendProgress),
       );
 
       return _handleResponse<T>(response, fromJson);

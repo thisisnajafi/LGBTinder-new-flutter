@@ -49,11 +49,6 @@ class SettingsRepository {
     return await _settingsService.changePassword(currentPassword, newPassword);
   }
 
-  /// Delete account
-  Future<void> deleteAccount(String password, String reason) async {
-    return await _settingsService.deleteAccount(password, reason);
-  }
-
   /// Export user data
   Future<Map<String, dynamic>> exportUserData() async {
     return await _settingsService.exportUserData();

@@ -16,7 +16,6 @@ class MarketingDeepLinkHandler {
   static const List<String> marketingRoutes = [
     '/plans',
     '/daily-rewards',
-    '/referral',
     '/badges',
     '/promotions',
   ];
@@ -38,8 +37,6 @@ class MarketingDeepLinkHandler {
         return _handlePlansDeepLink(context, queryParams);
       case '/daily-rewards':
         return _handleDailyRewardsDeepLink(context, queryParams);
-      case '/referral':
-        return _handleReferralDeepLink(context, queryParams);
       case '/badges':
         return _handleBadgesDeepLink(context, queryParams);
       case '/promotions':
@@ -82,20 +79,6 @@ class MarketingDeepLinkHandler {
     Map<String, String> queryParams,
   ) {
     context.push(AppRoutes.home);
-    return true;
-  }
-
-  /// Handle /referral deep link
-  bool _handleReferralDeepLink(
-    BuildContext context,
-    Map<String, String> queryParams,
-  ) {
-    final code = queryParams['code'];
-    final target = Uri(
-      path: AppRoutes.home,
-      queryParameters: code != null && code.isNotEmpty ? {'tab': 'settings', 'referralCode': code} : {'tab': 'settings'},
-    ).toString();
-    context.push(target);
     return true;
   }
 

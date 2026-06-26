@@ -328,6 +328,8 @@ class AppIcons {
   // Network & Connection Icons
   static const String wifi = '$_basePath/wifi.svg';
   static const String wifiSquare = '$_basePath/wifi-square.svg';
+  static const String wifiOff = 'assets/icons/broken/wifi.svg';
+  static const String wifiWeak = '$_basePath/warning-2.svg';
   static const String bluetooth = '$_basePath/bluetooth.svg';
   static const String bluetooth2 = '$_basePath/bluetooth-2.svg';
   static const String cloud = '$_basePath/cloud.svg';

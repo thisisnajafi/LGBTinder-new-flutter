@@ -232,8 +232,8 @@ class ApiEndpoints {
   static const String callManagementStatistics = '/call-management/statistics';
 
   static const String verifyEmailChange = '/profile/verify-email-change';
-  static const String deleteAccount = '/auth/delete-account';
   static const String subscriptionStatus = '/subscriptions/status';
+  static const String subscriptionRefresh = '/subscriptions/refresh';
   static const String subscriptionCancel = '/subscriptions/cancel';
   static const String subscriptionReactivate = '/subscriptions/reactivate';
   static const String userPaymentMethods = '/user/payment-methods';
@@ -475,15 +475,6 @@ class ApiEndpoints {
   static const String marketingPromoCodes = '/marketing/promo-codes';
   static const String marketingTrackImpression = '/marketing/track-impression';
   static const String marketingTrackClick = '/marketing/track-click';
-
-  // ==================== Referrals ====================
-  static const String referralsStats = '/referrals/stats';
-  static const String referralsCode = '/referrals/code';
-  static const String referralsHistory = '/referrals/history';
-  static const String referralsTiers = '/referrals/tiers';
-  static const String referralsValidateCode = '/referrals/validate-code';
-  static const String referralsProcessMilestone = '/referrals/process-milestone';
-  static const String referralsMarkCompleted = '/referrals/mark-completed';
 
   // ==================== Daily Rewards ====================
   static const String dailyRewardsStatus = '/daily-rewards/status';

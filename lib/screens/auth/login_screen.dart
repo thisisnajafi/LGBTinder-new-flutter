@@ -19,8 +19,6 @@ import '../../features/auth/data/models/email_verification_required_exception.da
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import 'package:go_router/go_router.dart';
-import '../../pages/home_page.dart';
-import '../../pages/profile_wizard_page.dart';
 import '../../routes/app_router.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/analytics/app_event_tracker.dart';
@@ -123,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'isNewUser': 'false',
             },
           ).toString();
-          context.go(target);
+          context.push(target);
         } else if (response.userState == 'ready_for_app' ||
             response.profileCompleted) {
           ref.read(appEventTrackerProvider).track('auth_success', meta: {'screen': 'login'});
@@ -192,7 +190,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               path: AppRoutes.emailVerification,
               queryParameters: {'email': e.email, 'isNewUser': 'false'},
             ).toString();
-            context.go(target);
+            context.push(target);
           }
         } catch (codeError) {
           if (mounted) {
@@ -247,7 +245,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   path: AppRoutes.emailVerification,
                   queryParameters: {'email': email, 'isNewUser': 'false'},
                 ).toString();
-                context.go(target);
+                context.push(target);
               }
             } catch (codeError) {
               if (mounted) {

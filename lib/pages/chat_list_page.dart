@@ -1,6 +1,7 @@
 // Screen: ChatListPage
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
@@ -21,8 +22,7 @@ import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../features/chat/data/models/chat.dart';
 import '../features/chat/utils/chat_message_preview.dart';
 import '../shared/models/api_error.dart';
-import '../shared/models/user_tier.dart';
-import '../shared/providers/user_tier_provider.dart';
+import '../core/providers/subscription_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../core/widgets/staggered_list_item.dart';
@@ -264,8 +264,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   }
 
   void _handleChatTap(Map<String, dynamic> chat) {
-    final userTier = ref.read(userTierProvider);
-    if (userTier == UserTier.basid) {
+    final isPremium = ref.read(isPremiumProvider);
+    if (!isPremium) {
       ChatUpgradeBottomSheet.show(context);
       return;
     }
@@ -295,9 +295,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     );
 
     final theme = Theme.of(context);
-    final tier = ref.watch(userTierProvider);
     final showPremiumBanner =
-        tier == UserTier.basid && !_premiumBannerDismissed;
+        !ref.watch(isPremiumProvider) && !_premiumBannerDismissed;
 
     return PremiumTabPageLayout(
       title: 'Messenger',
@@ -326,13 +325,26 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                 onChanged: (value) => setState(() => _searchQuery = value),
                 decoration: InputDecoration(
                   hintText: 'Search conversations...',
-                  prefixIcon: AppSvgIcon(
-                    assetPath: AppIcons.search,
-                    size: 20,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                  prefixIcon: _MessengerSearchPrefixIcon(isDark: theme.brightness == Brightness.dark),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 52,
+                    minHeight: 44,
                   ),
                   filled: true,
                   fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                    borderSide: BorderSide(
+                      color: AppColors.accentViolet.withValues(alpha: 0.14),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                    borderSide: BorderSide(
+                      color: AppColors.accentViolet.withValues(alpha: 0.45),
+                      width: 1.5,
+                    ),
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.radiusRound),
                     borderSide: BorderSide.none,
@@ -426,6 +438,58 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Gradient search badge for the messenger search field prefix.
+class _MessengerSearchPrefixIcon extends StatelessWidget {
+  const _MessengerSearchPrefixIcon({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.spacingSM),
+      child: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.accentViolet.withValues(alpha: isDark ? 0.32 : 0.16),
+              AppColors.accentPink.withValues(alpha: isDark ? 0.24 : 0.12),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: AppColors.accentViolet.withValues(alpha: 0.28),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.accentViolet, AppColors.accentPink],
+          ).createShader(bounds),
+          blendMode: BlendMode.srcIn,
+          child: AppSvgIcon(
+            assetPath: AppIcons.getIconBold('search-normal'),
+            size: 17,
+          ),
+        ),
       ),
     );
   }

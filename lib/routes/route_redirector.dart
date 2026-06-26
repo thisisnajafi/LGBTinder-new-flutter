@@ -43,7 +43,6 @@ class RouteRedirector {
     if (path == '/badges' || path == '/promotions' || path == '/daily-rewards') {
       return AppRoutes.home;
     }
-    if (path == '/referral') return '${AppRoutes.home}/settings';
     if (path == '/matches') return '${AppRoutes.home}/matches';
 
     if (path.startsWith('/profile/')) {

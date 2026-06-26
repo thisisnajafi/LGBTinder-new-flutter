@@ -20,7 +20,6 @@ import '../../../../../screens/privacy_settings_screen.dart';
 import '../../../../../screens/profile/profile_verification_screen.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
-import 'profile_completeness_utils.dart';
 import 'profile_details_sections.dart';
 import 'profile_hero_section.dart';
 import 'profile_premium_shell.dart';
@@ -55,7 +54,6 @@ class OwnProfileView extends ConsumerWidget {
 
     final UserTier fallbackTier = ref.watch(userTierProvider);
     final superlikes = ref.watch(superlikesRemainingProvider);
-    final completeness = computeProfileCompleteness(profile);
 
     final cacheData = ref.watch(profilePageCacheProvider).valueOrNull;
     final sessionCache = ref.watch(sessionDataCacheServiceProvider);
@@ -130,7 +128,6 @@ class OwnProfileView extends ConsumerWidget {
                 tier: tier,
                 locationLabel: locationLabel,
                 isOnline: profile.isOnline ?? false,
-                completeness: completeness,
                 viewsCount: profile.viewsCount ?? 0,
                 superlikesRemaining: superlikes,
                 onEditProfile: () => _openEdit(context),

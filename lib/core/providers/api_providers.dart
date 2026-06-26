@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../core/network/dio_client.dart';
 import '../../shared/services/api_service.dart';
-import '../../shared/services/connectivity_service.dart';
+import '../../core/services/connectivity_service.dart';
+import '../../core/services/action_queue_service.dart';
 import '../../shared/services/cache_service.dart';
 import '../../shared/services/offline_queue_service.dart';
 import '../../shared/services/sync_service.dart';
@@ -12,7 +13,6 @@ import '../../shared/services/locale_api_service.dart';
 import '../../shared/services/token_api_service.dart';
 import '../../shared/services/ticket_api_service.dart';
 import '../../shared/services/safety_api_service.dart';
-import '../../shared/services/referral_api_service.dart';
 import '../../shared/services/session_api_service.dart';
 import '../../shared/services/account_api_service.dart';
 import '../../shared/services/call_management_api_service.dart';
@@ -25,11 +25,8 @@ final tokenStorageServiceProvider = Provider<TokenStorageService>((ref) {
 
 /// Connectivity Service Provider (singleton)
 final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
-  final service = ConnectivityService();
-  // Defer so first frame / splash never waits on platform connectivity checks.
-  Future.microtask(() => service.initialize());
-  ref.onDispose(() => service.dispose());
-  return service;
+  ref.onDispose(() => ConnectivityService.instance.dispose());
+  return ConnectivityService.instance;
 });
 
 /// Cache Service Provider
@@ -47,10 +44,25 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final connectivityService = ref.watch(connectivityServiceProvider);
   final queueService = ref.watch(offlineQueueServiceProvider);
   final dioClient = ref.watch(dioClientProvider);
-  
+
   final syncService = SyncService(queueService, connectivityService, dioClient);
   Future.microtask(() => syncService.initialize());
   return syncService;
+});
+
+/// Wires queue flush + offline sync when connectivity is restored.
+final connectivityServiceBindingProvider = Provider<void>((ref) {
+  final dioClient = ref.watch(dioClientProvider);
+  final syncService = ref.watch(syncServiceProvider);
+
+  ConnectivityService.instance.onConnectionRestored = () async {
+    await ActionQueueService.instance.flush(dioClient.dio);
+    await syncService.syncQueuedRequests();
+  };
+
+  ref.onDispose(() {
+    ConnectivityService.instance.onConnectionRestored = null;
+  });
 });
 
 /// Dio Client Provider
@@ -92,11 +104,6 @@ final ticketApiServiceProvider = Provider<TicketApiService>((ref) {
 /// Safety API Service Provider (GET safety/guidelines)
 final safetyApiServiceProvider = Provider<SafetyApiService>((ref) {
   return SafetyApiService(ref.watch(apiServiceProvider));
-});
-
-/// Referral API Service Provider (referrals stats, code, history, tiers, validate, etc.)
-final referralApiServiceProvider = Provider<ReferralApiService>((ref) {
-  return ReferralApiService(ref.watch(apiServiceProvider));
 });
 
 /// Session API Service Provider (sessions/store, activity, revoke)

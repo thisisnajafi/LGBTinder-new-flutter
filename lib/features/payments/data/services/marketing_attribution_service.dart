@@ -12,7 +12,6 @@ class MarketingAttributionService {
   static const String _prefsKeyUtmContent = 'utm_content';
   static const String _prefsKeyMarketingSource = 'marketing_source';
   static const String _prefsKeyCampaignId = 'campaign_id';
-  static const String _prefsKeyReferralCode = 'referral_code';
 
   SharedPreferences? _prefs;
 
@@ -43,9 +42,6 @@ class MarketingAttributionService {
     if (queryParams.containsKey('campaign_id')) {
       await _prefs!.setString(_prefsKeyCampaignId, queryParams['campaign_id']!);
     }
-    if (queryParams.containsKey('referral_code')) {
-      await _prefs!.setString(_prefsKeyReferralCode, queryParams['referral_code']!);
-    }
     if (queryParams.containsKey('marketing_source')) {
       await _prefs!.setString(_prefsKeyMarketingSource, queryParams['marketing_source']!);
     }
@@ -65,7 +61,6 @@ class MarketingAttributionService {
       'utm_content': _prefs!.getString(_prefsKeyUtmContent),
       'marketing_source': _prefs!.getString(_prefsKeyMarketingSource),
       'campaign_id': _prefs!.getString(_prefsKeyCampaignId),
-      'referral_code': _prefs!.getString(_prefsKeyReferralCode),
     };
   }
 
@@ -80,7 +75,6 @@ class MarketingAttributionService {
     await _prefs!.remove(_prefsKeyUtmContent);
     await _prefs!.remove(_prefsKeyMarketingSource);
     await _prefs!.remove(_prefsKeyCampaignId);
-    await _prefs!.remove(_prefsKeyReferralCode);
 
     debugPrint('Cleared marketing attribution data');
   }
@@ -91,7 +85,6 @@ class MarketingAttributionService {
 
     return _prefs!.getString(_prefsKeyUtmSource) != null ||
         _prefs!.getString(_prefsKeyUtmCampaign) != null ||
-        _prefs!.getString(_prefsKeyCampaignId) != null ||
-        _prefs!.getString(_prefsKeyReferralCode) != null;
+        _prefs!.getString(_prefsKeyCampaignId) != null;
   }
 }

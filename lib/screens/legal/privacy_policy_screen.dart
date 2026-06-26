@@ -69,7 +69,9 @@ class PrivacyPolicyScreen extends ConsumerWidget {
             _buildSection(
               title: '5. Your Rights',
               content:
-                  'You have the right to access, update, or delete your personal information. You can also opt out of certain communications and data processing activities.',
+                  'You have the right to access and update your personal information. '
+                  'To request account removal, contact our support team. '
+                  'You can also opt out of certain communications and data processing activities.',
               textColor: textColor,
               secondaryTextColor: secondaryTextColor,
             ),

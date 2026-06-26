@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/constants/animation_constants.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -17,7 +16,6 @@ import '../../../../../features/matching/providers/likes_providers.dart';
 import '../../../../../routes/home_tab_routes.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../widgets/tier_badge.dart';
-import 'profile_completeness_utils.dart';
 
 /// Premium profile hero — identity, status, stats, and quick actions.
 class ProfileHeroSection extends ConsumerStatefulWidget {
@@ -30,7 +28,6 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
     required this.tier,
     required this.locationLabel,
     required this.isOnline,
-    required this.completeness,
     required this.viewsCount,
     required this.superlikesRemaining,
     required this.onEditProfile,
@@ -45,7 +42,6 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
   final UserTier tier;
   final String? locationLabel;
   final bool isOnline;
-  final ProfileCompletenessResult completeness;
   final int viewsCount;
   final int? superlikesRemaining;
   final VoidCallback onEditProfile;
@@ -86,16 +82,12 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
     }
   }
 
-  Future<void> _shareProfile() async {
-    final name = widget.fullName.trim();
-    final message = name.isEmpty
-        ? 'Check out my profile on LGBTFinder!'
-        : 'Check out $name on LGBTFinder!';
-    await Share.share(message, subject: 'My LGBTFinder Profile');
-  }
-
   void _openSettings() {
     context.go(HomeTabRoutes.locationForTab(4));
+  }
+
+  void _openSuperlikePacks() {
+    context.pushNamed('superlike-packs');
   }
 
   @override
@@ -161,8 +153,6 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                       alignment: Alignment.center,
                       child: TierBadge(tier: widget.tier, compact: false),
                     ),
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    _buildCompletionStrip(context, isDark),
                     const SizedBox(height: AppSpacing.spacingMD),
                     _buildQuickActions(context, isDark),
                     const SizedBox(height: AppSpacing.spacingMD),
@@ -386,93 +376,6 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
     );
   }
 
-  Widget _buildCompletionStrip(BuildContext context, bool isDark) {
-    final theme = Theme.of(context);
-    final progress = widget.completeness.percent / 100;
-
-    return _HeroTapScale(
-      onTap: widget.onEditProfile,
-      semanticLabel: 'Profile ${widget.completeness.percent} percent complete. Tap to improve.',
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.spacingMD,
-          vertical: AppSpacing.spacingSM,
-        ),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
-              : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-          border: Border.all(
-            color: AppColors.accentViolet.withValues(alpha: 0.1),
-          ),
-        ),
-        child: Row(
-              children: [
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: CustomPaint(
-                    painter: _HeroCompletenessPainter(
-                      progress: progress,
-                      trackColor: AppColors.accentViolet.withValues(alpha: 0.2),
-                      arcGradient: const LinearGradient(
-                        colors: [
-                          AppColors.accentGradientStart,
-                          AppColors.accentPink,
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${widget.completeness.percent}%',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.spacingSM),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.completeness.isComplete
-                            ? 'Profile complete'
-                            : '${widget.completeness.percent}% complete',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(99),
-                        child: LinearProgressIndicator(
-                          value: progress.clamp(0, 1),
-                          minHeight: 5,
-                          backgroundColor:
-                              AppColors.accentViolet.withValues(alpha: 0.15),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.accentPink,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                AppSvgIcon(
-                  assetPath: AppIcons.arrowRight,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-              ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuickActions(BuildContext context, bool isDark) {
     return Row(
       children: [
@@ -487,9 +390,9 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
         const SizedBox(width: AppSpacing.spacingSM),
         Expanded(
           child: _QuickActionButton(
-            icon: AppIcons.share,
-            label: 'Share',
-            onTap: _shareProfile,
+            icon: AppIcons.getIconPath('star', style: 'bold'),
+            label: 'Superlikes',
+            onTap: _openSuperlikePacks,
           ),
         ),
         const SizedBox(width: AppSpacing.spacingSM),
@@ -844,46 +747,4 @@ class _HeroTapScaleState extends State<_HeroTapScale> {
       ),
     );
   }
-}
-
-class _HeroCompletenessPainter extends CustomPainter {
-  const _HeroCompletenessPainter({
-    required this.progress,
-    required this.trackColor,
-    required this.arcGradient,
-  });
-
-  final double progress;
-  final Color trackColor;
-  final Gradient arcGradient;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const start = -3.1415926535 / 2;
-    final rect = Rect.fromLTWH(3, 3, size.width - 6, size.height - 6);
-
-    final track = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, start, 3.1415926535 * 2, false, track);
-
-    final arc = Paint()
-      ..shader = arcGradient.createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      rect,
-      start,
-      3.1415926535 * 2 * progress.clamp(0, 1),
-      false,
-      arc,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeroCompletenessPainter old) =>
-      old.progress != progress;
 }

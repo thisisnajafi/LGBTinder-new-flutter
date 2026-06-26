@@ -1,44 +1,113 @@
 // Screen: SupportTicketsScreen — list tickets, create ticket, view ticket detail (TicketApiService).
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
-import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../core/providers/api_providers.dart';
-import '../core/widgets/app_settings_detail.dart';
-import '../core/widgets/premium/premium_design_system.dart';
+import '../core/services/app_logger.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/border_radius_constants.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/theme/typography.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
-import '../widgets/buttons/gradient_button.dart';
-import '../shared/services/error_handler_service.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../shared/models/api_error.dart';
-import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../shared/services/error_handler_service.dart';
+import '../widgets/buttons/gradient_button.dart';
+
+const _situationOptions = <String, String>{
+  'bug': 'Bug / technical issue',
+  'feature_request': 'Feature request',
+  'account_issue': 'Account issue',
+  'payment_issue': 'Payment issue',
+  'other': 'Other',
+};
 
 /// Parsed ticket item from GET tickets list or GET tickets/:id.
 class SupportTicketItem {
   final int id;
-  final String? subject;
-  final String? message;
+  final String? title;
+  final String? description;
+  final String? situation;
   final String? status;
+  final String? screenshotUrl;
+  final String? adminNotes;
+  final String? resolvedAt;
   final String? createdAt;
+  final String? updatedAt;
 
   SupportTicketItem({
     required this.id,
-    this.subject,
-    this.message,
+    this.title,
+    this.description,
+    this.situation,
     this.status,
+    this.screenshotUrl,
+    this.adminNotes,
+    this.resolvedAt,
     this.createdAt,
+    this.updatedAt,
   });
+
+  String get displayTitle => title?.trim().isNotEmpty == true ? title!.trim() : 'Ticket #$id';
+
+  String get displayStatusLabel => statusLabel(status, hasAdminReply: adminNotes?.trim().isNotEmpty == true);
+
+  static String statusLabel(String? status, {bool hasAdminReply = false}) {
+    switch (status) {
+      case 'pending':
+        return hasAdminReply ? 'Answered' : 'Open';
+      case 'in_progress':
+        return hasAdminReply ? 'Answered' : 'In progress';
+      case 'resolved':
+        return 'Resolved';
+      case 'closed':
+        return 'Closed';
+      default:
+        return status ?? 'Unknown';
+    }
+  }
+
+  static String situationLabel(String? situation) =>
+      _situationOptions[situation] ?? situation ?? 'General';
+
+  static List<dynamic> extractList(Map<String, dynamic> data) {
+    final tickets = data['tickets'];
+    if (tickets is List) return tickets;
+    if (tickets is Map && tickets['data'] is List) {
+      return tickets['data'] as List;
+    }
+    return const [];
+  }
+
+  static SupportTicketItem? fromPayload(Map<String, dynamic> data) {
+    if (data['ticket'] is Map) {
+      return fromJson(Map<String, dynamic>.from(data['ticket'] as Map));
+    }
+    if (data.containsKey('id')) {
+      return fromJson(data);
+    }
+    return null;
+  }
 
   static SupportTicketItem fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     return SupportTicketItem(
       id: id is int ? id : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
-      subject: json['subject']?.toString(),
-      message: json['message']?.toString(),
+      title: json['title']?.toString() ?? json['subject']?.toString(),
+      description: json['description']?.toString() ?? json['message']?.toString(),
+      situation: json['situation']?.toString(),
       status: json['status']?.toString(),
+      screenshotUrl: json['screenshot_url']?.toString(),
+      adminNotes: json['admin_notes']?.toString(),
+      resolvedAt: json['resolved_at']?.toString(),
       createdAt: json['created_at']?.toString(),
+      updatedAt: json['updated_at']?.toString(),
     );
   }
 }
@@ -70,8 +139,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     try {
       final service = ref.read(ticketApiServiceProvider);
       final data = await service.getTickets(page: 1);
-      final List<dynamic> raw = data['data']?['tickets'] ?? data['tickets'] ?? (data['data'] is List ? data['data'] as List : const []);
-      final list = raw.map((e) => SupportTicketItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      final list = SupportTicketItem.extractList(data)
+          .map((e) => SupportTicketItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
       if (mounted) {
         setState(() {
           _tickets = list;
@@ -95,12 +165,31 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     }
   }
 
-  Future<void> _createTicket(String subject, String message) async {
+  Future<void> _createTicket({
+    required String title,
+    required String description,
+    required String situation,
+    String? screenshotPath,
+  }) async {
     try {
       final service = ref.read(ticketApiServiceProvider);
-      await service.createTicket({'subject': subject, 'message': message});
+      final data = await service.createTicket(
+        title: title,
+        description: description,
+        situation: situation,
+        screenshotPath: screenshotPath,
+      );
+      final created = SupportTicketItem.fromPayload(data);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ticket created')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              created != null
+                  ? 'Ticket #${created.id} submitted successfully'
+                  : 'Ticket submitted successfully',
+            ),
+          ),
+        );
         _loadTickets();
       }
     } on ApiError catch (e) {
@@ -115,79 +204,158 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
   }
 
   void _showNewTicketBottomSheet(BuildContext context, bool isDark, Color textColor, Color surfaceColor) {
-    final subjectController = TextEditingController();
-    final messageController = TextEditingController();
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    var selectedSituation = 'bug';
+    String? screenshotPath;
+    File? screenshotFile;
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => AppBottomSheetShell(
-        showCancel: true,
-        body: AppBottomSheetCard(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'New support ticket',
-                  style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
-                ),
-              SizedBox(height: AppSpacing.spacingMD),
-              TextField(
-                controller: subjectController,
-                decoration: InputDecoration(
-                  labelText: 'Subject',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => AppBottomSheetShell(
+          showCancel: true,
+          body: AppBottomSheetCard(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: AppSpacing.spacingLG,
+                right: AppSpacing.spacingLG,
+                top: AppSpacing.spacingLG,
+                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.spacingLG,
               ),
-              SizedBox(height: AppSpacing.spacingMD),
-              TextField(
-                controller: messageController,
-                decoration: InputDecoration(
-                  labelText: 'Message',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                ),
-                maxLines: 4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'New support ticket',
+                    style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedSituation,
+                    decoration: InputDecoration(
+                      labelText: 'Issue type',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
+                      filled: true,
+                      fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    ),
+                    items: _situationOptions.entries
+                        .map(
+                          (e) => DropdownMenuItem<String>(
+                            value: e.key,
+                            child: Text(e.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setSheetState(() => selectedSituation = value);
+                      }
+                    },
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
+                      filled: true,
+                      fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
+                      filled: true,
+                      fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    ),
+                    maxLines: 4,
+                  ),
+                  SizedBox(height: AppSpacing.spacingMD),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final image = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        maxWidth: 1920,
+                        maxHeight: 1920,
+                        imageQuality: 85,
+                      );
+                      if (image != null) {
+                        setSheetState(() {
+                          screenshotPath = image.path;
+                          screenshotFile = File(image.path);
+                        });
+                      }
+                    },
+                    icon: AppSvgIcon(assetPath: AppIcons.gallery, size: 18, color: AppColors.accentViolet),
+                    label: Text(screenshotFile == null ? 'Attach screenshot (optional)' : 'Change screenshot'),
+                  ),
+                  if (screenshotFile != null) ...[
+                    SizedBox(height: AppSpacing.spacingSM),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                      child: Image.file(
+                        screenshotFile!,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ],
+                  SizedBox(height: AppSpacing.spacingLG),
+                  GradientButton(
+                    onPressed: () async {
+                      final title = titleController.text.trim();
+                      final description = descriptionController.text.trim();
+                      if (title.isEmpty || description.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a title and description')),
+                        );
+                        return;
+                      }
+                      Navigator.of(ctx).pop();
+                      await _createTicket(
+                        title: title,
+                        description: description,
+                        situation: selectedSituation,
+                        screenshotPath: screenshotPath,
+                      );
+                    },
+                    text: 'Create ticket',
+                  ),
+                ],
               ),
-              SizedBox(height: AppSpacing.spacingLG),
-              GradientButton(
-                onPressed: () async {
-                  final subject = subjectController.text.trim();
-                  final message = messageController.text.trim();
-                  if (subject.isEmpty || message.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter subject and message')),
-                    );
-                    return;
-                  }
-                  Navigator.of(ctx).pop();
-                  await _createTicket(subject, message);
-                },
-                text: 'Create ticket',
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
-  void _showTicketDetail(BuildContext context, SupportTicketItem ticket, bool isDark, Color textColor, Color secondaryTextColor, Color surfaceColor, Color borderColor) async {
+  void _showTicketDetail(
+    BuildContext context,
+    SupportTicketItem ticket,
+    bool isDark,
+    Color textColor,
+    Color secondaryTextColor,
+    Color borderColor,
+  ) async {
     SupportTicketItem detail = ticket;
     try {
       final service = ref.read(ticketApiServiceProvider);
       final data = await service.getTicket(ticket.id);
-      if (data['data'] != null && context.mounted) {
-        detail = SupportTicketItem.fromJson(Map<String, dynamic>.from(data['data'] as Map));
-      }
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'support_tickets_screen', error: e); }
+      final parsed = SupportTicketItem.fromPayload(data);
+      if (parsed != null) detail = parsed;
+    } catch (e) {
+      AppLogger.warning('Failed to refresh ticket detail', tag: 'support_tickets_screen', error: e);
+    }
     if (!context.mounted) return;
     showModalBottomSheet<void>(
       context: context,
@@ -201,6 +369,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
             textColor: textColor,
             secondaryTextColor: secondaryTextColor,
             borderColor: borderColor,
+            isDark: isDark,
           ),
         ),
       ),
@@ -220,8 +389,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
       title: 'Support tickets',
       subtitle: 'View and create support requests',
       action: IconButton(
-        onPressed: () =>
-            _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
+        onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
         icon: AppSvgIcon(
           assetPath: AppIcons.add,
           size: 22,
@@ -240,8 +408,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                       children: [
                         Text(
                           _error!,
-                          style: AppTypography.body
-                              .copyWith(color: secondaryTextColor),
+                          style: AppTypography.body.copyWith(color: secondaryTextColor),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppSpacing.spacingMD),
@@ -249,8 +416,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                           onPressed: _loadTickets,
                           child: Text(
                             'Retry',
-                            style: AppTypography.button
-                                .copyWith(color: AppColors.accentViolet),
+                            style: AppTypography.button.copyWith(color: AppColors.accentViolet),
                           ),
                         ),
                       ],
@@ -277,8 +443,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                             const SizedBox(height: AppSpacing.spacingSM),
                             Text(
                               'Create a ticket to get help from support.',
-                              style: AppTypography.body
-                                  .copyWith(color: secondaryTextColor),
+                              style: AppTypography.body.copyWith(color: secondaryTextColor),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: AppSpacing.spacingLG),
@@ -305,9 +470,9 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                               for (final ticket in _tickets)
                                 PremiumSettingsTile(
                                   iconPath: AppIcons.document,
-                                  title: ticket.subject ?? 'Ticket #${ticket.id}',
+                                  title: ticket.displayTitle,
                                   subtitle: [
-                                    if (ticket.status != null) ticket.status,
+                                    ticket.displayStatusLabel,
                                     if (ticket.createdAt != null) ticket.createdAt,
                                   ].join(' · '),
                                   onTap: () => _showTicketDetail(
@@ -316,7 +481,6 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                                     isDark,
                                     textColor,
                                     secondaryTextColor,
-                                    surfaceColor,
                                     borderColor,
                                   ),
                                 ),
@@ -334,20 +498,22 @@ class _TicketDetailSheet extends StatelessWidget {
   final Color textColor;
   final Color secondaryTextColor;
   final Color borderColor;
+  final bool isDark;
 
   const _TicketDetailSheet({
     required this.ticket,
     required this.textColor,
     required this.secondaryTextColor,
     required this.borderColor,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.9,
+      initialChildSize: 0.65,
+      minChildSize: 0.35,
+      maxChildSize: 0.92,
       expand: false,
       builder: (context, scrollController) => SingleChildScrollView(
         controller: scrollController,
@@ -356,28 +522,96 @@ class _TicketDetailSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              ticket.subject ?? 'Ticket #${ticket.id}',
+              ticket.displayTitle,
               style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
             ),
-            if (ticket.status != null) ...[
+            SizedBox(height: AppSpacing.spacingXS),
+            Text(
+              'Status: ${ticket.displayStatusLabel}',
+              style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+            ),
+            if (ticket.situation != null) ...[
               SizedBox(height: AppSpacing.spacingXS),
-              Text('Status: ${ticket.status}', style: AppTypography.bodySmall.copyWith(color: secondaryTextColor)),
+              Text(
+                'Type: ${SupportTicketItem.situationLabel(ticket.situation)}',
+                style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+              ),
             ],
             if (ticket.createdAt != null) ...[
               SizedBox(height: AppSpacing.spacingXS),
-              Text('Created: ${ticket.createdAt}', style: AppTypography.bodySmall.copyWith(color: secondaryTextColor)),
+              Text(
+                'Created: ${ticket.createdAt}',
+                style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+              ),
+            ],
+            if (ticket.resolvedAt != null) ...[
+              SizedBox(height: AppSpacing.spacingXS),
+              Text(
+                'Resolved: ${ticket.resolvedAt}',
+                style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+              ),
             ],
             SizedBox(height: AppSpacing.spacingMD),
-            if (ticket.message != null && ticket.message!.isNotEmpty)
-              Text(
-                ticket.message!,
-                style: AppTypography.body.copyWith(color: textColor),
-              )
-            else
-              Text(
-                'No message.',
-                style: AppTypography.body.copyWith(color: secondaryTextColor),
+            Text('Your message', style: AppTypography.titleMedium.copyWith(color: textColor)),
+            SizedBox(height: AppSpacing.spacingXS),
+            Text(
+              ticket.description?.isNotEmpty == true ? ticket.description! : 'No description provided.',
+              style: AppTypography.body.copyWith(color: textColor),
+            ),
+            if (ticket.screenshotUrl != null && ticket.screenshotUrl!.isNotEmpty) ...[
+              SizedBox(height: AppSpacing.spacingMD),
+              Text('Screenshot', style: AppTypography.titleMedium.copyWith(color: textColor)),
+              SizedBox(height: AppSpacing.spacingSM),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                child: CachedNetworkImage(
+                  imageUrl: ticket.screenshotUrl!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    height: 180,
+                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    alignment: Alignment.center,
+                    child: const CircularProgressIndicator(),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    height: 120,
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Could not load screenshot',
+                      style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+                    ),
+                  ),
+                ),
               ),
+            ],
+            if (ticket.adminNotes != null && ticket.adminNotes!.trim().isNotEmpty) ...[
+              SizedBox(height: AppSpacing.spacingLG),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(AppSpacing.spacingMD),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Support reply',
+                      style: AppTypography.titleMedium.copyWith(color: AppColors.accentViolet),
+                    ),
+                    SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      ticket.adminNotes!,
+                      style: AppTypography.body.copyWith(color: textColor),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -1,0 +1,6 @@
+# Copy to android/key.properties (gitignored) for Play Store release signing.
+# Generate keystore: keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=upload
+storeFile=upload-keystore.jks

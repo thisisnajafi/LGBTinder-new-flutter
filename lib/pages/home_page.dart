@@ -15,6 +15,8 @@ import '../features/notifications/providers/notification_providers.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../core/utils/app_logger.dart';
 import '../core/location/location_providers.dart';
+import '../core/widgets/connectivity_banner.dart';
+import '../core/providers/api_providers.dart';
 import '../routes/home_tab_routes.dart';
 
 /// Home page — main shell with animated tabs and root back-navigation.
@@ -209,6 +211,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final navBarReserve = AppBottomNavBar.bottomReserve(bottomInset);
 
+    ref.watch(connectivityServiceBindingProvider);
+
     final pages = _buildPages(currentIndex, profileUserId);
 
     return PopScope(
@@ -220,55 +224,57 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            Padding(
-              padding: EdgeInsets.only(bottom: navBarReserve),
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _KeepAliveTab(
-                    key: const ValueKey('tab_discovery'),
-                    child: pages[0],
-                  ),
-                  _KeepAliveTab(
-                    key: const ValueKey('tab_chat'),
-                    child: pages[1],
-                  ),
-                  _KeepAliveTab(
-                    key: const ValueKey('tab_notifications'),
-                    child: pages[2],
-                  ),
-                  _KeepAliveTab(
-                    key: const ValueKey('tab_profile'),
-                    child: pages[3],
-                  ),
-                  _KeepAliveTab(
-                    key: const ValueKey('tab_settings'),
-                    child: pages[4],
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AppBottomNavBar(
-                currentIndex: currentIndex,
-                onTap: _onTabTapped,
-                messengerUnreadCount: ref.watch(unreadChatCountProvider),
-                notificationCount: ref.watch(unreadNotificationCountProvider).when(
-                      data: (count) => count,
-                      loading: () => null,
-                      error: (_, __) => null,
+        body: ConnectivityBanner(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(bottom: navBarReserve),
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _KeepAliveTab(
+                      key: const ValueKey('tab_discovery'),
+                      child: pages[0],
                     ),
+                    _KeepAliveTab(
+                      key: const ValueKey('tab_chat'),
+                      child: pages[1],
+                    ),
+                    _KeepAliveTab(
+                      key: const ValueKey('tab_notifications'),
+                      child: pages[2],
+                    ),
+                    _KeepAliveTab(
+                      key: const ValueKey('tab_profile'),
+                      child: pages[3],
+                    ),
+                    _KeepAliveTab(
+                      key: const ValueKey('tab_settings'),
+                      child: pages[4],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AppBottomNavBar(
+                  currentIndex: currentIndex,
+                  onTap: _onTabTapped,
+                  messengerUnreadCount: ref.watch(unreadChatCountProvider),
+                  notificationCount: ref.watch(unreadNotificationCountProvider).when(
+                        data: (count) => count,
+                        loading: () => null,
+                        error: (_, __) => null,
+                      ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

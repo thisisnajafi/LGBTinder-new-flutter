@@ -469,6 +469,17 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           unawaited(LostMatchDialog.show(context));
         }
       },
+      onOfflineQueued: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Will send when reconnected'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+          ),
+        );
+      },
     );
     ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
       threshold: kDiscoverStackBufferThreshold,

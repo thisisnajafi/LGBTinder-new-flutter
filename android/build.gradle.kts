@@ -41,8 +41,8 @@ subprojects {
         }
         configurations.classpath {
             resolutionStrategy {
-                force("com.android.tools.build:gradle:8.9.1")
-                force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
+                force("com.android.tools.build:gradle:8.11.1")
+                force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")
             }
         }
     }

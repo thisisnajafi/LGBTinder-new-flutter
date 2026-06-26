@@ -281,7 +281,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             width: double.infinity,
             height: 52,
             child: OutlinedButton(
-              onPressed: () => context.go(AppRoutes.login),
+              onPressed: () => context.push(AppRoutes.login),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: BorderSide(

@@ -341,48 +341,49 @@ class FilterPremiumGate extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isPremium) return child;
 
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Opacity(opacity: 0.42, child: AbsorbPointer(child: child)),
-        Positioned.fill(
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onUpgrade,
-              child: Center(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingSM,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onUpgrade,
+            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.spacingMD,
+                vertical: AppSpacing.spacingSM,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.accentPurple.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                border: Border.all(color: AppColors.accentPurple),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppSvgIcon(
+                    assetPath: AppIcons.crown,
+                    size: 18,
+                    color: AppColors.accentPurple,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentPurple.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    border: Border.all(color: AppColors.accentPurple),
+                  SizedBox(width: AppSpacing.spacingSM),
+                  Text(
+                    'Upgrade to unlock',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.accentPurple,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppSvgIcon(
-                        assetPath: AppIcons.crown,
-                        size: 18,
-                        color: AppColors.accentPurple,
-                      ),
-                      SizedBox(width: AppSpacing.spacingSM),
-                      Text(
-                        'Upgrade to unlock',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.accentPurple,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
             ),
           ),
         ),
+        SizedBox(height: AppSpacing.spacingMD),
+        Opacity(opacity: 0.42, child: AbsorbPointer(child: child)),
       ],
     );
   }

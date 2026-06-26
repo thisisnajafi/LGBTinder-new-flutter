@@ -14,7 +14,7 @@ import '../../widgets/badges/verification_badge.dart';
 import '../notification_settings_screen.dart';
 import '../../features/settings/presentation/screens/sound_preferences_screen.dart';
 import '../privacy_settings_screen.dart';
-import '../account_management_screen.dart';
+import 'account_management_screen.dart';
 import '../subscription_management_screen.dart';
 import '../two_factor_auth_screen.dart';
 import '../active_sessions_screen.dart';
@@ -121,7 +121,7 @@ class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSetti
           _buildSettingsTile(
             icon: Icons.person_outline,
             title: 'Account Management',
-            subtitle: 'Email, password, delete account',
+            subtitle: 'Email and password',
             onTap: () {
               Navigator.push(
                 context,

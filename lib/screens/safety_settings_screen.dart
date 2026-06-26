@@ -1,17 +1,18 @@
 // Screen: SafetySettingsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/utils/app_icons.dart';
-import '../widgets/modals/confirmation_dialog.dart';
 import '../features/settings/providers/settings_provider.dart';
 import '../features/settings/data/models/privacy_settings.dart';
 import '../core/location/location_providers.dart';
 import '../core/location/location_required_exception.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
+import '../routes/app_router.dart';
 import 'nearby_safe_places_screen.dart';
 import 'blocked_users_screen.dart';
 import 'report_history_screen.dart';
@@ -296,50 +297,13 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
           ),
           const SizedBox(height: AppSpacing.spacingXL),
           PremiumSettingsGroup(
-            title: 'Account actions',
+            title: 'Account help',
             children: [
               PremiumSettingsTile(
-                iconPath: AppIcons.delete,
-                title: 'Delete account',
-                subtitle: 'Permanently delete your account and all data',
-                destructive: true,
-                onTap: () async {
-                  final confirmed = await ConfirmationDialog.show(
-                    context,
-                    title: 'Delete account',
-                    message:
-                        'Are you sure you want to delete your account? This action cannot be undone.',
-                    confirmText: 'Delete',
-                    cancelText: 'Cancel',
-                    isDestructive: true,
-                  );
-                  if (confirmed == true) {
-                    try {
-                      final settingsNotifier =
-                          ref.read(settingsProvider.notifier);
-                      await settingsNotifier.deleteAccount();
-
-                      if (mounted) {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                          '/welcome',
-                          (Route<dynamic> route) => false,
-                        );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Account deleted successfully'),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to delete account: $e')),
-                        );
-                      }
-                    }
-                  }
-                },
+                iconPath: AppIcons.help,
+                title: 'Contact support',
+                subtitle: 'Request account changes or removal through support',
+                onTap: () => context.push(AppRoutes.supportTickets),
               ),
             ],
           ),

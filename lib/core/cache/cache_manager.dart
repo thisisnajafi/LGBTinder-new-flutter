@@ -10,6 +10,7 @@ import '../../features/profile/providers/profile_providers.dart';
 import '../providers/api_providers.dart';
 import 'cache_config.dart';
 import 'cache_providers.dart';
+import '../providers/subscription_provider.dart';
 import 'user_cache_service.dart';
 import 'cache_invalidator.dart';
 import 'user_profile_providers.dart';
@@ -107,6 +108,7 @@ class AppCacheManager {
     await Future.wait([
       revalidateOwnProfile(),
       revalidateMatchList(userId),
+      _ref.read(subscriptionRefreshProvider).refresh(),
     ]);
   }
 
