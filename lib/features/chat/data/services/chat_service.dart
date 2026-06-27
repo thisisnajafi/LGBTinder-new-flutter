@@ -262,7 +262,7 @@ class ChatService {
     return await getChatUsers(); // Alias for consistency
   }
 
-  /// Get unread message count
+  /// Get unread chats count (conversations with at least one unread message).
   Future<int> getUnreadCount() async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(

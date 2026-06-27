@@ -11,11 +11,11 @@ import 'chat_pusher_providers.dart';
 import 'chat_providers.dart';
 import 'user_presence_cache_provider.dart';
 
-/// Total unread chat messages for bottom-nav badge (live from list, API fallback).
+/// Total unread chats (conversations with unread messages) for bottom-nav badge.
 final unreadChatCountProvider = Provider<int>((ref) {
   final preview = ref.watch(chatListPreviewProvider);
   if (preview.isSeeded) {
-    return preview.items.fold<int>(0, (sum, item) => sum + item.unreadCount);
+    return preview.items.where((item) => item.unreadCount > 0).length;
   }
   return ref.watch(unreadChatCountAsyncProvider).valueOrNull ?? 0;
 });

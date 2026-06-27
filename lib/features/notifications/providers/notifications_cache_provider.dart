@@ -62,6 +62,14 @@ class NotificationsCacheState {
 
 const int kNotificationsPageSize = 20;
 
+List<app_models.Notification> _withoutChatMessageNotifications(
+  List<app_models.Notification> items,
+) {
+  return items
+      .where((n) => n.type.toLowerCase() != 'message')
+      .toList(growable: false);
+}
+
 /// Cache-first notifications feed with infinite scroll pagination.
 final notificationsCacheProvider =
     StateNotifierProvider<NotificationsCacheNotifier, NotificationsCacheState>(
@@ -131,15 +139,18 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       }
       if (notifications.isEmpty) return;
 
+      final filtered = _withoutChatMessageNotifications(notifications);
+      if (filtered.isEmpty) return;
+
       final currentPage = cached['current_page'] is int
           ? cached['current_page'] as int
           : 2;
       final hasMore = cached['has_more'] is bool
           ? cached['has_more'] as bool
-          : notifications.length >= kNotificationsPageSize;
+          : filtered.length >= kNotificationsPageSize;
 
       state = state.copyWith(
-        notifications: notifications,
+        notifications: filtered,
         currentPage: currentPage,
         hasMore: hasMore,
         initialLoadComplete: true,
@@ -189,7 +200,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       if (page == null) return;
 
       state = state.copyWith(
-        notifications: page.notifications,
+        notifications: _withoutChatMessageNotifications(page.notifications),
         currentPage: page.hasMore ? 2 : 1,
         hasMore: page.hasMore,
         initialLoadComplete: true,
@@ -238,7 +249,8 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       final existingIds = state.notifications.map((e) => e.id).toSet();
       final merged = [
         ...state.notifications,
-        ...page.notifications.where((n) => !existingIds.contains(n.id)),
+        ..._withoutChatMessageNotifications(page.notifications)
+            .where((n) => !existingIds.contains(n.id)),
       ];
 
       state = state.copyWith(

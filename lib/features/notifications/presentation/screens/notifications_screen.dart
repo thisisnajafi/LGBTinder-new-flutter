@@ -35,7 +35,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     'All',
     'Matches',
     'Likes',
-    'Messages',
     'Views',
     'System',
   ];
@@ -244,7 +243,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       return switch (label) {
         'matches' => type.contains('match'),
         'likes' => type.contains('like'),
-        'messages' => type.contains('message'),
         'views' => type.contains('view'),
         'system' => type.contains('plan') ||
             type.contains('system') ||
