@@ -12,6 +12,7 @@ import '../../features/calls/providers/incoming_call_provider.dart';
 import '../../features/settings/providers/sound_preferences_provider.dart';
 import '../cache/match_realtime_sync.dart';
 import '../providers/startup_flow_provider.dart';
+import '../services/presence_service.dart';
 
 bool _deviceSessionRegistered = false;
 
@@ -30,6 +31,7 @@ final deviceSessionRegistrationProvider = Provider<void>((ref) {
   Future.microtask(() async {
     try {
       await ref.read(sessionApiServiceProvider).storeSession();
+      await ref.read(presenceServiceProvider).onForeground();
     } catch (e, stack) {
       _deviceSessionRegistered = false;
       AppLogger.warning(

@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/chat.dart';
 import '../data/models/message.dart';
 import '../utils/chat_message_preview.dart';
+import '../../../shared/services/pusher_websocket_service.dart';
 import 'chat_local_sync_provider.dart';
 import 'chat_pusher_providers.dart';
 import 'chat_providers.dart';
+import 'user_presence_cache_provider.dart';
 
 /// Total unread chat messages for bottom-nav badge (live from list, API fallback).
 final unreadChatCountProvider = Provider<int>((ref) {
@@ -304,6 +306,21 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
     state = const ChatListPreviewState();
   }
 
+  void applyPeerPresence({
+    required int peerUserId,
+    required bool isOnline,
+  }) {
+    if (peerUserId <= 0) return;
+
+    final index = state.items.indexWhere((item) => item.id == peerUserId);
+    if (index < 0) return;
+
+    final updated = state.items[index].copyWith(isOnline: isOnline);
+    final items = [...state.items];
+    items[index] = updated;
+    state = state.copyWith(items: items);
+  }
+
   String _nameFromSenderPayload(Message message) {
     final meta = message.metadata;
     if (meta == null) return 'User';
@@ -334,13 +351,28 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
   }
 }
 
-/// Wires Pusher message + read events into [chatListPreviewProvider].
+/// Wires Pusher message + read + presence events into [chatListPreviewProvider].
 final chatListSyncProvider = Provider<void>((ref) {
   ref.watch(chatLocalSyncProvider);
   ref.watch(chatPusherLifecycleProvider);
 
   final pusher = ref.watch(pusherWebSocketServiceProvider);
   final preview = ref.read(chatListPreviewProvider.notifier);
+  final presenceCache = ref.read(userPresenceCacheProvider.notifier);
+
+  ref.listen(chatListPreviewProvider, (previous, next) {
+    if (!next.isSeeded || next.items.isEmpty) return;
+    final peerIds = next.items.map((item) => item.id).toSet();
+    unawaited(pusher.syncUserStatusSubscriptions(peerIds));
+  });
+
+  final connectionSub = pusher.connectionStream.listen((status) {
+    if (status != ConnectionStatus.connected) return;
+    final next = ref.read(chatListPreviewProvider);
+    if (!next.isSeeded || next.items.isEmpty) return;
+    final peerIds = next.items.map((item) => item.id).toSet();
+    unawaited(pusher.syncUserStatusSubscriptions(peerIds));
+  });
 
   final messageSub = pusher.messageStream.listen((message) {
     final lifecycle = ref.read(chatPusherLifecycleProvider);
@@ -367,8 +399,18 @@ final chatListSyncProvider = Provider<void>((ref) {
     }
   });
 
+  final presenceSub = pusher.presenceStream.listen((event) {
+    presenceCache.apply(event);
+    preview.applyPeerPresence(
+      peerUserId: event.userId,
+      isOnline: event.isOnline,
+    );
+  });
+
   ref.onDispose(() {
     unawaited(messageSub.cancel());
     unawaited(readSub.cancel());
+    unawaited(presenceSub.cancel());
+    unawaited(connectionSub.cancel());
   });
 });

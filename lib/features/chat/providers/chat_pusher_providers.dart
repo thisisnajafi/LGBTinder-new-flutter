@@ -127,6 +127,7 @@ class ChatPusherLifecycleNotifier extends Notifier<ChatPusherLifecycleState> {
         await connectForUser(userId);
       }
       await _pusher.subscribeConversation(conversationId);
+      await _pusher.subscribeUserStatus(otherUserId);
       state = state.copyWith(
         activeConversationId: conversationId,
         activePeerUserId: otherUserId,
@@ -156,6 +157,10 @@ class ChatPusherLifecycleNotifier extends Notifier<ChatPusherLifecycleState> {
       final convId = state.activeConversationId;
       if (convId != null) {
         await _pusher.subscribeConversation(convId);
+      }
+      final peerId = state.activePeerUserId;
+      if (peerId != null && peerId > 0) {
+        await _pusher.subscribeUserStatus(peerId);
       }
       state = state.copyWith(isReady: true, userId: userId);
     } catch (e) {

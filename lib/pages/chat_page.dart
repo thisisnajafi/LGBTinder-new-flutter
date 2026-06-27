@@ -43,6 +43,7 @@ import '../features/calls/presentation/widgets/call_history_bubble.dart';
 import '../features/calls/providers/call_providers.dart';
 import '../features/calls/utils/call_log_labels.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
+import '../features/chat/providers/user_presence_cache_provider.dart';
 import '../features/chat/utils/chat_message_preview.dart';
 import '../features/chat/providers/pinned_count_provider.dart';
 import '../features/chat/data/services/chat_service.dart';
@@ -91,6 +92,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   StreamSubscription<ReadReceiptEvent>? _readReceiptSubscription;
   StreamSubscription<MessageExpiredEvent>? _messageExpiredSubscription;
   StreamSubscription<CallSignalingEvent>? _callEventSubscription;
+  StreamSubscription<UserPresenceEvent>? _presenceSubscription;
   bool _isOnline = false;
   DateTime? _lastSeenAt;
   String? _resolvedUserName;
@@ -116,6 +118,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _loadMessages();
       _initializePusherListeners();
       _loadConversationMuteStatus();
+      _seedInitialPeerPresence();
     } else {
       setState(() {
         _isLoading = false;
@@ -131,6 +134,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _readReceiptSubscription?.cancel();
     _messageExpiredSubscription?.cancel();
     _callEventSubscription?.cancel();
+    _presenceSubscription?.cancel();
     _outboundTypingStopTimer?.cancel();
     _voiceRecordingTimer?.cancel();
     unawaited(_voiceRecorder.dispose());
@@ -313,6 +317,30 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       unawaited(_handleCallTimelineEvent(event));
     });
+
+    _presenceSubscription = pusher.presenceStream.listen((event) {
+      if (!mounted || event.userId != widget.userId) return;
+      setState(() {
+        _isOnline = event.isOnline;
+        _lastSeenAt = event.lastSeenAt;
+      });
+    });
+  }
+
+  void _seedInitialPeerPresence() {
+    final cached = ref.read(userPresenceCacheProvider)[widget.userId];
+    if (cached != null) {
+      _isOnline = cached.isOnline;
+      _lastSeenAt = cached.lastSeenAt;
+      return;
+    }
+
+    for (final item in ref.read(chatListPreviewProvider).items) {
+      if (item.id == widget.userId) {
+        _isOnline = item.isOnline;
+        break;
+      }
+    }
   }
 
   Future<void> _handleCallTimelineEvent(CallSignalingEvent event) async {

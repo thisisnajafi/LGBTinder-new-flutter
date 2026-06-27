@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/chat/providers/chat_pusher_providers.dart';
+import '../services/presence_service.dart';
 import 'cache_manager.dart';
 
 /// Revalidates caches when the app returns to the foreground.
@@ -39,6 +40,10 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
     if (state == AppLifecycleState.resumed) {
       ref.read(appCacheManagerProvider).revalidateAll();
       unawaited(ref.read(chatPusherLifecycleProvider.notifier).reconnect());
+      unawaited(ref.read(presenceServiceProvider).onForeground());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(ref.read(presenceServiceProvider).onBackground());
     }
   }
 

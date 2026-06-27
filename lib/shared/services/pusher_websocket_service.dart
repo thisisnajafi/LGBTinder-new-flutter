@@ -14,6 +14,7 @@ import '../../features/chat/data/models/message.dart';
 /// - `private-user.{userId}` — matches / global user events
 /// - `private-chat.{userId}` — legacy inbox (dual-publish from backend)
 /// - `private-conversation.{id}` — per-thread messages, typing, read receipts
+/// - `private-user.status.{peerId}` — matched peers' online / last-seen updates
 class PusherWebSocketService {
   PusherChannelsFlutter? _pusher;
   Dio? _authDio;
@@ -25,10 +26,12 @@ class PusherWebSocketService {
   final _messageExpiredController = StreamController<MessageExpiredEvent>.broadcast();
   final _matchController = StreamController<MatchEvent>.broadcast();
   final _callEventController = StreamController<CallSignalingEvent>.broadcast();
+  final _presenceController = StreamController<UserPresenceEvent>.broadcast();
   final _connectionController = StreamController<ConnectionStatus>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
   final Set<String> _subscribedChannels = {};
+  final Set<int> _statusUserIds = {};
   int? _currentUserId;
   bool _isConnected = false;
   bool _isConnecting = false;
@@ -39,6 +42,7 @@ class PusherWebSocketService {
   Stream<MessageExpiredEvent> get messageExpiredStream => _messageExpiredController.stream;
   Stream<MatchEvent> get matchStream => _matchController.stream;
   Stream<CallSignalingEvent> get callEventStream => _callEventController.stream;
+  Stream<UserPresenceEvent> get presenceStream => _presenceController.stream;
   Stream<ConnectionStatus> get connectionStream => _connectionController.stream;
   Stream<String> get errorStream => _errorController.stream;
 
@@ -127,6 +131,39 @@ class PusherWebSocketService {
     await unsubscribe('private-conversation.$conversationId');
   }
 
+  /// Subscribe to a matched peer's presence channel.
+  Future<void> subscribeUserStatus(int userId) async {
+    if (userId <= 0 || userId == _currentUserId || _statusUserIds.contains(userId)) {
+      return;
+    }
+
+    await subscribe('private-user.status.$userId');
+    _statusUserIds.add(userId);
+  }
+
+  Future<void> unsubscribeUserStatus(int userId) async {
+    if (!_statusUserIds.contains(userId)) return;
+
+    await unsubscribe('private-user.status.$userId');
+    _statusUserIds.remove(userId);
+  }
+
+  /// Align presence subscriptions with the current chat list peers.
+  Future<void> syncUserStatusSubscriptions(Set<int> userIds) async {
+    final valid = userIds
+        .where((id) => id > 0 && id != _currentUserId)
+        .toSet();
+    final toAdd = valid.difference(_statusUserIds);
+    final toRemove = _statusUserIds.difference(valid);
+
+    for (final id in toRemove) {
+      await unsubscribeUserStatus(id);
+    }
+    for (final id in toAdd) {
+      await subscribeUserStatus(id);
+    }
+  }
+
   Future<void> subscribe(String channelName) async {
     if (_pusher == null || _subscribedChannels.contains(channelName)) return;
 
@@ -163,6 +200,7 @@ class PusherWebSocketService {
     _isConnected = false;
     _isConnecting = false;
     _currentUserId = null;
+    _statusUserIds.clear();
     _connectionController.add(ConnectionStatus.disconnected);
   }
 
@@ -174,6 +212,7 @@ class PusherWebSocketService {
     _messageExpiredController.close();
     _matchController.close();
     _callEventController.close();
+    _presenceController.close();
     _connectionController.close();
     _errorController.close();
   }
@@ -261,6 +300,10 @@ class PusherWebSocketService {
           name: event.eventName,
           payload: payload,
         ));
+        break;
+      case 'user.status':
+      case 'presence.updated':
+        _handleUserPresence(payload);
         break;
       default:
         if (event.eventName.contains('Match') ||
@@ -370,6 +413,30 @@ class PusherWebSocketService {
     ));
   }
 
+  void _handleUserPresence(Map<String, dynamic> data) {
+    try {
+      final userId = int.tryParse(data['user_id']?.toString() ?? '') ?? 0;
+      if (userId <= 0) return;
+
+      final lastSeenRaw = data['last_seen_at'] ?? data['last_seen'];
+      _presenceController.add(UserPresenceEvent(
+        userId: userId,
+        isOnline: data['is_online'] == true,
+        lastSeenAt: lastSeenRaw != null
+            ? DateTime.tryParse(lastSeenRaw.toString())
+            : null,
+        timestamp: DateTime.tryParse(data['timestamp']?.toString() ?? '') ??
+            DateTime.now(),
+      ));
+    } catch (e) {
+      AppLogger.warning(
+        'Parse user presence failed',
+        tag: 'Pusher',
+        error: e,
+      );
+    }
+  }
+
   void _onConnectionStateChange(dynamic currentState, dynamic previousState) {
     final state = currentState?.toString() ?? '';
     AppLogger.info(
@@ -462,6 +529,20 @@ class CallSignalingEvent {
   final Map<String, dynamic> payload;
 
   CallSignalingEvent({required this.name, required this.payload});
+}
+
+class UserPresenceEvent {
+  final int userId;
+  final bool isOnline;
+  final DateTime? lastSeenAt;
+  final DateTime timestamp;
+
+  UserPresenceEvent({
+    required this.userId,
+    required this.isOnline,
+    this.lastSeenAt,
+    required this.timestamp,
+  });
 }
 
 enum ConnectionStatus {

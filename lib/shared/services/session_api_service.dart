@@ -18,11 +18,11 @@ class SessionApiService {
     return response.data ?? {};
   }
 
-  /// POST sessions/activity. Body: session_id (required).
-  Future<void> reportActivity(String sessionId) async {
+  /// POST sessions/activity. Optional session_id (uses current token when omitted).
+  Future<void> reportActivity({String? sessionId}) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.sessionActivity,
-      data: {'session_id': sessionId},
+      data: sessionId != null ? {'session_id': sessionId} : const {},
       fromJson: (json) => json as Map<String, dynamic>,
     );
     if (!response.isSuccess) throw Exception(response.message);

@@ -5,7 +5,11 @@ import '../../../../shared/services/token_storage_service.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
 
-/// WebSocket service for real-time messaging
+/// Legacy Socket.IO real-time client — **deprecated**.
+///
+/// Production chat uses [PusherWebSocketService] (`private-conversation.*`,
+/// `private-user.status.*`, event `user.status`). Do not use for new code.
+@Deprecated('Use PusherWebSocketService for chat and presence')
 class WebSocketService {
   IO.Socket? _socket;
   final TokenStorageService _tokenStorage;
