@@ -1,26 +1,27 @@
 ﻿// Screen: PaymentMethodsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../core/theme/app_colors.dart';
-import '../core/theme/typography.dart';
-import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
-import '../core/widgets/app_page_scaffold.dart';
-import '../core/widgets/app_page_header.dart';
-import '../widgets/common/section_header.dart';
-import '../widgets/common/divider_custom.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/theme/typography.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/constants/api_endpoints.dart';
+import '../core/providers/api_providers.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
-import '../core/constants/api_endpoints.dart';
 import 'add_payment_method_screen.dart';
 
-/// Payment methods screen - Manage payment methods
+/// Payment methods screen — manage saved cards and wallets.
 class PaymentMethodsScreen extends ConsumerStatefulWidget {
-  const PaymentMethodsScreen({Key? key}) : super(key: key);
+  const PaymentMethodsScreen({super.key});
 
   @override
-  ConsumerState<PaymentMethodsScreen> createState() => _PaymentMethodsScreenState();
+  ConsumerState<PaymentMethodsScreen> createState() =>
+      _PaymentMethodsScreenState();
 }
 
 class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
@@ -34,9 +35,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
   }
 
   Future<void> _loadPaymentMethods() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final apiService = ref.read(apiServiceProvider);
@@ -48,22 +47,25 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
       if (response.isSuccess && response.data != null) {
         final data = response.data!['data'] as List<dynamic>? ?? [];
         setState(() {
-          _paymentMethods = data.map((method) => method as Map<String, dynamic>).toList();
-          _isLoading = false;
+          _paymentMethods =
+              data.map((method) => method as Map<String, dynamic>).toList();
         });
       } else {
-        setState(() {
-          _paymentMethods = [];
-          _isLoading = false;
-        });
+        setState(() => _paymentMethods = []);
       }
-    } catch (e) {
-      // On error, set empty list
-      setState(() {
-        _paymentMethods = [];
-        _isLoading = false;
-      });
+    } catch (_) {
+      setState(() => _paymentMethods = []);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _openAddMethod() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddPaymentMethodScreen()),
+    );
+    if (mounted) _loadPaymentMethods();
   }
 
   Future<void> _handleSetDefault(String id) async {
@@ -75,20 +77,23 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
-      // Update local state
       setState(() {
-        for (var method in _paymentMethods) {
+        for (final method in _paymentMethods) {
           method['isDefault'] = method['id'] == id;
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Default payment method updated')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Default payment method updated')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update default payment method: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update default payment method: $e')),
+        );
+      }
     }
   }
 
@@ -102,23 +107,26 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
       isDestructive: true,
     );
 
-    if (confirmed == true) {
-      try {
-        final apiService = ref.read(apiServiceProvider);
-        await apiService.delete<Map<String, dynamic>>(
-          '${ApiEndpoints.userPaymentMethods}/$id',
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
+    if (confirmed != true) return;
 
-        // Update local state
-        setState(() {
-          _paymentMethods.removeWhere((method) => method['id'] == id);
-        });
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.delete<Map<String, dynamic>>(
+        '${ApiEndpoints.userPaymentMethods}/$id',
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
 
+      setState(() {
+        _paymentMethods.removeWhere((method) => method['id'] == id);
+      });
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Payment method removed')),
         );
-      } catch (e) {
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to remove payment method: $e')),
         );
@@ -129,175 +137,158 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: 'Payment Methods',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Cards and wallets on file',
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.spacingLG),
+          child: GradientButton(
+            text: 'Add Payment Method',
+            iconPath: AppIcons.add,
+            onPressed: _openAddMethod,
+            isFullWidth: true,
+          ),
+        ),
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: _paymentMethods.isEmpty
-                      ? EmptyState(
-                          title: 'No Payment Methods',
-                          message: 'Add a payment method to get started',
-                          icon: Icons.credit_card,
-                          actionLabel: 'Add Payment Method',
-                          onAction: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const AddPaymentMethodScreen(),
-                              ),
-                            ).then((_) => _loadPaymentMethods());
-                          },
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.all(AppSpacing.spacingLG),
-                          itemCount: _paymentMethods.length,
-                          itemBuilder: (context, index) {
-                            final method = _paymentMethods[index];
-                            final isDefault = method['isDefault'] == true;
-                            return Container(
-                              margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-                              padding: EdgeInsets.all(AppSpacing.spacingLG),
+          : _paymentMethods.isEmpty
+              ? EmptyState(
+                  title: 'No Payment Methods',
+                  message: 'Add a payment method to get started',
+                  iconPath: AppIcons.card,
+                  actionLabel: 'Add Payment Method',
+                  onAction: _openAddMethod,
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingLG,
+                    vertical: AppSpacing.spacingSM,
+                  ),
+                  itemCount: _paymentMethods.length,
+                  itemBuilder: (context, index) {
+                    final method = _paymentMethods[index];
+                    final isDefault = method['isDefault'] == true;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: AppSpacing.spacingMD,
+                      ),
+                      child: PremiumShell(
+                        margin: EdgeInsets.zero,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 32,
                               decoration: BoxDecoration(
-                                color: surfaceColor,
-                                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                                border: Border.all(
-                                  color: isDefault
-                                      ? AppColors.accentPurple
-                                      : borderColor,
-                                  width: isDefault ? 2 : 1,
+                                color: AppColors.accentViolet
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: AppSvgIcon(
+                                  assetPath: AppIcons.card,
+                                  size: 20,
+                                  color: AppColors.accentViolet,
                                 ),
                               ),
+                            ),
+                            const SizedBox(width: AppSpacing.spacingMD),
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      Container(
-                                        width: 48,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppColors.surfaceElevatedDark
-                                              : AppColors.surfaceElevatedLight,
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: borderColor),
-                                        ),
-                                        child: Icon(
-                                          Icons.credit_card,
-                                          color: AppColors.accentPurple,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      SizedBox(width: AppSpacing.spacingMD),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  '${method['brand']} •••• ${method['last4']}',
-                                                  style: AppTypography.h3.copyWith(
-                                                    color: textColor,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                if (isDefault) ...[
-                                                  SizedBox(width: AppSpacing.spacingSM),
-                                                  Container(
-                                                    padding: EdgeInsets.symmetric(
-                                                      horizontal: AppSpacing.spacingSM,
-                                                      vertical: AppSpacing.spacingXS,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors.accentPurple.withOpacity(0.2),
-                                                      borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                                                    ),
-                                                    child: Text(
-                                                      'DEFAULT',
-                                                      style: AppTypography.caption.copyWith(
-                                                        color: AppColors.accentPurple,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                            SizedBox(height: AppSpacing.spacingXS),
-                                            Text(
-                                              'Expires ${method['expiry']}',
-                                              style: AppTypography.caption.copyWith(
-                                                color: secondaryTextColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      PopupMenuButton(
-                                        icon: Icon(
-                                          Icons.more_vert,
-                                          color: secondaryTextColor,
-                                        ),
-                                        itemBuilder: (context) => [
-                                          if (!isDefault)
-                                            PopupMenuItem(
-                                              child: Text(
-                                                'Set as Default',
-                                                style: AppTypography.body.copyWith(color: textColor),
-                                              ),
-                                              onTap: () => _handleSetDefault(method['id']),
-                                            ),
-                                          PopupMenuItem(
-                                            child: Text(
-                                              'Delete',
-                                              style: AppTypography.body.copyWith(
-                                                color: AppColors.notificationRed,
-                                              ),
-                                            ),
-                                            onTap: () => _handleDelete(method['id']),
+                                      Flexible(
+                                        child: Text(
+                                          '${method['brand']} •••• ${method['last4']}',
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w700,
                                           ),
-                                        ],
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
+                                      if (isDefault) ...[
+                                        const SizedBox(
+                                          width: AppSpacing.spacingSM,
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.spacingSM,
+                                            vertical: AppSpacing.spacingXS,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accentViolet
+                                                .withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.radiusSM,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'DEFAULT',
+                                            style: AppTypography.caption
+                                                .copyWith(
+                                              color: AppColors.accentViolet,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.spacingXS),
+                                  Text(
+                                    'Expires ${method['expiry']}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: muted,
+                                    ),
                                   ),
                                 ],
                               ),
-                            );
-                          },
+                            ),
+                            PopupMenuButton<String>(
+                              icon: AppSvgIcon(
+                                assetPath: AppIcons.more,
+                                size: 20,
+                                color: muted,
+                              ),
+                              onSelected: (value) {
+                                if (value == 'default') {
+                                  _handleSetDefault(method['id'] as String);
+                                } else if (value == 'delete') {
+                                  _handleDelete(method['id'] as String);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                if (!isDefault)
+                                  const PopupMenuItem(
+                                    value: 'default',
+                                    child: Text('Set as Default'),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      color: AppColors.feedbackError,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                      ),
+                    );
+                  },
                 ),
-                // Add button
-                Padding(
-                  padding: EdgeInsets.all(AppSpacing.spacingLG),
-                  child: GradientButton(
-                    text: 'Add Payment Method',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddPaymentMethodScreen(),
-                        ),
-                      ).then((_) => _loadPaymentMethods());
-                    },
-                    isFullWidth: true,
-                    icon: Icons.add,
-                  ),
-                ),
-              ],
-            ),
     );
   }
 }

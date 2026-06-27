@@ -122,7 +122,7 @@ class _OnboardingCelebrationScreenState
 
   void _startDiscovering() {
     AppHaptics.light();
-    context.go(AppRoutes.home);
+    Navigator.of(context).pop(true);
   }
 
   void _editProfile() {

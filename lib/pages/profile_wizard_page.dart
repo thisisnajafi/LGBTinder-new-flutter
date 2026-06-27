@@ -304,6 +304,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               _uploadedImages.add(primaryImage);
             }
           }
+          _applyResumeStep(_resolveResumeStep());
         });
       }
     } catch (e) {
@@ -315,6 +316,42 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   bool get _hasProfilePhoto =>
       _primaryImageFile != null ||
       (_avatarUrl != null && _avatarUrl!.trim().isNotEmpty);
+
+  /// First wizard step that still needs user input (used after hot restart redirect).
+  int _resolveResumeStep() {
+    if (!_hasProfilePhoto) return 0;
+    if (_countryId == null ||
+        _cityId == null ||
+        _genderId == null ||
+        _birthDate == null ||
+        _phoneNumber.isEmpty) {
+      return 1;
+    }
+    if (_bio.isEmpty ||
+        _educations.isEmpty ||
+        _jobs.isEmpty ||
+        _languages.isEmpty) {
+      return 2;
+    }
+    if (_preferredGenders.isEmpty ||
+        _relationGoals.isEmpty ||
+        _minAgePreference >= _maxAgePreference) {
+      return 3;
+    }
+    if (_musicGenres.isEmpty || _interestsIds.isEmpty) {
+      return 4;
+    }
+    return 6;
+  }
+
+  void _applyResumeStep(int step) {
+    if (!mounted || step <= 0) return;
+    _currentStep = step;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+      _pageController.jumpToPage(step);
+    });
+  }
 
   // Validation methods — phone validation handled by [CountryPhoneInput] / [CountryPhoneUtils].
 
@@ -843,15 +880,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
       final response = await authService.completeRegistration(request);
 
-      if (response.profileCompleted && mounted) {
-        await authService.syncBootstrapSession(
-          CheckTokenResponse(
-            isComplete: true,
-            needsProfileCompletion: false,
-            userState: response.userState ?? 'ready_for_app',
-            user: response.user,
-          ),
-        );
+      CheckTokenResponse? tokenState;
+      try {
+        tokenState = await authService.checkToken();
+        await authService.syncBootstrapSession(tokenState);
+      } catch (_) {
+        // Fall back to complete-registration payload when offline.
+      }
+
+      final isComplete =
+          tokenState?.isComplete ?? response.profileCompleted;
+      if (isComplete && mounted) {
         context.go(AppRoutes.home);
         return;
       }
@@ -871,6 +910,17 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             ),
           ),
         );
+
+        try {
+          final refreshed = await authService.checkToken();
+          await authService.syncBootstrapSession(refreshed);
+          if (mounted && refreshed.isComplete) {
+            context.go(AppRoutes.home);
+            return;
+          }
+        } catch (_) {
+          // User can finish remaining steps from the wizard.
+        }
       }
     } on ApiError catch (e) {
       if (mounted &&

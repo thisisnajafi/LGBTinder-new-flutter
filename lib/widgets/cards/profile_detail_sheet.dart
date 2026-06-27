@@ -1,14 +1,21 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/match_percentage_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 import '../discovery/discovery_swipe_action_button.dart';
 import '../../shared/models/match_reason.dart';
 import '../ui/distance_tag.dart';
 import 'swipeable_card.dart';
 
-/// Draggable profile detail sheet shown when user taps bio "more".
+/// Reserve space for the floating like / superlike / dislike row.
+const double _kSheetActionBarReserve = 88;
+
+/// Draggable profile detail sheet shown when user swipes up or taps bio "more".
 class ProfileDetailSheet extends StatefulWidget {
   const ProfileDetailSheet({
     super.key,
@@ -36,21 +43,18 @@ class ProfileDetailSheet extends StatefulWidget {
 }
 
 class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
-  bool _wasBelowSnap = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final sheetColor =
+        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
 
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (notification) {
-        if (notification.extent <= notification.minExtent + 0.005) {
-          if (_wasBelowSnap) {
-            widget.onClose();
-          }
-          _wasBelowSnap = true;
-        } else if (notification.extent > 0.55) {
-          _wasBelowSnap = false;
+        // Dismiss when dragged below the default snap point (0.58).
+        if (notification.extent < 0.55) {
+          widget.onClose();
         }
         return false;
       },
@@ -62,61 +66,80 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
         snap: true,
         snapSizes: const [0.58, 0.90],
         builder: (context, scrollController) {
-        final showActions =
-            widget.onDislike != null ||
-            widget.onSuperlike != null ||
-            widget.onLike != null;
+          final showActions = widget.onDislike != null ||
+              widget.onSuperlike != null ||
+              widget.onLike != null;
 
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ListView(
-                controller: scrollController,
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  showActions ? 132 : 24,
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: sheetColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.radiusXL),
+              ),
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.accentViolet.withValues(alpha: 0.18),
                 ),
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(top: 10, bottom: 16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.20),
-                        borderRadius: BorderRadius.circular(100),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
+                  blurRadius: 24,
+                  offset: const Offset(0, -8),
+                ),
+              ],
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ListView(
+                  controller: scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.spacingLG,
+                    0,
+                    AppSpacing.spacingLG,
+                    showActions
+                        ? _kSheetActionBarReserve + AppSpacing.spacingXL
+                        : AppSpacing.spacingXXL,
+                  ),
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(
+                          top: AppSpacing.spacingSM,
+                          bottom: AppSpacing.spacingLG,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.20),
+                          borderRadius: BorderRadius.circular(100),
+                        ),
                       ),
                     ),
-                  ),
-                  ProfileSheetContent(
-                    profile: widget.profile,
-                    sharedInterests: widget.sharedInterests,
-                  ),
-                ],
-              ),
-              if (showActions)
-                Positioned(
-                  left: AppSpacing.spacingXL,
-                  right: AppSpacing.spacingXL,
-                  bottom: AppSpacing.spacingLG,
-                  child: DiscoverySheetActionBar(
-                    disabled: widget.actionsDisabled,
-                    onDislike: widget.onDislike,
-                    onSuperlike: widget.onSuperlike,
-                    onLike: widget.onLike,
-                  ),
+                    ProfileSheetContent(
+                      profile: widget.profile,
+                      sharedInterests: widget.sharedInterests,
+                    ),
+                  ],
                 ),
-            ],
-          ),
-        );
-      },
+                if (showActions)
+                  Positioned(
+                    left: AppSpacing.spacingXL,
+                    right: AppSpacing.spacingXL,
+                    bottom: AppSpacing.spacingMD,
+                    child: DiscoverySheetActionBar(
+                      disabled: widget.actionsDisabled,
+                      onDislike: widget.onDislike,
+                      onSuperlike: widget.onSuperlike,
+                      onLike: widget.onLike,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -172,90 +195,97 @@ class ProfileSheetContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final accent = AppColors.accentViolet;
     final dividerColor = theme.colorScheme.outlineVariant;
-    final surfaceVariant =
-        theme.colorScheme.surfaceContainerHighest;
+    final surfaceVariant = theme.colorScheme.surfaceContainerHighest;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    profile.age != null
-                        ? '${profile.firstName}, ${profile.age}'
-                        : profile.firstName,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (profile.city != null || profile.country != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.getIconPath('location'),
-                          size: 14,
-                          color: primary,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            [
-                              if (profile.city != null) profile.city,
-                              if (profile.country != null) profile.country,
-                            ].join(', '),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.65),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (profile.isVerified)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(color: primary, width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+        PremiumShell(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.all(AppSpacing.spacingMD),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppSvgIcon(
-                      assetPath: AppIcons.getIconPath('verify'),
-                      size: 12,
-                      color: primary,
-                    ),
-                    const SizedBox(width: 4),
                     Text(
-                      'Verified',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: primary,
+                      profile.age != null
+                          ? '${profile.firstName}, ${profile.age}'
+                          : profile.firstName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
                       ),
                     ),
+                    if (profile.city != null || profile.country != null) ...[
+                      const SizedBox(height: AppSpacing.spacingXS),
+                      Row(
+                        children: [
+                          AppSvgIcon(
+                            assetPath: AppIcons.getIconPath('location'),
+                            size: 14,
+                            color: accent,
+                          ),
+                          const SizedBox(width: AppSpacing.spacingXS),
+                          Expanded(
+                            child: Text(
+                              [
+                                if (profile.city != null) profile.city,
+                                if (profile.country != null) profile.country,
+                              ].join(', '),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.65),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
-          ],
+              if (profile.isVerified)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingSM,
+                    vertical: AppSpacing.spacingXS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: accent),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppSvgIcon(
+                        assetPath: AppIcons.getIconPath('verify'),
+                        size: 12,
+                        color: accent,
+                      ),
+                      const SizedBox(width: AppSpacing.spacingXS),
+                      Text(
+                        'Verified',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: accent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.spacingLG),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppSpacing.spacingSM,
+          runSpacing: AppSpacing.spacingSM,
           children: [
             if (profile.isOnline)
               _StatChip(
@@ -277,6 +307,7 @@ class ProfileSheetContent extends StatelessWidget {
                       'Online now',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: kDiscoveryOnlineGreen,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -284,28 +315,13 @@ class ProfileSheetContent extends StatelessWidget {
               ),
             if (profile.matchPercentage != null &&
                 profile.matchPercentage! > 0)
-              _StatChip(
-                background: primary.withValues(alpha: 0.12),
-                border: primary.withValues(alpha: 0.40),
-                child: Text(
-                  'Match ${profile.matchPercentage}%',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+              _MatchSheetChip(percentage: profile.matchPercentage!),
           ],
         ),
         if (profile.bio != null && profile.bio!.trim().isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text(
-            'About',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.spacingXL),
+          const PremiumSectionHeader(title: 'About'),
+          const SizedBox(height: AppSpacing.spacingSM),
           Text(
             profile.bio!,
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -315,62 +331,24 @@ class ProfileSheetContent extends StatelessWidget {
           ),
         ],
         if (profile.matchReasons.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Why you matched',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.spacingXL),
+          const PremiumSectionHeader(title: 'Why you matched'),
+          const SizedBox(height: AppSpacing.spacingSM),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
             children: profile.matchReasons.map((reason) {
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(
-                    color: primary.withValues(alpha: 0.30),
-                    width: 0.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppSvgIcon(
-                      assetPath: matchReasonIconPath(reason.type),
-                      size: 16,
-                      color: primary,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      reason.label,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: primary,
-                      ),
-                    ),
-                  ],
-                ),
-              );
+              return _MatchReasonChip(reason: reason);
             }).toList(),
           ),
         ],
         if (_hasInfoPills(profile)) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Info',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.spacingXL),
+          const PremiumSectionHeader(title: 'Info'),
+          const SizedBox(height: AppSpacing.spacingSM),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
             children: [
               if (profile.jobTitle != null)
                 _InfoPill(
@@ -394,39 +372,33 @@ class ProfileSheetContent extends StatelessWidget {
                   dividerColor: dividerColor,
                 ),
               if (profile.distance != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: DistanceTag(distance: profile.distance!),
-                ),
+                DistanceTag(distance: profile.distance!),
             ],
           ),
         ],
         if (profile.interests.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Interests',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.spacingXL),
+          const PremiumSectionHeader(title: 'Interests'),
+          const SizedBox(height: AppSpacing.spacingSM),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
             children: profile.interests.map((interest) {
               final isShared =
                   sharedInterests.contains(interest.toLowerCase());
               return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: isShared
-                      ? primary.withValues(alpha: 0.15)
+                      ? accent.withValues(alpha: 0.15)
                       : surfaceVariant,
                   borderRadius: BorderRadius.circular(100),
                   border: Border.all(
                     color: isShared
-                        ? primary.withValues(alpha: 0.50)
+                        ? accent.withValues(alpha: 0.50)
                         : dividerColor,
                     width: isShared ? 1 : 0.5,
                   ),
@@ -435,7 +407,7 @@ class ProfileSheetContent extends StatelessWidget {
                   interest,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isShared
-                        ? primary
+                        ? accent
                         : theme.colorScheme.onSurface.withValues(alpha: 0.75),
                     fontWeight:
                         isShared ? FontWeight.w600 : FontWeight.w400,
@@ -446,27 +418,22 @@ class ProfileSheetContent extends StatelessWidget {
           ),
         ],
         if (profile.imageUrls.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Text(
-            'Photos',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.spacingXL),
+          const PremiumSectionHeader(title: 'Photos'),
+          const SizedBox(height: AppSpacing.spacingSM),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               childAspectRatio: 1,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
+              mainAxisSpacing: AppSpacing.spacingXS,
+              crossAxisSpacing: AppSpacing.spacingXS,
             ),
             itemCount: profile.imageUrls.length,
             itemBuilder: (context, index) {
               return ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 child: CachedNetworkImage(
                   imageUrl: profile.imageUrls[index],
                   fit: BoxFit.cover,
@@ -487,6 +454,83 @@ class ProfileSheetContent extends StatelessWidget {
   }
 }
 
+class _MatchSheetChip extends StatelessWidget {
+  const _MatchSheetChip({required this.percentage});
+
+  final int percentage;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = MatchPercentageColors.colorFor(percentage);
+
+    return _StatChip(
+      background: color.withValues(alpha: 0.14),
+      border: color.withValues(alpha: 0.45),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppSvgIcon(
+            assetPath: AppIcons.getIconPath('magic-star'),
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'Match $percentage%',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatchReasonChip extends StatelessWidget {
+  const _MatchReasonChip({required this.reason});
+
+  final MatchReason reason;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = AppColors.accentViolet;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.28),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppSvgIcon(
+            assetPath: matchReasonIconPath(reason.type),
+            size: 16,
+            color: accent,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            reason.label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatChip extends StatelessWidget {
   const _StatChip({
     required this.background,
@@ -501,7 +545,7 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(100),
@@ -528,7 +572,7 @@ class _InfoPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
+    final accent = AppColors.accentViolet;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -543,7 +587,7 @@ class _InfoPill extends StatelessWidget {
           AppSvgIcon(
             assetPath: icon,
             size: 16,
-            color: primary.withValues(alpha: 0.70),
+            color: accent.withValues(alpha: 0.70),
           ),
           const SizedBox(width: 6),
           Text(
@@ -584,13 +628,13 @@ class DiscoverySheetActionBar extends StatelessWidget {
             size: 58,
             onPressed: disabled ? null : onDislike,
           ),
-          const SizedBox(width: 32),
+          const SizedBox(width: AppSpacing.spacingXXL),
           DiscoverySwipeActionButton(
             type: DiscoverySwipeActionType.superlike,
             size: 54,
             onPressed: disabled ? null : onSuperlike,
           ),
-          const SizedBox(width: 32),
+          const SizedBox(width: AppSpacing.spacingXXL),
           DiscoverySwipeActionButton(
             type: DiscoverySwipeActionType.like,
             size: 58,

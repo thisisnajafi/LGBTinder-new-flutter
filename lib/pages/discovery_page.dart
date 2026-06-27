@@ -71,6 +71,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   bool _isClearingPassport = false;
   bool _isSwipeInProgress = false;
   bool _isProfileSheetOpen = false;
+  bool _isClosingProfileSheet = false;
   late final DraggableScrollableController _sheetController;
 
   Map<String, dynamic>? _discoverQueryFilters() {
@@ -112,18 +113,31 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   void _closeProfileSheet() {
-    if (!_isProfileSheetOpen) return;
+    if (!_isProfileSheetOpen || _isClosingProfileSheet) return;
+    _isClosingProfileSheet = true;
     final disableAnimations = MediaQuery.of(context).disableAnimations;
     if (disableAnimations || !_sheetController.isAttached) {
-      setState(() => _isProfileSheetOpen = false);
+      setState(() {
+        _isProfileSheetOpen = false;
+        _isClosingProfileSheet = false;
+      });
       return;
     }
-    _sheetController.animateTo(
+    _sheetController
+        .animateTo(
       0.50,
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
-    ).whenComplete(() {
-      if (mounted) setState(() => _isProfileSheetOpen = false);
+    )
+        .whenComplete(() {
+      if (mounted) {
+        setState(() {
+          _isProfileSheetOpen = false;
+          _isClosingProfileSheet = false;
+        });
+      } else {
+        _isClosingProfileSheet = false;
+      }
     });
   }
 
@@ -1096,15 +1110,26 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             ),
             if (_isProfileSheetOpen && sheetProfile != null)
               Positioned.fill(
-                child: ProfileDetailSheet(
-                  controller: _sheetController,
-                  profile: sheetProfile,
-                  sharedInterests: _sharedInterestSet(stack.first),
-                  onClose: _closeProfileSheet,
-                  actionsDisabled: _isSwipeInProgress,
-                  onDislike: () => _handleSheetAction('dislike'),
-                  onSuperlike: () => _handleSheetAction('superlike'),
-                  onLike: () => _handleSheetAction('like'),
+                child: Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: _closeProfileSheet,
+                      behavior: HitTestBehavior.opaque,
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.42),
+                      ),
+                    ),
+                    ProfileDetailSheet(
+                      controller: _sheetController,
+                      profile: sheetProfile,
+                      sharedInterests: _sharedInterestSet(stack.first),
+                      onClose: _closeProfileSheet,
+                      actionsDisabled: _isSwipeInProgress,
+                      onDislike: () => _handleSheetAction('dislike'),
+                      onSuperlike: () => _handleSheetAction('superlike'),
+                      onLike: () => _handleSheetAction('like'),
+                    ),
+                  ],
                 ),
               ),
           ],

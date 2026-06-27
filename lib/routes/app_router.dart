@@ -184,15 +184,29 @@ class _GuardDecision {
 }
 
 Future<AuthStage> _getAuthStage(TokenStorageService tokenStorage) async {
-  final hasAuthToken = await tokenStorage.isAuthenticated();
-  if (hasAuthToken) return AuthStage.authenticated;
-
   final profileToken = await tokenStorage.getProfileCompletionToken();
-  if (profileToken != null && profileToken.isNotEmpty) {
+  final hasProfileCompletionToken =
+      profileToken != null && profileToken.isNotEmpty;
+
+  final hasAuthToken = await tokenStorage.isAuthenticated();
+  if (!hasAuthToken) {
+    if (hasProfileCompletionToken) {
+      return AuthStage.profileCompletion;
+    }
+    return AuthStage.unauthenticated;
+  }
+
+  final session = await tokenStorage.getUserSession();
+  final profileCompleted = session?.profileCompleted ?? false;
+  final userState = session?.userState;
+  final needsProfileCompletion = !profileCompleted ||
+      userState == 'profile_completion_required';
+
+  if (needsProfileCompletion || hasProfileCompletionToken) {
     return AuthStage.profileCompletion;
   }
 
-  return AuthStage.unauthenticated;
+  return AuthStage.authenticated;
 }
 
 _GuardDecision evaluateGuardDecision({

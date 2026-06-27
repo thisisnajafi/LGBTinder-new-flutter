@@ -1,410 +1,214 @@
 // Screen: ComprehensiveSettingsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
+import '../../features/settings/presentation/screens/sound_preferences_screen.dart';
+import '../../routes/app_router.dart';
 import '../../widgets/avatar/avatar_with_status.dart';
 import '../../widgets/badges/premium_badge.dart';
 import '../../widgets/badges/verification_badge.dart';
-import '../notification_settings_screen.dart';
-import '../../features/settings/presentation/screens/sound_preferences_screen.dart';
-import '../privacy_settings_screen.dart';
-import 'account_management_screen.dart';
-import '../subscription_management_screen.dart';
-import '../two_factor_auth_screen.dart';
 import '../active_sessions_screen.dart';
-import '../help_support_screen.dart';
 import '../emergency_contacts_screen.dart';
+import '../notification_settings_screen.dart';
+import '../privacy_settings_screen.dart';
 import '../safety_settings_screen.dart';
+import '../two_factor_auth_screen.dart';
+import 'account_management_screen.dart';
 
-/// Comprehensive settings screen - Main settings hub
+/// Comprehensive settings screen — premium settings hub (legacy entry).
 class ComprehensiveSettingsScreen extends ConsumerStatefulWidget {
-  const ComprehensiveSettingsScreen({Key? key}) : super(key: key);
+  const ComprehensiveSettingsScreen({super.key});
 
   @override
-  ConsumerState<ComprehensiveSettingsScreen> createState() => _ComprehensiveSettingsScreenState();
+  ConsumerState<ComprehensiveSettingsScreen> createState() =>
+      _ComprehensiveSettingsScreenState();
 }
 
-class _ComprehensiveSettingsScreenState extends ConsumerState<ComprehensiveSettingsScreen> {
-  // User data (TODO: Get from provider)
+class _ComprehensiveSettingsScreenState
+    extends ConsumerState<ComprehensiveSettingsScreen> {
   String _userName = 'User';
   String? _userAvatarUrl;
   bool _isPremium = false;
   bool _isVerified = false;
 
+  void _push(Widget screen) {
+    Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return AppPageScaffold(
+    return PremiumDetailScaffold(
       title: 'Settings',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
+      subtitle: 'Account, privacy, and preferences',
       body: ListView(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
+        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
         children: [
-          // Profile header
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              border: Border(
-                bottom: BorderSide(color: borderColor, width: 1),
-              ),
-            ),
-            child: Row(
-              children: [
-                AvatarWithStatus(
-                  imageUrl: _userAvatarUrl,
-                  name: _userName,
-                  isOnline: false,
-                  size: 64.0,
-                ),
-                SizedBox(width: AppSpacing.spacingMD),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            _userName,
-                            style: AppTypography.h2.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (_isVerified) ...[
-                            SizedBox(width: AppSpacing.spacingSM),
-                            VerificationBadge(isVerified: true, size: 20),
-                          ],
-                          if (_isPremium) ...[
-                            SizedBox(width: AppSpacing.spacingSM),
-                            PremiumBadge(isPremium: true, fontSize: 10),
-                          ],
-                        ],
-                      ),
-                      SizedBox(height: AppSpacing.spacingXS),
-                      Text(
-                        'View and edit your profile',
-                        style: AppTypography.caption.copyWith(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: secondaryTextColor,
-                ),
-              ],
-            ),
-          ),
-
-          // Account
-          SectionHeader(
-            title: 'Account',
-            icon: Icons.person,
-          ),
-          _buildSettingsTile(
-            icon: Icons.person_outline,
-            title: 'Account Management',
-            subtitle: 'Email and password',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AccountManagementScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildSettingsTile(
-            icon: Icons.security,
-            title: 'Two-Factor Authentication',
-            subtitle: 'Add an extra layer of security',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TwoFactorAuthScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildSettingsTile(
-            icon: Icons.devices,
-            title: 'Active Sessions',
-            subtitle: 'Manage your logged-in devices',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ActiveSessionsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Privacy & Safety
-          SectionHeader(
-            title: 'Privacy & Safety',
-            icon: Icons.lock,
-          ),
-          _buildSettingsTile(
-            icon: Icons.privacy_tip,
-            title: 'Privacy',
-            subtitle: 'Control your privacy settings',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PrivacySettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildSettingsTile(
-            icon: Icons.shield,
-            title: 'Safety',
-            subtitle: 'Safety and security settings',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SafetySettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildSettingsTile(
-            icon: Icons.emergency,
-            title: 'Emergency Contacts',
-            subtitle: 'Manage emergency contacts',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EmergencyContactsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Notifications
-          SectionHeader(
-            title: 'Notifications',
-            icon: Icons.notifications,
-          ),
-          _buildSettingsTile(
-            icon: Icons.notifications_outlined,
-            title: 'Notification Settings',
-            subtitle: 'Manage your notification preferences',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationSettingsScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildSettingsTile(
-            icon: Icons.volume_up_outlined,
-            title: 'Sounds',
-            subtitle: 'Message, call, and notification sounds',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SoundPreferencesScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Premium & Payments
-          SectionHeader(
-            title: 'Premium & Payments',
-            icon: Icons.star,
-          ),
-          _buildSettingsTile(
-            icon: Icons.workspace_premium,
-            title: 'Subscription',
-            subtitle: 'Manage your premium subscription',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SubscriptionManagementScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // Support
-          SectionHeader(
-            title: 'Support',
-            icon: Icons.help_outline,
-          ),
-          _buildSettingsTile(
-            icon: Icons.support_agent,
-            title: 'Help & Support',
-            subtitle: 'Get help and contact support',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const HelpSupportScreen(),
-                ),
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          const SizedBox(height: AppSpacing.spacingXL),
-
-          // App info
-          SectionHeader(
-            title: 'About',
-            icon: Icons.info,
-          ),
-          _buildSettingsTile(
-            icon: Icons.info_outline,
-            title: 'App Version',
-            subtitle: '1.0.0',
-            onTap: null,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsTile({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    VoidCallback? onTap,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          border: Border(
-            bottom: BorderSide(color: borderColor, width: 1),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: textColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-              ),
-              child: Icon(
-                icon,
-                color: textColor,
-                size: 20,
-              ),
-            ),
-            SizedBox(width: AppSpacing.spacingMD),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          PremiumShell(
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+            child: PremiumTapScale(
+              onTap: () {},
+              semanticLabel: 'View profile',
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: AppTypography.body.copyWith(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
+                  AvatarWithStatus(
+                    imageUrl: _userAvatarUrl,
+                    name: _userName,
+                    isOnline: false,
+                    size: 64,
+                  ),
+                  const SizedBox(width: AppSpacing.spacingMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _userName,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_isVerified) ...[
+                              const SizedBox(width: AppSpacing.spacingSM),
+                              const VerificationBadge(isVerified: true, size: 20),
+                            ],
+                            if (_isPremium) ...[
+                              const SizedBox(width: AppSpacing.spacingSM),
+                              const PremiumBadge(isPremium: true, fontSize: 10),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.spacingXS),
+                        Text(
+                          'View and edit your profile',
+                          style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                        ),
+                      ],
                     ),
                   ),
-                  if (subtitle != null) ...[
-                    SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      subtitle,
-                      style: AppTypography.caption.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                  ],
+                  AppSvgIcon(
+                    assetPath: AppIcons.chevronRight,
+                    size: 18,
+                    color: muted,
+                  ),
                 ],
               ),
             ),
-            if (onTap != null)
-              Icon(
-                Icons.chevron_right,
-                color: secondaryTextColor,
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Account',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.user,
+                title: 'Account Management',
+                subtitle: 'Email and password',
+                onTap: () => _push(const AccountManagementScreen()),
               ),
-          ],
-        ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.key,
+                title: 'Two-Factor Authentication',
+                subtitle: 'Add an extra layer of security',
+                onTap: () => _push(const TwoFactorAuthScreen()),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.getIconPath('mobile'),
+                title: 'Active Sessions',
+                subtitle: 'Manage your logged-in devices',
+                onTap: () => _push(const ActiveSessionsScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Privacy & Safety',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.lock,
+                title: 'Privacy',
+                subtitle: 'Control your privacy settings',
+                onTap: () => _push(const PrivacySettingsScreen()),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.shield,
+                title: 'Safety',
+                subtitle: 'Safety and security settings',
+                onTap: () => _push(const SafetySettingsScreen()),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.danger,
+                title: 'Emergency Contacts',
+                subtitle: 'Manage emergency contacts',
+                onTap: () => _push(const EmergencyContactsScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Notifications',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.notification,
+                title: 'Notification Settings',
+                subtitle: 'Manage your notification preferences',
+                onTap: () => _push(const NotificationSettingsScreen()),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.getIconPath('volume-high'),
+                title: 'Sounds',
+                subtitle: 'Message, call, and notification sounds',
+                onTap: () => _push(const SoundPreferencesScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Premium & Payments',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.crown,
+                title: 'Subscription',
+                subtitle: 'Manage your premium subscription',
+                accent: AppColors.accentRose,
+                onTap: () => context.push(AppRoutes.subscriptionManagement),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Support',
+            children: [
+              PremiumSettingsTile(
+                iconPath: AppIcons.support,
+                title: 'Help & Support',
+                subtitle: 'Get help and contact support',
+                onTap: () => context.push(AppRoutes.helpSupport),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'About',
+            children: [
+              PremiumInfoRow(
+                label: 'App version',
+                value: '1.0.0',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -543,6 +543,11 @@ if (AppAnimations.animationsEnabled(context)) { /* animate */ }
 | 25r | Community — forum scaffold | ✅ Done | `screens/community_forum_screen.dart` — `PremiumDetailScaffold` + `PremiumCategoryChips` + SVG |
 | 25s | Payments — billing history scaffold | ✅ Done | `screens/billing_history_screen.dart` — `PremiumDetailScaffold` + `PremiumShell` transaction rows |
 | 25t | Auth — login/register polish | ✅ Done | `AuthTextField` + `AuthVisibilityToggle`; Google button contrast; email→`sms` icon; terms/privacy links; removed duplicate headers |
+| 25u | Settings — comprehensive hub scaffold | ✅ Done | `screens/settings/comprehensive_settings_screen.dart` — `PremiumDetailScaffold` + `PremiumSettingsGroup` + SVG |
+| 25v | Payments — subscription status scaffold | ✅ Done | `screens/subscription_status_screen.dart` — `PremiumDetailScaffold` + `PremiumShell` status card + SVG |
+| 25w | Payments — payment overview scaffold | ✅ Done | `screens/payment_screen.dart` — premium transaction/method rows + manage tiles |
+| 25x | Payments — payment methods scaffold | ✅ Done | `screens/payment_methods_screen.dart` — `PremiumDetailScaffold` + `PremiumShell` cards + SVG |
+| 26 | Discover — profile detail sheet polish | ✅ Done | `profile_detail_sheet.dart` — `MatchPercentageColors`, `PremiumSectionHeader`, dismiss <0.55, scrim tap, action inset |
 
 ---
 
