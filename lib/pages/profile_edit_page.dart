@@ -156,18 +156,30 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   }
 
   Future<void> _pickImage(ImageSource source, {required bool setAsPrimary}) async {
-    if (!setAsPrimary && _images.length >= AppConstants.maxProfilePhotos) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Maximum ${AppConstants.maxProfilePhotos} photos allowed',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+    if (setAsPrimary) {
+      final profileCount =
+          _images.where((image) => image.type == 'profile').length;
+      if (profileCount >= AppConstants.maxPrimaryPhotos) {
+        // Primary upload replaces the existing profile photo on the server.
       }
-      return;
+    } else {
+      final galleryCount =
+          _images.where((image) => image.type == 'gallery').length;
+      if (galleryCount >= AppConstants.maxGalleryPhotos ||
+          _images.length >= AppConstants.maxTotalProfilePhotos) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Maximum ${AppConstants.maxGalleryPhotos} gallery photos allowed '
+                '(${AppConstants.maxTotalProfilePhotos} total including primary).',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
     }
     try {
       final XFile? image = await _imagePicker.pickImage(source: source);
@@ -207,7 +219,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Image uploaded successfully'),
+            content: Text('Gallery photo added successfully'),
             backgroundColor: AppColors.onlineGreen,
           ),
         );
@@ -661,7 +673,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 ProfileImageEditor(
                   imageUrls: _images.map((img) => img.imageUrl).toList(),
                   primaryIndex: _primaryImageIndex,
-                  maxImages: AppConstants.maxProfilePhotos,
+                  maxImages: AppConstants.maxTotalProfilePhotos,
                   onImageAdd: (_) => _showGalleryImageSourceDialog(),
                   onImageDelete: (index) {
                     if (index < _images.length) {

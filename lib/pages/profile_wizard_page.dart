@@ -550,7 +550,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     return 'Unknown Device';
   }
 
-  static int get _maxAdditionalPhotos => AppConstants.maxProfilePhotos;
+  static int get _maxAdditionalPhotos => AppConstants.maxGalleryPhotos;
 
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
     try {

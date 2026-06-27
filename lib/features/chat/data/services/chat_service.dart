@@ -73,6 +73,8 @@ class ChatService {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.chatHistory,
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        // Chat threads change constantly; never serve stale cached history.
+        useCache: false,
         forceRefresh: forceRefresh,
       );
 

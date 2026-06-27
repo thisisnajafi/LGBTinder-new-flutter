@@ -27,6 +27,7 @@ import '../core/widgets/profile_stats_card.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
 import '../widgets/match/match_screen.dart';
+import '../core/constants/app_constants.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/cache/image_cache_service.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart'
@@ -904,15 +905,46 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _handlePickedImage(File imageFile) async {
+    final cachedProfile = ref.read(profilePageCacheProvider).valueOrNull?.profile;
+    final images = cachedProfile?.images ?? [];
+    final galleryCount =
+        images.where((image) => image.type == 'gallery').length;
+
+    if (galleryCount >= AppConstants.maxGalleryPhotos ||
+        images.length >= AppConstants.maxTotalProfilePhotos) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'You can add up to ${AppConstants.maxGalleryPhotos} gallery photos '
+              '(${AppConstants.maxTotalProfilePhotos} total including primary).',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-      // Upload image using profile provider
-      final profileNotifier = ref.read(profileProvider.notifier);
-      await profileNotifier.uploadImage(imageFile.path);
+      final imageService = ref.read(imageServiceProvider);
+      await imageService.uploadImage(imageFile, type: 'gallery');
+      await ref.read(profilePageCacheProvider.notifier).refresh();
+      await ref.read(appCacheManagerProvider).revalidateAll();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile image uploaded successfully!'),
+            content: Text('Gallery photo added successfully'),
+          ),
+        );
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -920,18 +952,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload image: $e'),
+            content: Text('Failed to upload photo: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
-
-    // Here you would typically:
-    // 1. Upload the image to backend
-    // 2. Get the image URL from response
-    // 3. Update the profile with new image URL
-    // 4. Refresh the profile data
   }
 
   void _openImageViewer(int initialIndex) {

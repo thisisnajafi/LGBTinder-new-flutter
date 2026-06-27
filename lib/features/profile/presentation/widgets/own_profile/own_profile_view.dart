@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/cache/session_cache_providers.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/spacing_constants.dart';
@@ -86,6 +87,10 @@ class OwnProfileView extends ConsumerWidget {
 
     final photos = profile.images ?? [];
     final photoUrls = photos.map((p) => p.imageUrl).toList();
+    final galleryCount =
+        photos.where((photo) => photo.type == 'gallery').length;
+    final canAddGalleryPhoto = galleryCount < AppConstants.maxGalleryPhotos &&
+        photos.length < AppConstants.maxTotalProfilePhotos;
     final detailChips = buildProfileDetailChips(
       job: jobLabel,
       education: educationLabel,
@@ -128,6 +133,7 @@ class OwnProfileView extends ConsumerWidget {
                 totalCount: photos.length,
                 onEdit: onEditPhotos,
                 onAdd: onAddPhoto,
+                canAddMore: canAddGalleryPhoto,
                 onPhotoTap: onPhotoTap,
               ),
               const SizedBox(height: _sectionGap),

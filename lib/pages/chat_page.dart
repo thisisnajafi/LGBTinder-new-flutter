@@ -258,6 +258,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             .toList();
         _messages.add(_messageToMap(message));
       });
+      unawaited(
+        ref
+            .read(chatLocalRepositoryProvider)
+            .upsertMessage(message, widget.userId),
+      );
       _scrollToBottom();
     });
 
@@ -508,41 +513,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           calls: callMaps,
         );
 
-        if (showedCache && !forceRefresh) {
-          final existingIds = _messages
-              .where((item) => item['kind'] != 'call')
-              .map((item) => item['id'])
-              .whereType<int>()
-              .toSet();
-          final newFromNetwork = messageMaps
-              .where((m) => !existingIds.contains(m['id']))
-              .toList();
-          setState(() {
-            if (newFromNetwork.isNotEmpty) {
-              _messages = ChatTimelineMerger.merge(
-                messages: [
-                  ..._messages.where((item) => item['kind'] != 'call'),
-                  ...newFromNetwork,
-                ],
-                calls: [
-                  ...merged.where((item) => item['kind'] == 'call'),
-                  ..._messages.where((item) => item['kind'] == 'call'),
-                ],
-              );
-            }
-            _isLoading = false;
-            _hasMoreMessages = history.hasMore;
-            _nextCursor = history.nextCursor;
-          });
-        } else {
-          setState(() {
-            _messages = merged;
-            _isLoading = false;
-            _hasMoreMessages = history.hasMore;
-            _nextCursor = history.nextCursor;
-          });
-          _scrollToBottom();
-        }
+        setState(() {
+          _messages = merged;
+          _isLoading = false;
+          _hasMoreMessages = history.hasMore;
+          _nextCursor = history.nextCursor;
+        });
+        _scrollToBottom();
         unawaited(
           localRepo.upsertMessages(history.messages, widget.userId),
         );
@@ -555,10 +532,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
           ),
         );
-
-        if (!showedCache || forceRefresh) {
-          _scrollToBottom();
-        }
 
         final conversationId = history.conversationId;
         if (conversationId != null && conversationId > 0) {
@@ -892,6 +865,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           .toList()
         ..add(_messageToMap(serverMessage));
     });
+    unawaited(
+      ref
+          .read(chatLocalRepositoryProvider)
+          .upsertMessage(serverMessage, widget.userId),
+    );
   }
 
   Future<void> _markAsRead() async {

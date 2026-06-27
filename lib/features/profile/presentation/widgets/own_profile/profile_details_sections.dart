@@ -44,6 +44,7 @@ class PremiumPhotosSection extends StatelessWidget {
     required this.totalCount,
     required this.onEdit,
     required this.onAdd,
+    this.canAddMore = true,
     required this.onPhotoTap,
     this.shellMargin,
   });
@@ -52,6 +53,7 @@ class PremiumPhotosSection extends StatelessWidget {
   final int totalCount;
   final VoidCallback onEdit;
   final VoidCallback onAdd;
+  final bool canAddMore;
   final void Function(int index) onPhotoTap;
   final EdgeInsets? shellMargin;
 
@@ -60,7 +62,10 @@ class PremiumPhotosSection extends StatelessWidget {
     final previewCount = AppConstants.profilePhotoGridPreview;
     final hasPhotos = imageUrls.isNotEmpty;
     final display = imageUrls.take(previewCount).toList();
-    final itemCount = hasPhotos ? display.length + 1 : 3;
+    final showAddTile = canAddMore && (hasPhotos || imageUrls.isEmpty);
+    final itemCount = hasPhotos
+        ? display.length + (showAddTile ? 1 : 0)
+        : (canAddMore ? 3 : 0);
 
     return PremiumProfileShell(
       margin: shellMargin ?? ProfileContentLayout.shellMargin,
@@ -70,7 +75,7 @@ class PremiumPhotosSection extends StatelessWidget {
           PremiumSectionHeader(
             title: 'Gallery',
             subtitle: hasPhotos
-                ? '$totalCount photo${totalCount == 1 ? '' : 's'} · Drag to reorder in edit'
+                ? '$totalCount photo${totalCount == 1 ? '' : 's'} · Up to ${AppConstants.maxTotalProfilePhotos} (1 primary + ${AppConstants.maxGalleryPhotos} gallery)'
                 : 'Profiles with 3+ photos get 5× more matches',
             actionLabel: hasPhotos ? 'Edit' : null,
             onAction: hasPhotos ? onEdit : null,
@@ -88,7 +93,7 @@ class PremiumPhotosSection extends StatelessWidget {
             itemCount: itemCount,
             itemBuilder: (context, index) {
               if (!hasPhotos) {
-                return _AddPhotoTile(onTap: onAdd);
+                return _AddPhotoTile(onTap: canAddMore ? onAdd : () {});
               }
               if (index < display.length) {
                 final isPrimary = index == 0;
@@ -98,7 +103,10 @@ class PremiumPhotosSection extends StatelessWidget {
                   child: _PhotoTile(url: display[index], isPrimary: isPrimary),
                 );
               }
-              return _AddPhotoTile(onTap: onAdd);
+              if (showAddTile) {
+                return _AddPhotoTile(onTap: onAdd);
+              }
+              return const SizedBox.shrink();
             },
           ),
         ],
