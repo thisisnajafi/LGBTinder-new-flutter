@@ -343,34 +343,33 @@ class _ProfileActionBarHeader extends SliverPersistentHeaderDelegate {
 
   final Widget child;
 
-  static const double _height = 70;
+  @override
+  double get minExtent => OtherUserProfileActionBar.preferredHeight;
 
   @override
-  double get minExtent => _height;
-
-  @override
-  double get maxExtent => _height;
+  double get maxExtent => OtherUserProfileActionBar.preferredHeight;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Theme.of(context).scaffoldBackgroundColor
-            : Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: overlapsContent
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
+    return SizedBox(
+      height: maxExtent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: overlapsContent
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: child,
       ),
-      child: child,
     );
   }
 

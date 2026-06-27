@@ -425,6 +425,10 @@ class _HeroStatChip extends StatelessWidget {
 
 /// Integrated profile action bar — pinned below hero.
 class OtherUserProfileActionBar extends StatelessWidget {
+  /// Layout height used by [SliverPersistentHeader] (padding + 46px controls).
+  static const double preferredHeight =
+      AppSpacing.spacingSM + 46 + AppSpacing.spacingMD;
+
   const OtherUserProfileActionBar({
     super.key,
     required this.showDiscoveryActions,
@@ -449,22 +453,24 @@ class OtherUserProfileActionBar extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.08),
+    return SizedBox(
+      height: preferredHeight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+          border: Border(
+            bottom: BorderSide(
+              color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.08),
+            ),
           ),
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.spacingLG,
-        AppSpacing.spacingSM,
-        AppSpacing.spacingLG,
-        AppSpacing.spacingMD,
-      ),
-      child: Row(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.spacingLG,
+          AppSpacing.spacingSM,
+          AppSpacing.spacingLG,
+          AppSpacing.spacingMD,
+        ),
+        child: Row(
         children: [
           if (onMessage != null)
             Expanded(
@@ -545,6 +551,7 @@ class OtherUserProfileActionBar extends StatelessWidget {
             ),
           ],
         ],
+        ),
       ),
     );
   }
