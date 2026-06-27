@@ -8,8 +8,10 @@ import 'package:lgbtindernew/features/chat/providers/chat_providers.dart';
 import 'package:lgbtindernew/shared/services/api_service.dart';
 import 'package:lgbtindernew/shared/services/session_api_service.dart';
 
+import 'chat_service_test.mocks.dart';
+
 class _TrackingChatRepository extends ChatRepository {
-  _TrackingChatRepository(this.onlineCalls) : super(ChatService(_NoopApiService()));
+  _TrackingChatRepository(this.onlineCalls, ChatService service) : super(service);
 
   final List<bool> onlineCalls;
 
@@ -20,7 +22,7 @@ class _TrackingChatRepository extends ChatRepository {
 }
 
 class _TrackingSessionApiService extends SessionApiService {
-  _TrackingSessionApiService(this.onActivity) : super(_NoopApiService());
+  _TrackingSessionApiService(this.onActivity, ApiService apiService) : super(apiService);
 
   final void Function() onActivity;
 
@@ -30,30 +32,24 @@ class _TrackingSessionApiService extends SessionApiService {
   }
 }
 
-class _NoopApiService extends ApiService {
-  _NoopApiService() : super(null);
-}
-
 void main() {
   group('PresenceService lifecycle', () {
     test('onForeground marks online and reports session activity', () async {
       final onlineCalls = <bool>[];
       var activityReports = 0;
+      final mockApi = MockApiService();
+      final chatRepo = _TrackingChatRepository(onlineCalls, ChatService(mockApi));
+      final sessionApi = _TrackingSessionApiService(() => activityReports++, mockApi);
 
       final container = ProviderContainer(
         overrides: [
-          chatRepositoryProvider.overrideWith(
-            (ref) => _TrackingChatRepository(onlineCalls),
-          ),
-          sessionApiServiceProvider.overrideWith(
-            (ref) => _TrackingSessionApiService(() => activityReports++),
-          ),
+          chatRepositoryProvider.overrideWithValue(chatRepo),
+          sessionApiServiceProvider.overrideWithValue(sessionApi),
         ],
       );
       addTearDown(container.dispose);
 
-      final service = container.read(presenceServiceProvider);
-      await service.onForeground();
+      await container.read(presenceServiceProvider).onForeground();
 
       expect(onlineCalls, [true]);
       expect(activityReports, 1);
@@ -62,15 +58,14 @@ void main() {
     test('onBackground marks offline and stops heartbeat', () async {
       final onlineCalls = <bool>[];
       var activityReports = 0;
+      final mockApi = MockApiService();
+      final chatRepo = _TrackingChatRepository(onlineCalls, ChatService(mockApi));
+      final sessionApi = _TrackingSessionApiService(() => activityReports++, mockApi);
 
       final container = ProviderContainer(
         overrides: [
-          chatRepositoryProvider.overrideWith(
-            (ref) => _TrackingChatRepository(onlineCalls),
-          ),
-          sessionApiServiceProvider.overrideWith(
-            (ref) => _TrackingSessionApiService(() => activityReports++),
-          ),
+          chatRepositoryProvider.overrideWithValue(chatRepo),
+          sessionApiServiceProvider.overrideWithValue(sessionApi),
         ],
       );
       addTearDown(container.dispose);

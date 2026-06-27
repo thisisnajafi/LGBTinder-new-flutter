@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lgbtindernew/features/chat/providers/user_presence_cache_provider.dart';
 import 'package:lgbtindernew/shared/services/pusher_websocket_service.dart';
@@ -5,7 +6,10 @@ import 'package:lgbtindernew/shared/services/pusher_websocket_service.dart';
 void main() {
   group('UserPresenceCacheNotifier', () {
     test('apply stores online snapshot by user id', () {
-      final notifier = UserPresenceCacheNotifier();
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(userPresenceCacheProvider.notifier);
       final event = UserPresenceEvent(
         userId: 42,
         isOnline: true,
@@ -15,7 +19,7 @@ void main() {
 
       notifier.apply(event);
 
-      final snapshot = notifier.state[42];
+      final snapshot = container.read(userPresenceCacheProvider)[42];
       expect(snapshot, isNotNull);
       expect(snapshot!.isOnline, isTrue);
       expect(snapshot.lastSeenAt, event.lastSeenAt);
