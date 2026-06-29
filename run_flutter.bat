@@ -7,13 +7,13 @@ if not exist "%FLUTTER_BIN%" (
     echo Flutter not found at %FLUTTER_BIN%
     exit /b 1
 )
+
 echo Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn
 
-REM Delegate "run" to PowerShell for filtered console output (hides EGL noise).
-if /I "%~1"=="run" (
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_flutter.ps1" %*
-    exit /b %ERRORLEVEL%
+if "%~1"=="" (
+    "%FLUTTER_BIN%" run
+) else (
+    "%FLUTTER_BIN%" %*
 )
 
-"%FLUTTER_BIN%" %*
 exit /b %ERRORLEVEL%

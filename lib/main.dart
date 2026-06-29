@@ -101,6 +101,10 @@ Future<void> _bootstrap() async {
   ConnectivityService.instance.initialize();
   startupLog('2. Flutter bindings initialized');
 
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
