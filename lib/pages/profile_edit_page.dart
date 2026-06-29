@@ -15,7 +15,7 @@ import '../widgets/profile/avatar_upload.dart';
 import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart';
-import '../core/cache/cache_providers.dart';
+import '../core/cache/cache_manager.dart';
 import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
 import '../features/profile/data/models/user_profile.dart';

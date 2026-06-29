@@ -12,6 +12,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/widgets/app_page_header.dart';
 import '../features/profile/presentation/widgets/own_profile/own_profile_view.dart';
+import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../features/profile/widgets/profile_photo_carousel.dart';
 import '../features/profile/widgets/tier_badge.dart';
 import '../features/profile/widgets/profile_completeness_indicator.dart';
@@ -42,7 +43,6 @@ import '../features/safety/data/models/block.dart';
 import '../features/safety/data/models/report.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
-import '../pages/profile_edit_page.dart';
 import '../routes/app_router.dart';
 import '../core/utils/app_icons.dart';
 import '../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
@@ -457,6 +457,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _openProfileEdit() async {
+    await context.push(AppRoutes.profileEdit);
+    if (mounted) {
+      await ref.read(profilePageCacheProvider.notifier).refresh();
+    }
+  }
+
   List<String> _getImageUrls([UserProfile? p]) {
     final pr = p ?? _profile;
     if (pr?.images == null || pr!.images!.isEmpty) {
@@ -567,14 +574,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       size: 24,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ProfileEditPage(),
-                        ),
-                      );
-                    },
+                    onPressed: _openProfileEdit,
                   ),
                 ),
                 Expanded(
@@ -633,16 +633,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ProfileBio(
           bio: profile.profileBio,
           isEditable: isOwn,
-          onEdit: isOwn
-              ? () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProfileEditPage(),
-                    ),
-                  );
-                }
-              : null,
+          onEdit: isOwn ? _openProfileEdit : null,
         ),
         ProfileInfoSections(
           interests: _labelsFromProfile(profile.interestTitles, profile.interests, interestsRef),
@@ -768,14 +759,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       bodyContent = OwnProfileView(
         profile: profile,
         onViewProfile: () => _openFullProfileView(profile),
-        onEditPhotos: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => const ProfileEditPage(),
-            ),
-          );
-        },
+        onEditPhotos: _openProfileEdit,
         onAddPhoto: _openImagePicker,
         onPhotoTap: _openImageViewer,
       );
@@ -961,7 +945,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _openImageViewer(int initialIndex) {
-    final imageUrls = _getImageUrls();
+    final ownProfile =
+        _isOwnProfile ? ref.read(profilePageCacheProvider).valueOrNull?.profile : null;
+    final imageUrls = _isOwnProfile
+        ? galleryProfileImages(ownProfile?.images)
+            .map((img) => img.imageUrl)
+            .toList()
+        : _getImageUrls();
 
     if (imageUrls.isEmpty) return;
 
