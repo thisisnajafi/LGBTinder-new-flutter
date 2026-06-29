@@ -42,15 +42,28 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final useGoogleLightShell = widget.lightStyle || isDark;
 
-    final backgroundColor = useGoogleLightShell
-        ? const Color(0xFFFFFFFF)
-        : Colors.white;
-    const foregroundColor = Color(0xFF1F1F1F);
-    final borderColor = useGoogleLightShell
-        ? const Color(0xFFDADCE0)
-        : AppColors.borderMediumLight;
+    final Color backgroundColor;
+    final Color foregroundColor;
+    final Color borderColor;
+    final double elevation;
+
+    if (widget.lightStyle) {
+      backgroundColor = Colors.white;
+      foregroundColor = const Color(0xFF1F1F1F);
+      borderColor = const Color(0xFFDADCE0);
+      elevation = 1;
+    } else if (isDark) {
+      backgroundColor = AppColors.surfaceDark;
+      foregroundColor = AppColors.textPrimaryDark;
+      borderColor = AppColors.borderMediumDark;
+      elevation = 0;
+    } else {
+      backgroundColor = Colors.white;
+      foregroundColor = const Color(0xFF1F1F1F);
+      borderColor = AppColors.borderMediumLight;
+      elevation = 0;
+    }
 
     return Semantics(
       label: 'Continue with Google',
@@ -60,7 +73,7 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
         height: 56,
         child: Material(
           color: backgroundColor,
-          elevation: useGoogleLightShell ? 1 : 0,
+          elevation: elevation,
           shadowColor: Colors.black.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppRadius.radiusRound),
           child: InkWell(
@@ -78,7 +91,7 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
                         width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.2,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
+                          valueColor: AlwaysStoppedAnimation<Color>(
                             foregroundColor,
                           ),
                         ),
