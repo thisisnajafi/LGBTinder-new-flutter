@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/auth_page_scaffold.dart';
+import '../../features/auth/presentation/widgets/terms_agreement_tile.dart';
 import '../../features/auth/presentation/widgets/social_login_button.dart';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -155,15 +156,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final linkStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: AppColors.accentViolet,
-      decoration: TextDecoration.underline,
-    );
+    final secondaryTextColor = theme.brightness == Brightness.dark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     _termsTap.onTap = () => context.push(AppRoutes.termsOfService);
     _privacyTap.onTap = () => context.push(AppRoutes.privacyPolicy);
@@ -278,51 +273,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
-                // Terms agreement
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Checkbox(
-                      value: _agreeToTerms,
-                      onChanged: (value) {
-                        setState(() {
-                          _agreeToTerms = value ?? false;
-                        });
-                      },
-                      activeColor: AppColors.accentPurple,
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text.rich(
-                          TextSpan(
-                            text: 'I agree to the ',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: textColor,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: 'Terms of Service',
-                                style: linkStyle,
-                                recognizer: _termsTap,
-                              ),
-                              TextSpan(
-                                text: ' and ',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: textColor,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: linkStyle,
-                                recognizer: _privacyTap,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                TermsAgreementTile(
+                  value: _agreeToTerms,
+                  onChanged: (value) {
+                    setState(() => _agreeToTerms = value);
+                  },
+                  termsRecognizer: _termsTap,
+                  privacyRecognizer: _privacyTap,
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
                 // Register button

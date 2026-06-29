@@ -370,6 +370,7 @@ class AppIcons {
   static const String emptyBox = '$_basePath/box.svg';
   static const String emptyFolder = '$_basePath/folder.svg';
   static const String emptyDocument = '$_basePath/document.svg';
+  static const String googleLogo = '$_basePath/google_g_logo.svg';
   
   /// Get icon path by name (fallback method) - uses new icons directory
   static String? getIconPathByName(String iconName, {String style = _outline}) {

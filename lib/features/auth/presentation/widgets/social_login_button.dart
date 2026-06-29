@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/error_handler_service.dart';
 import '../../providers/auth_provider.dart';
@@ -40,54 +42,66 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = widget.lightStyle
-        ? Colors.white
-        : (isDark ? AppColors.surfaceDark : Colors.white);
-    final foregroundColor = widget.lightStyle
-        ? Colors.black87
-        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
-    final borderColor = widget.lightStyle
-        ? Colors.white.withValues(alpha: 0.55)
-        : (isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight);
+    final useGoogleLightShell = widget.lightStyle || isDark;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleGoogleSignIn,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
+    final backgroundColor = useGoogleLightShell
+        ? const Color(0xFFFFFFFF)
+        : Colors.white;
+    const foregroundColor = Color(0xFF1F1F1F);
+    final borderColor = useGoogleLightShell
+        ? const Color(0xFFDADCE0)
+        : AppColors.borderMediumLight;
+
+    return Semantics(
+      label: 'Continue with Google',
+      button: true,
+      child: SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: Material(
+          color: backgroundColor,
+          elevation: useGoogleLightShell ? 1 : 0,
+          shadowColor: Colors.black.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          child: InkWell(
+            onTap: _isLoading ? null : _handleGoogleSignIn,
             borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            side: BorderSide(color: borderColor, width: 1.2),
-          ),
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
-        ),
-        child: _isLoading
-            ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _GoogleMark(),
-                  SizedBox(width: AppSpacing.spacingMD),
-                  Text(
-                    'Continue with Google',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: foregroundColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                border: Border.all(color: borderColor, width: 1.2),
               ),
+              child: _isLoading
+                  ? Center(
+                      child: SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            foregroundColor,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const _GoogleLogoMark(size: 24),
+                        SizedBox(width: AppSpacing.spacingMD),
+                        Text(
+                          'Continue with Google',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: foregroundColor,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -154,26 +168,18 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
   }
 }
 
-class _GoogleMark extends StatelessWidget {
+class _GoogleLogoMark extends StatelessWidget {
+  const _GoogleLogoMark({this.size = 24});
+
+  final double size;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.black12),
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        'G',
-        style: TextStyle(
-          color: Color(0xFF4285F4),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return SvgPicture.asset(
+      AppIcons.googleLogo,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
     );
   }
 }
