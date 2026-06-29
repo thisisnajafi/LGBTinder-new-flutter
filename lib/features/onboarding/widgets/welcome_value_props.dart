@@ -61,36 +61,31 @@ class _WelcomeValuePropsState extends State<WelcomeValueProps>
 
     return Semantics(
       label: 'LGBTFinder highlights: safe space, real matches, for everyone',
-      child: Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(_items.length, (index) {
-            final animation = disableAnimations
-                ? const AlwaysStoppedAnimation(1.0)
-                : CurvedAnimation(
-                    parent: _controller,
-                    curve: Interval(
-                      (index * 0.12).clamp(0.0, 0.55),
-                      (0.45 + index * 0.12).clamp(0.45, 1.0),
-                      curve: Curves.easeOutCubic,
-                    ),
-                  );
+      child: Row(
+        children: List.generate(_items.length, (index) {
+          final animation = disableAnimations
+              ? const AlwaysStoppedAnimation(1.0)
+              : CurvedAnimation(
+                  parent: _controller,
+                  curve: Interval(
+                    (index * 0.12).clamp(0.0, 0.55),
+                    (0.45 + index * 0.12).clamp(0.45, 1.0),
+                    curve: Curves.easeOutCubic,
+                  ),
+                );
 
-            return Padding(
+          return Expanded(
+            child: Padding(
               padding: EdgeInsets.only(
-                left: index == 0 ? 0 : AppSpacing.spacingMD,
+                left: index == 0 ? 0 : AppSpacing.spacingSM,
               ),
-              child: SizedBox(
-                width: 98,
-                child: _ValuePropTile(
-                  item: _items[index],
-                  animation: animation,
-                ),
+              child: _ValuePropTile(
+                item: _items[index],
+                animation: animation,
               ),
-            );
-          }),
-        ),
+            ),
+          );
+        }),
       ),
     );
   }

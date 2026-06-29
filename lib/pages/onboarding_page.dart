@@ -217,35 +217,44 @@ class _SlideContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
-      child: Column(
-        children: [
-          OnboardingIntroHero(iconPath: slide.iconPath),
-          if (slide.showTypingDots) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            const OnboardingTypingDots(),
-          ],
-          SizedBox(height: AppSpacing.spacingLG),
-          Text(
-            slide.title,
-            style: textTheme.displayMedium?.copyWith(
-              color: AppColors.textPrimaryDark,
-              fontWeight: FontWeight.w800,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                OnboardingIntroHero(iconPath: slide.iconPath),
+                if (slide.showTypingDots) ...[
+                  SizedBox(height: AppSpacing.spacingMD),
+                  const OnboardingTypingDots(),
+                ],
+                SizedBox(height: AppSpacing.spacingXL),
+                Text(
+                  slide.title,
+                  style: textTheme.displayMedium?.copyWith(
+                    color: AppColors.textPrimaryDark,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSpacing.spacingMD),
+                Text(
+                  slide.description,
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textPrimaryDark.withValues(alpha: 0.92),
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Text(
-            slide.description,
-            style: textTheme.bodyLarge?.copyWith(
-              color: AppColors.textPrimaryDark.withValues(alpha: 0.92),
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

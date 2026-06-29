@@ -150,7 +150,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     final textTheme = Theme.of(context).textTheme;
 
     final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Text(
+          'LGBTFinder',
+          style: _whiteText(
+            context,
+            textTheme.displaySmall,
+            weight: FontWeight.w800,
+            size: 34,
+          ).copyWith(letterSpacing: 0.6),
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: AppSpacing.spacingLG),
         WelcomeGlassCard(
           onGradient: true,
           child: Text(
@@ -172,17 +185,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             textTheme.bodyLarge,
             alpha: 0.82,
           ).copyWith(height: 1.55, letterSpacing: 0.15),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: AppSpacing.spacingLG),
-        Text(
-          'LGBTFinder',
-          style: _whiteText(
-            context,
-            textTheme.displaySmall,
-            weight: FontWeight.w800,
-            size: 34,
-          ).copyWith(letterSpacing: 0.6),
           textAlign: TextAlign.center,
         ),
       ],
@@ -413,21 +415,37 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
                 child: Column(
                   children: [
-                    SizedBox(height: AppSpacing.spacingLG),
-                    FadeTransition(
-                      opacity: animated ? _mosaicFade : const AlwaysStoppedAnimation(1),
-                      child: const WelcomeValueProps(),
-                    ),
-                    SizedBox(height: AppSpacing.spacingXL),
-                    _buildLogo(context, animated: animated),
-                    SizedBox(height: AppSpacing.spacingMD),
                     Expanded(
-                      child: SingleChildScrollView(
-                        physics: const ClampingScrollPhysics(),
-                        child: _buildBrandingBlock(
-                          context,
-                          animated: animated,
-                        ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  FadeTransition(
+                                    opacity: animated
+                                        ? _mosaicFade
+                                        : const AlwaysStoppedAnimation(1),
+                                    child: const WelcomeValueProps(),
+                                  ),
+                                  SizedBox(height: AppSpacing.spacingXL),
+                                  _buildLogo(context, animated: animated),
+                                  SizedBox(height: AppSpacing.spacingLG),
+                                  _buildBrandingBlock(
+                                    context,
+                                    animated: animated,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     _buildActions(context, animated: animated),

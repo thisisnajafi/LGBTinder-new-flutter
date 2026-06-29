@@ -58,26 +58,21 @@ class _OnboardingIntroHeroState extends State<OnboardingIntroHero>
       label: 'Onboarding illustration',
       child: ScaleTransition(
         scale: _scale,
-        child: AspectRatio(
-          aspectRatio: 4 / 3,
+        child: Container(
+          width: 200,
+          height: 200,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.textPrimaryDark.withValues(alpha: 0.12),
+            border: Border.all(
+              color: AppColors.textPrimaryDark.withValues(alpha: 0.2),
+            ),
+          ),
           child: Center(
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.textPrimaryDark.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: AppColors.textPrimaryDark.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Center(
-                child: AppSvgIcon(
-                  assetPath: widget.iconPath,
-                  size: 96,
-                  color: AppColors.textPrimaryDark,
-                ),
-              ),
+            child: AppSvgIcon(
+              assetPath: widget.iconPath,
+              size: 96,
+              color: AppColors.textPrimaryDark,
             ),
           ),
         ),
