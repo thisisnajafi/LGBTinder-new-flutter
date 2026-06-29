@@ -86,6 +86,10 @@ class AuthService {
       profileCompleted: response.profileCompleted,
       userState: response.userState,
     );
+
+    if (response.profileCompleted) {
+      await _tokenStorage.clearProfileCompletionToken();
+    }
   }
 
   Future<void> _saveAuthTokensForLogin({

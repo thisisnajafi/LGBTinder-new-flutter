@@ -68,6 +68,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   int _currentStep = 0;
   bool _isLoading = false;
   bool _isUploadingImage = false;
+  bool _profileSubmissionComplete = false;
   
   // Form data
   String? _avatarUrl;
@@ -293,15 +294,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           if (profile.relationGoals != null && profile.relationGoals!.isNotEmpty) {
             _relationGoals = profile.relationGoals!;
           }
-          // Load primary image if exists
+          // Load profile images (primary + gallery already on server)
           if (profile.images != null && profile.images!.isNotEmpty) {
-            final primaryImage = profile.images!.firstWhere(
-              (img) => img.isPrimary,
-              orElse: () => profile.images!.first,
-            );
-            _avatarUrl = primaryImage.imageUrl;
-            if (!_uploadedImages.any((img) => img.id == primaryImage.id)) {
-              _uploadedImages.add(primaryImage);
+            for (final image in profile.images!) {
+              if (!_uploadedImages.any((img) => img.id == image.id)) {
+                _uploadedImages.add(image);
+              }
+              if (image.isPrimary || image.type == 'profile') {
+                _avatarUrl = image.imageUrl;
+              }
             }
           }
           _applyResumeStep(_resolveResumeStep());
@@ -552,6 +553,54 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   static int get _maxAdditionalPhotos => AppConstants.maxGalleryPhotos;
 
+  int get _existingGalleryCount => _uploadedImages
+      .where((img) => img.type == 'gallery' || (!img.isPrimary && img.type != 'profile'))
+      .length;
+
+  int get _totalGalleryCount =>
+      _existingGalleryCount + _additionalImageFiles.length;
+
+  bool get _galleryFull => _totalGalleryCount >= _maxAdditionalPhotos;
+
+  bool get _primaryAlreadyUploaded => _uploadedImages.any(
+        (img) => img.isPrimary || img.type == 'profile',
+      );
+
+  int get _remainingGallerySlots =>
+      (_maxAdditionalPhotos - _totalGalleryCount).clamp(0, _maxAdditionalPhotos);
+
+  Future<void> _exitWizardToDiscover() async {
+    final authService = ref.read(authServiceProvider);
+    try {
+      final refreshed = await authService.checkToken();
+      await authService.syncBootstrapSession(refreshed);
+      if (refreshed.isComplete && mounted) {
+        context.go(AppRoutes.home);
+        return;
+      }
+    } catch (_) {
+      // Fall through to local session repair when bootstrap check fails.
+    }
+
+    if (_profileSubmissionComplete) {
+      final tokenStorage = ref.read(tokenStorageServiceProvider);
+      final session = await tokenStorage.getUserSession();
+      final user = session?.user;
+      if (user != null) {
+        await tokenStorage.saveUserSession(
+          user: user,
+          profileCompleted: true,
+          userState: 'ready_for_app',
+        );
+        await tokenStorage.clearProfileCompletionToken();
+      }
+    }
+
+    if (mounted) {
+      context.go(AppRoutes.home);
+    }
+  }
+
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -569,7 +618,19 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             _avatarUrl = file.path; // Temporary local path for preview
           });
         } else {
-          // Additional photos
+          if (_remainingGallerySlots <= 0) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'You can add up to $_maxAdditionalPhotos gallery photos.',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
           setState(() {
             _additionalImageFiles.add(file);
           });
@@ -587,8 +648,21 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   Future<void> _pickAdditionalImages(ImageSource source) async {
-    final remaining = _maxAdditionalPhotos - _additionalImageFiles.length;
-    if (remaining <= 0) return;
+    final remaining = _remainingGallerySlots;
+    if (remaining <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'You can add up to $_maxAdditionalPhotos gallery photos '
+              '(${AppConstants.maxTotalProfilePhotos} total including primary).',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     try {
       if (source == ImageSource.gallery) {
@@ -602,7 +676,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
         setState(() {
           for (final image in images) {
-            if (_additionalImageFiles.length >= _maxAdditionalPhotos) break;
+            final nextTotal =
+                _existingGalleryCount + _additionalImageFiles.length;
+            if (nextTotal >= _maxAdditionalPhotos) break;
             _additionalImageFiles.add(File(image.path));
           }
         });
@@ -623,9 +699,27 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   Future<void> _uploadAllImages() async {
-    final hasNewPrimary = _primaryImageFile != null;
-    final hasNewGallery = _additionalImageFiles.isNotEmpty;
-    if (!hasNewPrimary && !hasNewGallery) return;
+    var uploadPrimary = _primaryImageFile != null && !_primaryAlreadyUploaded;
+    var galleryFiles = List<File>.from(_additionalImageFiles);
+    final remainingSlots = _maxAdditionalPhotos - _existingGalleryCount;
+
+    if (galleryFiles.length > remainingSlots) {
+      galleryFiles = galleryFiles.take(remainingSlots).toList();
+    }
+
+    if (!uploadPrimary && galleryFiles.isEmpty) {
+      if (mounted) {
+        setState(() {
+          if (_primaryImageFile != null && _primaryAlreadyUploaded) {
+            _primaryImageFile = null;
+          }
+          if (_additionalImageFiles.isNotEmpty && remainingSlots <= 0) {
+            _additionalImageFiles = [];
+          }
+        });
+      }
+      return;
+    }
 
     setState(() {
       _isUploadingImage = true;
@@ -633,20 +727,32 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
     try {
       final imageService = ref.read(imageServiceProvider);
-      
-      if (hasNewPrimary) {
+
+      if (uploadPrimary && _primaryImageFile != null) {
         final primaryImage =
             await imageService.uploadImage(_primaryImageFile!, type: 'primary');
-        _uploadedImages.add(primaryImage);
+        if (!_uploadedImages.any((img) => img.id == primaryImage.id)) {
+          _uploadedImages.add(primaryImage);
+        }
+        _avatarUrl = primaryImage.imageUrl;
       }
-      
-      // Upload additional images
-      for (var imageFile in _additionalImageFiles) {
+
+      for (final imageFile in galleryFiles) {
+        if (_uploadedImages
+                .where((img) =>
+                    img.type == 'gallery' ||
+                    (!img.isPrimary && img.type != 'profile'))
+                .length >=
+            _maxAdditionalPhotos) {
+          break;
+        }
         try {
-          final uploadedImage = await imageService.uploadImage(imageFile, type: 'gallery');
-          _uploadedImages.add(uploadedImage);
+          final uploadedImage =
+              await imageService.uploadImage(imageFile, type: 'gallery');
+          if (!_uploadedImages.any((img) => img.id == uploadedImage.id)) {
+            _uploadedImages.add(uploadedImage);
+          }
         } catch (e) {
-          // Continue with other images even if one fails
           if (mounted) {
             ErrorHandlerService.showErrorSnackBar(
               context,
@@ -668,6 +774,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     } finally {
       if (mounted) {
         setState(() {
+          _primaryImageFile = null;
+          _additionalImageFiles = [];
           _isUploadingImage = false;
         });
       }
@@ -729,6 +837,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   }
 
   Future<void> _completeWizard() async {
+    if (_profileSubmissionComplete) {
+      await _exitWizardToDiscover();
+      return;
+    }
+
     if (_phoneFormKey.currentState != null && !_phoneFormKey.currentState!.validate()) {
       return;
     }
@@ -890,13 +1003,15 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
       final isComplete =
           tokenState?.isComplete ?? response.profileCompleted;
+      _profileSubmissionComplete = true;
+
       if (isComplete && mounted) {
-        context.go(AppRoutes.home);
+        await _exitWizardToDiscover();
         return;
       }
 
       if (mounted) {
-        await Navigator.of(context).push<void>(
+        final shouldDiscover = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             builder: (context) => OnboardingCelebrationScreen(
               displayName: _name.isNotEmpty ? _name : 'You',
@@ -911,15 +1026,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
           ),
         );
 
-        try {
-          final refreshed = await authService.checkToken();
-          await authService.syncBootstrapSession(refreshed);
-          if (mounted && refreshed.isComplete) {
-            context.go(AppRoutes.home);
-            return;
-          }
-        } catch (_) {
-          // User can finish remaining steps from the wizard.
+        if (!mounted) return;
+        if (shouldDiscover == true) {
+          await _exitWizardToDiscover();
         }
       }
     } on ApiError catch (e) {
@@ -1052,7 +1161,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                   if (_currentStep > 0) SizedBox(width: AppSpacing.spacingMD),
                   Expanded(
                     child: GradientButton(
-                      text: _currentStep == 6 ? 'Complete' : 'Next',
+                      text: _currentStep == 6
+                          ? (_profileSubmissionComplete
+                              ? 'Start Discovering'
+                              : 'Complete')
+                          : 'Next',
                       onPressed: (_isLoading || _isUploadingImage) 
                           ? null 
                           : (_currentStep == 6 ? _completeWizard : _nextStep),
@@ -1902,7 +2015,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 SizedBox(height: AppSpacing.spacingXL),
                 if (_additionalImageFiles.isEmpty)
                   GestureDetector(
-                    onTap: _additionalImageFiles.length >= _maxAdditionalPhotos
+                    onTap: _galleryFull
                         ? null
                         : () => _showImageSourceDialog(isPrimary: false),
                     child: Container(
@@ -1999,7 +2112,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: _additionalImageFiles.length >= _maxAdditionalPhotos
+                    onPressed: _galleryFull
                         ? null
                         : () => _showImageSourceDialog(isPrimary: false),
                     icon: AppSvgIcon(
@@ -2008,9 +2121,9 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     label: Text(
-                      _additionalImageFiles.length >= _maxAdditionalPhotos
+                      _galleryFull
                           ? 'Maximum $_maxAdditionalPhotos photos'
-                          : 'Add Photos (${_additionalImageFiles.length}/$_maxAdditionalPhotos)',
+                          : 'Add Photos (${_totalGalleryCount}/$_maxAdditionalPhotos)',
                     ),
                   ),
                 ),

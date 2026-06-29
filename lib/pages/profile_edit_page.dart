@@ -14,9 +14,12 @@ import '../widgets/buttons/gradient_button.dart';
 import '../widgets/profile/avatar_upload.dart';
 import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../features/profile/providers/profile_providers.dart';
+import '../features/profile/providers/profile_page_cache_provider.dart';
+import '../core/cache/cache_providers.dart';
 import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
 import '../features/profile/data/models/user_profile.dart';
+import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../shared/models/api_error.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/reference_data/data/models/reference_item.dart';
@@ -155,6 +158,21 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     return !_images[idx].isPrimary;
   }
 
+  List<UserImage> get _galleryImages => galleryProfileImages(_images);
+
+  int? _imageIndexForGalleryIndex(int galleryIndex) {
+    if (galleryIndex < 0 || galleryIndex >= _galleryImages.length) {
+      return null;
+    }
+    final targetId = _galleryImages[galleryIndex].id;
+    return _images.indexWhere((img) => img.id == targetId);
+  }
+
+  Future<void> _syncProfileCache() async {
+    await ref.read(profilePageCacheProvider.notifier).refresh();
+    await ref.read(appCacheManagerProvider).revalidateAll();
+  }
+
   Future<void> _pickImage(ImageSource source, {required bool setAsPrimary}) async {
     if (setAsPrimary) {
       final profileCount =
@@ -165,14 +183,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     } else {
       final galleryCount =
           _images.where((image) => image.type == 'gallery').length;
-      if (galleryCount >= AppConstants.maxGalleryPhotos ||
-          _images.length >= AppConstants.maxTotalProfilePhotos) {
+      if (galleryCount >= AppConstants.maxGalleryPhotos) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Maximum ${AppConstants.maxGalleryPhotos} gallery photos allowed '
-                '(${AppConstants.maxTotalProfilePhotos} total including primary).',
+                'Maximum ${AppConstants.maxGalleryPhotos} images allowed.',
               ),
               backgroundColor: Colors.red,
             ),
@@ -212,10 +228,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (mounted) {
         setState(() {
           _images.add(uploadedImage);
-          if (_images.length == 1) {
-            _avatarUrl = uploadedImage.imageUrl;
-          }
         });
+        await _syncProfileCache();
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -268,6 +282,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             });
           _avatarUrl = uploadedImage.imageUrl;
         });
+        await _syncProfileCache();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -315,6 +330,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             _avatarUrl = nextPrimary.imageUrl;
           }
         });
+        await _syncProfileCache();
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -385,6 +401,51 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to set primary image: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _reorderGalleryImages(int oldIndex, int newIndex) async {
+    if (oldIndex == newIndex) return;
+
+    final previous = List<UserImage>.from(_images);
+    final gallery = List<UserImage>.from(_galleryImages);
+    final item = gallery.removeAt(oldIndex);
+    gallery.insert(newIndex, item);
+
+    final nonGallery =
+        _images.where((img) => img.type != 'gallery').toList();
+
+    setState(() {
+      _images = [
+        ...nonGallery,
+        ...gallery,
+      ];
+    });
+
+    try {
+      final imageService = ref.read(imageServiceProvider);
+      await imageService.reorderImages(_images.map((img) => img.id).toList());
+      await _syncProfileCache();
+    } on ApiError catch (e) {
+      if (mounted) {
+        setState(() => _images = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reorder images: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _images = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reorder images: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -464,9 +525,10 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       );
 
       await profileService.updateProfile(request);
+      await _syncProfileCache();
 
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile updated successfully'),
@@ -668,24 +730,21 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
-              title: 'Photos',
+              title: 'Images',
               children: [
                 ProfileImageEditor(
-                  imageUrls: _images.map((img) => img.imageUrl).toList(),
-                  primaryIndex: _primaryImageIndex,
-                  maxImages: AppConstants.maxTotalProfilePhotos,
+                  imageUrls:
+                      _galleryImages.map((img) => img.imageUrl).toList(),
+                  galleryOnly: true,
+                  maxImages: AppConstants.maxGalleryPhotos,
                   onImageAdd: (_) => _showGalleryImageSourceDialog(),
-                  onImageDelete: (index) {
-                    if (index < _images.length) {
-                      _deleteImage(_images[index].id, index);
+                  onImageDelete: (galleryIndex) {
+                    final imageIndex = _imageIndexForGalleryIndex(galleryIndex);
+                    if (imageIndex != null) {
+                      _deleteImage(_images[imageIndex].id, imageIndex);
                     }
                   },
-                  onImageReorder: _reorderImages,
-                  onImageSetPrimary: (index) {
-                    if (index < _images.length) {
-                      _setPrimaryImage(_images[index].id, index);
-                    }
-                  },
+                  onImageReorder: _reorderGalleryImages,
                 ),
               ],
             ),

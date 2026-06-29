@@ -21,6 +21,16 @@ class CompleteRegistrationResponse {
   });
 
   factory CompleteRegistrationResponse.fromJson(Map<String, dynamic> json) {
+    final profileStatus =
+        json['profile_completion_status'] as Map<String, dynamic>?;
+
+    var profileCompleted =
+        json['profile_completed'] == true || json['profile_completed'] == 1;
+    if (!profileCompleted && profileStatus != null) {
+      profileCompleted = profileStatus['is_complete'] == true ||
+          profileStatus['is_complete'] == 1;
+    }
+
     return CompleteRegistrationResponse(
       user: json['user'] != null && json['user'] is Map
           ? UserData.fromJson(Map<String, dynamic>.from(json['user'] as Map))
@@ -28,8 +38,9 @@ class CompleteRegistrationResponse {
       token: json['token']?.toString(),
       tokenType: json['token_type']?.toString(),
       onesignalPlayerId: json['onesignal_player_id']?.toString(),
-      profileCompleted: json['profile_completed'] == true || json['profile_completed'] == 1,
-      needsProfileCompletion: json['needs_profile_completion'] == true || json['needs_profile_completion'] == 1,
+      profileCompleted: profileCompleted,
+      needsProfileCompletion: json['needs_profile_completion'] == true ||
+          json['needs_profile_completion'] == 1,
       userState: json['user_state']?.toString(),
     );
   }

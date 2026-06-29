@@ -15,7 +15,6 @@ import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../routes/app_router.dart';
-import '../../../widgets/buttons/gradient_button.dart';
 import 'onboarding_profile_preview_card.dart';
 
 /// Full-screen celebration after profile wizard completion.
@@ -244,10 +243,10 @@ class _OnboardingCelebrationScreenState
                           Semantics(
                             label: 'Start discovering matches',
                             button: true,
-                            child: GradientButton(
-                              text: 'Start Discovering',
+                            child: _CelebrationButton(
+                              label: 'Start Discovering',
                               iconPath: AppIcons.discover,
-                              usePrideGradient: true,
+                              primary: true,
                               onPressed: _startDiscovering,
                             ),
                           ),
@@ -255,7 +254,7 @@ class _OnboardingCelebrationScreenState
                           Semantics(
                             label: 'Edit profile before discovering',
                             button: true,
-                            child: _CelebrationSecondaryButton(
+                            child: _CelebrationButton(
                               label: 'Edit Profile',
                               iconPath: AppIcons.userEdit,
                               onPressed: _editProfile,
@@ -470,23 +469,24 @@ class _CelebrationBadge extends StatelessWidget {
   }
 }
 
-class _CelebrationSecondaryButton extends StatefulWidget {
+class _CelebrationButton extends StatefulWidget {
   final String label;
   final String iconPath;
   final VoidCallback onPressed;
+  final bool primary;
 
-  const _CelebrationSecondaryButton({
+  const _CelebrationButton({
     required this.label,
     required this.iconPath,
     required this.onPressed,
+    this.primary = false,
   });
 
   @override
-  State<_CelebrationSecondaryButton> createState() =>
-      _CelebrationSecondaryButtonState();
+  State<_CelebrationButton> createState() => _CelebrationButtonState();
 }
 
-class _CelebrationSecondaryButtonState extends State<_CelebrationSecondaryButton>
+class _CelebrationButtonState extends State<_CelebrationButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _scale;
@@ -513,6 +513,35 @@ class _CelebrationSecondaryButtonState extends State<_CelebrationSecondaryButton
 
   @override
   Widget build(BuildContext context) {
+    final border = Border.all(
+      color: Colors.white.withValues(alpha: 0.52),
+      width: 1.5,
+    );
+    final radius = BorderRadius.circular(AppRadius.radiusRound);
+
+    final content = SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AppSvgIcon(
+            assetPath: widget.iconPath,
+            size: 20,
+            color: AppColors.textPrimaryDark,
+          ),
+          SizedBox(width: AppSpacing.spacingSM),
+          Text(
+            widget.label,
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.textPrimaryDark,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+
     return GestureDetector(
       onTapDown: (_) {
         if (AppAnimations.animationsEnabled(context)) {
@@ -525,49 +554,46 @@ class _CelebrationSecondaryButtonState extends State<_CelebrationSecondaryButton
       child: ScaleTransition(
         scale: _scale,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.52),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.14),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AppSvgIcon(
-                      assetPath: widget.iconPath,
-                      size: 20,
-                      color: AppColors.textPrimaryDark,
-                    ),
-                    SizedBox(width: AppSpacing.spacingSM),
-                    Text(
-                      widget.label,
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.textPrimaryDark,
-                        fontWeight: FontWeight.w700,
+          borderRadius: radius,
+          child: widget.primary
+              ? DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                    borderRadius: radius,
+                    border: border,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentRose.withValues(alpha: 0.38),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: content,
+                )
+              : BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: radius,
+                      border: border,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.14),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
+                    child: content,
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
       ),
     );

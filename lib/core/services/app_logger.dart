@@ -1,6 +1,5 @@
 // Structured logger for LGBTFinder
-// In debug mode: prints formatted output to console
-// Ready for crash reporting integration (Sentry, Firebase Crashlytics)
+// Quiet by default: errors + API traffic only (see [_minLevel] / [_apiLogging]).
 
 import 'package:flutter/foundation.dart';
 
@@ -10,6 +9,12 @@ class AppLogger {
   AppLogger._();
 
   static const bool _enabled = kDebugMode;
+
+  /// General app logs below this level are suppressed in debug console.
+  static const LogLevel _minLevel = LogLevel.error;
+
+  static const bool _apiLogging = true;
+
   static const String _reset = '\x1B[0m';
   static const String _grey = '\x1B[90m';
   static const String _cyan = '\x1B[36m';
@@ -47,36 +52,50 @@ class AppLogger {
       _log(LogLevel.fatal, message,
           tag: tag, error: error, stackTrace: stackTrace);
 
-  /// Log an API request
-  static void apiRequest(String method, String url, {Map? body}) {
-    if (!_enabled) return;
-    debugPrint('$_cyan[API ▶] $method $url$_reset');
+  /// Log an API request (always shown when [_apiLogging]).
+  static void apiRequest(
+    String method,
+    String url, {
+    Map? body,
+    String? extra,
+  }) {
+    if (!_enabled || !_apiLogging) return;
+    final suffix = extra != null && extra.isNotEmpty ? ' $extra' : '';
+    debugPrint('$_cyan[API ▶] $method $url$suffix$_reset');
     if (body != null && body.isNotEmpty) {
-      debugPrint('$_grey       body: $body$_reset');
+      debugPrint('$_grey       req: $body$_reset');
     }
   }
 
-  /// Log an API response
-  static void apiResponse(String method, String url, int statusCode,
-      {dynamic body}) {
-    if (!_enabled) return;
+  /// Log an API response (always shown when [_apiLogging]).
+  static void apiResponse(
+    String method,
+    String url,
+    int statusCode, {
+    dynamic body,
+  }) {
+    if (!_enabled || !_apiLogging) return;
     final color = statusCode >= 400 ? _red : _cyan;
     debugPrint('$color[API ◀] $statusCode $method $url$_reset');
     if (statusCode >= 400 && body != null) {
-      debugPrint('$_red       response: $body$_reset');
+      debugPrint('$_red       res: $body$_reset');
     }
   }
 
-  /// Log navigation events
-  static void navigation(String from, String to) {
-    if (!_enabled) return;
-    debugPrint('$_grey[NAV] $from → $to$_reset');
+  /// Extra API detail line (errors, upload diagnostics).
+  static void apiLine(String message) {
+    if (!_enabled || !_apiLogging) return;
+    debugPrint('$_cyan[API] $message$_reset');
   }
 
-  /// Log provider state changes
+  /// Log navigation events (suppressed unless verbose).
+  static void navigation(String from, String to) {
+    _log(LogLevel.verbose, '$from → $to', tag: 'NAV');
+  }
+
+  /// Log provider state changes (suppressed unless verbose).
   static void providerState(String providerName, String state) {
-    if (!_enabled) return;
-    debugPrint('$_grey[PROVIDER] $providerName: $state$_reset');
+    _log(LogLevel.verbose, '$providerName: $state', tag: 'PROVIDER');
   }
 
   static void _log(
@@ -86,7 +105,7 @@ class AppLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    if (!_enabled) return;
+    if (!_enabled || level.index < _minLevel.index) return;
 
     final time = DateTime.now().toIso8601String().substring(11, 23);
     final prefix = _prefix(level);
@@ -101,7 +120,7 @@ class AppLogger {
       final lines = stackTrace
           .toString()
           .split('\n')
-          .take(8)
+          .take(6)
           .map((l) => '$_grey  $l$_reset')
           .join('\n');
       debugPrint(lines);

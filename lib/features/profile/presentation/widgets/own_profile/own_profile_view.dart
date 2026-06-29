@@ -21,6 +21,7 @@ import '../../../../../shared/models/user_tier.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
 import 'profile_details_sections.dart';
 import 'profile_hero_section.dart';
+import 'profile_photo_utils.dart';
 import 'profile_premium_shell.dart';
 /// Own-profile scroll layout (dating-app standard).
 class OwnProfileView extends ConsumerWidget {
@@ -46,10 +47,16 @@ class OwnProfileView extends ConsumerWidget {
         ? profile.firstName
         : '${profile.firstName} ${profile.lastName}';
     final age = _age(profile);
-    final avatarUrl = profile.images?.isNotEmpty == true
-        ? profile.images!.first.imageUrl
-        : null;
     final isVerified = profile.isVerified == true;
+
+    final photos = profile.images ?? [];
+    final primaryImage = primaryProfileImage(photos);
+    final avatarUrl = primaryImage?.imageUrl;
+    final galleryPhotos = galleryProfileImages(photos);
+    final galleryUrls = galleryPhotos.map((p) => p.imageUrl).toList();
+    final galleryCount = galleryPhotos.length;
+    final canAddGalleryPhoto =
+        galleryCount < AppConstants.maxGalleryPhotos;
 
     final UserTier tier = ref.watch(userTierProvider);
     final superlikes = ref.watch(superlikesRemainingProvider);
@@ -85,12 +92,6 @@ class OwnProfileView extends ConsumerWidget {
     final relationGoalLabels = _mapReferenceIds(profile.relationGoals, relationGoalsRef);
     final languageLabels = _mapReferenceIds(profile.languages, languagesRef);
 
-    final photos = profile.images ?? [];
-    final photoUrls = photos.map((p) => p.imageUrl).toList();
-    final galleryCount =
-        photos.where((photo) => photo.type == 'gallery').length;
-    final canAddGalleryPhoto = galleryCount < AppConstants.maxGalleryPhotos &&
-        photos.length < AppConstants.maxTotalProfilePhotos;
     final detailChips = buildProfileDetailChips(
       job: jobLabel,
       education: educationLabel,
@@ -124,13 +125,14 @@ class OwnProfileView extends ConsumerWidget {
                 isOnline: profile.isOnline != false,
                 viewsCount: profile.viewsCount ?? 0,
                 superlikesRemaining: superlikes,
-                onEditProfile: () => _openEdit(context),
+                onEditProfile: () => _openEdit(context, ref),
                 onEditPhoto: onEditPhotos,
                 onViewProfile: onViewProfile,
               ),
               const SizedBox(height: _sectionGap),
-              PremiumPhotosSection(                imageUrls: photoUrls,
-                totalCount: photos.length,
+              PremiumPhotosSection(
+                imageUrls: galleryUrls,
+                totalCount: galleryCount,
                 onEdit: onEditPhotos,
                 onAdd: onAddPhoto,
                 canAddMore: canAddGalleryPhoto,
@@ -140,16 +142,16 @@ class OwnProfileView extends ConsumerWidget {
               PremiumPersonalitySection(
                 bio: profile.profileBio,
                 conversationStarters: const [],
-                onEdit: () => _openEdit(context),
+                onEdit: () => _openEdit(context, ref),
               ),              const SizedBox(height: _sectionGap),
               PremiumDetailsGridSection(
                 chips: detailChips,
-                onEdit: () => _openEdit(context),
+                onEdit: () => _openEdit(context, ref),
               ),
               const SizedBox(height: _sectionGap),
               PremiumInterestsSection(
                 labels: interestLabels,
-                onEdit: () => _openEdit(context),
+                onEdit: () => _openEdit(context, ref),
               ),
               const SizedBox(height: _sectionGap),
               PremiumAccountHubSection(actions: hubActions),
@@ -219,7 +221,10 @@ class OwnProfileView extends ConsumerWidget {
     ];
   }
 
-  void _openEdit(BuildContext context) {    context.push(AppRoutes.profileEdit);
+  void _openEdit(BuildContext context, WidgetRef ref) async {
+    await context.push(AppRoutes.profileEdit);
+    if (!context.mounted) return;
+    await ref.read(profilePageCacheProvider.notifier).refresh();
   }
 
   int? _age(UserProfile profile) {

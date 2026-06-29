@@ -8,7 +8,6 @@ import '../../core/constants/api_endpoints.dart';
 import '../auth/banned_handler.dart';
 import '../auth/unauthorized_handler.dart';
 import '../utils/app_logger.dart';
-import 'app_dio_logger.dart';
 import 'subscription_meta_interceptor.dart';
 import 'retry_interceptor.dart';
 
@@ -78,10 +77,7 @@ class DioClient {
   }
 
   void _setupInterceptors() {
-    _dio.interceptors.addAll([
-      RetryInterceptor(_dio),
-      AppDioLogger(),
-    ]);
+    _dio.interceptors.add(RetryInterceptor(_dio));
 
     // Auth, logging, and error handling
     _dio.interceptors.add(
@@ -101,45 +97,36 @@ class DioClient {
 
           // Log request: full URI, body (summarized)
           final uri = options.uri.toString();
-          apiLog('REQUEST ${options.method} $uri');
-          if (options.data != null) {
-            if (options.data is FormData) {
-              final fd = options.data as FormData;
-              apiLog('  body: FormData (multipart)');
-              for (final f in fd.files) {
-                apiLog('  [UPLOAD] field=${f.key} filename=${f.value.filename} size=${f.value.length ?? '?'} bytes');
-              }
-              for (final e in fd.fields) {
-                apiLog('  field: ${e.key}=${e.value}');
-              }
-            } else {
-              apiLog('  body: ${_summarizeBody(options.data)}');
-            }
+          String? requestExtra;
+          Map? requestBody;
+          if (options.data is FormData) {
+            final fd = options.data as FormData;
+            requestExtra = '[multipart: ${fd.files.length} file(s)]';
+          } else if (options.data is Map) {
+            requestBody = options.data as Map;
           }
-          if (options.queryParameters.isNotEmpty) {
-            apiLog('  query: ${options.queryParameters}');
-          }
+          AppLogger.apiRequest(
+            options.method,
+            uri,
+            body: requestBody,
+            extra: requestExtra,
+          );
 
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          // Log response: status, body (summarized)
           final uri = response.requestOptions.uri.toString();
-          apiLog('RESPONSE ${response.statusCode} $uri');
-          if (response.data != null) {
-            final ct = response.headers.value('content-type') ?? '';
-            final isJson = ct.toLowerCase().contains('application/json');
-            apiLog('  body: ${isJson ? _summarizeBody(response.data) : _summarizeBody(response.data, maxChars: 200)}');
-            // For 4xx on upload endpoints, log full error body to debug INVALID_IMAGE etc.
-            if (response.statusCode != null &&
-                response.statusCode! >= 400 &&
-                response.statusCode! < 500 &&
-                uri.contains('/upload') &&
-                response.data is Map) {
-              final data = response.data as Map;
-              apiLog('  [UPLOAD_ERROR] message=${data['message']} error_code=${data['error_code']} detail=${data['detail']}');
-            }
+          final status = response.statusCode ?? 0;
+          dynamic errorBody;
+          if (status >= 400 && response.data != null) {
+            errorBody = _summarizeBody(response.data, maxChars: 500);
           }
+          AppLogger.apiResponse(
+            response.requestOptions.method,
+            uri,
+            status,
+            body: errorBody,
+          );
 
           // Treat 401 as unauthenticated — except login/register and plan/feature denials.
           if (response.statusCode == 401) {
@@ -163,15 +150,21 @@ class DioClient {
         },
         onError: (error, handler) async {
           final uri = error.requestOptions.uri.toString();
-          final code = error.response?.statusCode;
-          apiLog('ERROR $code $uri | ${error.message}');
-          if (error.response != null && error.response?.data != null) {
-            apiLog('  response: ${_summarizeBody(error.response!.data, maxChars: 500)}');
-            if (uri.contains('/upload') && error.response!.data is Map) {
-              final data = error.response!.data as Map;
-              apiLog('  [UPLOAD_ERROR] message=${data['message']} error_code=${data['error_code']} detail=${data['detail']}');
-            }
-          }
+          final code = error.response?.statusCode ?? 0;
+          final summary = error.response?.data != null
+              ? _summarizeBody(error.response!.data, maxChars: 500)
+              : error.message;
+          AppLogger.apiResponse(
+            error.requestOptions.method,
+            uri,
+            code,
+            body: summary,
+          );
+          AppLogger.error(
+            'API failed: ${error.requestOptions.method} $uri',
+            tag: 'API',
+            error: error.message,
+          );
 
           // Handle 403 banned account
           if (error.response?.statusCode == 403) {

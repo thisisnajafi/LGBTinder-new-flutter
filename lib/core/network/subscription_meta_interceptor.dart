@@ -15,10 +15,6 @@ class SubscriptionMetaInterceptor extends Interceptor {
           final subscription = meta['subscription'];
           if (subscription is Map<String, dynamic>) {
             SubscriptionMetaSync.instance.handle(subscription);
-            AppLogger.info(
-              'Subscription synced from response: ${subscription['tier']}',
-              tag: 'SubscriptionInterceptor',
-            );
           }
         }
       }

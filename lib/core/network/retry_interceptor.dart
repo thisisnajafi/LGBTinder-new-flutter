@@ -47,20 +47,16 @@ class RetryInterceptor extends Interceptor {
     final maxRetries = _maxRetriesFor(err);
 
     if (_isFinalError(err)) {
-      AppLogger.warning(
-        'Non-retryable error ${err.response?.statusCode}: '
-        '${err.requestOptions.method} ${err.requestOptions.path}',
-        tag: 'Retry',
-      );
       return handler.next(err);
     }
 
     if (!_isRetryable(err) || attempt >= maxRetries) {
       if (attempt >= maxRetries) {
-        AppLogger.warning(
-          'Max retries ($attempt/$maxRetries) reached: '
+        AppLogger.error(
+          'Max retries ($attempt/$maxRetries): '
           '${err.requestOptions.method} ${err.requestOptions.path}',
           tag: 'Retry',
+          error: err.message,
         );
         ConnectivityService.instance.markWeakConnection();
       }
@@ -75,12 +71,6 @@ class RetryInterceptor extends Interceptor {
             seconds: int.tryParse(retryAfterHeader) ?? delay.inSeconds,
           )
         : delay;
-
-    AppLogger.info(
-      'Retrying (${attempt + 1}/$maxRetries) in ${actualDelay.inSeconds}s: '
-      '${err.requestOptions.method} ${err.requestOptions.path}',
-      tag: 'Retry',
-    );
 
     await Future.delayed(actualDelay);
 

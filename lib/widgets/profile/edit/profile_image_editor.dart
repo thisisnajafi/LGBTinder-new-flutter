@@ -19,12 +19,14 @@ class ProfileImageEditor extends ConsumerStatefulWidget {
   final Function(int, int)? onImageReorder;
   final Function(int)? onImageSetPrimary;
   final int? maxImages;
+  final bool galleryOnly;
 
   const ProfileImageEditor({
     Key? key,
     required this.imageUrls,
     this.primaryIndex = 0,
     this.maxImages,
+    this.galleryOnly = false,
     this.onImageAdd,
     this.onImageDelete,
     this.onImageReorder,
@@ -56,12 +58,12 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Profile Images',
+            widget.galleryOnly ? 'Images' : 'Profile Images',
             style: theme.textTheme.headlineMedium?.copyWith(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
           ),
-          if (widget.imageUrls.length > 1) ...[
+          if (!widget.galleryOnly && widget.imageUrls.length > 1) ...[
             SizedBox(height: AppSpacing.spacingXS),
             Text(
               'Hold and drag to reorder. Tap a photo to set it as primary.',
@@ -98,7 +100,8 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
     Color borderColor,
   ) {
     final imageUrl = widget.imageUrls[index];
-    final isPrimary = index == widget.primaryIndex;
+    final isPrimary =
+        !widget.galleryOnly && index == widget.primaryIndex;
     final canReorder = widget.onImageReorder != null && widget.imageUrls.length > 1;
 
     Widget tile = _buildImageTile(
@@ -171,7 +174,9 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
       label: isPrimary ? 'Primary profile photo' : 'Profile photo ${index + 1}',
       button: !isPrimary && widget.onImageSetPrimary != null,
       child: GestureDetector(
-        onTap: !isPrimary ? () => widget.onImageSetPrimary?.call(index) : null,
+        onTap: !isPrimary && widget.onImageSetPrimary != null
+            ? () => widget.onImageSetPrimary?.call(index)
+            : null,
         child: Stack(
           children: [
             ClipRRect(
@@ -237,7 +242,7 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
                   ),
                 ),
               )
-            else if (widget.onImageSetPrimary != null)
+            else if (!widget.galleryOnly && widget.onImageSetPrimary != null)
               Positioned(
                 bottom: 4,
                 left: 4,

@@ -75,7 +75,7 @@ class PremiumPhotosSection extends StatelessWidget {
           PremiumSectionHeader(
             title: 'Gallery',
             subtitle: hasPhotos
-                ? '$totalCount photo${totalCount == 1 ? '' : 's'} · Up to ${AppConstants.maxTotalProfilePhotos} (1 primary + ${AppConstants.maxGalleryPhotos} gallery)'
+                ? '$totalCount image${totalCount == 1 ? '' : 's'}'
                 : 'Profiles with 3+ photos get 5× more matches',
             actionLabel: hasPhotos ? 'Edit' : null,
             onAction: hasPhotos ? onEdit : null,
@@ -96,11 +96,10 @@ class PremiumPhotosSection extends StatelessWidget {
                 return _AddPhotoTile(onTap: canAddMore ? onAdd : () {});
               }
               if (index < display.length) {
-                final isPrimary = index == 0;
                 return PremiumTapScale(
                   onTap: () => onPhotoTap(index),
                   semanticLabel: 'Photo ${index + 1}',
-                  child: _PhotoTile(url: display[index], isPrimary: isPrimary),
+                  child: _PhotoTile(url: display[index], isPrimary: false),
                 );
               }
               if (showAddTile) {

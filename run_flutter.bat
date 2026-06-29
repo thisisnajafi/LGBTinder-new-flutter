@@ -9,7 +9,20 @@ if not exist "%FLUTTER_BIN%" (
 )
 echo Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn
 if /I "%~1"=="run" (
-    adb shell setprop log.tag.EGL_emulation SUPPRESS 2>nul
-    adb shell setprop log.tag.EGL_emulation_app_time_stats SUPPRESS 2>nul
+    call :SuppressAndroidNoise
 )
 "%FLUTTER_BIN%" %*
+exit /b %ERRORLEVEL%
+
+:SuppressAndroidNoise
+where adb >nul 2>&1
+if errorlevel 1 exit /b 0
+adb wait-for-device >nul 2>&1
+adb shell setprop log.tag.EGL_emulation SUPPRESS >nul 2>&1
+adb shell setprop log.tag.EGL_emulation_app_time_stats SUPPRESS >nul 2>&1
+adb shell setprop log.tag.libEGL SUPPRESS >nul 2>&1
+adb shell setprop log.tag.OpenGLRenderer SUPPRESS >nul 2>&1
+adb shell setprop log.tag.Choreographer SUPPRESS >nul 2>&1
+adb logcat -P "EGL_emulation:S libEGL:S OpenGLRenderer:S Choreographer:S" >nul 2>&1
+adb logcat -c >nul 2>&1
+exit /b 0

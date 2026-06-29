@@ -17,8 +17,14 @@ function Suppress-AndroidNoiseLogs {
         $adbCmd = Get-Command adb -ErrorAction SilentlyContinue
         if ($adbCmd) { $adb = $adbCmd.Source } else { return }
     }
+    & $adb wait-for-device 2>$null
     & $adb shell setprop log.tag.EGL_emulation SUPPRESS 2>$null
     & $adb shell setprop log.tag.EGL_emulation_app_time_stats SUPPRESS 2>$null
+    & $adb shell setprop log.tag.libEGL SUPPRESS 2>$null
+    & $adb shell setprop log.tag.OpenGLRenderer SUPPRESS 2>$null
+    & $adb shell setprop log.tag.Choreographer SUPPRESS 2>$null
+    & $adb logcat -P "EGL_emulation:S libEGL:S OpenGLRenderer:S Choreographer:S" 2>$null
+    & $adb logcat -c 2>$null
 }
 
 Write-Host "Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn" -ForegroundColor Cyan
