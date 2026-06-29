@@ -45,7 +45,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final PageController _pageController = PageController();
   late ConfettiController _confettiController;
   int _currentPage = 0;
-  int _direction = 1;
 
   static const _slides = [
     _OnboardingSlide(
@@ -87,7 +86,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _nextPage() async {
     AppHaptics.light();
     if (_currentPage < _slides.length - 1) {
-      setState(() => _direction = 1);
       await _pageController.nextPage(
         duration: AppAnimations.transitionPage,
         curve: Curves.easeOutCubic,
@@ -172,32 +170,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   child: PageView.builder(
                     controller: _pageController,
                     onPageChanged: (index) {
-                      setState(() {
-                        _direction = index > _currentPage ? 1 : -1;
-                        _currentPage = index;
-                      });
+                      setState(() => _currentPage = index);
                       AppHaptics.selection();
                     },
                     itemCount: _slides.length,
                     itemBuilder: (context, index) {
-                      return AnimatedSwitcher(
-                        duration: AppAnimations.transitionPage,
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) {
-                          final offset = Tween<Offset>(
-                            begin: Offset(_direction * 0.08, 0),
-                            end: Offset.zero,
-                          ).animate(animation);
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(position: offset, child: child),
-                          );
-                        },
-                        child: _SlideContent(
-                          key: ValueKey(index),
-                          slide: _slides[index],
-                        ),
+                      return _SlideContent(
+                        key: ValueKey('onboarding_slide_$index'),
+                        slide: _slides[index],
                       );
                     },
                   ),

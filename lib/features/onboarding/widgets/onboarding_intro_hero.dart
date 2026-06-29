@@ -105,9 +105,6 @@ class _OnboardingTypingDotsState extends State<OnboardingTypingDots>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    if (AppAnimations.animationsEnabled(context)) {
-      _controller.repeat();
-    }
   }
 
   @override
