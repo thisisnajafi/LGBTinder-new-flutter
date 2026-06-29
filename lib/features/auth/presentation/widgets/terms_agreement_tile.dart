@@ -135,7 +135,8 @@ class _TermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final idleBorder = isDark
         ? AppColors.borderMediumDark
         : AppColors.borderMediumLight;
