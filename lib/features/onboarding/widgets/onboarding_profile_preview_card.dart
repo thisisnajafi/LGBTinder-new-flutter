@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/widgets/profile_age_badge.dart';
 import '../../../core/widgets/profile_image_widget.dart';
 
 /// Discovery-style mini profile preview shown after onboarding completion.
@@ -163,33 +164,18 @@ class _OnboardingProfilePreviewCardState
                           ],
                         ),
                       ),
-                      if (widget.age != null) ...[
-                        SizedBox(width: AppSpacing.spacingSM),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.spacingMD,
-                            vertical: AppSpacing.spacingXS,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusRound),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Text(
-                            '${widget.age}',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
+                if (widget.age != null)
+                  Positioned(
+                    top: AppSpacing.spacingMD,
+                    right: AppSpacing.spacingMD,
+                    child: ProfileAgeBadge(
+                      age: widget.age!,
+                      style: ProfileAgeBadgeStyle.photoOverlay,
+                    ),
+                  ),
                 if (_photos.length > 1)
                   Positioned(
                     top: AppSpacing.spacingMD,

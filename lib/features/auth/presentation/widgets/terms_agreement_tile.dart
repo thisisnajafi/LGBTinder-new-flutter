@@ -41,13 +41,16 @@ class TermsAgreementTile extends StatelessWidget {
       height: 1.45,
       fontSize: 13.5,
     );
+    final linkColor = isDark ? AppColors.accentPink : AppColors.primaryLight;
     final linkStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: AppColors.accentViolet,
-      fontWeight: FontWeight.w600,
+      color: linkColor,
+      fontWeight: FontWeight.w700,
       height: 1.45,
       fontSize: 13.5,
       decoration: TextDecoration.underline,
-      decorationColor: AppColors.accentViolet.withValues(alpha: 0.65),
+      decorationStyle: TextDecorationStyle.solid,
+      decorationThickness: 1.25,
+      decorationColor: linkColor,
     );
 
     return Container(
@@ -65,17 +68,14 @@ class TermsAgreementTile extends StatelessWidget {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: AppSvgIcon(
-              assetPath: AppIcons.shieldTick,
-              size: 20,
-              color: value
-                  ? AppColors.accentPurple
-                  : mutedColor.withValues(alpha: 0.85),
-            ),
+          AppSvgIcon(
+            assetPath: AppIcons.shieldTick,
+            size: 20,
+            color: value
+                ? AppColors.accentPurple
+                : mutedColor.withValues(alpha: 0.85),
           ),
           SizedBox(width: AppSpacing.spacingMD),
           Expanded(
@@ -86,7 +86,10 @@ class TermsAgreementTile extends StatelessWidget {
                 TextSpan(
                   style: bodyStyle,
                   children: [
-                    const TextSpan(text: 'I agree to the '),
+                    TextSpan(
+                      text: 'I agree to the ',
+                      style: bodyStyle?.copyWith(color: textColor),
+                    ),
                     TextSpan(
                       text: 'Terms of Service',
                       style: linkStyle,
@@ -132,8 +135,7 @@ class _TermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final idleBorder = isDark
         ? AppColors.borderMediumDark
         : AppColors.borderMediumLight;
@@ -148,6 +150,7 @@ class _TermsCheckbox extends StatelessWidget {
           curve: Curves.easeOutCubic,
           width: 24,
           height: 24,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             gradient: value ? AppColors.brandGradient : null,
             color: value ? null : Colors.transparent,
@@ -166,18 +169,44 @@ class _TermsCheckbox extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: value
-              ? Text(
-                  '✓',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                  ),
-                )
-              : null,
+          child: value ? const Center(child: _CheckboxCheckMark()) : null,
         ),
       ),
     );
   }
+}
+
+/// Compact check mark drawn for the consent checkbox (no outer square).
+class _CheckboxCheckMark extends StatelessWidget {
+  const _CheckboxCheckMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(12, 10),
+      painter: _CheckboxCheckMarkPainter(),
+    );
+  }
+}
+
+class _CheckboxCheckMarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.1
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path()
+      ..moveTo(size.width * 0.12, size.height * 0.55)
+      ..lineTo(size.width * 0.42, size.height * 0.82)
+      ..lineTo(size.width * 0.9, size.height * 0.18);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

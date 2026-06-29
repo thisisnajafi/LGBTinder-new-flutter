@@ -42,11 +42,8 @@ class ConnectivityService {
   bool get isConnected => _current == NetworkConnectionState.connected;
 
   /// Backward-compatible online flag used by [ApiService] and [SyncService].
-  /// Treats [checking] and [weak] as online so startup/re-verify does not block API calls.
-  bool get isOnline =>
-      _current == NetworkConnectionState.connected ||
-      _current == NetworkConnectionState.checking ||
-      _current == NetworkConnectionState.weak;
+  /// Any state except explicit [disconnected] allows API attempts (Dio reports real failures).
+  bool get isOnline => _current != NetworkConnectionState.disconnected;
 
   /// Backward-compatible bool stream for existing listeners.
   Stream<bool> get connectivityStream => onStateChange.map(
@@ -100,11 +97,16 @@ class ConnectivityService {
       return;
     }
 
+    // Network interface is up — do not block API calls while probing.
+    if (_current == NetworkConnectionState.disconnected) {
+      _setState(NetworkConnectionState.checking);
+    }
+
     final hasInternet = await _hasInternetAccess();
     _setState(
       hasInternet
           ? NetworkConnectionState.connected
-          : NetworkConnectionState.disconnected,
+          : NetworkConnectionState.weak,
     );
     AppLogger.info(
       'Connectivity verified: ${_current.name}',
@@ -114,19 +116,35 @@ class ConnectivityService {
 
   Future<bool> _hasInternetAccess() async {
     const probes = [
-      'https://www.google.com/generate_204',
-      'https://connectivitycheck.gstatic.com/generate_204',
       ApiEndpoints.apiOrigin,
+      '${ApiEndpoints.baseUrl}/',
+      'https://connectivitycheck.gstatic.com/generate_204',
+      'https://www.google.com/generate_204',
     ];
 
     for (final url in probes) {
       try {
-        final response = await _pingDio.get(url);
-        if (response.statusCode == 204 || response.statusCode == 200) {
+        final response = await _pingDio.head(
+          url,
+          options: Options(
+            followRedirects: true,
+            validateStatus: (status) => status != null && status > 0,
+          ),
+        );
+        final code = response.statusCode;
+        if (code != null && code < 500) {
           return true;
         }
       } catch (_) {
-        continue;
+        try {
+          final response = await _pingDio.get(url);
+          final code = response.statusCode;
+          if (code == 204 || code == 200 || (code != null && code < 500)) {
+            return true;
+          }
+        } catch (_) {
+          continue;
+        }
       }
     }
     return false;

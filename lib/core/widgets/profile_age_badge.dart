@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
@@ -14,6 +15,9 @@ enum ProfileAgeBadgeStyle {
 
   /// Frosted pill on photo hero overlays.
   heroOverlay,
+
+  /// Solid gradient pill on discovery-style photo cards.
+  photoOverlay,
 }
 
 class ProfileAgeBadge extends StatelessWidget {
@@ -38,6 +42,8 @@ class ProfileAgeBadge extends StatelessWidget {
         return _InlineBadge(age: age, primary: primary, theme: theme);
       case ProfileAgeBadgeStyle.heroOverlay:
         return _HeroOverlayBadge(age: age, theme: theme);
+      case ProfileAgeBadgeStyle.photoOverlay:
+        return _PhotoOverlayBadge(age: age, theme: theme);
     }
   }
 }
@@ -149,6 +155,57 @@ class _HeroOverlayBadge extends StatelessWidget {
         style: theme.textTheme.labelMedium?.copyWith(
           color: Colors.white,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoOverlayBadge extends StatelessWidget {
+  const _PhotoOverlayBadge({
+    required this.age,
+    required this.theme,
+  });
+
+  final int age;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: AppTheme.accentGradient,
+        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.55),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.42),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: AppColors.accentRose.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingMD,
+          vertical: AppSpacing.spacingXS,
+        ),
+        child: Text(
+          '$age',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
+            height: 1,
+          ),
         ),
       ),
     );

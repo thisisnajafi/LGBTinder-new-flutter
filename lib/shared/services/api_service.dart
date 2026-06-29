@@ -93,6 +93,9 @@ class ApiService {
 
     // Check connectivity
     if (!_connectivityService.isOnline) {
+      await _connectivityService.verifyConnection();
+    }
+    if (!_connectivityService.isOnline) {
       if (useCache) {
         final cached = await _cacheService.getCached<T>(
           requestKey,
@@ -235,6 +238,10 @@ class ApiService {
     RetryConfig? retryConfig,
   }) async {
     if (!_connectivityService.isOnline) {
+      await _connectivityService.verifyConnection();
+    }
+
+    if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
         if (data is Map<String, dynamic> &&
             ActionQueueService.instance.isQueueableEndpoint(endpoint)) {
@@ -331,7 +338,10 @@ class ApiService {
     Options? options,
     bool queueIfOffline = true,
   }) async {
-    // Check connectivity
+    if (!_connectivityService.isOnline) {
+      await _connectivityService.verifyConnection();
+    }
+
     if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
         await _queueService.queueRequest(
@@ -426,6 +436,10 @@ class ApiService {
     bool queueIfOffline = true,
   }) async {
     if (!_connectivityService.isOnline) {
+      await _connectivityService.verifyConnection();
+    }
+
+    if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
         await _queueService.queueRequest(
           QueuedRequest(
@@ -506,7 +520,9 @@ class ApiService {
     Options? options,
     bool queueIfOffline = false, // DELETE usually shouldn't be queued
   }) async {
-    // Check connectivity
+    if (!_connectivityService.isOnline) {
+      await _connectivityService.verifyConnection();
+    }
     if (!_connectivityService.isOnline) {
       if (queueIfOffline) {
         await _queueService.queueRequest(
@@ -640,7 +656,9 @@ class ApiService {
     Options? options,
     bool queueIfOffline = false, // FormData can't be easily serialized for offline queue
   }) async {
-    // Check connectivity
+    if (!_connectivityService.isOnline) {
+      await _connectivityService.verifyConnection();
+    }
     if (!_connectivityService.isOnline) {
       throw ApiError(
         message: 'No internet connection. Please check your network and try again.',

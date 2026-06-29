@@ -82,6 +82,10 @@ class ErrorHandlerService {
 
     // Check error message for common patterns
     final message = error.message.toLowerCase();
+
+    if (message.contains('request queued')) {
+      return error.message;
+    }
     
     if (message.contains('timeout') || message.contains('connection timeout')) {
       return 'Connection timeout. Please check your internet connection and try again.';

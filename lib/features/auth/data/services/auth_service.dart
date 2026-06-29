@@ -122,6 +122,7 @@ class AuthService {
         ApiEndpoints.register,
         data: request.toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
+        queueIfOffline: false,
       );
 
       if (response.isSuccess && response.data != null) {
@@ -141,6 +142,7 @@ class AuthService {
         ApiEndpoints.loginPassword,
         data: request.toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
+        queueIfOffline: false,
       );
 
       // Handle both success and profile completion required cases
@@ -604,6 +606,7 @@ class AuthService {
             'device_name': deviceName,
         },
         fromJson: (json) => json as Map<String, dynamic>,
+        queueIfOffline: false,
       );
 
       if (response.data != null) {

@@ -100,6 +100,90 @@ class _GradientButtonState extends ConsumerState<GradientButton>
         : AppTheme.accentGradient;
   }
 
+  TextStyle _labelStyle() {
+    final base = AppTypography.button.copyWith(
+      color: Colors.white,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.2,
+    );
+    if (!widget.usePrideGradient) return base;
+    return base.copyWith(
+      fontWeight: FontWeight.w800,
+      shadows: const [
+        Shadow(
+          color: Color(0x8C000000),
+          blurRadius: 8,
+          offset: Offset(0, 1.5),
+        ),
+        Shadow(
+          color: Color(0x59000000),
+          blurRadius: 14,
+          offset: Offset(0, 3),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLabelContent() {
+    if (widget.isLoading) {
+      return const Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
+    final labelStyle = _labelStyle();
+    final row = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.iconPath != null || widget.icon != null) ...[
+          widget.iconPath != null
+              ? AppSvgIcon(
+                  assetPath: widget.iconPath!,
+                  size: 20,
+                  color: Colors.white,
+                )
+              : Icon(
+                  widget.icon!,
+                  color: Colors.white,
+                  size: 20,
+                ),
+          SizedBox(width: AppSpacing.spacingSM),
+        ],
+        Text(
+          widget.text,
+          style: labelStyle,
+        ),
+      ],
+    );
+
+    if (!widget.usePrideGradient) return row;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.spacingLG,
+          vertical: AppSpacing.spacingSM,
+        ),
+        child: row,
+      ),
+    );
+  }
+
   List<BoxShadow> _shadows() {
     if (widget.usePrideGradient) {
       return [
@@ -180,47 +264,7 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                         EdgeInsets.symmetric(
                           horizontal: AppSpacing.spacingXL,
                         ),
-                    child: widget.isLoading
-                        ? const Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (widget.iconPath != null ||
-                                  widget.icon != null) ...[
-                                widget.iconPath != null
-                                    ? AppSvgIcon(
-                                        assetPath: widget.iconPath!,
-                                        size: 20,
-                                        color: Colors.white,
-                                      )
-                                    : Icon(
-                                        widget.icon!,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                SizedBox(width: AppSpacing.spacingSM),
-                              ],
-                              Text(
-                                widget.text,
-                                style: AppTypography.button.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
+                    child: Center(child: _buildLabelContent()),
                   ),
                 ],
               ),
