@@ -50,75 +50,72 @@ class TermsAgreementTile extends StatelessWidget {
       decorationColor: AppColors.accentViolet.withValues(alpha: 0.65),
     );
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onChanged(!value),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.spacingMD,
+        vertical: AppSpacing.spacingMD,
+      ),
+      decoration: BoxDecoration(
+        color: shellColor,
         borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.spacingMD,
-            vertical: AppSpacing.spacingMD,
-          ),
-          decoration: BoxDecoration(
-            color: shellColor,
-            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-            border: Border.all(
+        border: Border.all(
+          color: value
+              ? AppColors.accentPurple.withValues(alpha: 0.45)
+              : borderColor,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: AppSvgIcon(
+              assetPath: AppIcons.shieldTick,
+              size: 20,
               color: value
-                  ? AppColors.accentPurple.withValues(alpha: 0.45)
-                  : borderColor,
+                  ? AppColors.accentPurple
+                  : mutedColor.withValues(alpha: 0.85),
             ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: AppSvgIcon(
-                  assetPath: AppIcons.shieldTick,
-                  size: 20,
-                  color: value
-                      ? AppColors.accentPurple
-                      : mutedColor.withValues(alpha: 0.85),
+          SizedBox(width: AppSpacing.spacingMD),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => onChanged(!value),
+              child: Text.rich(
+                TextSpan(
+                  style: bodyStyle,
+                  children: [
+                    const TextSpan(text: 'I agree to the '),
+                    TextSpan(
+                      text: 'Terms of Service',
+                      style: linkStyle,
+                      recognizer: termsRecognizer,
+                    ),
+                    TextSpan(
+                      text: ' and ',
+                      style: bodyStyle?.copyWith(color: textColor),
+                    ),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: linkStyle,
+                      recognizer: privacyRecognizer,
+                    ),
+                    TextSpan(
+                      text: '.',
+                      style: bodyStyle?.copyWith(color: textColor),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: AppSpacing.spacingMD),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    style: bodyStyle,
-                    children: [
-                      const TextSpan(text: 'I agree to the '),
-                      TextSpan(
-                        text: 'Terms of Service',
-                        style: linkStyle,
-                        recognizer: termsRecognizer,
-                      ),
-                      TextSpan(
-                        text: ' and ',
-                        style: bodyStyle?.copyWith(color: textColor),
-                      ),
-                      TextSpan(
-                        text: 'Privacy Policy',
-                        style: linkStyle,
-                        recognizer: privacyRecognizer,
-                      ),
-                      TextSpan(
-                        text: '.',
-                        style: bodyStyle?.copyWith(color: textColor),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: AppSpacing.spacingSM),
-              _TermsCheckbox(
-                value: value,
-                onChanged: onChanged,
-              ),
-            ],
+            ),
           ),
-        ),
+          SizedBox(width: AppSpacing.spacingSM),
+          _TermsCheckbox(
+            value: value,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }

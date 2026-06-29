@@ -91,7 +91,7 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
                         SizedBox(width: AppSpacing.spacingMD),
                         Text(
                           'Continue with Google',
-                          style: AppTypography.labelLarge.copyWith(
+                          style: AppTypography.button.copyWith(
                             color: foregroundColor,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.1,
