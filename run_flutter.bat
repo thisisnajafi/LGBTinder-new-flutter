@@ -8,21 +8,12 @@ if not exist "%FLUTTER_BIN%" (
     exit /b 1
 )
 echo Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn
+
+REM Delegate "run" to PowerShell for filtered console output (hides EGL noise).
 if /I "%~1"=="run" (
-    call :SuppressAndroidNoise
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_flutter.ps1" %*
+    exit /b %ERRORLEVEL%
 )
+
 "%FLUTTER_BIN%" %*
 exit /b %ERRORLEVEL%
-
-:SuppressAndroidNoise
-where adb >nul 2>&1
-if errorlevel 1 exit /b 0
-adb wait-for-device >nul 2>&1
-adb shell setprop log.tag.EGL_emulation SUPPRESS >nul 2>&1
-adb shell setprop log.tag.EGL_emulation_app_time_stats SUPPRESS >nul 2>&1
-adb shell setprop log.tag.libEGL SUPPRESS >nul 2>&1
-adb shell setprop log.tag.OpenGLRenderer SUPPRESS >nul 2>&1
-adb shell setprop log.tag.Choreographer SUPPRESS >nul 2>&1
-adb logcat -P "EGL_emulation:S libEGL:S OpenGLRenderer:S Choreographer:S" >nul 2>&1
-adb logcat -c >nul 2>&1
-exit /b 0

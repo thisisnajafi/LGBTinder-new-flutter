@@ -194,20 +194,18 @@ flutter:
         - asset: assets/fonts/Inter/Inter-Bold.ttf
           weight: 700
 
-# Native splash — gradient + white-circle logo (matches Flutter splash)
+# Native splash — pride gradient + centered logo (matches Flutter splash_page.dart)
+# No branding bitmap: Android stretches bottom branding to full width; app name renders in Flutter.
 flutter_native_splash:
   background_image: assets/images/splash_gradient_bg.png
   background_image_dark: assets/images/splash_gradient_bg.png
   image: assets/images/splash_icon_circle.png
   image_dark: assets/images/splash_icon_circle.png
-  branding: assets/images/splash_branding.png
-  branding_bottom_padding: 72
-  branding_dark: assets/images/splash_branding.png
   android_12:
     image: assets/images/splash_android12_icon.png
-    color: "#76AC80"
     image_dark: assets/images/splash_android12_icon.png
-    color_dark: "#76AC80"
+    color: "#457B9D"
+    color_dark: "#457B9D"
     icon_background_color: "#FFFFFF"
     icon_background_color_dark: "#FFFFFF"
   web: false

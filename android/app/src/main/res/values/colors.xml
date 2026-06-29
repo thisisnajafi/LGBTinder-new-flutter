@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Pride gradient center tone (t=0.52) for Android 12+ system splash -->
-    <color name="splash_background">#76AC80</color>
+    <!-- Pride gradient blue band — matches splash_gradient.xml centerColor -->
+    <color name="splash_background">#457B9D</color>
 </resources>
