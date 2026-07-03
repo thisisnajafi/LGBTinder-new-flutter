@@ -149,7 +149,6 @@ dev_dependencies:
   build_runner: ^2.4.8
   mocktail: ^1.0.1
   drift_dev: ^2.31.0
-  flutter_native_splash: ^2.4.0
 
   # For information on the generic Dart part of this file, see the
   # following page: https://dart.dev/tools/pub/pubspec
@@ -193,20 +192,3 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter/Inter-Bold.ttf
           weight: 700
-
-# Native splash — pride gradient + centered logo (matches Flutter splash_page.dart)
-# No branding bitmap: Android stretches bottom branding to full width; app name renders in Flutter.
-flutter_native_splash:
-  background_image: assets/images/splash_gradient_bg.png
-  background_image_dark: assets/images/splash_gradient_bg.png
-  image: assets/images/splash_icon_circle.png
-  image_dark: assets/images/splash_icon_circle.png
-  android_12:
-    image: assets/images/splash_android12_icon.png
-    image_dark: assets/images/splash_android12_icon.png
-    color: "#457B9D"
-    color_dark: "#457B9D"
-    icon_background_color: "#FFFFFF"
-    icon_background_color_dark: "#FFFFFF"
-  web: false
-  ios: false
