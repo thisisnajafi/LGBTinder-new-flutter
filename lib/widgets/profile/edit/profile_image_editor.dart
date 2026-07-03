@@ -118,6 +118,7 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
     }
 
     return LongPressDraggable<int>(
+      key: ValueKey(imageUrl),
       data: index,
       delay: const Duration(milliseconds: 150),
       onDragStarted: () => setState(() => _draggingIndex = index),

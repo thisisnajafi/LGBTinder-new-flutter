@@ -8,6 +8,7 @@ import '../../../core/theme/spacing_constants.dart';
 import '../../../core/widgets/premium/premium_page.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/widgets/profile_image_widget.dart';
+import '../../../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../../widgets/loading/skeleton_loader.dart';
 
@@ -36,9 +37,7 @@ class DiscoverGreetingWidget extends ConsumerWidget {
     final greeting = _timeBasedGreeting();
     final profile = profileState.valueOrNull?.profile;
     final firstName = _displayFirstName(profile?.firstName);
-    final avatarUrl = profile?.images?.isNotEmpty == true
-        ? profile!.images!.first.imageUrl
-        : null;
+    final avatarUrl = primaryProfileImage(profile?.images)?.imageUrl;
     final isOnline = profile?.isOnline ?? false;
 
     return Padding(

@@ -33,6 +33,14 @@ class UserImage {
   /// Get the full URL for the image
   String get url => _buildUrl(path);
 
+  /// Square crop URL for avatars (profile-type images expose multiple sizes).
+  String get avatarDisplayUrl {
+    return getSizeUrl('250x250') ??
+        getSizeUrl('100x100') ??
+        getSizeUrl('50x50') ??
+        imageUrl;
+  }
+
   /// Alias for url property for backward compatibility
   String get imageUrl => url;
 

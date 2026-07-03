@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
@@ -471,10 +473,13 @@ class AuthService {
     }
   }
 
-  /// Complete profile registration
+  /// Complete profile registration. When [primaryImage] or [galleryImages] are
+  /// provided, sends one multipart request (profile data + photos).
   Future<CompleteRegistrationResponse> completeRegistration(
-    CompleteRegistrationRequest request,
-  ) async {
+    CompleteRegistrationRequest request, {
+    File? primaryImage,
+    List<File> galleryImages = const [],
+  }) async {
     try {
       final profileToken = await _resolveProfileCompletionToken();
       if (profileToken == null || profileToken.isEmpty) {
@@ -484,16 +489,35 @@ class AuthService {
         );
       }
 
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.completeRegistration,
-        data: request.toJson(),
-        fromJson: (json) => json as Map<String, dynamic>,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $profileToken',
-          },
-        ),
+      final authOptions = Options(
+        headers: {
+          'Authorization': 'Bearer $profileToken',
+        },
       );
+
+      final hasMedia = primaryImage != null || galleryImages.isNotEmpty;
+      final ApiResponse<Map<String, dynamic>> response;
+
+      if (hasMedia) {
+        final fields = await _buildCompleteRegistrationFormData(
+          request,
+          primaryImage: primaryImage,
+          galleryImages: galleryImages,
+        );
+        response = await _apiService.postFormData<Map<String, dynamic>>(
+          ApiEndpoints.completeRegistration,
+          fields: fields,
+          fromJson: (json) => json as Map<String, dynamic>,
+          options: authOptions,
+        );
+      } else {
+        response = await _apiService.post<Map<String, dynamic>>(
+          ApiEndpoints.completeRegistration,
+          data: request.toJson(),
+          fromJson: (json) => json as Map<String, dynamic>,
+          options: authOptions,
+        );
+      }
 
       if (response.isSuccess && response.data != null) {
         final completeResponse = CompleteRegistrationResponse.fromJson(response.data!);
@@ -513,6 +537,48 @@ class AuthService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<Map<String, dynamic>> _buildCompleteRegistrationFormData(
+    CompleteRegistrationRequest request, {
+    File? primaryImage,
+    List<File> galleryImages = const [],
+  }) async {
+    final fields = <String, dynamic>{};
+    final json = request.toJson();
+
+    for (final entry in json.entries) {
+      final value = entry.value;
+      if (value is List) {
+        for (var i = 0; i < value.length; i++) {
+          fields['${entry.key}[$i]'] = value[i].toString();
+        }
+      } else if (value is bool) {
+        fields[entry.key] = value ? '1' : '0';
+      } else {
+        fields[entry.key] = value.toString();
+      }
+    }
+
+    if (primaryImage != null) {
+      final fileName =
+          primaryImage.path.replaceAll(r'\', '/').split('/').last;
+      fields['primary_image'] = await MultipartFile.fromFile(
+        primaryImage.path,
+        filename: fileName,
+      );
+    }
+
+    for (var i = 0; i < galleryImages.length; i++) {
+      final file = galleryImages[i];
+      final fileName = file.path.replaceAll(r'\', '/').split('/').last;
+      fields['gallery_images[$i]'] = await MultipartFile.fromFile(
+        file.path,
+        filename: fileName,
+      );
+    }
+
+    return fields;
   }
 
   /// Logout - revoke server token, clear local session.

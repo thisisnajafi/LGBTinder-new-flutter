@@ -15,6 +15,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../routes/app_router.dart';
+import '../utils/finish_onboarding_navigation.dart';
 import 'onboarding_profile_preview_card.dart';
 
 /// Full-screen celebration after profile wizard completion.
@@ -119,9 +120,13 @@ class _OnboardingCelebrationScreenState
     super.dispose();
   }
 
-  void _startDiscovering() {
+  Future<void> _startDiscovering() async {
     AppHaptics.light();
-    Navigator.of(context).pop(true);
+    await finishProfileOnboardingAndGoHome(
+      ref,
+      context,
+      profileSubmissionComplete: true,
+    );
   }
 
   void _editProfile() {

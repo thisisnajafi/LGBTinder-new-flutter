@@ -44,6 +44,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   final TextEditingController _bioController = TextEditingController();
   
   bool _isLoading = false;
+  bool _isUploadingAvatar = false;
   bool _isSaving = false;
   
   // Profile data
@@ -91,15 +92,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           _name = '${profile.firstName} ${profile.lastName}'.trim();
           _bioController.text = profile.profileBio ?? '';
           _bio = _bioController.text;
-          UserImage? primaryImage;
-          if (profile.images != null && profile.images!.isNotEmpty) {
-            try {
-              primaryImage = profile.images!.firstWhere((img) => img.isPrimary);
-            } catch (e) {
-              primaryImage = profile.images!.first;
-            }
-          }
-          _avatarUrl = primaryImage?.imageUrl;
+          UserImage? primaryImage = primaryProfileImage(profile.images);
+          _avatarUrl = primaryImage?.avatarDisplayUrl;
           _images = List<UserImage>.from(profile.images ?? [])
             ..sort((a, b) => a.order.compareTo(b.order));
           _interestsIds = profile.interests ?? [];
@@ -202,7 +196,17 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (image != null) {
         final file = File(image.path);
         if (setAsPrimary) {
-          await _uploadImageAsPrimary(file);
+          setState(() {
+            _avatarUrl = file.path;
+            _isUploadingAvatar = true;
+          });
+          try {
+            await _uploadImageAsPrimary(file);
+          } finally {
+            if (mounted) {
+              setState(() => _isUploadingAvatar = false);
+            }
+          }
         } else {
           await _uploadImage(file);
         }
@@ -280,7 +284,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               }
               return a.order.compareTo(b.order);
             });
-          _avatarUrl = uploadedImage.imageUrl;
+          _avatarUrl = uploadedImage.avatarDisplayUrl;
         });
         await _syncProfileCache();
 
@@ -416,13 +420,19 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     final item = gallery.removeAt(oldIndex);
     gallery.insert(newIndex, item);
 
+    final orderSlots = _galleryImages.map((img) => img.order).toList()..sort();
+    final reorderedGallery = [
+      for (var i = 0; i < gallery.length; i++)
+        gallery[i].copyWith(order: orderSlots[i]),
+    ];
+
     final nonGallery =
         _images.where((img) => img.type != 'gallery').toList();
 
     setState(() {
       _images = [
         ...nonGallery,
-        ...gallery,
+        ...reorderedGallery,
       ];
     });
 
@@ -719,6 +729,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       imageUrl: _avatarUrl,
                       name: _name,
                       size: 120.0,
+                      isLoading: _isUploadingAvatar,
                       showPrimaryBadge: _avatarUrl != null && _avatarUrl!.isNotEmpty,
                       onUpload: _showAvatarImageSourceDialog,
                       onEdit: _showAvatarImageSourceDialog,

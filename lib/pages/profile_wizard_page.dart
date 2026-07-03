@@ -27,15 +27,16 @@ import '../widgets/buttons/gradient_button.dart';
 import '../features/auth/providers/auth_service_provider.dart';
 import '../features/auth/data/models/complete_registration_request.dart';
 import '../features/auth/data/models/check_token_response.dart';
-import '../features/profile/providers/profile_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../routes/app_router.dart';
 import 'package:go_router/go_router.dart';
 import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
+import '../features/onboarding/utils/finish_onboarding_navigation.dart';
 import '../features/onboarding/widgets/onboarding_celebration_screen.dart';
 import '../core/utils/app_haptics.dart';
 import '../core/utils/country_phone_utils.dart';
+import '../core/utils/image_upload_compressor.dart';
 import '../core/widgets/inputs/country_phone_input.dart';
 import '../core/widgets/metric_slider_tile.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
@@ -67,7 +68,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   final GlobalKey<FormState> _phoneFormKey = GlobalKey<FormState>();
   int _currentStep = 0;
   bool _isLoading = false;
-  bool _isUploadingImage = false;
   bool _profileSubmissionComplete = false;
   
   // Form data
@@ -570,35 +570,11 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       (_maxAdditionalPhotos - _totalGalleryCount).clamp(0, _maxAdditionalPhotos);
 
   Future<void> _exitWizardToDiscover() async {
-    final authService = ref.read(authServiceProvider);
-    try {
-      final refreshed = await authService.checkToken();
-      await authService.syncBootstrapSession(refreshed);
-      if (refreshed.isComplete && mounted) {
-        context.go(AppRoutes.home);
-        return;
-      }
-    } catch (_) {
-      // Fall through to local session repair when bootstrap check fails.
-    }
-
-    if (_profileSubmissionComplete) {
-      final tokenStorage = ref.read(tokenStorageServiceProvider);
-      final session = await tokenStorage.getUserSession();
-      final user = session?.user;
-      if (user != null) {
-        await tokenStorage.saveUserSession(
-          user: user,
-          profileCompleted: true,
-          userState: 'ready_for_app',
-        );
-        await tokenStorage.clearProfileCompletionToken();
-      }
-    }
-
-    if (mounted) {
-      context.go(AppRoutes.home);
-    }
+    await finishProfileOnboardingAndGoHome(
+      ref,
+      context,
+      profileSubmissionComplete: _profileSubmissionComplete,
+    );
   }
 
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
@@ -698,8 +674,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     }
   }
 
-  Future<void> _uploadAllImages() async {
-    var uploadPrimary = _primaryImageFile != null && !_primaryAlreadyUploaded;
+  Future<({File? primaryImage, List<File> galleryImages})>
+      _prepareRegistrationMedia() async {
+    final uploadPrimary =
+        _primaryImageFile != null && !_primaryAlreadyUploaded;
     var galleryFiles = List<File>.from(_additionalImageFiles);
     final remainingSlots = _maxAdditionalPhotos - _existingGalleryCount;
 
@@ -707,79 +685,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       galleryFiles = galleryFiles.take(remainingSlots).toList();
     }
 
-    if (!uploadPrimary && galleryFiles.isEmpty) {
-      if (mounted) {
-        setState(() {
-          if (_primaryImageFile != null && _primaryAlreadyUploaded) {
-            _primaryImageFile = null;
-          }
-          if (_additionalImageFiles.isNotEmpty && remainingSlots <= 0) {
-            _additionalImageFiles = [];
-          }
-        });
-      }
-      return;
+    File? primaryImage;
+    if (uploadPrimary && _primaryImageFile != null) {
+      primaryImage =
+          await ImageUploadCompressor.prepareForUpload(_primaryImageFile!);
     }
 
-    setState(() {
-      _isUploadingImage = true;
-    });
-
-    try {
-      final imageService = ref.read(imageServiceProvider);
-
-      if (uploadPrimary && _primaryImageFile != null) {
-        final primaryImage =
-            await imageService.uploadImage(_primaryImageFile!, type: 'primary');
-        if (!_uploadedImages.any((img) => img.id == primaryImage.id)) {
-          _uploadedImages.add(primaryImage);
-        }
-        _avatarUrl = primaryImage.imageUrl;
-      }
-
-      for (final imageFile in galleryFiles) {
-        if (_uploadedImages
-                .where((img) =>
-                    img.type == 'gallery' ||
-                    (!img.isPrimary && img.type != 'profile'))
-                .length >=
-            _maxAdditionalPhotos) {
-          break;
-        }
-        try {
-          final uploadedImage =
-              await imageService.uploadImage(imageFile, type: 'gallery');
-          if (!_uploadedImages.any((img) => img.id == uploadedImage.id)) {
-            _uploadedImages.add(uploadedImage);
-          }
-        } catch (e) {
-          if (mounted) {
-            ErrorHandlerService.showErrorSnackBar(
-              context,
-              e is ApiError ? e : ApiError(message: e.toString()),
-              customMessage: 'Failed to upload one image, continuing...',
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e is ApiError ? e : ApiError(message: e.toString()),
-          customMessage: 'Failed to upload images',
-        );
-      }
-      rethrow;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _primaryImageFile = null;
-          _additionalImageFiles = [];
-          _isUploadingImage = false;
-        });
-      }
+    final galleryImages = <File>[];
+    for (final file in galleryFiles) {
+      galleryImages.add(await ImageUploadCompressor.prepareForUpload(file));
     }
+
+    return (primaryImage: primaryImage, galleryImages: galleryImages);
   }
 
   List<String> _celebrationPhotoSources() {
@@ -938,10 +855,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     });
 
     try {
-      // First upload all images
-      await _uploadAllImages();
+      final media = await _prepareRegistrationMedia();
 
-      // Then complete registration
       final authService = ref.read(authServiceProvider);
       final deviceName = await _getDeviceName();
       
@@ -991,7 +906,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
         relationGoals: _relationGoals,
       );
 
-      final response = await authService.completeRegistration(request);
+      final response = await authService.completeRegistration(
+        request,
+        primaryImage: media.primaryImage,
+        galleryImages: media.galleryImages,
+      );
+
+      if (mounted) {
+        setState(() {
+          _primaryImageFile = null;
+          _additionalImageFiles = [];
+        });
+      }
 
       CheckTokenResponse? tokenState;
       try {
@@ -1011,7 +937,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
       }
 
       if (mounted) {
-        final shouldDiscover = await Navigator.of(context).push<bool>(
+        await Navigator.of(context).push<void>(
           MaterialPageRoute(
             builder: (context) => OnboardingCelebrationScreen(
               displayName: _name.isNotEmpty ? _name : 'You',
@@ -1025,11 +951,6 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             ),
           ),
         );
-
-        if (!mounted) return;
-        if (shouldDiscover == true) {
-          await _exitWizardToDiscover();
-        }
       }
     } on ApiError catch (e) {
       if (mounted &&
@@ -1166,10 +1087,10 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                               ? 'Start Discovering'
                               : 'Complete')
                           : 'Next',
-                      onPressed: (_isLoading || _isUploadingImage) 
+                      onPressed: _isLoading
                           ? null 
                           : (_currentStep == 6 ? _completeWizard : _nextStep),
-                      isLoading: (_isLoading || _isUploadingImage) && _currentStep == 6,
+                      isLoading: _isLoading && _currentStep == 6,
                       isFullWidth: true,
                     ),
                   ),

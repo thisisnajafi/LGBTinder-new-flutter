@@ -22,6 +22,7 @@ class AvatarUpload extends ConsumerStatefulWidget {
   final VoidCallback? onSetPrimary;
   final bool showEditButton;
   final bool showPrimaryBadge;
+  final bool isLoading;
 
   const AvatarUpload({
     super.key,
@@ -33,6 +34,7 @@ class AvatarUpload extends ConsumerStatefulWidget {
     this.onSetPrimary,
     this.showEditButton = true,
     this.showPrimaryBadge = false,
+    this.isLoading = false,
   });
 
   @override
@@ -49,7 +51,7 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
       widget.imageUrl != null && widget.imageUrl!.isNotEmpty;
 
   VoidCallback? get _primaryAction =>
-      _hasImage ? widget.onEdit : widget.onUpload;
+      widget.isLoading ? null : (_hasImage ? widget.onEdit : widget.onUpload);
 
   @override
   Widget build(BuildContext context) {
@@ -68,35 +70,41 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
         children: [
           Semantics(
             label: _hasImage ? 'Profile photo' : 'Add profile photo',
-            button: !_hasImage,
+            button: !_hasImage && !widget.isLoading,
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: !_hasImage ? _primaryAction : null,
+                onTap: (!_hasImage && !widget.isLoading) ? _primaryAction : null,
                 customBorder: const CircleBorder(),
                 child: SizedBox(
                   width: widget.size,
                   height: widget.size,
-                  child: _hasImage
-                      ? _photoAvatar(context, primary)
-                      : _emptyAvatar(context, surface, onSurface, primary),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _hasImage
+                          ? _photoAvatar(context, primary)
+                          : _emptyAvatar(context, surface, onSurface, primary),
+                      if (widget.isLoading) _loadingOverlay(context),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          if (widget.showPrimaryBadge && _hasImage)
+          if (widget.showPrimaryBadge && _hasImage && !widget.isLoading)
             Positioned(
               top: overflow - 2,
               left: overflow - 2,
               child: _primaryBadge(context, primary),
             ),
-          if (widget.onSetPrimary != null && _hasImage)
+          if (widget.onSetPrimary != null && _hasImage && !widget.isLoading)
             Positioned(
               left: overflow - _actionTapSize / 2,
               bottom: overflow - _actionTapSize / 2,
               child: _starButton(context, primary),
             ),
-          if (widget.showEditButton)
+          if (widget.showEditButton && !widget.isLoading)
             Positioned(
               left: _cameraBadgeOffset(widget.size, overflow),
               top: _cameraBadgeOffset(widget.size, overflow),
@@ -118,7 +126,7 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
   }
 
   Widget _photoAvatar(BuildContext context, Color primary) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: primary, width: 2.5),
@@ -130,7 +138,33 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
           ),
         ],
       ),
-      child: ClipOval(child: _imageContent(context)),
+      child: ClipOval(
+        child: SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: _imageContent(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _loadingOverlay(BuildContext context) {
+    return ClipOval(
+      child: ColoredBox(
+        color: Colors.black.withValues(alpha: 0.42),
+        child: Center(
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -192,6 +226,7 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
         width: widget.size,
         height: widget.size,
         fit: BoxFit.cover,
+        size: ImageSize.thumbnail,
       );
     }
 
@@ -200,6 +235,7 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
       width: widget.size,
       height: widget.size,
       fit: BoxFit.cover,
+      alignment: Alignment.center,
       errorBuilder: (_, __, ___) => _imageErrorPlaceholder(context, placeholder),
     );
   }
@@ -255,7 +291,7 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: widget.onSetPrimary,
+          onTap: widget.isLoading ? null : widget.onSetPrimary,
           customBorder: const CircleBorder(),
           child: SizedBox(
             width: _actionVisualSize,

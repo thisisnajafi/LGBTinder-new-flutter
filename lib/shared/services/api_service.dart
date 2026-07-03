@@ -729,6 +729,37 @@ class ApiService {
     }
   }
 
+  /// POST multipart/form-data (profile fields + optional files).
+  Future<ApiResponse<T>> postFormData<T>(
+    String endpoint, {
+    required Map<String, dynamic> fields,
+    T Function(dynamic)? fromJson,
+    ProgressCallback? onSendProgress,
+    Options? options,
+  }) async {
+    try {
+      final uploadOptions = _uploadOptions(options);
+      final response = await _dioClient.dio.post(
+        endpoint,
+        data: FormData.fromMap(fields),
+        options: uploadOptions,
+        onSendProgress: _retryAwareSendProgress(uploadOptions, onSendProgress),
+      );
+
+      return _handleResponse<T>(response, fromJson);
+    } on DioException catch (e) {
+      throw ApiError.fromDioException(e);
+    } catch (e) {
+      if (e is ApiError) {
+        rethrow;
+      }
+      throw ApiError(
+        message: 'An unexpected error occurred: ${e.toString()}',
+        originalError: e,
+      );
+    }
+  }
+
   /// Upload multiple files
   Future<ApiResponse<T>> uploadFiles<T>(
     String endpoint,
