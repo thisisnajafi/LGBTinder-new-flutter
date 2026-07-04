@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/app_logger.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/discovery_provider.dart';
@@ -54,8 +56,11 @@ class _ActionButtonsRowState extends ConsumerState<ActionButtonsRow> {
     return AnimatedOpacity(
       opacity: disabled ? 0.5 : 1.0,
       duration: const Duration(milliseconds: 150),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Padding(
+        padding: ResponsivePadding.horizontal(context).copyWith(
+          top: AppSpacing.spacingLG,
+          bottom: AppSpacing.spacingLG,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [

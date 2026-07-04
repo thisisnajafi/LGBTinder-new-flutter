@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/animation_constants.dart';
+import '../../../core/responsive/responsive.dart';
 import '../../../core/widgets/avatar_widget.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
@@ -131,6 +132,9 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
     );
 
     final slideOffset = (1.0 - Curves.elasticOut.transform(avatarProgress)) * 120;
+    final avatarGap = AppBreakpoints.value(context, phone: AppSpacing.spacingLG, tablet: AppSpacing.spacingXL);
+    final avatarSize = AppBreakpoints.value(context, phone: 88.0, tablet: 96.0);
+    final horizontalInset = ResponsivePadding.horizontal(context).left;
 
     return Material(
       color: Colors.transparent,
@@ -168,6 +172,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Transform.translate(
                       offset: Offset(-slideOffset, 0),
@@ -177,10 +182,11 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                           imageUrl: widget.currentUserAvatarUrl,
                           label: widget.currentUser.firstName,
                           theme: theme,
+                          diameter: avatarSize,
                         ),
                       ),
                     ),
-                    SizedBox(width: AppSpacing.spacingLG),
+                    SizedBox(width: avatarGap),
                     Transform.scale(
                       scale: heartScale.clamp(0.0, 1.35),
                       child: Container(
@@ -202,7 +208,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                         ),
                       ),
                     ),
-                    SizedBox(width: AppSpacing.spacingLG),
+                    SizedBox(width: avatarGap),
                     Transform.translate(
                       offset: Offset(slideOffset, 0),
                       child: Opacity(
@@ -211,6 +217,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                           imageUrl: widget.matchedUserAvatarUrl,
                           label: widget.matchedUser.firstName,
                           theme: theme,
+                          diameter: avatarSize,
                         ),
                       ),
                     ),
@@ -222,40 +229,48 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
 
           // Phase 5 — headline + names
           Positioned(
-            left: AppSpacing.contentPadding,
-            right: AppSpacing.contentPadding,
+            left: horizontalInset,
+            right: horizontalInset,
             bottom: size.height * 0.22,
             child: Opacity(
               opacity: textProgress.clamp(0.0, 1.0),
               child: Transform.translate(
                 offset: Offset(0, (1.0 - textProgress) * 32),
-                child: Column(
-                  children: [
-                    Semantics(
-                      label: 'New Match',
-                      header: true,
-                      child: Text(
-                        'New Match!',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                child: ResponsiveGrid.constrainedTo(
+                  context,
+                  Column(
+                    children: [
+                      Semantics(
+                        label: 'New Match',
+                        header: true,
+                        child: Text(
+                          'New Match!',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.spacingSM),
+                      Text(
+                        'Congratulations! You and ${widget.matchedUser.firstName} liked each other.',
+                        style: theme.textTheme.titleMedium?.copyWith(
                           color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    SizedBox(height: AppSpacing.spacingSM),
-                    Text(
-                      'Congratulations! You and ${widget.matchedUser.firstName} liked each other.',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                    ],
+                  ),
+                  tablet: 480,
                 ),
               ),
             ),
@@ -263,16 +278,18 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
 
           // Phase 6 — CTAs
           Positioned(
-            left: AppSpacing.contentPadding,
-            right: AppSpacing.contentPadding,
+            left: horizontalInset,
+            right: horizontalInset,
             bottom: AppSpacing.spacingXXL + MediaQuery.paddingOf(context).bottom,
             child: Opacity(
               opacity: ctaProgress.clamp(0.0, 1.0),
               child: Transform.translate(
                 offset: Offset(0, (1.0 - ctaProgress) * 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+                child: ResponsiveGrid.constrainedTo(
+                  context,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                     Semantics(
                       label: 'Start chat',
                       button: true,
@@ -315,9 +332,11 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                     ),
                   ],
                 ),
+                tablet: 480,
               ),
             ),
           ),
+        ),
         ],
       ),
     );
@@ -329,15 +348,16 @@ class _AvatarBubble extends ConsumerWidget {
     required this.imageUrl,
     required this.label,
     required this.theme,
+    this.diameter = 88,
   });
 
   final String? imageUrl;
   final String label;
   final ThemeData theme;
+  final double diameter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const double diameter = 88;
     return Column(
       children: [
         Container(

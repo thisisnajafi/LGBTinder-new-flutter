@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/match_percentage_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
@@ -60,7 +61,15 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
         }
         return false;
       },
-      child: DraggableScrollableSheet(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: AppBreakpoints.isPhone(context)
+                ? double.infinity
+                : ResponsiveGrid.maxContentWidth(context),
+          ),
+          child: DraggableScrollableSheet(
         controller: widget.controller,
         initialChildSize: 0.58,
         minChildSize: 0.50,
@@ -130,7 +139,8 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
                   Positioned(
                     left: AppSpacing.spacingXL,
                     right: AppSpacing.spacingXL,
-                    bottom: AppSpacing.spacingMD,
+                    bottom: AppSpacing.spacingMD +
+                        MediaQuery.paddingOf(context).bottom,
                     child: DiscoverySheetActionBar(
                       disabled: widget.actionsDisabled,
                       onDislike: widget.onDislike,
@@ -142,6 +152,8 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
             ),
           );
         },
+      ),
+        ),
       ),
     );
   }
@@ -224,6 +236,8 @@ class ProfileSheetContent extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.3,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (profile.city != null || profile.country != null) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
@@ -245,6 +259,8 @@ class ProfileSheetContent extends StatelessWidget {
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.65),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -636,6 +652,12 @@ class DiscoverySheetActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final actionGap = AppBreakpoints.value(
+      context,
+      phone: AppSpacing.spacingLG,
+      tablet: AppSpacing.spacingXXL,
+    );
+
     return AnimatedOpacity(
       opacity: disabled ? 0.5 : 1,
       duration: const Duration(milliseconds: 150),
@@ -647,13 +669,13 @@ class DiscoverySheetActionBar extends StatelessWidget {
             size: 58,
             onPressed: disabled ? null : onDislike,
           ),
-          const SizedBox(width: AppSpacing.spacingXXL),
+          SizedBox(width: actionGap),
           DiscoverySwipeActionButton(
             type: DiscoverySwipeActionType.superlike,
             size: 54,
             onPressed: disabled ? null : onSuperlike,
           ),
-          const SizedBox(width: AppSpacing.spacingXXL),
+          SizedBox(width: actionGap),
           DiscoverySwipeActionButton(
             type: DiscoverySwipeActionType.like,
             size: 58,

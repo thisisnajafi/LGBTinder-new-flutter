@@ -7,6 +7,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/constants/animation_constants.dart';
 import '../buttons/gradient_button.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/utils/app_icons.dart';
 
 /// Empty state widget
@@ -80,12 +81,14 @@ class _EmptyStateState extends ConsumerState<EmptyState>
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     final content = Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.spacingXL),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: ResponsiveGrid.constrained(
+        context,
+        Padding(
+          padding: ResponsivePadding.page(context),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
             if (widget.iconPath != null || widget.icon != null) ...[
               widget.iconPath != null
                   ? AppSvgIcon(
@@ -104,6 +107,8 @@ class _EmptyStateState extends ConsumerState<EmptyState>
               widget.title,
               style: AppTypography.h3.copyWith(color: textColor),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             if (widget.showPrideAccent) ...[
               SizedBox(height: AppSpacing.spacingMD),
@@ -126,6 +131,8 @@ class _EmptyStateState extends ConsumerState<EmptyState>
                 widget.message!,
                 style: AppTypography.body.copyWith(color: secondaryTextColor),
                 textAlign: TextAlign.center,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
             if (widget.actionLabel != null && widget.onAction != null) ...[
@@ -151,6 +158,7 @@ class _EmptyStateState extends ConsumerState<EmptyState>
             ],
           ],
         ),
+      ),
       ),
     );
 

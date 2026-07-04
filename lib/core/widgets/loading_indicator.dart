@@ -51,6 +51,8 @@ class LoadingIndicator extends ConsumerWidget {
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],

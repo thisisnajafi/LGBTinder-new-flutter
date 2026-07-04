@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../responsive/responsive.dart';
 import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart' show AppIcons, AppSvgIcon;
@@ -84,57 +85,61 @@ class AppBottomSheetShell extends StatelessWidget {
     // Keep the sheet above the keyboard without growing past the viewport.
     final maxHeight = (screenHeight - keyboardInset) * 0.92;
 
-    return AnimatedPadding(
-      padding: padding ??
-          EdgeInsets.fromLTRB(
-            AppSpacing.spacingMD,
-            0,
-            AppSpacing.spacingMD,
-            bottomSafe + AppSpacing.spacingMD,
-          ),
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      child: Padding(
-        padding: EdgeInsets.only(bottom: keyboardInset),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _DragHandle(color: theme.colorScheme.onSurface.withValues(alpha: 0.22)),
-              if (body != null)
-                Flexible(child: body!)
-              else
-                AppBottomSheetCard(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (title != null) _TitleHeader(title: title!),
-                      for (var i = 0; i < actions.length; i++) ...[
-                        if (i > 0) const AppBottomSheetDivider(),
-                        AppBottomSheetActionTile(item: actions[i]),
+    return ResponsiveGrid.constrainedTo(
+      context,
+      AnimatedPadding(
+        padding: padding ??
+            EdgeInsets.fromLTRB(
+              AppSpacing.spacingMD,
+              0,
+              AppSpacing.spacingMD,
+              bottomSafe + AppSpacing.spacingMD,
+            ),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: keyboardInset),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DragHandle(color: theme.colorScheme.onSurface.withValues(alpha: 0.22)),
+                if (body != null)
+                  Flexible(child: body!)
+                else
+                  AppBottomSheetCard(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (title != null) _TitleHeader(title: title!),
+                        for (var i = 0; i < actions.length; i++) ...[
+                          if (i > 0) const AppBottomSheetDivider(),
+                          AppBottomSheetActionTile(item: actions[i]),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-              if (showCancel) ...[
-                const SizedBox(height: AppSpacing.spacingSM),
-                AppBottomSheetCard(
-                  child: AppBottomSheetActionTile(
-                    item: AppActionSheetItem(
-                      iconPath: AppIcons.close,
-                      label: 'Cancel',
-                      iconColor:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                      onTap: () => Navigator.pop(context),
                     ),
                   ),
-                ),
+                if (showCancel) ...[
+                  const SizedBox(height: AppSpacing.spacingSM),
+                  AppBottomSheetCard(
+                    child: AppBottomSheetActionTile(
+                      item: AppActionSheetItem(
+                        iconPath: AppIcons.close,
+                        label: 'Cancel',
+                        iconColor:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                        onTap: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
+      tablet: 560,
     );
   }
 }

@@ -345,7 +345,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         : 'Select a plan and billing period';
 
     return Container(
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
         AppSpacing.spacingLG,
         AppSpacing.spacingMD,
         AppSpacing.spacingLG,
@@ -372,6 +372,8 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
             Text(
               summary,
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark

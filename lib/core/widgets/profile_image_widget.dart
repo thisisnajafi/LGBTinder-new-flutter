@@ -31,24 +31,27 @@ class ProfileImageWidget extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     final radius = borderRadius ?? BorderRadius.circular(AppRadius.radiusMD);
     final cacheManager = ref.watch(imageCacheServiceProvider);
+    final resolvedWidth = width;
+    final resolvedHeight = height ?? width;
 
     if (imageUrl == null || imageUrl!.isEmpty) {
-      return _fallback(context, isDark, radius);
+      return _fallback(context, isDark, radius, resolvedWidth, resolvedHeight);
     }
 
     Widget image = CachedNetworkImage(
       imageUrl: imageUrl!,
       cacheManager: cacheManager,
-      width: width,
-      height: height,
+      width: resolvedWidth,
+      height: resolvedHeight,
       fit: fit,
       fadeInDuration: const Duration(milliseconds: 200),
       placeholder: (_, __) => SkeletonLoader(
-        width: width,
-        height: height,
+        width: resolvedWidth,
+        height: resolvedHeight,
         borderRadius: radius,
       ),
-      errorWidget: (_, __, ___) => _fallback(context, isDark, radius),
+      errorWidget: (_, __, ___) =>
+          _fallback(context, isDark, radius, resolvedWidth, resolvedHeight),
     );
 
     if (borderRadius != null) {
@@ -58,10 +61,16 @@ class ProfileImageWidget extends ConsumerWidget {
     return image;
   }
 
-  Widget _fallback(BuildContext context, bool isDark, BorderRadius radius) {
+  Widget _fallback(
+    BuildContext context,
+    bool isDark,
+    BorderRadius radius,
+    double? resolvedWidth,
+    double? resolvedHeight,
+  ) {
     return Container(
-      width: width,
-      height: height,
+      width: resolvedWidth,
+      height: resolvedHeight,
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: radius,
@@ -69,7 +78,7 @@ class ProfileImageWidget extends ConsumerWidget {
       alignment: Alignment.center,
       child: AppSvgIcon(
         assetPath: AppIcons.user,
-        size: (height ?? width ?? 48) * 0.4,
+        size: (resolvedHeight ?? resolvedWidth ?? 48) * 0.4,
         color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
       ),
     );

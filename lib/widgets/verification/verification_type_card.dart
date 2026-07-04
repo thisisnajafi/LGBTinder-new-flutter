@@ -134,6 +134,8 @@ class VerificationTypeCard extends StatelessWidget {
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 'Adds ${type.points} points',
@@ -144,7 +146,7 @@ class VerificationTypeCard extends StatelessWidget {
             ],
           ),
         ),
-        _StatusChip(status: status),
+        Flexible(child: _StatusChip(status: status)),
       ],
     );
   }

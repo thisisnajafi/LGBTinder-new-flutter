@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
+import '../responsive/responsive.dart';
 import '../theme/border_radius_constants.dart';
 import '../utils/app_icons.dart';
 import '../../features/profile/providers/profile_page_cache_provider.dart';
@@ -51,67 +52,77 @@ class AppBottomNavBar extends ConsumerWidget {
     final profileIsOnline = profileData?.isOnline ?? true;
     final innerRadius = 100 - _borderWidth;
 
+    final horizontalMargin = AppBreakpoints.value(
+      context,
+      phone: floatingHorizontalMargin,
+      tablet: AppSpacing.spacingXL,
+    );
+
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          floatingHorizontalMargin,
-          0,
-          floatingHorizontalMargin,
-          floatingBottomMargin,
-        ),
-        child: _GradientNavBarShell(
-          isDark: isDark,
-          borderWidth: _borderWidth,
-          child: Container(
-            height: barHeight,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(innerRadius),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.white.withValues(alpha: 0.72),
-                width: 0.75,
+      child: ResponsiveGrid.constrainedTo(
+        context,
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalMargin,
+            0,
+            horizontalMargin,
+            floatingBottomMargin,
+          ),
+          child: _GradientNavBarShell(
+            isDark: isDark,
+            borderWidth: _borderWidth,
+            child: Container(
+              height: barHeight,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(innerRadius),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.white.withValues(alpha: 0.72),
+                  width: 0.75,
+                ),
               ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(itemCount, (index) {
-                final isActive = currentIndex == index;
-                final outlinePath = AppIcons.mainNavIconOutline(index);
-                final activePath = AppIcons.mainNavIconActive(index);
-                final label = AppIcons.mainNavItems[index].label;
-                final useProfileAvatar = index == profileTabIndex &&
-                    isActive &&
-                    profileAvatarUrl != null;
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(itemCount, (index) {
+                  final isActive = currentIndex == index;
+                  final outlinePath = AppIcons.mainNavIconOutline(index);
+                  final activePath = AppIcons.mainNavIconActive(index);
+                  final label = AppIcons.mainNavItems[index].label;
+                  final useProfileAvatar = index == profileTabIndex &&
+                      isActive &&
+                      profileAvatarUrl != null;
 
-                return Expanded(
-                  child: _NavItem(
-                    label: label,
-                    outlinePath: outlinePath,
-                    activePath: activePath,
-                    isActive: isActive,
-                    inactiveIconColor: inactiveIconColor,
-                    iconOverride: useProfileAvatar
-                        ? _ProfileNavAvatar(
-                            imageUrl: profileAvatarUrl,
-                            isOnline: profileIsOnline,
-                          )
-                        : null,
-                    badge: _badgeForTab(
-                      index: index,
-                      messengerUnreadCount: messengerUnreadCount,
-                      notificationCount: notificationCount,
+                  return Expanded(
+                    child: _NavItem(
+                      label: label,
+                      outlinePath: outlinePath,
+                      activePath: activePath,
+                      isActive: isActive,
+                      inactiveIconColor: inactiveIconColor,
+                      iconOverride: useProfileAvatar
+                          ? _ProfileNavAvatar(
+                              imageUrl: profileAvatarUrl,
+                              isOnline: profileIsOnline,
+                            )
+                          : null,
+                      badge: _badgeForTab(
+                        index: index,
+                        messengerUnreadCount: messengerUnreadCount,
+                        notificationCount: notificationCount,
+                      ),
+                      onTap: () => onTap(index),
                     ),
-                    onTap: () => onTap(index),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ),
         ),
+        tablet: 680,
       ),
     );
   }

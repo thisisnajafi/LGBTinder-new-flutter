@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/utils/app_date_time.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/avatar_widget.dart';
@@ -190,7 +191,7 @@ class MessageBubble extends ConsumerWidget {
         child: Container(
           margin: MessageBubbleChrome.margin(isSent: false),
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.75,
+            maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context),
           ),
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.spacingLG,
@@ -337,7 +338,7 @@ class MessageBubble extends ConsumerWidget {
         child: Container(
         margin: MessageBubbleChrome.margin(isSent: isSent),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context),
         ),
         padding: EdgeInsets.all(AppSpacing.spacingMD),
         decoration: isSent
@@ -690,7 +691,9 @@ class _ProfileLinkBubble extends StatelessWidget {
       child: Container(
         margin: MessageBubbleChrome.margin(isSent: isSent),
         padding: const EdgeInsets.all(AppSpacing.spacingMD),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+        constraints: BoxConstraints(
+          maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.72),
+        ),
         decoration: isSent
             ? MessageBubbleChrome.sent(
                 isFailed: deliveryStatus == MessageDeliveryStatus.failed,

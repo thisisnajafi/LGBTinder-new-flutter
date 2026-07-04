@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_date_time.dart';
@@ -100,7 +101,7 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
                 onLongPress: widget.onLongPress,
                 child: Container(
                   constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.7,
+                    maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.7),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(

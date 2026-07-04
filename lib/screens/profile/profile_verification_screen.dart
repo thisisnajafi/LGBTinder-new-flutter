@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/app_page_scaffold.dart';
 import '../../features/profile/data/models/profile_verification.dart';
@@ -330,7 +331,7 @@ class _ProfileVerificationScreenState
     final theme = Theme.of(context);
     final base = theme.colorScheme.surfaceContainerHighest;
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.spacingLG),
+      padding: ResponsivePadding.page(context),
       children: [
         ShimmerEffect(
           child: Container(
@@ -398,7 +399,7 @@ class _ProfileVerificationScreenState
     required VerificationUploadState uploadState,
   }) {
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.spacingLG),
+      padding: ResponsivePadding.page(context),
       children: [
         _buildHeader(context, verification),
         SizedBox(height: AppSpacing.spacingLG),
@@ -454,6 +455,9 @@ class _ProfileVerificationScreenState
             fontWeight: FontWeight.w700,
             color: tint,
           ),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         SizedBox(height: AppSpacing.spacingXS),
         Text(
