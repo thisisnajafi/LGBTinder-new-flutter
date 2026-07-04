@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants/animation_constants.dart';
 import '../core/theme/app_colors.dart';
+import '../core/responsive/responsive.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_haptics.dart';
@@ -137,69 +138,73 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
           ),
           SafeArea(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Semantics(
-                    label: 'Skip onboarding',
-                    button: true,
-                    child: TextButton(
-                      onPressed: _skipOnboarding,
-                      child: Text(
-                        'Skip',
-                        style: textTheme.labelLarge?.copyWith(
-                          color: AppColors.textPrimaryDark.withValues(alpha: 0.95),
-                          fontWeight: FontWeight.w600,
+            child: ResponsiveGrid.constrainedTo(
+              context,
+              Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Semantics(
+                      label: 'Skip onboarding',
+                      button: true,
+                      child: TextButton(
+                        onPressed: _skipOnboarding,
+                        child: Text(
+                          'Skip',
+                          style: textTheme.labelLarge?.copyWith(
+                            color: AppColors.textPrimaryDark.withValues(alpha: 0.95),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
-                  child: OnboardingProgressIndicator(
-                    currentStep: _currentPage,
-                    totalSteps: _slides.length,
-                    style: OnboardingProgressStyle.dots,
-                    lightOnDark: true,
-                  ),
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() => _currentPage = index);
-                      AppHaptics.selection();
-                    },
-                    itemCount: _slides.length,
-                    itemBuilder: (context, index) {
-                      return _SlideContent(
-                        key: ValueKey('onboarding_slide_$index'),
-                        slide: _slides[index],
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.spacingLG,
-                    AppSpacing.spacingMD,
-                    AppSpacing.spacingLG,
-                    AppSpacing.spacingXL,
-                  ),
-                  child: Semantics(
-                    label: isLast ? 'Get started' : 'Next slide',
-                    button: true,
-                    child: GradientButton(
-                      text: isLast ? 'Get Started' : 'Next',
-                      onPressed: _nextPage,
-                      usePrideGradient: false,
+                  Padding(
+                    padding: ResponsivePadding.horizontal(context),
+                    child: OnboardingProgressIndicator(
+                      currentStep: _currentPage,
+                      totalSteps: _slides.length,
+                      style: OnboardingProgressStyle.dots,
+                      lightOnDark: true,
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: AppSpacing.spacingMD),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (index) {
+                        setState(() => _currentPage = index);
+                        AppHaptics.selection();
+                      },
+                      itemCount: _slides.length,
+                      itemBuilder: (context, index) {
+                        return _SlideContent(
+                          key: ValueKey('onboarding_slide_$index'),
+                          slide: _slides[index],
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppBreakpoints.value(context, phone: AppSpacing.spacingLG, tablet: AppSpacing.spacingXL),
+                      AppSpacing.spacingMD,
+                      AppBreakpoints.value(context, phone: AppSpacing.spacingLG, tablet: AppSpacing.spacingXL),
+                      AppSpacing.spacingXL + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: Semantics(
+                      label: isLast ? 'Get started' : 'Next slide',
+                      button: true,
+                      child: GradientButton(
+                        text: isLast ? 'Get Started' : 'Next',
+                        onPressed: _nextPage,
+                        usePrideGradient: false,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              tablet: 500,
             ),
           ),
         ],
@@ -220,7 +225,7 @@ class _SlideContent extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXL),
+          padding: ResponsivePadding.horizontal(context),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Column(
@@ -240,6 +245,8 @@ class _SlideContent extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
                 Text(
@@ -249,6 +256,8 @@ class _SlideContent extends StatelessWidget {
                     height: 1.5,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -9,7 +9,9 @@ import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../discovery/discovery_swipe_action_button.dart';
 import '../../shared/models/match_reason.dart';
+import '../../features/profile/data/models/profile_verification.dart';
 import '../ui/distance_tag.dart';
+import '../verification/verification_components.dart';
 import 'swipeable_card.dart';
 
 /// Reserve space for the floating like / superlike / dislike row.
@@ -154,6 +156,7 @@ class DiscoverySheetProfile {
     this.country,
     this.bio,
     this.isVerified = false,
+    this.verification,
     this.isOnline = false,
     this.matchPercentage,
     this.matchReasons = const [],
@@ -171,6 +174,7 @@ class DiscoverySheetProfile {
   final String? country;
   final String? bio;
   final bool isVerified;
+  final ProfileIdentityVerification? verification;
   final bool isOnline;
   final int? matchPercentage;
   final List<MatchReason> matchReasons;
@@ -246,10 +250,25 @@ class ProfileSheetContent extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (profile.verification != null &&
+                        profile.verification!.hasAnyVerified) ...[
+                      const SizedBox(height: AppSpacing.spacingXS),
+                      VerificationStatusRow(
+                        photoVerified: profile.verification!.photoVerified,
+                        idVerified: profile.verification!.idVerified,
+                        videoVerified: profile.verification!.videoVerified,
+                      ),
+                    ],
                   ],
                 ),
               ),
-              if (profile.isVerified)
+              if (profile.verification != null &&
+                  profile.verification!.badge != 'Unverified')
+                VerificationBadgeChip(
+                  badge: profile.verification!.badge,
+                  compact: true,
+                )
+              else if (profile.isVerified)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.spacingSM,

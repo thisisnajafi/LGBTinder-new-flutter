@@ -143,11 +143,8 @@ class AppSubscriptionStatus {
       return defaultValue;
     }
 
-    final tierRaw = json['tier']?.toString().toLowerCase().trim() ?? 'basid';
-    final tier = UserTier.values.firstWhere(
-      (t) => t.key == tierRaw,
-      orElse: () => UserTier.basid,
-    );
+    final tierRaw = json['tier']?.toString();
+    final tier = userTierFromApiKey(tierRaw);
 
     final featuresJson = json['features'];
     final features = featuresJson is Map<String, dynamic>

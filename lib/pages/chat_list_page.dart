@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/responsive/responsive.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/chat/chat_matches_row.dart';
@@ -27,6 +28,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import '../core/widgets/staggered_list_item.dart';
 import '../routes/app_router.dart';
+import 'chat_page.dart';
 
 enum _ChatFilter { all, unread, online }
 
@@ -59,6 +61,9 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   _ChatFilter _activeFilter = _ChatFilter.all;
   bool _premiumBannerDismissed = false;
   bool _retriedForMissingNames = false;
+  int? _tabletSelectedUserId;
+  String? _tabletSelectedUserName;
+  String? _tabletSelectedAvatarUrl;
 
   @override
   void initState() {
@@ -273,6 +278,15 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     final userId = chat['id'] as int? ?? 0;
     if (userId <= 0) return;
 
+    if (AppBreakpoints.isTablet(context)) {
+      setState(() {
+        _tabletSelectedUserId = userId;
+        _tabletSelectedUserName = _displayNameFromMap(chat);
+        _tabletSelectedAvatarUrl = chat['avatar_url'] as String?;
+      });
+      return;
+    }
+
     final target = Uri(
       path: AppRoutes.chat,
       queryParameters: {
@@ -284,6 +298,270 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       },
     ).toString();
     context.push(target);
+  }
+
+  void _clearTabletSelection() {
+    setState(() {
+      _tabletSelectedUserId = null;
+      _tabletSelectedUserName = null;
+      _tabletSelectedAvatarUrl = null;
+    });
+  }
+
+  Widget _buildSearchField(ThemeData theme) {
+    if (!_showSearch) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PremiumPageHeader.horizontalPadding,
+        0,
+        PremiumPageHeader.horizontalPadding,
+        AppSpacing.spacingSM,
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _searchQuery = value),
+        decoration: InputDecoration(
+          hintText: 'Search conversations...',
+          prefixIcon: _MessengerSearchPrefixIcon(
+            isDark: theme.brightness == Brightness.dark,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 52,
+            minHeight: 44,
+          ),
+          filled: true,
+          fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+            borderSide: BorderSide(
+              color: AppColors.accentViolet.withValues(alpha: 0.14),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+            borderSide: BorderSide(
+              color: AppColors.accentViolet.withValues(alpha: 0.45),
+              width: 1.5,
+            ),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingMD,
+            vertical: AppSpacing.spacingSM,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConversationList({
+    required Map<int, bool> typingUsers,
+    required EdgeInsets listPadding,
+  }) {
+    return Expanded(
+      child: _isLoading && _chats.isEmpty
+          ? const ChatListLoading(itemCount: 5)
+          : _hasError && _chats.isEmpty
+              ? ErrorDisplayWidget(
+                  errorMessage:
+                      _errorMessage ?? 'Failed to load conversations',
+                  onRetry: _loadChats,
+                )
+              : _filteredChats.isEmpty
+                  ? RefreshIndicator(
+                      onRefresh: () async {
+                        await _loadChats(forceRefresh: true);
+                        await _loadMatches();
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.35,
+                          child: const ChatListEmpty(),
+                        ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        await _loadChats(forceRefresh: true);
+                        await _loadMatches();
+                      },
+                      child: ListView.separated(
+                        padding: listPadding,
+                        itemCount: _filteredChats.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.spacingSM),
+                        itemBuilder: (context, index) {
+                          final chat = _filteredChats[index];
+                          final userId = chat['id'] as int;
+                          final isTypingLive = typingUsers[userId] == true;
+                          final item = ChatListItem(
+                            userId: userId,
+                            name: _displayNameFromMap(chat),
+                            avatarUrl: chat['avatar_url'],
+                            lastMessage: chat['last_message'],
+                            lastMessageType:
+                                chat['last_message_type']?.toString(),
+                            lastMessageTime: chat['last_message_time'],
+                            unreadCount: chat['unread_count'],
+                            isOnline: chat['is_online'],
+                            isTyping:
+                                chat['is_typing'] == true || isTypingLive,
+                            isMuted: chat['is_muted'] == true,
+                            onTap: () => _handleChatTap(chat),
+                          );
+                          return StaggeredListItem(
+                            index: index,
+                            animateAppear:
+                                !_didInitialLoadAnimation && index < 8,
+                            child: item,
+                          );
+                        },
+                      ),
+                    ),
+    );
+  }
+
+  Widget _buildMessengerBody({
+    required ThemeData theme,
+    required Map<int, bool> typingUsers,
+    required bool showPremiumBanner,
+    EdgeInsets listPadding = const EdgeInsets.symmetric(
+      horizontal: PremiumPageHeader.horizontalPadding,
+    ),
+    bool compactHeader = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSearchField(theme),
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+          child: PremiumCategoryChips(
+            labels: const ['All', 'Unread', 'Online'],
+            selectedIndex: _activeFilter.index,
+            onSelected: (i) =>
+                setState(() => _activeFilter = _ChatFilter.values[i]),
+          ),
+        ),
+        if (!compactHeader) ...[
+          ChatMatchesRow(matches: _matches),
+          const SizedBox(height: AppSpacing.spacingMD),
+        ],
+        if (showPremiumBanner && !compactHeader)
+          ChatPremiumBanner(
+            onDismiss: _dismissPremiumBanner,
+            onUpgrade: () => context.push(AppRoutes.subscriptionPlans),
+          ),
+        _buildConversationList(
+          typingUsers: typingUsers,
+          listPadding: listPadding,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletEmptyDetail(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final muted = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return ColoredBox(
+      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      child: Center(
+        child: Padding(
+          padding: ResponsivePadding.horizontal(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppSvgIcon(
+                assetPath: AppIcons.message,
+                size: 48,
+                color: muted,
+              ),
+              const SizedBox(height: AppSpacing.spacingLG),
+              Text(
+                'Select a conversation',
+                style: theme.textTheme.titleMedium?.copyWith(color: muted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabletMasterDetail({
+    required ThemeData theme,
+    required Map<int, bool> typingUsers,
+    required bool showPremiumBanner,
+  }) {
+    final isDark = theme.brightness == Brightness.dark;
+    final dividerColor = isDark
+        ? AppColors.borderMediumDark
+        : AppColors.borderMediumLight;
+
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      body: SafeArea(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: ResponsiveGrid.chatMasterPanelWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  PremiumPageHeader(
+                    title: 'Messenger',
+                    subtitle: 'Conversations',
+                    action: IconButton(
+                      icon: AppSvgIcon(
+                        assetPath: AppIcons.search,
+                        size: 24,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      onPressed: () =>
+                          setState(() => _showSearch = !_showSearch),
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildMessengerBody(
+                      theme: theme,
+                      typingUsers: typingUsers,
+                      showPremiumBanner: showPremiumBanner,
+                      listPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingSM,
+                      ),
+                      compactHeader: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(width: 1, color: dividerColor),
+            Expanded(
+              child: _tabletSelectedUserId != null
+                  ? ChatPage(
+                      key: ValueKey(_tabletSelectedUserId),
+                      userId: _tabletSelectedUserId!,
+                      userName: _tabletSelectedUserName,
+                      avatarUrl: _tabletSelectedAvatarUrl,
+                      embedded: true,
+                      onEmbeddedClose: _clearTabletSelection,
+                    )
+                  : _buildTabletEmptyDetail(theme),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -298,6 +576,14 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     final showPremiumBanner =
         !ref.watch(isPremiumProvider) && !_premiumBannerDismissed;
 
+    if (AppBreakpoints.isTablet(context)) {
+      return _buildTabletMasterDetail(
+        theme: theme,
+        typingUsers: typingUsers,
+        showPremiumBanner: showPremiumBanner,
+      );
+    }
+
     return PremiumTabPageLayout(
       title: 'Messenger',
       subtitle: 'Your conversations & matches',
@@ -309,135 +595,10 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         ),
         onPressed: () => setState(() => _showSearch = !_showSearch),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_showSearch)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                PremiumPageHeader.horizontalPadding,
-                0,
-                PremiumPageHeader.horizontalPadding,
-                AppSpacing.spacingSM,
-              ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _searchQuery = value),
-                decoration: InputDecoration(
-                  hintText: 'Search conversations...',
-                  prefixIcon: _MessengerSearchPrefixIcon(isDark: theme.brightness == Brightness.dark),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 52,
-                    minHeight: 44,
-                  ),
-                  filled: true,
-                  fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    borderSide: BorderSide(
-                      color: AppColors.accentViolet.withValues(alpha: 0.14),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    borderSide: BorderSide(
-                      color: AppColors.accentViolet.withValues(alpha: 0.45),
-                      width: 1.5,
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingSM,
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
-            child: PremiumCategoryChips(
-              labels: const ['All', 'Unread', 'Online'],
-              selectedIndex: _activeFilter.index,
-              onSelected: (i) =>
-                  setState(() => _activeFilter = _ChatFilter.values[i]),
-            ),
-          ),
-          ChatMatchesRow(matches: _matches),
-          const SizedBox(height: AppSpacing.spacingMD),
-          if (showPremiumBanner)
-            ChatPremiumBanner(
-              onDismiss: _dismissPremiumBanner,
-              onUpgrade: () => context.push(AppRoutes.subscriptionPlans),
-            ),
-          Expanded(
-            child: _isLoading && _chats.isEmpty
-                ? const ChatListLoading(itemCount: 5)
-                : _hasError && _chats.isEmpty
-                    ? ErrorDisplayWidget(
-                        errorMessage:
-                            _errorMessage ?? 'Failed to load conversations',
-                        onRetry: _loadChats,
-                      )
-                    : _filteredChats.isEmpty
-                        ? RefreshIndicator(
-                            onRefresh: () async {
-                              await _loadChats(forceRefresh: true);
-                              await _loadMatches();
-                            },
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: SizedBox(
-                                height: MediaQuery.of(context).size.height * 0.5,
-                                child: const ChatListEmpty(),
-                              ),
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () async {
-                              await _loadChats(forceRefresh: true);
-                              await _loadMatches();
-                            },
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: PremiumPageHeader.horizontalPadding,
-                              ),
-                              itemCount: _filteredChats.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: AppSpacing.spacingSM),
-                              itemBuilder: (context, index) {
-                                final chat = _filteredChats[index];
-                                final userId = chat['id'] as int;
-                                  final isTypingLive =
-                                      typingUsers[userId] == true;
-                                  final item = ChatListItem(
-                                    userId: userId,
-                                    name: _displayNameFromMap(chat),
-                                    avatarUrl: chat['avatar_url'],
-                                    lastMessage: chat['last_message'],
-                                    lastMessageType:
-                                        chat['last_message_type']?.toString(),
-                                    lastMessageTime: chat['last_message_time'],
-                                    unreadCount: chat['unread_count'],
-                                    isOnline: chat['is_online'],
-                                    isTyping: chat['is_typing'] == true ||
-                                        isTypingLive,
-                                    isMuted: chat['is_muted'] == true,
-                                    onTap: () => _handleChatTap(chat),
-                                  );
-                                  return StaggeredListItem(
-                                    index: index,
-                                    animateAppear:
-                                        !_didInitialLoadAnimation && index < 8,
-                                    child: item,
-                                  );
-                                },
-                              ),
-                            ),
-          ),
-        ],
+      body: _buildMessengerBody(
+        theme: theme,
+        typingUsers: typingUsers,
+        showPremiumBanner: showPremiumBanner,
       ),
     );
   }

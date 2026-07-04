@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/utils/app_haptics.dart';
 import '../../core/widgets/app_page_scaffold.dart';
@@ -188,7 +189,7 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
               ),
             )
           : ListView(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: ResponsivePadding.page(context),
               children: [
                 const OnboardingProgressIndicator(
                   currentStep: 0,

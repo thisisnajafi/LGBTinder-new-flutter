@@ -7,6 +7,7 @@ import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 import '../../features/onboarding/widgets/welcome_glass_card.dart';
 import '../../features/onboarding/widgets/welcome_value_props.dart';
 import '../../widgets/buttons/gradient_button.dart';
@@ -186,6 +187,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             alpha: 0.82,
           ).copyWith(height: 1.55, letterSpacing: 0.15),
           textAlign: TextAlign.center,
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -408,49 +411,53 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
               ),
             SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingXL,
-                  vertical: AppSpacing.spacingMD,
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return SingleChildScrollView(
-                            physics: const ClampingScrollPhysics(),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: constraints.maxHeight,
+              child: ResponsiveGrid.constrainedTo(
+                context,
+                Padding(
+                  padding: ResponsivePadding.page(context).copyWith(
+                    top: AppSpacing.spacingMD,
+                    bottom: AppSpacing.spacingMD,
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              physics: const ClampingScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    FadeTransition(
+                                      opacity: animated
+                                          ? _mosaicFade
+                                          : const AlwaysStoppedAnimation(1),
+                                      child: const WelcomeValueProps(),
+                                    ),
+                                    SizedBox(height: AppSpacing.spacingXL),
+                                    _buildLogo(context, animated: animated),
+                                    SizedBox(height: AppSpacing.spacingLG),
+                                    _buildBrandingBlock(
+                                      context,
+                                      animated: animated,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  FadeTransition(
-                                    opacity: animated
-                                        ? _mosaicFade
-                                        : const AlwaysStoppedAnimation(1),
-                                    child: const WelcomeValueProps(),
-                                  ),
-                                  SizedBox(height: AppSpacing.spacingXL),
-                                  _buildLogo(context, animated: animated),
-                                  SizedBox(height: AppSpacing.spacingLG),
-                                  _buildBrandingBlock(
-                                    context,
-                                    animated: animated,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                    _buildActions(context, animated: animated),
-                  ],
+                      _buildActions(context, animated: animated),
+                    ],
+                  ),
                 ),
+                tablet: 500,
               ),
             ),
           ],

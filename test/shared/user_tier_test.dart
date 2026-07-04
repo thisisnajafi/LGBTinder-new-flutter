@@ -31,5 +31,19 @@ void main() {
       expect(UserTier.golden.atLeast(UserTier.silder), isTrue);
     });
   });
+
+  group('userTierFromApiKey', () {
+    test('parses basic and legacy basid', () {
+      expect(userTierFromApiKey('basic'), UserTier.basid);
+      expect(userTierFromApiKey('basid'), UserTier.basid);
+      expect(userTierFromApiKey('silder'), UserTier.silder);
+      expect(userTierFromApiKey('golden'), UserTier.golden);
+    });
+
+    test('display label for basic tier', () {
+      expect(UserTier.basid.key, 'basic');
+      expect(UserTier.basid.displayLabel, 'Basic');
+    });
+  });
 }
 

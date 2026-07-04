@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
+import '../core/responsive/responsive.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
@@ -193,6 +194,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       country: profile.country,
       bio: profile.profileBio,
       isVerified: profile.isVerified ?? false,
+      verification: profile.verification,
       isOnline: profile.isOnline ?? false,
       matchPercentage: profile.matchPercentage ?? profile.compatibilityScore,
       matchReasons: profile.matchReasons,
@@ -1054,58 +1056,75 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 ),
                 _buildLimitIndicator(),
                 Expanded(
-                  child: showSkeleton
-                      ? Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            _kDiscoverHorizontalPadding,
-                            AppSpacing.spacingXS,
-                            _kDiscoverHorizontalPadding,
-                            AppSpacing.spacingXS,
-                          ),
-                          child: const SkeletonDiscovery(),
-                        )
-                      : CardStackManager(
-                          cards: cards,
-                          onSwipe: _onCardStackSwipe,
-                          onViewProfile: _handleCardTap,
-                          isSheetOpen: _isProfileSheetOpen,
-                          onSheetOpenChanged: _setProfileSheetOpen,
-                          horizontalPadding: _kDiscoverHorizontalPadding,
-                          contentTopInset: AppSpacing.spacingSM,
-                          contentBottomInset: AppSpacing.spacingSM,
-                          isLoading: false,
-                          onRefresh: () async {
-                            await ref
-                                .read(appCacheManagerProvider)
-                                .revalidateAll();
-                            await ref
-                                .read(discoverCacheProvider.notifier)
-                                .refresh(filters: _discoverQueryFilters());
-                          },
-                          emptyTitle: emptyConfig.title,
-                          emptySubtitle: emptyConfig.subtitle,
-                          emptyActionLabel: emptyConfig.primaryLabel,
-                          onEmptyAction: emptyConfig.onPrimary,
-                          emptySecondaryActionLabel: emptyConfig.secondaryLabel,
-                          onEmptySecondaryAction: emptyConfig.onSecondary,
-                          emptyTertiaryActionLabel: emptyConfig.tertiaryLabel,
-                          onEmptyTertiaryAction: emptyConfig.onTertiary,
+                  child: ResponsiveGrid.constrainedTo(
+                    context,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: showSkeleton
+                              ? Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    _kDiscoverHorizontalPadding,
+                                    AppSpacing.spacingXS,
+                                    _kDiscoverHorizontalPadding,
+                                    AppSpacing.spacingXS,
+                                  ),
+                                  child: const SkeletonDiscovery(),
+                                )
+                              : CardStackManager(
+                                  cards: cards,
+                                  onSwipe: _onCardStackSwipe,
+                                  onViewProfile: _handleCardTap,
+                                  isSheetOpen: _isProfileSheetOpen,
+                                  onSheetOpenChanged: _setProfileSheetOpen,
+                                  horizontalPadding: _kDiscoverHorizontalPadding,
+                                  contentTopInset: AppSpacing.spacingSM,
+                                  contentBottomInset: AppSpacing.spacingSM,
+                                  isLoading: false,
+                                  onRefresh: () async {
+                                    await ref
+                                        .read(appCacheManagerProvider)
+                                        .revalidateAll();
+                                    await ref
+                                        .read(discoverCacheProvider.notifier)
+                                        .refresh(
+                                          filters: _discoverQueryFilters(),
+                                        );
+                                  },
+                                  emptyTitle: emptyConfig.title,
+                                  emptySubtitle: emptyConfig.subtitle,
+                                  emptyActionLabel: emptyConfig.primaryLabel,
+                                  onEmptyAction: emptyConfig.onPrimary,
+                                  emptySecondaryActionLabel:
+                                      emptyConfig.secondaryLabel,
+                                  onEmptySecondaryAction:
+                                      emptyConfig.onSecondary,
+                                  emptyTertiaryActionLabel:
+                                      emptyConfig.tertiaryLabel,
+                                  onEmptyTertiaryAction:
+                                      emptyConfig.onTertiary,
+                                ),
                         ),
-                ),
-                if (showActionRow)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      _kDiscoverHorizontalPadding,
-                      AppSpacing.spacingSM,
-                      _kDiscoverHorizontalPadding,
-                      AppSpacing.spacingXS,
+                        if (showActionRow)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              _kDiscoverHorizontalPadding,
+                              AppSpacing.spacingSM,
+                              _kDiscoverHorizontalPadding,
+                              AppSpacing.spacingXS,
+                            ),
+                            child: AnimatedOpacity(
+                              opacity: _isSwipeInProgress ? 0.5 : 1.0,
+                              duration: const Duration(milliseconds: 150),
+                              child: _buildDiscoveryActionRow(),
+                            ),
+                          ),
+                      ],
                     ),
-                    child: AnimatedOpacity(
-                      opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                      duration: const Duration(milliseconds: 150),
-                      child: _buildDiscoveryActionRow(),
-                    ),
+                    tablet: 420,
                   ),
+                ),
               ],
             ),
             if (_isProfileSheetOpen && sheetProfile != null)

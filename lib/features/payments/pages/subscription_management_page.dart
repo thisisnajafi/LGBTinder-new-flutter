@@ -115,7 +115,9 @@ class _SubscriptionManagementPageState
 
   bool get _isPremiumActive =>
       _status?.isActive == true &&
-      (_status?.tier != null && _status!.tier!.toLowerCase() != 'basid');
+      (_status?.tier != null &&
+          _status!.tier!.toLowerCase() != 'basic' &&
+          _status!.tier!.toLowerCase() != 'basid');
 
   bool get _isGracePeriod =>
       _status?.status?.toLowerCase() == 'grace_period';
@@ -260,6 +262,7 @@ class _SubscriptionManagementPageState
         return 'Silder';
       case 'golden':
         return 'Golden';
+      case 'basic':
       case 'basid':
         return 'Free';
       default:

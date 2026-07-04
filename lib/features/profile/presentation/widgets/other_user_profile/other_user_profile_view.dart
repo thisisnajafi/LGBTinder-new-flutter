@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +8,8 @@ import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
 import '../../../providers/profile_page_cache_provider.dart';
 import '../own_profile/profile_details_sections.dart';
+import '../own_profile/profile_hero_section.dart';
+import '../own_profile/profile_photo_utils.dart';
 import 'other_user_profile_sections.dart';
 
 class OtherUserProfileView extends ConsumerStatefulWidget {
@@ -22,6 +22,7 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
   final VoidCallback? onShare;
   final VoidCallback? onMoreOptions;
   final Future<void> Function()? onRefresh;
+  final void Function(int index)? onPhotoTap;
   final List<String> interestLabels;
   final List<String> jobLabels;
   final List<String> educationLabels;
@@ -44,6 +45,7 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
     this.onShare,
     this.onMoreOptions,
     this.onRefresh,
+    this.onPhotoTap,
     this.interestLabels = const [],
     this.jobLabels = const [],
     this.educationLabels = const [],
@@ -60,41 +62,7 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
 }
 
 class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
-  int _photoIndex = 0;
-  Timer? _photoTimer;
-  final ScrollController _scrollController = ScrollController();
-
-  static const Duration _photoInterval = Duration(seconds: 5);
   static const double _sectionGap = AppSpacing.spacingXL;
-
-  @override
-  void initState() {
-    super.initState();
-    _startPhotoTimer();
-  }
-
-  @override
-  void didUpdateWidget(covariant OtherUserProfileView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.profile.id != widget.profile.id ||
-        oldWidget.profile.images?.length != widget.profile.images?.length) {
-      _photoIndex = 0;
-      _startPhotoTimer();
-    }
-  }
-
-  @override
-  void dispose() {
-    _photoTimer?.cancel();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  List<String> get _imageUrls {
-    final images = widget.profile.images;
-    if (images == null || images.isEmpty) return const [];
-    return images.map((img) => img.imageUrl).toList();
-  }
 
   String get _fullName {
     final profile = widget.profile;
@@ -135,14 +103,6 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     return base;
   }
 
-  bool get _showActionBar =>
-      widget.onMessage != null ||
-      widget.onMoreOptions != null ||
-      widget.onLike != null ||
-      widget.onSuperlike != null ||
-      widget.onShare != null ||
-      widget.showInteractionActions;
-
   int? get _apiMatchPercent {
     final profile = widget.profile;
     if (profile.matchPercentage != null && profile.matchPercentage! > 0) {
@@ -151,39 +111,6 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     final raw = profile.additionalData?['compatibility_score'];
     if (raw is int) return raw;
     return int.tryParse('$raw');
-  }
-
-  void _startPhotoTimer() {
-    _photoTimer?.cancel();
-    if (_imageUrls.length <= 1) return;
-    _photoTimer = Timer.periodic(_photoInterval, (_) {
-      if (!mounted) return;
-      _advancePhoto();
-    });
-  }
-
-  void _advancePhoto() {
-    final urls = _imageUrls;
-    if (urls.length <= 1) return;
-    setState(() {
-      _photoIndex = (_photoIndex + 1) % urls.length;
-    });
-  }
-
-  void _onHeroPhotoTap() {
-    _photoTimer?.cancel();
-    _advancePhoto();
-    _startPhotoTimer();
-  }
-
-  void _onGalleryPhotoTap(int index) {
-    setState(() => _photoIndex = index);
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
-    _startPhotoTimer();
   }
 
   @override
@@ -230,19 +157,24 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       job: widget.jobLabels.isNotEmpty ? widget.jobLabels.first : null,
     );
 
-    final detailGroups = buildCategorizedDetailGroups(
-      gender: widget.genderLabel,
+    final detailChips = buildProfileDetailChips(
+      job: widget.jobLabels.isNotEmpty ? widget.jobLabels.first : null,
+      education:
+          widget.educationLabels.isNotEmpty ? widget.educationLabels.first : null,
       height: widget.profile.height,
+      gender: widget.genderLabel,
+      relationGoals: widget.relationGoalLabels,
+      languages: widget.languageLabels,
       smoke: widget.profile.smoke,
       drink: widget.profile.drink,
       gym: widget.profile.gym,
-      jobs: widget.jobLabels,
-      educations: widget.educationLabels,
-      relationGoals: widget.relationGoalLabels,
-      preferredGenders: widget.preferredGenderLabels,
-      languages: widget.languageLabels,
-      musicGenres: widget.musicLabels,
     );
+
+    final photos = widget.profile.images ?? [];
+    final primaryImage = primaryProfileImage(photos);
+    final avatarUrl = primaryImage?.imageUrl;
+    final photoUrls = orderedProfilePhotoUrls(photos);
+    final galleryUrls = galleryProfileImages(photos).map((p) => p.imageUrl).toList();
 
     final bio = widget.profile.profileBio?.trim();
     final hasAbout = (bio != null && bio.isNotEmpty) ||
@@ -252,130 +184,84 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       onRefresh: widget.onRefresh ?? () async {},
       edgeOffset: MediaQuery.paddingOf(context).top,
       child: CustomScrollView(
-        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
           SliverToBoxAdapter(
-            child: OtherUserProfileHero(
-              imageUrls: _imageUrls,
-              photoIndex: _photoIndex,
-              fullName: _fullName,
-              age: _age,
-              isVerified: widget.profile.isVerified == true,
-              isOnline: widget.profile.isOnline == true,
-              tier: _tier,
-              locationLabel: _locationDisplay,
-              matchPercent: compatibility.matchPercent,
-              sharedInterestCount: compatibility.sharedInterests.length,
-              recentlyActiveLabel: formatRecentlyActive(widget.profile),
-              onBack: () => Navigator.maybePop(context),
-              onPhotoTap: _imageUrls.length > 1 ? _onHeroPhotoTap : null,
-            ),
-          ),
-          if (_showActionBar)
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _ProfileActionBarHeader(
-                child: OtherUserProfileActionBar(
-                  showDiscoveryActions: widget.showInteractionActions,
-                  isMatched: widget.isMatched,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ProfileHeroSection(
+                  fullName: _fullName,
+                  avatarUrl: avatarUrl,
+                  photoUrls: photoUrls,
+                  age: _age,
+                  isVerified: widget.profile.isVerified == true,
+                  tier: _tier,
+                  locationLabel: _locationDisplay,
+                  isOnline: widget.profile.isOnline == true,
+                  viewsCount: widget.profile.viewsCount ?? 0,
+                  superlikesRemaining: null,
+                  onEditProfile: () {},
+                  onEditPhoto: () {},
+                  onViewProfile: () {},
+                  viewerMode: true,
+                  onBack: () => Navigator.maybePop(context),
                   onMessage: widget.onMessage,
-                  onLike: widget.onLike,
-                  onSuperlike: widget.onSuperlike,
-                  onShare: widget.onShare,
+                  onLike: widget.showInteractionActions ? widget.onLike : null,
                   onMore: widget.onMoreOptions,
+                  matchPercent: compatibility.matchPercent,
+                  onPhotoTap: widget.onPhotoTap,
                 ),
-              ),
+                const SizedBox(height: _sectionGap),
+                PremiumCompatibilitySection(data: compatibility),
+                if (photoUrls.isNotEmpty) ...[
+                  const SizedBox(height: _sectionGap),
+                  PremiumPhotosSection(
+                    imageUrls: galleryUrls.isNotEmpty ? galleryUrls : photoUrls,
+                    totalCount: photoUrls.length,
+                    onEdit: () {},
+                    onAdd: () {},
+                    canAddMore: false,
+                    readOnly: true,
+                    onPhotoTap: widget.onPhotoTap ?? (_) {},
+                  ),
+                ],
+                if (hasAbout) ...[
+                  const SizedBox(height: _sectionGap),
+                  PremiumPersonalitySection(
+                    bio: bio,
+                    conversationStarters: conversationStarters,
+                    sectionTitle: 'About',
+                    sectionSubtitle: 'Get to know them',
+                    quoteBio: false,
+                    readOnly: true,
+                  ),
+                ],
+                if (detailChips.isNotEmpty) ...[
+                  const SizedBox(height: _sectionGap),
+                  PremiumDetailsGridSection(
+                    chips: detailChips,
+                    sectionTitle: 'About them',
+                    sectionSubtitle: 'Identity, lifestyle, and preferences',
+                  ),
+                ],
+                if (widget.interestLabels.isNotEmpty) ...[
+                  const SizedBox(height: _sectionGap),
+                  PremiumSharedInterestsSection(
+                    allLabels: widget.interestLabels,
+                    sharedLabels: compatibility.sharedInterests.toSet(),
+                  ),
+                ],
+                SizedBox(height: AppSpacing.spacingXXL + bottomInset),
+              ],
             ),
-          SliverToBoxAdapter(
-            child: PremiumCompatibilitySection(data: compatibility),
-          ),
-          if (hasAbout) ...[
-            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
-            SliverToBoxAdapter(
-              child: PremiumPersonalitySection(
-                bio: bio,
-                conversationStarters: conversationStarters,
-                sectionTitle: 'About',
-                sectionSubtitle: 'Get to know them',
-                quoteBio: false,
-                readOnly: true,
-              ),
-            ),
-          ],
-          if (widget.interestLabels.isNotEmpty) ...[
-            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
-            SliverToBoxAdapter(
-              child: PremiumSharedInterestsSection(
-                allLabels: widget.interestLabels,
-                sharedLabels: compatibility.sharedInterests.toSet(),
-              ),
-            ),
-          ],
-          if (detailGroups.isNotEmpty) ...[
-            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
-            SliverToBoxAdapter(
-              child: PremiumCategorizedDetailsSection(groups: detailGroups),
-            ),
-          ],
-          if (_imageUrls.length > 1) ...[
-            SliverToBoxAdapter(child: SizedBox(height: _sectionGap)),
-            SliverToBoxAdapter(
-              child: PremiumViewerPhotosSection(
-                imageUrls: _imageUrls,
-                onPhotoTap: _onGalleryPhotoTap,
-              ),
-            ),
-          ],
-          SliverToBoxAdapter(
-            child: SizedBox(height: AppSpacing.spacingXXL + bottomInset),
           ),
         ],
       ),
     );
   }
-}
-
-class _ProfileActionBarHeader extends SliverPersistentHeaderDelegate {
-  _ProfileActionBarHeader({required this.child});
-
-  final Widget child;
-
-  @override
-  double get minExtent => OtherUserProfileActionBar.preferredHeight;
-
-  @override
-  double get maxExtent => OtherUserProfileActionBar.preferredHeight;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return SizedBox(
-      height: maxExtent,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: overlapsContent
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: child,
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _ProfileActionBarHeader old) =>
-      old.child != child;
 }
 
 /// Resolve another user's plan tier from profile payload (not the viewer's tier).

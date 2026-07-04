@@ -295,8 +295,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 SocialLoginButton(getDeviceName: _getDeviceName),
                 SizedBox(height: AppSpacing.spacingLG),
                 // Sign in link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       'Already have an account? ',
@@ -308,6 +309,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       onPressed: () {
                         context.push(AppRoutes.login);
                       },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: Text(
                         'Sign In',
                         style: theme.textTheme.labelLarge?.copyWith(

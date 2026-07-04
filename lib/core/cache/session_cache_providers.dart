@@ -58,9 +58,6 @@ class CachedUserTierNotifier extends StateNotifier<String?> {
   UserTier? get asUserTier {
     final value = state;
     if (value == null) return null;
-    return UserTier.values.firstWhere(
-      (t) => t.key == value,
-      orElse: () => UserTier.basid,
-    );
+    return userTierFromApiKey(value);
   }
 }

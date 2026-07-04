@@ -353,26 +353,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 SizedBox(height: AppSpacing.spacingMD),
                 // Remember me & Forgot password
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (value) {
-                            setState(() {
-                              _rememberMe = value ?? false;
-                            });
-                          },
-                          activeColor: AppColors.accentPurple,
-                        ),
-                        Text(
-                          'Remember me',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: textColor,
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Checkbox(
+                            value: _rememberMe,
+                            onChanged: (value) {
+                              setState(() {
+                                _rememberMe = value ?? false;
+                              });
+                            },
+                            activeColor: AppColors.accentPurple,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                           ),
-                        ),
-                      ],
+                          Flexible(
+                            child: Text(
+                              'Remember me',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: textColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
@@ -384,6 +392,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           color: AppColors.accentViolet,
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -404,8 +414,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 SizedBox(height: AppSpacing.spacingLG),
                 // Sign up link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       'Don\'t have an account? ',
@@ -417,6 +428,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () {
                         context.push(AppRoutes.register);
                       },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: Text(
                         'Sign Up',
                         style: theme.textTheme.labelLarge?.copyWith(

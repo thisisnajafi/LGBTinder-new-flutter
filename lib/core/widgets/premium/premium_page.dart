@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../responsive/responsive.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
@@ -133,17 +134,20 @@ class PremiumTabPageLayout extends StatelessWidget {
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PremiumPageHeader(
-              title: title,
-              subtitle: subtitle,
-              action: action,
-            ),
-            const SizedBox(height: AppSpacing.spacingMD),
-            Expanded(child: body),
-          ],
+        child: ResponsiveGrid.constrained(
+          context,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PremiumPageHeader(
+                title: title,
+                subtitle: subtitle,
+                action: action,
+              ),
+              const SizedBox(height: AppSpacing.spacingMD),
+              Expanded(child: body),
+            ],
+          ),
         ),
       ),
     );
@@ -178,19 +182,22 @@ class PremiumDetailScaffold extends StatelessWidget {
       backgroundColor: bg,
       bottomNavigationBar: bottomNavigationBar,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PremiumPageHeader(
-              title: title,
-              subtitle: subtitle,
-              action: action,
-              showBackButton: true,
-              onBack: onBack,
-            ),
-            const SizedBox(height: AppSpacing.spacingSM),
-            Expanded(child: body),
-          ],
+        child: ResponsiveGrid.constrained(
+          context,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PremiumPageHeader(
+                title: title,
+                subtitle: subtitle,
+                action: action,
+                showBackButton: true,
+                onBack: onBack,
+              ),
+              const SizedBox(height: AppSpacing.spacingSM),
+              Expanded(child: body),
+            ],
+          ),
         ),
       ),
     );

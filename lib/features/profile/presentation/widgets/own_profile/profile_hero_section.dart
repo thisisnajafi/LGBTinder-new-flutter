@@ -23,6 +23,7 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
     super.key,
     required this.fullName,
     required this.avatarUrl,
+    required this.photoUrls,
     required this.age,
     required this.isVerified,
     required this.tier,
@@ -33,10 +34,18 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
     required this.onEditProfile,
     required this.onEditPhoto,
     required this.onViewProfile,
+    this.viewerMode = false,
+    this.onBack,
+    this.onMessage,
+    this.onLike,
+    this.onMore,
+    this.matchPercent,
+    this.onPhotoTap,
   });
 
   final String fullName;
   final String? avatarUrl;
+  final List<String> photoUrls;
   final int? age;
   final bool isVerified;
   final UserTier tier;
@@ -47,6 +56,13 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
   final VoidCallback onEditProfile;
   final VoidCallback onEditPhoto;
   final VoidCallback onViewProfile;
+  final bool viewerMode;
+  final VoidCallback? onBack;
+  final VoidCallback? onMessage;
+  final VoidCallback? onLike;
+  final VoidCallback? onMore;
+  final int? matchPercent;
+  final void Function(int index)? onPhotoTap;
 
   @override
   ConsumerState<ProfileHeroSection> createState() =>
@@ -57,14 +73,53 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   int _matchesCount = 0;
   int _likesReceived = 0;
   bool _statsLoading = true;
+  PageController? _photoController;
+  int _photoIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadEngagementStats();
+    _initPhotoController();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileHeroSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_samePhotoUrls(oldWidget.photoUrls, widget.photoUrls)) {
+      _photoIndex = 0;
+      _photoController?.dispose();
+      _initPhotoController();
+    }
+  }
+
+  void _initPhotoController() {
+    if (widget.photoUrls.length > 1) {
+      _photoController = PageController();
+    } else {
+      _photoController = null;
+    }
+  }
+
+  bool _samePhotoUrls(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _photoController?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadEngagementStats() async {
+    if (widget.viewerMode) {
+      if (mounted) setState(() => _statsLoading = false);
+      return;
+    }
     try {
       final likesService = ref.read(likesServiceProvider);
       final results = await Future.wait([
@@ -120,7 +175,9 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
           child: Stack(
             children: [
               Positioned.fill(child: _CoverBackground(
-                avatarUrl: widget.avatarUrl,
+                avatarUrl: widget.photoUrls.isNotEmpty
+                    ? widget.photoUrls[_photoIndex.clamp(0, widget.photoUrls.length - 1)]
+                    : widget.avatarUrl,
                 isDark: isDark,
               )),
               Positioned.fill(
@@ -143,6 +200,34 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.viewerMode && widget.onBack != null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _HeroTapScale(
+                          onTap: widget.onBack!,
+                          semanticLabel: 'Back',
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Center(
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.arrowLeft,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (widget.viewerMode && widget.onBack != null)
+                      const SizedBox(height: AppSpacing.spacingSM),
                     _buildPhotoCard(context, photoSize, isDark),
                     const SizedBox(height: AppSpacing.spacingMD),
                     _buildIdentityRow(context, isDark),
@@ -155,8 +240,13 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                     ),
                     const SizedBox(height: AppSpacing.spacingMD),
                     _buildQuickActions(context, isDark),
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    _buildStatsPanel(context, isDark),
+                    if (!widget.viewerMode) ...[
+                      const SizedBox(height: AppSpacing.spacingMD),
+                      _buildStatsPanel(context, isDark),
+                    ] else if (widget.matchPercent != null) ...[
+                      const SizedBox(height: AppSpacing.spacingMD),
+                      _buildViewerMatchChip(context),
+                    ],
                   ],
                 ),
               ),
@@ -168,105 +258,168 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   }
 
   Widget _buildPhotoCard(BuildContext context, double size, bool isDark) {
+    final urls = widget.photoUrls.isNotEmpty
+        ? widget.photoUrls
+        : (widget.avatarUrl != null ? [widget.avatarUrl!] : const <String>[]);
+    final hasMultiple = urls.length > 1 && _photoController != null;
+
+    final photoStack = SizedBox(
+      width: size + 12,
+      height: size + 12,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size + 8,
+            height: size + 8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.accentGradientStart,
+                  AppColors.accentPink,
+                  AppColors.feedbackInfo,
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.surfaceDark.withValues(alpha: 0.55)
+                      : Colors.white.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
+                  child: hasMultiple
+                      ? PageView.builder(
+                          controller: _photoController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const PageScrollPhysics(),
+                          onPageChanged: (index) {
+                            if (!mounted) return;
+                            setState(() => _photoIndex = index);
+                          },
+                          itemCount: urls.length,
+                          itemBuilder: (context, index) {
+                            return GestureDetector(
+                              onTap: widget.onPhotoTap == null
+                                  ? null
+                                  : () => widget.onPhotoTap!(index),
+                              child: ProfileImageWidget(
+                                imageUrl: urls[index],
+                                width: size,
+                                height: size,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          },
+                        )
+                      : ProfileImageWidget(
+                          imageUrl:
+                              urls.isNotEmpty ? urls.first : widget.avatarUrl,
+                          width: size,
+                          height: size,
+                          fit: BoxFit.cover,
+                        ),
+                ),
+              ),
+            ),
+          ),
+          if (hasMultiple)
+            Positioned(
+              bottom: 6,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(urls.length, (index) {
+                    final active = index == _photoIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: active ? 16 : 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          if (widget.isVerified)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: AppColors.brandGradient,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? AppColors.backgroundDark : Colors.white,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.getIconPath('tick-circle', style: 'bold'),
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          if (!widget.viewerMode)
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: _HeroTapScale(
+                onTap: widget.onEditPhoto,
+                semanticLabel: 'Change profile photo',
+                child: const ProfileCameraBadge(size: 30, iconSize: 14),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    if (hasMultiple || widget.viewerMode) {
+      return Center(child: photoStack);
+    }
+
     return Center(
       child: _HeroTapScale(
         onTap: widget.onViewProfile,
         onLongPress: widget.onEditPhoto,
         semanticLabel: 'View profile. Long press to change photo.',
-        child: SizedBox(
-          width: size + 12,
-          height: size + 12,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: size + 8,
-                height: size + 8,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.accentGradientStart,
-                      AppColors.accentPink,
-                      AppColors.feedbackInfo,
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-                  child: Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceDark.withValues(alpha: 0.55)
-                          : Colors.white.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.22),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
-                      child: ProfileImageWidget(
-                        imageUrl: widget.avatarUrl,
-                        width: size,
-                        height: size,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (widget.isVerified)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.brandGradient,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDark ? AppColors.backgroundDark : Colors.white,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: AppSvgIcon(
-                        assetPath: AppIcons.getIconPath('tick-circle', style: 'bold'),
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: _HeroTapScale(
-                  onTap: widget.onEditPhoto,
-                  semanticLabel: 'Change profile photo',
-                  child: const ProfileCameraBadge(size: 30, iconSize: 14),
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: photoStack,
       ),
     );
   }
@@ -377,6 +530,43 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   }
 
   Widget _buildQuickActions(BuildContext context, bool isDark) {
+    if (widget.viewerMode) {
+      return Row(
+        children: [
+          if (widget.onMessage != null)
+            Expanded(
+              flex: 3,
+              child: _QuickActionButton(
+                icon: AppIcons.message,
+                label: 'Message',
+                isPrimary: true,
+                onTap: widget.onMessage!,
+              ),
+            ),
+          if (widget.onLike != null) ...[
+            const SizedBox(width: AppSpacing.spacingSM),
+            Expanded(
+              child: _QuickActionButton(
+                icon: AppIcons.heartOutline,
+                label: 'Like',
+                onTap: widget.onLike!,
+              ),
+            ),
+          ],
+          if (widget.onMore != null) ...[
+            const SizedBox(width: AppSpacing.spacingSM),
+            Expanded(
+              child: _QuickActionButton(
+                icon: AppIcons.more,
+                label: 'More',
+                onTap: widget.onMore!,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
     return Row(
       children: [
         Expanded(
@@ -477,6 +667,45 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
       width: 1,
       height: 36,
       color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.2),
+    );
+  }
+
+  Widget _buildViewerMatchChip(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.spacingSM,
+        horizontal: AppSpacing.spacingMD,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark.withValues(alpha: 0.85)
+            : AppColors.cardBackgroundLight.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(
+          color: AppColors.accentPink.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AppSvgIcon(
+            assetPath: AppIcons.heart,
+            size: 18,
+            color: AppColors.accentPink,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${widget.matchPercent}% match',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.accentPink,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

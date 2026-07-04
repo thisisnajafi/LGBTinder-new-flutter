@@ -325,22 +325,40 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingXXL),
-              // Code input fields
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(6, (index) {
-                  return _buildCodeField(
-                    index: index,
-                    controller: _codeControllers[index],
-                    focusNode: _focusNodes[index],
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                    surfaceColor: surfaceColor,
-                    borderColor: borderColor,
+              // Code input fields — flexible width for small screens
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  const gap = AppSpacing.spacingSM;
+                  const fieldCount = 6;
+                  final fieldWidth = ((constraints.maxWidth - gap * (fieldCount - 1)) /
+                          fieldCount)
+                      .clamp(40.0, 56.0);
+                  final fieldHeight = (fieldWidth * 1.2).clamp(52.0, 60.0);
+
+                  return Row(
+                    children: [
+                      for (var index = 0; index < fieldCount; index++) ...[
+                        if (index > 0) SizedBox(width: gap),
+                        Expanded(
+                          child: _buildCodeField(
+                            index: index,
+                            controller: _codeControllers[index],
+                            focusNode: _focusNodes[index],
+                            textColor: textColor,
+                            secondaryTextColor: secondaryTextColor,
+                            surfaceColor: surfaceColor,
+                            borderColor: borderColor,
+                            height: fieldHeight,
+                          ),
+                        ),
+                      ],
+                    ],
                   );
-                }),
+                },
               ),
               SizedBox(height: AppSpacing.spacingXL),
               // Verify button
@@ -353,8 +371,9 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
               ),
               SizedBox(height: AppSpacing.spacingLG),
               // Resend code
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     'Didn\'t receive the code? ',
@@ -426,20 +445,26 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     required Color secondaryTextColor,
     required Color surfaceColor,
     required Color borderColor,
+    required double height,
   }) {
-    return Container(
-      width: 50,
-      height: 60,
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(
-          color: focusNode.hasFocus
-              ? AppColors.accentPurple
-              : borderColor,
-          width: focusNode.hasFocus ? 2 : 1,
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: focusNode,
+      builder: (context, child) {
+        return Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            border: Border.all(
+              color: focusNode.hasFocus
+                  ? AppColors.accentPurple
+                  : borderColor,
+              width: focusNode.hasFocus ? 2 : 1,
+            ),
+          ),
+          child: child,
+        );
+      },
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -452,7 +477,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
         ],
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           counterText: '',
           border: InputBorder.none,
           contentPadding: EdgeInsets.zero,

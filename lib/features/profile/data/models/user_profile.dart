@@ -38,6 +38,7 @@ class UserProfile {
   final int? minAgePreference;
   final int? maxAgePreference;
   final bool? isVerified;
+  final ProfileIdentityVerification? verification;
   final bool? isPremium;
   final bool? isOnline;
   final bool? isPhoneVerified;
@@ -85,6 +86,7 @@ class UserProfile {
     this.minAgePreference,
     this.maxAgePreference,
     this.isVerified,
+    this.verification,
     this.isPremium,
     this.isOnline,
     this.isPhoneVerified,
@@ -285,6 +287,11 @@ class UserProfile {
       minAgePreference: json['min_age_preference'] != null ? ((json['min_age_preference'] is int) ? json['min_age_preference'] as int : int.tryParse(json['min_age_preference'].toString())) : null,
       maxAgePreference: json['max_age_preference'] != null ? ((json['max_age_preference'] is int) ? json['max_age_preference'] as int : int.tryParse(json['max_age_preference'].toString())) : null,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      verification: json['verification'] is Map
+          ? ProfileIdentityVerification.fromJson(
+              Map<String, dynamic>.from(json['verification'] as Map),
+            )
+          : null,
       isPremium: json['is_premium'] == true || json['is_premium'] == 1,
       isOnline: json['is_online'] == true || json['is_online'] == 1,
       isPhoneVerified: json['is_phone_verified'] == true || json['is_phone_verified'] == 1,
@@ -346,6 +353,13 @@ class UserProfile {
       if (minAgePreference != null) 'min_age_preference': minAgePreference,
       if (maxAgePreference != null) 'max_age_preference': maxAgePreference,
       if (isVerified != null) 'is_verified': isVerified,
+      if (verification != null) 'verification': {
+        'score': verification!.score,
+        'badge': verification!.badge,
+        'photo_verified': verification!.photoVerified,
+        'id_verified': verification!.idVerified,
+        'video_verified': verification!.videoVerified,
+      },
       if (isPremium != null) 'is_premium': isPremium,
       if (isOnline != null) 'is_online': isOnline,
       if (isPhoneVerified != null) 'is_phone_verified': isPhoneVerified,

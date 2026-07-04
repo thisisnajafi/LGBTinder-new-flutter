@@ -46,6 +46,7 @@ class PremiumPhotosSection extends StatelessWidget {
     required this.onAdd,
     this.canAddMore = true,
     required this.onPhotoTap,
+    this.readOnly = false,
     this.shellMargin,
   });
 
@@ -55,6 +56,7 @@ class PremiumPhotosSection extends StatelessWidget {
   final VoidCallback onAdd;
   final bool canAddMore;
   final void Function(int index) onPhotoTap;
+  final bool readOnly;
   final EdgeInsets? shellMargin;
 
   @override
@@ -62,10 +64,15 @@ class PremiumPhotosSection extends StatelessWidget {
     final previewCount = AppConstants.profilePhotoGridPreview;
     final hasPhotos = imageUrls.isNotEmpty;
     final display = imageUrls.take(previewCount).toList();
-    final showAddTile = canAddMore && (hasPhotos || imageUrls.isEmpty);
+    final allowAdd = !readOnly && canAddMore;
+    final showAddTile = allowAdd && (hasPhotos || imageUrls.isEmpty);
     final itemCount = hasPhotos
         ? display.length + (showAddTile ? 1 : 0)
-        : (canAddMore ? 3 : 0);
+        : (allowAdd ? 3 : 0);
+
+    if (readOnly && !hasPhotos) {
+      return const SizedBox.shrink();
+    }
 
     return PremiumProfileShell(
       margin: shellMargin ?? ProfileContentLayout.shellMargin,
@@ -77,8 +84,8 @@ class PremiumPhotosSection extends StatelessWidget {
             subtitle: hasPhotos
                 ? '$totalCount image${totalCount == 1 ? '' : 's'}'
                 : 'Profiles with 3+ photos get 5× more matches',
-            actionLabel: hasPhotos ? 'Edit' : null,
-            onAction: hasPhotos ? onEdit : null,
+            actionLabel: hasPhotos && !readOnly ? 'Edit' : null,
+            onAction: hasPhotos && !readOnly ? onEdit : null,
           ),
           const SizedBox(height: AppSpacing.spacingMD),
           GridView.builder(
@@ -93,7 +100,7 @@ class PremiumPhotosSection extends StatelessWidget {
             itemCount: itemCount,
             itemBuilder: (context, index) {
               if (!hasPhotos) {
-                return _AddPhotoTile(onTap: canAddMore ? onAdd : () {});
+                return _AddPhotoTile(onTap: allowAdd ? onAdd : () {});
               }
               if (index < display.length) {
                 return PremiumTapScale(
@@ -676,11 +683,7 @@ class PremiumMembershipSection extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final isBasid = tier == UserTier.basid;
 
-    final tierLabel = switch (tier) {
-      UserTier.golden => 'Golden',
-      UserTier.silder => 'Silder',
-      UserTier.basid => 'Basid',
-    };
+    final tierLabel = tier.displayLabel;
 
     final benefits = switch (tier) {
       UserTier.golden => const [

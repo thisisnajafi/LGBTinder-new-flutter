@@ -124,7 +124,7 @@ class SuperlikeSubscriptionSnapshot {
     }
 
     return SuperlikeSubscriptionSnapshot(
-      tier: json['tier']?.toString() ?? 'basid',
+      tier: json['tier']?.toString() ?? 'basic',
       isActive: parseBool(json['is_active']),
       superlikesPerDay: parseInt(json['superlikes_per_day']),
       superlikesUsedToday: parseInt(json['superlikes_used_today']),

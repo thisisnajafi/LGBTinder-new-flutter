@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../core/constants/animation_constants.dart';
 import '../core/theme/app_theme.dart';
+import '../core/responsive/responsive.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
 import '../shared/models/api_error.dart';
@@ -486,6 +487,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final screenHeight = MediaQuery.sizeOf(context).height;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     final animationsEnabled = AppAnimations.animationsEnabled(context);
     final titleFontSize = textTheme.displaySmall?.fontSize ?? 24.0;
     final taglineFontSize = textTheme.bodyLarge?.fontSize ?? 16.0;
@@ -501,90 +503,110 @@ class _SplashPageState extends ConsumerState<SplashPage>
                 ),
               ),
             ),
-            Positioned(
-              top: screenHeight * 0.30,
-              left: 0,
-              right: 0,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  FadeTransition(
-                    opacity: _logoFade,
-                    child: ScaleTransition(
-                      scale: _logoScale,
-                      child: _buildLogoCircle(),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  SlideTransition(
-                    position: _titleSlide,
-                    child: FadeTransition(
-                      opacity: _titleFade,
-                      child: Text(
-                        'LGBTFinder',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: titleFontSize,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
+            SafeArea(
+              bottom: false,
+              child: ResponsiveGrid.constrainedTo(
+                context,
+                SizedBox(
+                  height: screenHeight,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: screenHeight * 0.30,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            FadeTransition(
+                              opacity: _logoFade,
+                              child: ScaleTransition(
+                                scale: _logoScale,
+                                child: _buildLogoCircle(),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            SlideTransition(
+                              position: _titleSlide,
+                              child: FadeTransition(
+                                opacity: _titleFade,
+                                child: Text(
+                                  'LGBTFinder',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: titleFontSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SlideTransition(
+                              position: _taglineSlide,
+                              child: FadeTransition(
+                                opacity: _taglineFade,
+                                child: Text(
+                                  'Find your perfect match',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: taglineFontSize,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white.withValues(alpha: 0.82),
+                                    letterSpacing: 0.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SlideTransition(
-                    position: _taglineSlide,
-                    child: FadeTransition(
-                      opacity: _taglineFade,
-                      child: Text(
-                        'Find your perfect match',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: taglineFontSize,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.white.withValues(alpha: 0.82),
-                          letterSpacing: 0.2,
+                      Positioned(
+                        bottom: screenHeight * 0.12,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: FadeTransition(
+                            opacity: _dotsFade,
+                            child: _buildPulsingDots(
+                              animationsEnabled: animationsEnabled,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              bottom: screenHeight * 0.12,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: FadeTransition(
-                  opacity: _dotsFade,
-                  child: _buildPulsingDots(
-                    animationsEnabled: animationsEnabled,
+                      Positioned(
+                        bottom: bottomInset + 24,
+                        left: 0,
+                        right: 0,
+                        child: FutureBuilder<PackageInfo>(
+                          future: _packageInfoFuture,
+                          builder: (context, snapshot) {
+                            final version = snapshot.hasData
+                                ? 'v${snapshot.data!.version}'
+                                : 'v1.0.0';
+                            return Text(
+                              version,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.40),
+                                fontSize: 12,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              bottom: 24,
-              left: 0,
-              right: 0,
-              child: FutureBuilder<PackageInfo>(
-                future: _packageInfoFuture,
-                builder: (context, snapshot) {
-                  final version = snapshot.hasData
-                      ? 'v${snapshot.data!.version}'
-                      : 'v1.0.0';
-                  return Text(
-                    version,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.40),
-                      fontSize: 12,
-                    ),
-                  );
-                },
+                tablet: 500,
               ),
             ),
           ],

@@ -18,6 +18,7 @@ import '../features/calls/pages/outgoing_call_page.dart';
 import '../pages/chat_list_page.dart';
 import '../pages/chat_page.dart';
 import '../pages/profile_edit_page.dart';
+import '../screens/profile/profile_verification_screen.dart';
 import '../screens/discovery/profile_detail_screen.dart';
 import '../screens/blocked_users_screen.dart';
 import '../features/matching/presentation/screens/matches_screen.dart';
@@ -61,6 +62,7 @@ class AppRoutes {
   static const String outgoingCall = '/call/outgoing';
   static const String profile = '/profile';
   static const String profileEdit = '/profile/edit';
+  static const String profileVerification = '/profile/verification';
   static const String profileDetail = '/profile-detail';
   static const String billingHistory = '/billing-history';
   static const String settings = '/settings';
@@ -483,6 +485,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.profileEdit,
         name: 'profile-edit',
         pageBuilder: (context, state) => slideFadePage(state, const ProfileEditPage()),
+      ),
+
+      GoRoute(
+        path: AppRoutes.profileVerification,
+        name: 'profileVerification',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const ProfileVerificationScreen()),
       ),
       
       // Profile Detail (requires auth)

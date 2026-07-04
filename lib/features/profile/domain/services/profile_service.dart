@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:lgbtindernew/core/constants/api_endpoints.dart';
@@ -5,6 +6,7 @@ import 'package:lgbtindernew/shared/services/api_service.dart';
 import 'package:lgbtindernew/shared/services/token_storage_service.dart';
 import 'package:lgbtindernew/core/network/dio_client.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/models/update_profile_request.dart';
 import '../../data/models/user_image.dart';
@@ -243,86 +245,94 @@ class ProfileService {
     }
   }
 
+  Future<ProfileVerification> _refreshVerificationStatusAfterAction() async {
+    return getVerificationStatus();
+  }
+
+  Future<ProfileVerification> _submitVerificationFile({
+    required String endpoint,
+    required String fieldName,
+    required String filePath,
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    final response = await _apiService.uploadFile<Map<String, dynamic>>(
+      endpoint,
+      File(filePath),
+      fieldName: fieldName,
+      onSendProgress: onUploadProgress == null
+          ? null
+          : (sent, total) {
+              if (total > 0) {
+                onUploadProgress(sent / total);
+              }
+            },
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+
+    VerificationSubmitResult.fromJson(
+      response.data ?? <String, dynamic>{},
+    );
+
+    return _refreshVerificationStatusAfterAction();
+  }
+
   /// Submit photo verification
-  Future<ProfileVerification> submitPhotoVerification(String photoPath) async {
+  Future<ProfileVerification> submitPhotoVerification(
+    String photoPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
     try {
-      final formData = FormData.fromMap({
-        'photo': await MultipartFile.fromFile(
-          photoPath,
-          filename: photoPath.split('/').last,
-        ),
-      });
-
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.profileVerificationPhoto,
-        data: formData,
-        fromJson: (json) => json as Map<String, dynamic>,
+      return await _submitVerificationFile(
+        endpoint: ApiEndpoints.profileVerificationPhoto,
+        fieldName: 'photo',
+        filePath: photoPath,
+        onUploadProgress: onUploadProgress,
       );
-
-      if (response.isSuccess && response.data != null) {
-        return ProfileVerification.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
-      }
     } catch (e) {
       rethrow;
     }
   }
 
   /// Submit ID verification
-  Future<ProfileVerification> submitIdVerification(String idPath) async {
+  Future<ProfileVerification> submitIdVerification(
+    String idPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
     try {
-      final formData = FormData.fromMap({
-        'id_document': await MultipartFile.fromFile(
-          idPath,
-          filename: idPath.split('/').last,
-        ),
-      });
-
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.profileVerificationId,
-        data: formData,
-        fromJson: (json) => json as Map<String, dynamic>,
+      return await _submitVerificationFile(
+        endpoint: ApiEndpoints.profileVerificationId,
+        fieldName: 'id_document',
+        filePath: idPath,
+        onUploadProgress: onUploadProgress,
       );
-
-      if (response.isSuccess && response.data != null) {
-        return ProfileVerification.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
-      }
     } catch (e) {
       rethrow;
     }
   }
 
   /// Submit video verification
-  Future<ProfileVerification> submitVideoVerification(String videoPath) async {
+  Future<ProfileVerification> submitVideoVerification(
+    String videoPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
     try {
-      final formData = FormData.fromMap({
-        'video': await MultipartFile.fromFile(
-          videoPath,
-          filename: videoPath.split('/').last,
-        ),
-      });
-
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.profileVerificationVideo,
-        data: formData,
-        fromJson: (json) => json as Map<String, dynamic>,
+      return await _submitVerificationFile(
+        endpoint: ApiEndpoints.profileVerificationVideo,
+        fieldName: 'video',
+        filePath: videoPath,
+        onUploadProgress: onUploadProgress,
       );
-
-      if (response.isSuccess && response.data != null) {
-        return ProfileVerification.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
-      }
     } catch (e) {
       rethrow;
     }
   }
 
   /// Get verification history
-  Future<List<ProfileVerification>> getVerificationHistory() async {
+  Future<List<VerificationHistoryItem>> getVerificationHistory() async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.profileVerificationHistory,
@@ -330,8 +340,14 @@ class ProfileService {
       );
 
       if (response.isSuccess && response.data != null) {
-        final history = response.data!['history'] as List<dynamic>? ?? [];
-        return history.map((item) => ProfileVerification.fromJson(item as Map<String, dynamic>)).toList();
+        final verifications =
+            response.data!['verifications'] as List<dynamic>? ?? [];
+        return verifications
+            .whereType<Map>()
+            .map((item) => VerificationHistoryItem.fromJson(
+                  Map<String, dynamic>.from(item),
+                ))
+            .toList();
       } else {
         throw Exception(response.message);
       }
@@ -341,7 +357,7 @@ class ProfileService {
   }
 
   /// Cancel verification
-  Future<void> cancelVerification(int verificationId) async {
+  Future<ProfileVerification> cancelVerification(int verificationId) async {
     try {
       final response = await _apiService.delete<Map<String, dynamic>>(
         ApiEndpoints.profileVerificationCancel(verificationId),
@@ -351,21 +367,47 @@ class ProfileService {
       if (!response.isSuccess) {
         throw Exception(response.message);
       }
+
+      return _refreshVerificationStatusAfterAction();
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Get verification guidelines
-  Future<Map<String, dynamic>> getVerificationGuidelines() async {
+  static const _guidelinesCacheKey = 'verification:guidelines';
+  static const _guidelinesSavedAtKey = 'verification:guidelines:savedAt';
+  static const _guidelinesTtl = Duration(hours: 24);
+
+  /// Get verification guidelines (cached 24h in shared_preferences)
+  Future<VerificationGuidelines> getVerificationGuidelines() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedAtMs = prefs.getInt(_guidelinesSavedAtKey);
+      final cachedJson = prefs.getString(_guidelinesCacheKey);
+
+      if (savedAtMs != null && cachedJson != null) {
+        final age = DateTime.now().difference(
+          DateTime.fromMillisecondsSinceEpoch(savedAtMs),
+        );
+        if (age < _guidelinesTtl) {
+          final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
+          return VerificationGuidelines.fromJson(decoded);
+        }
+      }
+
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.profileVerificationGuidelines,
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (response.isSuccess && response.data != null) {
-        return response.data!;
+        final envelope = <String, dynamic>{'data': response.data};
+        await prefs.setString(_guidelinesCacheKey, jsonEncode(envelope));
+        await prefs.setInt(
+          _guidelinesSavedAtKey,
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        return VerificationGuidelines.fromJson(envelope);
       } else {
         throw Exception(response.message);
       }

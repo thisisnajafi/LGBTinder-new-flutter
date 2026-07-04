@@ -1,5 +1,6 @@
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/models/match_reason.dart';
+import '../../../profile/data/models/profile_verification.dart';
 
 /// Discovery profile model (simplified user profile for discovery)
 class DiscoveryProfile {
@@ -24,6 +25,7 @@ class DiscoveryProfile {
   final String? educationTitle;
   final bool? isSuperliked;
   final bool? isVerified;
+  final ProfileIdentityVerification? verification;
   final bool? isPremium;
   final bool? isOnline;
   final DateTime? lastActive;
@@ -50,6 +52,7 @@ class DiscoveryProfile {
     this.educationTitle,
     this.isSuperliked,
     this.isVerified,
+    this.verification,
     this.isPremium,
     this.isOnline,
     this.lastActive,
@@ -93,6 +96,11 @@ class DiscoveryProfile {
       educationTitle: _parseFirstTitle(json['educations']) ?? json['education']?.toString() ?? json['education_title']?.toString(),
       isSuperliked: json['is_superliked'] == true || json['is_superliked'] == 1,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      verification: json['verification'] is Map
+          ? ProfileIdentityVerification.fromJson(
+              Map<String, dynamic>.from(json['verification'] as Map),
+            )
+          : null,
       isPremium: json['is_premium'] == true || json['is_premium'] == 1,
       isOnline: json['is_online'] == true || json['is_online'] == 1,
       lastActive: json['last_active'] != null ? DateTime.tryParse(json['last_active'].toString()) : null,
@@ -122,6 +130,11 @@ class DiscoveryProfile {
       if (educationTitle != null) 'education_title': educationTitle,
       if (isSuperliked != null) 'is_superliked': isSuperliked,
       if (isVerified != null) 'is_verified': isVerified,
+      if (verification != null)
+        'verification': {
+          'score': verification!.score,
+          'badge': verification!.badge,
+        },
       if (isPremium != null) 'is_premium': isPremium,
       if (isOnline != null) 'is_online': isOnline,
       if (lastActive != null) 'last_active': lastActive!.toIso8601String(),

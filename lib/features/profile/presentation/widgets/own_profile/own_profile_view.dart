@@ -9,6 +9,7 @@ import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
 import '../../../../payments/data/models/subscription_plan.dart';
 import '../../../data/models/user_profile.dart';
+import '../../../data/models/profile_verification.dart';
 import '../../../providers/profile_page_cache_provider.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
@@ -16,7 +17,7 @@ import '../../../../settings/presentation/screens/matching_preferences_screen.da
 import '../../../../../routes/app_router.dart';
 import '../../../../../screens/active_sessions_screen.dart';
 import '../../../../../screens/privacy_settings_screen.dart';
-import '../../../../../screens/profile/profile_verification_screen.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
 import 'profile_details_sections.dart';
@@ -52,6 +53,7 @@ class OwnProfileView extends ConsumerWidget {
     final photos = profile.images ?? [];
     final primaryImage = primaryProfileImage(photos);
     final avatarUrl = primaryImage?.imageUrl;
+    final photoUrls = orderedProfilePhotoUrls(photos);
     final galleryPhotos = galleryProfileImages(photos);
     final galleryUrls = galleryPhotos.map((p) => p.imageUrl).toList();
     final galleryCount = galleryPhotos.length;
@@ -105,7 +107,8 @@ class OwnProfileView extends ConsumerWidget {
     );
     final hubActions = _buildHubActions(
       context,
-      isVerified: isVerified,
+      ref: ref,
+      profile: profile,
       tier: tier,
     );
 
@@ -118,6 +121,7 @@ class OwnProfileView extends ConsumerWidget {
               ProfileHeroSection(
                 fullName: fullName,
                 avatarUrl: avatarUrl,
+                photoUrls: photoUrls,
                 age: age,
                 isVerified: isVerified,
                 tier: tier,
@@ -128,6 +132,7 @@ class OwnProfileView extends ConsumerWidget {
                 onEditProfile: () => _openEdit(context, ref),
                 onEditPhoto: onEditPhotos,
                 onViewProfile: onViewProfile,
+                onPhotoTap: onPhotoTap,
               ),
               const SizedBox(height: _sectionGap),
               PremiumPhotosSection(
@@ -171,7 +176,8 @@ class OwnProfileView extends ConsumerWidget {
 
   List<ProfileHubActionData> _buildHubActions(
     BuildContext context, {
-    required bool isVerified,
+    required WidgetRef ref,
+    required UserProfile profile,
     required UserTier tier,
   }) {
     final isBasid = tier == UserTier.basid;
@@ -183,15 +189,49 @@ class OwnProfileView extends ConsumerWidget {
       );
     }
 
+    final liveVerification = ref.watch(profileProvider.select((s) => s.verification));
+    final identity = liveVerification != null
+        ? _identityFromLive(liveVerification)
+        : profile.verification;
+
+    final badge = identity?.badge ?? 'Unverified';
+    final score = identity?.score ?? 0;
+    final hasPending = liveVerification?.pendingVerificationsCount != null &&
+        liveVerification!.pendingVerificationsCount > 0;
+
+    String statusLabel;
+    Color statusColor;
+    String subtitle;
+
+    if (badge == 'Fully Verified') {
+      statusLabel = 'Fully Verified';
+      statusColor = AppColors.feedbackSuccess;
+      subtitle = 'Score: $score/100';
+    } else if (hasPending) {
+      statusLabel = 'Under Review';
+      statusColor = AppColors.feedbackWarning;
+      subtitle = 'Your submission is being reviewed';
+    } else if (score > 0) {
+      statusLabel = badge;
+      statusColor = Theme.of(context).colorScheme.primary;
+      subtitle = 'Score: $score/100';
+    } else {
+      statusLabel = 'Verify Identity';
+      statusColor = Theme.of(context)
+          .colorScheme
+          .onSurface
+          .withValues(alpha: 0.45);
+      subtitle = 'Build trust and get 3× more matches';
+    }
+
     return [
       ProfileHubActionData(
         iconPath: AppIcons.verify,
         title: 'Verification',
-        subtitle: isVerified ? 'Identity confirmed' : 'Build trust faster',
-        statusLabel: isVerified ? 'Verified' : 'Pending',
-        statusColor:
-            isVerified ? AppColors.feedbackSuccess : AppColors.feedbackWarning,
-        onTap: () => pushScreen(const ProfileVerificationScreen()),
+        subtitle: subtitle,
+        statusLabel: statusLabel,
+        statusColor: statusColor,
+        onTap: () => context.pushNamed('profileVerification'),
       ),
       ProfileHubActionData(
         iconPath: AppIcons.discover,
@@ -219,6 +259,16 @@ class OwnProfileView extends ConsumerWidget {
         onTap: () => context.pushNamed('subscription-plans'),
       ),
     ];
+  }
+
+  ProfileIdentityVerification? _identityFromLive(ProfileVerification live) {
+    return ProfileIdentityVerification(
+      score: live.verificationScore,
+      badge: live.verificationBadge,
+      photoVerified: live.photoVerified,
+      idVerified: live.idVerified,
+      videoVerified: live.videoVerified,
+    );
   }
 
   void _openEdit(BuildContext context, WidgetRef ref) async {

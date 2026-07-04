@@ -20,23 +20,14 @@ final userTierProvider = Provider<UserTier>((ref) {
 
   final cachedTier = ref.watch(cachedUserTierProvider);
   if (cachedTier != null) {
-    return UserTier.values.firstWhere(
-      (t) => t.key == cachedTier,
-      orElse: () => UserTier.basid,
-    );
+    return userTierFromApiKey(cachedTier);
   }
 
   final planLimits = ref.watch(planLimitsProvider).valueOrNull;
   if (planLimits != null) {
     final apiTier = planLimits.planInfo.tier?.toLowerCase().trim();
     if (apiTier != null && apiTier.isNotEmpty) {
-      return UserTier.values.firstWhere(
-        (t) => t.key == apiTier,
-        orElse: () => userTierFromPlan(
-          planId: planLimits.planInfo.planId,
-          planName: planLimits.planInfo.planName,
-        ),
-      );
+      return userTierFromApiKey(apiTier);
     }
     return userTierFromPlan(
       planId: planLimits.planInfo.planId,

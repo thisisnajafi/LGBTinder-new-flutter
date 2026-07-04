@@ -10,21 +10,11 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
+import '../core/responsive/responsive.dart';
 import '../core/widgets/app_page_header.dart';
 import '../features/profile/presentation/widgets/own_profile/own_profile_view.dart';
 import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
-import '../features/profile/widgets/profile_photo_carousel.dart';
-import '../features/profile/widgets/tier_badge.dart';
-import '../features/profile/widgets/profile_completeness_indicator.dart';
-import '../features/profile/data/models/profile_completion.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
-import '../shared/providers/user_tier_provider.dart';
-import '../shared/models/user_tier.dart';
-import '../widgets/profile/profile_bio.dart';
-import '../widgets/profile/profile_info_sections.dart';
-import '../widgets/profile/safety_verification_section.dart';
-import '../core/widgets/loading_indicator.dart';
-import '../core/widgets/profile_stats_card.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
 import '../widgets/match/match_screen.dart';
@@ -68,36 +58,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _hasError = false;
   String? _errorMessage;
   UserProfile? _profile;
-  int _matchesCount = 0;
-  int _pendingLikesCount = 0;
-  /// Badge info from GET profile/badge/info (own profile only).
-  Map<String, dynamic>? _badgeInfo;
 
   @override
   void initState() {
     super.initState();
     if (_isOwnProfile) {
       profileLog('ProfilePage: own profile — init cache refresh');
-      _loadStatistics();
-      _loadBadgeInfo();
-      // Cache-first: render from cache immediately; refresh in background (no blocking).
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(profilePageCacheProvider.notifier).refresh();
-        _loadBadgeInfo();
       });
     } else {
       _loadProfile();
-    }
-  }
-
-  /// Load badge info from GET profile/badge/info for own profile header.
-  Future<void> _loadBadgeInfo() async {
-    if (!_isOwnProfile) return;
-    try {
-      final info = await ref.read(profileServiceProvider).getProfileBadgeInfo();
-      if (mounted) setState(() => _badgeInfo = info);
-    } catch (_) {
-      // Non-blocking; header falls back to profile flags
     }
   }
 
@@ -148,60 +119,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  Future<void> _loadStatistics() async {
-    if (!_isOwnProfile) return;
-    
-    try {
-      final likesService = ref.read(likesServiceProvider);
-      
-      // Load matches and pending likes in parallel
-      final results = await Future.wait([
-        likesService.getMatches(),
-        likesService.getPendingLikes(),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          _matchesCount = results[0].length;
-          _pendingLikesCount = results[1].length;
-        });
-      }
-    } catch (e) {
-      // Silently fail - statistics are not critical
-    }
-  }
-
-  int? _calculateAge([UserProfile? p]) {
-    final pr = p ?? _profile;
-    if (pr?.birthDate == null) return null;
-    try {
-      final birthDate = DateTime.parse(pr!.birthDate!);
-      final today = DateTime.now();
-      int age = today.year - birthDate.year;
-      if (today.month < birthDate.month ||
-          (today.month == birthDate.month && today.day < birthDate.day)) {
-        age--;
-      }
-      return age;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  String _getLocation([UserProfile? p]) {
-    final pr = p ?? _profile;
-    final parts = <String>[];
-    if (pr?.city != null) parts.add(pr!.city!);
-    if (pr?.country != null) parts.add(pr!.country!);
-    return parts.isEmpty ? 'Location not set' : parts.join(', ');
-  }
-
   String _getFullName([UserProfile? p]) {
     final pr = p ?? _profile;
     if (pr == null) return '';
-    return pr.lastName != null
-        ? '${pr.firstName} ${pr.lastName}'
-        : pr.firstName;
+    return pr.lastName.trim().isEmpty
+        ? pr.firstName
+        : '${pr.firstName} ${pr.lastName}';
   }
 
   Future<void> _handleLike() async {
@@ -474,17 +397,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   bool get _isOwnProfile => widget.userId == null;
 
-  /// Resolve verified from GET profile/badge/info or profile (own profile only).
-  bool _badgeVerified(UserProfile? profile) {
-    if (_badgeInfo != null) {
-      final inner = (_badgeInfo!['data'] as Map<String, dynamic>?) ?? _badgeInfo!;
-      final v = inner['verified'] ?? inner['is_verified'];
-      if (v != null) return v == true || v == 1;
-    }
-    return profile?.isVerified ?? false;
-  }
-
-  /// Resolve premium from GET profile/badge/info or profile (own profile only).
   String _formatProfileCacheError(AsyncValue<ProfilePageData> cacheState) {
     final error = cacheState.error;
     final stack = cacheState.stackTrace;
@@ -507,55 +419,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return 'Could not load your profile. Tap retry to try again.';
   }
 
-  bool _badgePremium(UserProfile? profile) {
-    if (_badgeInfo != null) {
-      final inner = (_badgeInfo!['data'] as Map<String, dynamic>?) ?? _badgeInfo!;
-      final p = inner['is_premium'] ?? inner['premium'];
-      if (p != null) return p == true || p == 1;
-    }
-    return profile?.isPremium ?? false;
-  }
-
-  List<String>? _labelsFromProfile(
-    List<String>? apiTitles,
-    List<int>? ids,
-    List<dynamic> refs,
-  ) {
-    if (apiTitles != null && apiTitles.isNotEmpty) return apiTitles;
-    if (ids == null || ids.isEmpty) return null;
-    final byId = <int, String>{};
-    for (final item in refs) {
-      final id = item.id as int?;
-      final title = item.title as String?;
-      if (id != null && title != null && title.isNotEmpty) {
-        byId[id] = title;
-      }
-    }
-    final values = ids
-        .map((id) => byId[id])
-        .whereType<String>()
-        .where((t) => t.isNotEmpty)
-        .toSet()
-        .toList(growable: false);
-    return values.isEmpty ? null : values;
-  }
-
-  String? _genderLabel(UserProfile profile, List<dynamic> gendersRef) {
-    if (profile.gender != null && profile.gender!.trim().isNotEmpty) {
-      return profile.gender;
-    }
-    if (profile.genderId == null) return null;
-    for (final item in gendersRef) {
-      if (item.id == profile.genderId) return item.title as String?;
-    }
-    return null;
-  }
-
-  UserTier _resolveTier(UserProfile? profile) {
-    if (_badgePremium(profile)) return UserTier.silder;
-    return ref.watch(userTierProvider);
-  }
-
   void _openFullProfileView(UserProfile profile) {
     Navigator.push(
       context,
@@ -568,6 +431,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               children: [
                 AppPageHeader(
                   title: 'My Profile',
+                  showBackButton: true,
+                  onBack: () => Navigator.pop(context),
                   action: IconButton(
                     icon: AppSvgIcon(
                       assetPath: AppIcons.edit,
@@ -578,8 +443,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: _buildProfileDetailContent(profile, isOwn: true),
+                  child: OwnProfileView(
+                    profile: profile,
+                    onViewProfile: () {},
+                    onEditPhotos: _openProfileEdit,
+                    onAddPhoto: _openImagePicker,
+                    onPhotoTap: _openImageViewer,
                   ),
                 ),
               ],
@@ -587,118 +456,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildProfileDetailContent(UserProfile profile, {required bool isOwn}) {
-    final interestsRef = ref.watch(interestsProvider).valueOrNull ?? const [];
-    final jobsRef = ref.watch(jobsProvider).valueOrNull ?? const [];
-    final educationsRef = ref.watch(educationLevelsProvider).valueOrNull ?? const [];
-    final languagesRef = ref.watch(languagesProvider).valueOrNull ?? const [];
-    final preferredGendersRef = ref.watch(preferredGendersProvider).valueOrNull ?? const [];
-    final relationGoalsRef = ref.watch(relationshipGoalsProvider).valueOrNull ?? const [];
-    final musicRef = ref.watch(musicGenresProvider).valueOrNull ?? const [];
-    final gendersRef = ref.watch(gendersProvider).valueOrNull ?? const [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_getImageUrls(profile).isNotEmpty)
-          RepaintBoundary(
-            child: ProfilePhotoCarousel(
-              imageUrls: _getImageUrls(profile),
-              overlayHeader: ProfileOverlayHeader(
-                name: _getFullName(profile),
-                age: _calculateAge(profile),
-                isVerified: _badgeVerified(profile),
-                tier: _resolveTier(profile),
-                location: _getLocation(profile),
-              ),
-            ),
-          )
-        else
-          ProfilePhotoEmptyState(
-            onAddPhoto: isOwn ? _openImagePicker : null,
-          ),
-        if (isOwn)
-          ProfileCompletenessIndicator(
-            completion: _estimateCompletion(profile),
-          ),
-        if (isOwn)
-          ProfileStatsCard(
-            matchesCount: _matchesCount,
-            likesCount: _pendingLikesCount,
-            viewsCount: profile.viewsCount ?? 0,
-          ),
-        ProfileBio(
-          bio: profile.profileBio,
-          isEditable: isOwn,
-          onEdit: isOwn ? _openProfileEdit : null,
-        ),
-        ProfileInfoSections(
-          interests: _labelsFromProfile(profile.interestTitles, profile.interests, interestsRef),
-          jobs: _labelsFromProfile(profile.jobTitles, profile.jobs, jobsRef),
-          educations: _labelsFromProfile(
-            profile.educationTitles,
-            profile.educations,
-            educationsRef,
-          ),
-          languages: _labelsFromProfile(null, profile.languages, languagesRef),
-          musicGenres: _labelsFromProfile(null, profile.musicGenres, musicRef),
-          relationGoals: _labelsFromProfile(null, profile.relationGoals, relationGoalsRef),
-          gender: _genderLabel(profile, gendersRef),
-          preferredGenders: _labelsFromProfile(
-            null,
-            profile.preferredGenders,
-            preferredGendersRef,
-          ),
-          height: profile.height,
-          weight: profile.weight,
-          smoke: profile.smoke,
-          drink: profile.drink,
-          gym: profile.gym,
-          location: _getLocation(profile),
-        ),
-        if (isOwn)
-          SafetyVerificationSection(
-            isVerified: profile.isVerified ?? false,
-            isPhoneVerified: profile.isPhoneVerified ?? false,
-            isEmailVerified: profile.isEmailVerified ?? true,
-            onVerifyTap: () {
-              context.go('/profile/verification');
-            },
-          ),
-        SizedBox(height: AppSpacing.spacingXXL),
-      ],
-    );
-  }
-
-  ProfileCompletion _estimateCompletion(UserProfile profile) {
-    final missing = <String>[];
-    if (profile.profileBio == null || profile.profileBio!.trim().isEmpty) {
-      missing.add('bio');
-    }
-    if (profile.images == null || profile.images!.isEmpty) {
-      missing.add('photos');
-    }
-    final interestCount =
-        profile.interestTitles?.length ?? profile.interests?.length ?? 0;
-    if (interestCount < 3) {
-      missing.add('interests');
-    }
-    final hasJob = (profile.jobTitles != null && profile.jobTitles!.isNotEmpty) ||
-        (profile.jobs != null && profile.jobs!.isNotEmpty);
-    if (!hasJob) {
-      missing.add('job');
-    }
-    if (profile.city == null || profile.city!.isEmpty) {
-      missing.add('location');
-    }
-    return ProfileCompletion(
-      isComplete: missing.isEmpty,
-      profileCompleted: missing.isEmpty,
-      needsProfileCompletion: missing.isNotEmpty,
-      missingFields: missing,
     );
   }
 
@@ -737,10 +494,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           };
     final String? ownProfileErrorMessage = isOwn && cacheState != null
         ? _formatProfileCacheError(cacheState)
-        : null;
-
-    final avatarUrl = profile?.images?.isNotEmpty == true
-        ? profile!.images!.first.imageUrl
         : null;
 
     Widget bodyContent;
@@ -829,27 +582,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         onSuperlike: _handleSuperlike,
         onMoreOptions: () => _showMoreOptions(context),
         onRefresh: _loadProfile,
+        onPhotoTap: (index) => _openImageViewer(index),
       );
     }
 
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: loading || hasError || profile == null
-            ? bodyContent
-            : RefreshIndicator(
-                onRefresh: () async {
-                  if (isOwn) {
-                    await ref.read(appCacheManagerProvider).revalidateAll();
-                    await ref.read(profilePageCacheProvider.notifier).refresh();
-                    await _loadStatistics();
-                    await _loadBadgeInfo();
-                  } else {
-                    await _loadProfile();
-                  }
-                },
-                child: bodyContent,
-              ),
+        child: ResponsiveGrid.constrained(
+          context,
+          loading || hasError || profile == null
+              ? bodyContent
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    if (isOwn) {
+                      await ref.read(appCacheManagerProvider).revalidateAll();
+                      await ref.read(profilePageCacheProvider.notifier).refresh();
+                    } else {
+                      await _loadProfile();
+                    }
+                  },
+                  child: bodyContent,
+                ),
+        ),
       ),
     );
   }

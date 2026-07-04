@@ -149,13 +149,7 @@ class PlanLimits {
   UserTier _resolveTier() {
     final apiTier = planInfo.tier?.toLowerCase().trim();
     if (apiTier != null && apiTier.isNotEmpty) {
-      return UserTier.values.firstWhere(
-        (t) => t.key == apiTier,
-        orElse: () => userTierFromPlan(
-          planId: planInfo.planId,
-          planName: planInfo.planName,
-        ),
-      );
+      return userTierFromApiKey(apiTier);
     }
     return userTierFromPlan(
       planId: planInfo.planId,

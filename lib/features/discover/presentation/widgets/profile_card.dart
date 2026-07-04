@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 import '../../../../widgets/ui/distance_tag.dart';
+import '../../../../widgets/badges/verification_badge.dart';
 import '../../data/models/discovery_profile.dart';
 
 /// Profile card widget for discovery
@@ -210,33 +211,17 @@ class ProfileCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Verification badge
-          if (profile.isVerified == true) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.feedbackSuccess,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.verified,
-                    size: 14,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Verified',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+          // Identity verification badge (profile verification, not email)
+          if (profile.verification != null &&
+              profile.verification!.badge != 'Unverified') ...[
+            VerificationBadge(
+              isVerified: true,
+              badgeLabel: profile.verification!.badge,
+              size: 22,
             ),
+            const SizedBox(height: 8),
+          ] else if (profile.isVerified == true) ...[
+            VerificationBadge(isVerified: true, size: 22),
             const SizedBox(height: 8),
           ],
 

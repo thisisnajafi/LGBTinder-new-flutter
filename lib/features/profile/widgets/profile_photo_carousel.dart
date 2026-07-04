@@ -71,6 +71,8 @@ class _ProfilePhotoCarouselState extends ConsumerState<ProfilePhotoCarousel> {
         children: [
           PageView.builder(
             controller: _pageController,
+            scrollDirection: Axis.horizontal,
+            physics: const PageScrollPhysics(),
             onPageChanged: (i) {
               if (!mounted) return;
               setState(() => _index = i);
@@ -105,23 +107,28 @@ class _ProfilePhotoCarouselState extends ConsumerState<ProfilePhotoCarousel> {
               );
             },
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  AppColors.backgroundDark.withValues(alpha: 0.55),
-                ],
-                stops: const [0.55, 1.0],
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      AppColors.backgroundDark.withValues(alpha: 0.55),
+                    ],
+                    stops: const [0.55, 1.0],
+                  ),
+                ),
               ),
             ),
           ),
           Positioned(
             top: AppSpacing.spacingLG,
             right: AppSpacing.spacingLG,
-            child: Container(
+            child: IgnorePointer(
+              child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: AppSpacing.spacingMD,
                 vertical: AppSpacing.spacingXS,
@@ -138,20 +145,24 @@ class _ProfilePhotoCarouselState extends ConsumerState<ProfilePhotoCarousel> {
                 ),
               ),
             ),
+            ),
           ),
           if (widget.overlayHeader != null)
             Positioned(
               left: AppSpacing.spacingLG,
               right: AppSpacing.spacingLG,
               bottom: AppSpacing.spacingXXL,
-              child: widget.overlayHeader!,
+              child: IgnorePointer(
+                child: widget.overlayHeader!,
+              ),
             ),
           Positioned(
             left: 0,
             right: 0,
             bottom: AppSpacing.spacingMD,
-            child: Center(
-              child: SmoothPageIndicator(
+            child: IgnorePointer(
+              child: Center(
+                child: SmoothPageIndicator(
                 controller: _pageController,
                 count: widget.imageUrls.length,
                 effect: ExpandingDotsEffect(
@@ -163,6 +174,7 @@ class _ProfilePhotoCarouselState extends ConsumerState<ProfilePhotoCarousel> {
                   dotColor: AppColors.textPrimaryDark.withValues(alpha: 0.45),
                 ),
               ),
+            ),
             ),
           ),
         ],

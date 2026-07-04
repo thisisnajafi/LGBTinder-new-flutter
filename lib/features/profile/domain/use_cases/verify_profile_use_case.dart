@@ -8,66 +8,49 @@ class VerifyProfileUseCase {
 
   VerifyProfileUseCase(this._profileRepository);
 
-  /// Get verification status
   Future<ProfileVerification> getVerificationStatus() async {
-    try {
-      return await _profileRepository.getVerificationStatus();
-    } catch (e) {
-      rethrow;
-    }
+    return _profileRepository.getVerificationStatus();
   }
 
-  /// Submit photo verification
-  Future<ProfileVerification> submitPhotoVerification(String photoPath) async {
-    try {
-      return await _profileRepository.submitPhotoVerification(photoPath);
-    } catch (e) {
-      rethrow;
-    }
+  Future<ProfileVerification> submitPhotoVerification(
+    String photoPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    return _profileRepository.submitPhotoVerification(
+      photoPath,
+      onUploadProgress: onUploadProgress,
+    );
   }
 
-  /// Submit ID verification
-  Future<ProfileVerification> submitIdVerification(String idPath) async {
-    try {
-      return await _profileRepository.submitIdVerification(idPath);
-    } catch (e) {
-      rethrow;
-    }
+  Future<ProfileVerification> submitIdVerification(
+    String idPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    return _profileRepository.submitIdVerification(
+      idPath,
+      onUploadProgress: onUploadProgress,
+    );
   }
 
-  /// Submit video verification
-  Future<ProfileVerification> submitVideoVerification(String videoPath) async {
-    try {
-      return await _profileRepository.submitVideoVerification(videoPath);
-    } catch (e) {
-      rethrow;
-    }
+  Future<ProfileVerification> submitVideoVerification(
+    String videoPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    return _profileRepository.submitVideoVerification(
+      videoPath,
+      onUploadProgress: onUploadProgress,
+    );
   }
 
-  /// Get verification history
-  Future<List<ProfileVerification>> getVerificationHistory() async {
-    try {
-      return await _profileRepository.getVerificationHistory();
-    } catch (e) {
-      rethrow;
-    }
+  Future<List<VerificationHistoryItem>> getVerificationHistory() async {
+    return _profileRepository.getVerificationHistory();
   }
 
-  /// Cancel verification
-  Future<void> cancelVerification(int verificationId) async {
-    try {
-      return await _profileRepository.cancelVerification(verificationId);
-    } catch (e) {
-      rethrow;
-    }
+  Future<ProfileVerification> cancelVerification(int verificationId) async {
+    return _profileRepository.cancelVerification(verificationId);
   }
 
-  /// Get verification guidelines
-  Future<Map<String, dynamic>> getVerificationGuidelines() async {
-    try {
-      return await _profileRepository.getVerificationGuidelines();
-    } catch (e) {
-      rethrow;
-    }
+  Future<VerificationGuidelines> getVerificationGuidelines() async {
+    return _profileRepository.getVerificationGuidelines();
   }
 }

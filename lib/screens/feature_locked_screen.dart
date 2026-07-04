@@ -53,11 +53,7 @@ class FeatureLockedScreen extends StatelessWidget {
     final secondaryTextColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    final tierLabel = switch (minTier) {
-      UserTier.basid => 'Basid',
-      UserTier.silder => 'Silder',
-      UserTier.golden => 'Golden',
-    };
+    final tierLabel = minTier.displayLabel;
 
     return Consumer(
       builder: (context, ref, _) {

@@ -51,34 +51,46 @@ class ProfileRepository {
     return await _profileService.getVerificationStatus();
   }
 
-  /// Submit photo verification
-  Future<ProfileVerification> submitPhotoVerification(String photoPath) async {
-    return await _profileService.submitPhotoVerification(photoPath);
+  Future<ProfileVerification> submitPhotoVerification(
+    String photoPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    return _profileService.submitPhotoVerification(
+      photoPath,
+      onUploadProgress: onUploadProgress,
+    );
   }
 
-  /// Submit ID verification
-  Future<ProfileVerification> submitIdVerification(String idPath) async {
-    return await _profileService.submitIdVerification(idPath);
+  Future<ProfileVerification> submitIdVerification(
+    String idPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    return _profileService.submitIdVerification(
+      idPath,
+      onUploadProgress: onUploadProgress,
+    );
   }
 
-  /// Submit video verification
-  Future<ProfileVerification> submitVideoVerification(String videoPath) async {
-    return await _profileService.submitVideoVerification(videoPath);
+  Future<ProfileVerification> submitVideoVerification(
+    String videoPath, {
+    void Function(double progress)? onUploadProgress,
+  }) async {
+    return _profileService.submitVideoVerification(
+      videoPath,
+      onUploadProgress: onUploadProgress,
+    );
   }
 
-  /// Get verification history
-  Future<List<ProfileVerification>> getVerificationHistory() async {
-    return await _profileService.getVerificationHistory();
+  Future<List<VerificationHistoryItem>> getVerificationHistory() async {
+    return _profileService.getVerificationHistory();
   }
 
-  /// Cancel verification
-  Future<void> cancelVerification(int verificationId) async {
-    return await _profileService.cancelVerification(verificationId);
+  Future<ProfileVerification> cancelVerification(int verificationId) async {
+    return _profileService.cancelVerification(verificationId);
   }
 
-  /// Get verification guidelines
-  Future<Map<String, dynamic>> getVerificationGuidelines() async {
-    return await _profileService.getVerificationGuidelines();
+  Future<VerificationGuidelines> getVerificationGuidelines() async {
+    return _profileService.getVerificationGuidelines();
   }
 
   /// Get profile completion status

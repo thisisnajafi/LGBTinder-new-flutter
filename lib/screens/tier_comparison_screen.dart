@@ -45,7 +45,7 @@ class TierComparisonScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.spacingXL),
               _TierCard(
-                title: 'Basid',
+                title: 'Basic',
                 subtitle: 'Great to start',
                 accent: AppColors.accentViolet,
                 bullets: const [

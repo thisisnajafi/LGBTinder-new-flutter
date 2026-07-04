@@ -1,125 +1,287 @@
 ﻿// Screen: ProfileVerificationScreen
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/widgets/profile_image_widget.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/badges/verification_badge.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
+import 'package:image_picker/image_picker.dart';
 
-/// Profile verification screen - Verification process and document upload
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../features/profile/data/models/profile_verification.dart';
+import '../../features/profile/providers/profile_provider.dart';
+import '../../widgets/loading/shimmer_effect.dart';
+import '../../widgets/verification/verification_components.dart';
+import '../../widgets/verification/verification_type_card.dart';
+
+/// Profile verification — identity trust (photo / ID / video).
 class ProfileVerificationScreen extends ConsumerStatefulWidget {
-  const ProfileVerificationScreen({Key? key}) : super(key: key);
+  const ProfileVerificationScreen({super.key});
 
   @override
-  ConsumerState<ProfileVerificationScreen> createState() => _ProfileVerificationScreenState();
+  ConsumerState<ProfileVerificationScreen> createState() =>
+      _ProfileVerificationScreenState();
 }
 
-class _ProfileVerificationScreenState extends ConsumerState<ProfileVerificationScreen> {
-  bool _isLoading = false;
-  bool _isSubmitting = false;
-  String _verificationStatus = 'pending'; // 'pending', 'approved', 'rejected', 'none'
-  String? _rejectionReason;
-  DateTime? _submittedAt;
-  DateTime? _reviewedAt;
-
-  // Document uploads
-  String? _idFrontUrl;
-  String? _idBackUrl;
-  String? _selfieUrl;
+class _ProfileVerificationScreenState
+    extends ConsumerState<ProfileVerificationScreen> {
+  bool _historyVisible = false;
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _loadVerificationStatus();
-  }
-
-  Future<void> _loadVerificationStatus() async {
-    setState(() {
-      _isLoading = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(profileProvider.notifier).loadVerificationStatus();
+      ref.read(profileProvider.notifier).loadVerificationGuidelines();
     });
+  }
 
-    try {
-      // TODO: Load verification status from API
-      // GET /api/profile/verification
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() {
-          _verificationStatus = 'pending';
-          _submittedAt = DateTime.now().subtract(const Duration(days: 2));
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load verification status: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  VerificationCardStatus _statusForType(
+    String type,
+    ProfileVerification verification,
+    List<VerificationHistoryItem> history,
+  ) {
+    final verified = switch (type) {
+      'id' => verification.idVerified,
+      'video' => verification.videoVerified,
+      _ => verification.photoVerified,
+    };
+    if (verified) return VerificationCardStatus.approved;
+
+    final pending = verification.pendingVerifications
+        ?.where((p) => p.type == type)
+        .toList();
+    if (pending != null && pending.isNotEmpty) {
+      return VerificationCardStatus.pending;
     }
+
+    final latest = history.where((h) => h.type == type).toList();
+    if (latest.isNotEmpty && latest.first.status == 'rejected') {
+      return VerificationCardStatus.rejected;
+    }
+
+    return VerificationCardStatus.notStarted;
   }
 
-  Future<void> _uploadDocument(String type) async {
-    // TODO: Open image picker and upload document
-    // POST /api/profile/verification/documents
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Document upload coming soon')),
-    );
+  PendingVerification? _pendingForType(
+    String type,
+    ProfileVerification verification,
+  ) {
+    final list = verification.pendingVerifications;
+    if (list == null) return null;
+    for (final pending in list) {
+      if (pending.type == type) return pending;
+    }
+    return null;
   }
 
-  Future<void> _submitVerification() async {
-    if (_idFrontUrl == null || _idBackUrl == null || _selfieUrl == null) {
+  VerificationHistoryItem? _latestHistoryForType(
+    String type,
+    List<VerificationHistoryItem> history,
+  ) {
+    for (final item in history) {
+      if (item.type == type) return item;
+    }
+    return null;
+  }
+
+  Future<void> _pickAndSubmit(VerificationType type) async {
+    String? path;
+    switch (type) {
+      case VerificationType.photo:
+        path = await _pickPhotoSource();
+        break;
+      case VerificationType.id:
+        path = await _pickIdSource();
+        break;
+      case VerificationType.video:
+        path = await _pickVideo();
+        break;
+    }
+    if (path == null || !mounted) return;
+
+    final file = File(path);
+    if (!await file.exists()) return;
+
+    final maxBytes = type == VerificationType.video
+        ? 50 * 1024 * 1024
+        : 10 * 1024 * 1024;
+    if (await file.length() > maxBytes) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload all required documents')),
+        SnackBar(
+          content: Text(
+            type == VerificationType.video
+                ? 'File too large. Maximum size is 50MB for videos.'
+                : 'File too large. Maximum size is 10MB for photos and documents.',
+          ),
+        ),
       );
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
-
     try {
-      // TODO: Submit verification via API
-      // POST /api/profile/verification/submit
-      await Future.delayed(const Duration(seconds: 2));
+      final notifier = ref.read(profileProvider.notifier);
+      switch (type) {
+        case VerificationType.photo:
+          await notifier.submitPhotoVerification(path);
+          break;
+        case VerificationType.id:
+          await notifier.submitIdVerification(path);
+          break;
+        case VerificationType.video:
+          await notifier.submitVideoVerification(path);
+          break;
+      }
       if (mounted) {
-        setState(() {
-          _verificationStatus = 'pending';
-          _submittedAt = DateTime.now();
-        });
-        AlertDialogCustom.show(
-          context,
-          title: 'Verification Submitted',
-          message: 'Your verification request has been submitted. We\'ll review it within 24-48 hours.',
-          icon: Icons.check_circle,
-          iconColor: AppColors.onlineGreen,
-        );
+        await notifier.loadVerificationHistory();
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit verification: $e')),
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<String?> _pickPhotoSource() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return null;
+    final picked = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1920,
+    );
+    return picked?.path;
+  }
+
+  Future<String?> _pickIdSource() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
+              title: const Text('Photo (Gallery)'),
+              onTap: () => Navigator.pop(ctx, 'gallery'),
+            ),
+            ListTile(
+              leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
+              title: const Text('Photo (Camera)'),
+              onTap: () => Navigator.pop(ctx, 'camera'),
+            ),
+            ListTile(
+              leading: AppSvgIcon(assetPath: AppIcons.document, size: 22),
+              title: const Text('PDF Document'),
+              onTap: () => Navigator.pop(ctx, 'pdf'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null) return null;
+    if (choice == 'pdf') {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+      );
+      return result?.files.single.path;
+    }
+    final source =
+        choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final picked = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1920,
+    );
+    return picked?.path;
+  }
+
+  Future<String?> _pickVideo() async {
+    final picked = await _imagePicker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 2),
+    );
+    return picked?.path;
+  }
+
+  Future<void> _confirmCancel(int verificationId) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.spacingLG),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Cancel this submission?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                Text(
+                  'Your uploaded file will be deleted.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                SizedBox(height: AppSpacing.spacingLG),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Keep Submission'),
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error,
+                    side: BorderSide(color: theme.colorScheme.error),
+                  ),
+                  child: const Text('Yes, Cancel'),
+                ),
+              ],
+            ),
+          ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref
+          .read(profileProvider.notifier)
+          .cancelVerification(verificationId);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
   }
 
@@ -127,476 +289,305 @@ class _ProfileVerificationScreenState extends ConsumerState<ProfileVerificationS
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    if (_isLoading) {
-      return AppPageScaffold(
-      title: 'Verification',
-      showBackButton: true,
-      backgroundColor: backgroundColor,
-      body: const Center(child: CircularProgressIndicator()),
-      );
-
-    }
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final isLoading = ref.watch(
+      profileProvider.select((s) => s.isVerificationLoading),
+    );
+    final verification = ref.watch(
+      profileProvider.select((s) => s.verification),
+    );
+    final guidelines = ref.watch(
+      profileProvider.select((s) => s.verificationGuidelines),
+    );
+    final history = ref.watch(
+      profileProvider.select((s) => s.verificationHistory),
+    );
+    final uploadState = ref.watch(
+      profileProvider.select((s) => s.verificationUpload),
+    );
+    final error = ref.watch(profileProvider.select((s) => s.error));
 
     return AppPageScaffold(
       title: 'Verification',
       showBackButton: true,
       backgroundColor: backgroundColor,
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
-        children: [
-          // Status banner
-          if (_verificationStatus == 'approved')
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              margin: EdgeInsets.only(bottom: AppSpacing.spacingLG),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.onlineGreen,
-                    AppColors.onlineGreen.withOpacity(0.8),
-                  ],
+      body: isLoading && verification == null
+          ? _buildLoadingShimmer(context)
+          : verification == null
+              ? _buildErrorState(context, error)
+              : _buildContent(
+                  context,
+                  verification: verification,
+                  guidelines: guidelines,
+                  history: history,
+                  uploadState: uploadState,
                 ),
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.verified,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                  SizedBox(width: AppSpacing.spacingMD),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Verified Account',
-                          style: AppTypography.h2.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: AppSpacing.spacingXS),
-                        Text(
-                          'Your account has been verified',
-                          style: AppTypography.body.copyWith(
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else if (_verificationStatus == 'rejected')
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              margin: EdgeInsets.only(bottom: AppSpacing.spacingLG),
+    );
+  }
+
+  Widget _buildLoadingShimmer(BuildContext context) {
+    final theme = Theme.of(context);
+    final base = theme.colorScheme.surfaceContainerHighest;
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.spacingLG),
+      children: [
+        ShimmerEffect(
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: base,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+        SizedBox(height: AppSpacing.spacingMD),
+        for (var i = 0; i < 3; i++) ...[
+          ShimmerEffect(
+            child: Container(
+              height: 160,
               decoration: BoxDecoration(
-                color: AppColors.notificationRed.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: AppColors.notificationRed),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: AppColors.notificationRed,
-                        size: 32,
-                      ),
-                      SizedBox(width: AppSpacing.spacingMD),
-                      Expanded(
-                        child: Text(
-                          'Verification Rejected',
-                          style: AppTypography.h2.copyWith(
-                            color: AppColors.notificationRed,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_rejectionReason != null) ...[
-                    SizedBox(height: AppSpacing.spacingMD),
-                    Text(
-                      'Reason: $_rejectionReason',
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: AppSpacing.spacingMD),
-                  GradientButton(
-                    text: 'Resubmit Verification',
-                    onPressed: () {
-                      setState(() {
-                        _verificationStatus = 'none';
-                        _idFrontUrl = null;
-                        _idBackUrl = null;
-                        _selfieUrl = null;
-                      });
-                    },
-                    isFullWidth: true,
-                  ),
-                ],
-              ),
-            )
-          else if (_verificationStatus == 'pending')
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              margin: EdgeInsets.only(bottom: AppSpacing.spacingLG),
-              decoration: BoxDecoration(
-                color: AppColors.warningYellow.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: AppColors.warningYellow),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.pending,
-                    color: AppColors.warningYellow,
-                    size: 32,
-                  ),
-                  SizedBox(width: AppSpacing.spacingMD),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Verification Pending',
-                          style: AppTypography.h2.copyWith(
-                            color: AppColors.warningYellow,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: AppSpacing.spacingXS),
-                        Text(
-                          _submittedAt != null
-                              ? 'Submitted ${_formatTime(_submittedAt!)}'
-                              : 'Your verification is being reviewed',
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                color: base,
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
-
-          // Info section
-          SectionHeader(
-            title: 'Why Verify?',
-            icon: Icons.info,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(color: borderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildBenefitItem(
-                  icon: Icons.verified_user,
-                  title: 'Build Trust',
-                  description: 'Show others you\'re a real person',
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                _buildBenefitItem(
-                  icon: Icons.trending_up,
-                  title: 'Get More Matches',
-                  description: 'Verified profiles get 3x more matches',
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                _buildBenefitItem(
-                  icon: Icons.security,
-                  title: 'Safer Community',
-                  description: 'Help keep our community safe and authentic',
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                ),
-              ],
-            ),
-          ),
-          DividerCustom(),
-          SizedBox(height: AppSpacing.spacingLG),
+        ],
+      ],
+    );
+  }
 
-          // Document uploads
-          if (_verificationStatus != 'approved') ...[
-            SectionHeader(
-              title: 'Required Documents',
-              icon: Icons.description,
+  Widget _buildErrorState(BuildContext context, String? error) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.spacingLG),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSvgIcon(
+              assetPath: AppIcons.danger,
+              size: 40,
+              color: theme.colorScheme.error,
             ),
             SizedBox(height: AppSpacing.spacingMD),
-            _buildDocumentUpload(
-              title: 'ID Front',
-              description: 'Upload the front of your government-issued ID',
-              imageUrl: _idFrontUrl,
-              onUpload: () => _uploadDocument('id_front'),
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
+            Text(
+              error ?? 'Failed to load verification status',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
             ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildDocumentUpload(
-              title: 'ID Back',
-              description: 'Upload the back of your government-issued ID',
-              imageUrl: _idBackUrl,
-              onUpload: () => _uploadDocument('id_back'),
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            _buildDocumentUpload(
-              title: 'Selfie',
-              description: 'Take a selfie holding your ID next to your face',
-              imageUrl: _selfieUrl,
-              onUpload: () => _uploadDocument('selfie'),
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-              surfaceColor: surfaceColor,
-              borderColor: borderColor,
-            ),
-            DividerCustom(),
             SizedBox(height: AppSpacing.spacingLG),
-
-            // Guidelines
-            SectionHeader(
-              title: 'Guidelines',
-              icon: Icons.rule,
-            ),
-            SizedBox(height: AppSpacing.spacingMD),
-            Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildGuidelineItem(
-                    '• ID must be government-issued (driver\'s license, passport, etc.)',
-                    textColor,
-                  ),
-                  SizedBox(height: AppSpacing.spacingSM),
-                  _buildGuidelineItem(
-                    '• All text must be clearly visible and readable',
-                    textColor,
-                  ),
-                  SizedBox(height: AppSpacing.spacingSM),
-                  _buildGuidelineItem(
-                    '• Selfie must show your full face and the ID clearly',
-                    textColor,
-                  ),
-                  SizedBox(height: AppSpacing.spacingSM),
-                  _buildGuidelineItem(
-                    '• Documents must be valid and not expired',
-                    textColor,
-                  ),
-                  SizedBox(height: AppSpacing.spacingSM),
-                  _buildGuidelineItem(
-                    '• Review typically takes 24-48 hours',
-                    textColor,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: AppSpacing.spacingXXL),
-            GradientButton(
-              text: _isSubmitting ? 'Submitting...' : 'Submit for Verification',
-              onPressed: _isSubmitting || _verificationStatus == 'pending'
-                  ? null
-                  : _submitVerification,
-              isLoading: _isSubmitting,
-              isFullWidth: true,
-              icon: Icons.send,
+            FilledButton(
+              onPressed: () {
+                ref.read(profileProvider.notifier).loadVerificationStatus();
+              },
+              child: const Text('Retry'),
             ),
           ],
-          SizedBox(height: AppSpacing.spacingXXL),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildBenefitItem({
-    required IconData icon,
-    required String title,
-    required String description,
-    required Color textColor,
-    required Color secondaryTextColor,
+  Widget _buildContent(
+    BuildContext context, {
+    required ProfileVerification verification,
+    required VerificationGuidelines? guidelines,
+    required List<VerificationHistoryItem> history,
+    required VerificationUploadState uploadState,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.spacingLG),
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.accentPurple.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-          ),
-          child: Icon(
-            icon,
-            color: AppColors.accentPurple,
-            size: 20,
+        _buildHeader(context, verification),
+        SizedBox(height: AppSpacing.spacingLG),
+        _buildProgressBar(context, verification),
+        SizedBox(height: AppSpacing.spacingXL),
+        ...VerificationType.values.map((type) {
+          final typeKey = type.name;
+          final status = _statusForType(typeKey, verification, history);
+          final pending = _pendingForType(typeKey, verification);
+          final latest = _latestHistoryForType(typeKey, history);
+          final isUploading = uploadState.isUploading &&
+              uploadState.activeType == typeKey;
+
+          return VerificationTypeCard(
+            type: type,
+            status: status,
+            adminNotes: latest?.adminNotes,
+            submittedAt: pending?.submittedAt,
+            reviewedAt: latest?.status == 'approved'
+                ? latest?.reviewedAt
+                : null,
+            pendingVerificationId: pending?.id,
+            guidelinesText: guidelines?.descriptionFor(typeKey) ?? '',
+            isUploading: isUploading,
+            uploadProgress: isUploading ? uploadState.progress : 0,
+            onUpload: () => _pickAndSubmit(type),
+            onCancel: pending != null
+                ? () => _confirmCancel(pending.id)
+                : null,
+          );
+        }),
+        _buildHistorySection(context, history),
+      ],
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, ProfileVerification verification) {
+    final theme = Theme.of(context);
+    final score = verification.verificationScore;
+    final tint = verificationScoreTint(context, score);
+
+    return Column(
+      children: [
+        AppSvgIcon(
+          assetPath: AppIcons.shieldTick,
+          size: 64,
+          color: tint,
+        ),
+        SizedBox(height: AppSpacing.spacingSM),
+        Text(
+          verification.verificationBadge,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: tint,
           ),
         ),
-        SizedBox(width: AppSpacing.spacingMD),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTypography.body.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: AppSpacing.spacingXS),
-              Text(
-                description,
-                style: AppTypography.caption.copyWith(
-                  color: secondaryTextColor,
-                ),
-              ),
-            ],
+        SizedBox(height: AppSpacing.spacingXS),
+        Text(
+          '${verification.verificationScore}/100',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDocumentUpload({
-    required String title,
-    required String description,
-    required String? imageUrl,
-    required VoidCallback onUpload,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(
-          color: imageUrl != null
-              ? AppColors.onlineGreen
-              : borderColor,
-          width: imageUrl != null ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      description,
-                      style: AppTypography.caption.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                  ],
+  Widget _buildProgressBar(
+    BuildContext context,
+    ProfileVerification verification,
+  ) {
+    final theme = Theme.of(context);
+    final animate = !MediaQuery.of(context).disableAnimations;
+    final segments = [
+      ('Photo', 0.30, verification.photoVerified),
+      ('ID', 0.40, verification.idVerified),
+      ('Video', 0.30, verification.videoVerified),
+    ];
+
+    return Column(
+      children: [
+        Row(
+          children: segments.map((seg) {
+            final filled = seg.$3;
+            return Expanded(
+              flex: (seg.$2 * 100).round(),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: seg != segments.last ? 4 : 0,
+                ),
+                child: AnimatedContainer(
+                  duration: animate
+                      ? const Duration(milliseconds: 600)
+                      : Duration.zero,
+                  curve: Curves.easeOutCubic,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(100),
+                    color: filled
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.12),
+                  ),
                 ),
               ),
-              if (imageUrl != null)
-                Icon(
-                  Icons.check_circle,
-                  color: AppColors.onlineGreen,
-                  size: 24,
+            );
+          }).toList(),
+        ),
+        SizedBox(height: AppSpacing.spacingSM),
+        Row(
+          children: segments.map((seg) {
+            final filled = seg.$3;
+            final points = (seg.$2 * 100).round();
+            return Expanded(
+              flex: points,
+              child: Text(
+                '${seg.$1} · ${points}pts',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: filled
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.45),
                 ),
-            ],
-          ),
-          if (imageUrl != null) ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-              child: Container(
-                height: 150,
-                width: double.infinity,
-                color: surfaceColor,
-                child: ProfileImageWidget(
-                  imageUrl: imageUrl,
-                  width: double.infinity,
-                  height: 150,
-                  fit: BoxFit.cover,
-                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistorySection(
+    BuildContext context,
+    List<VerificationHistoryItem> history,
+  ) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Submission History',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ] else ...[
-            SizedBox(height: AppSpacing.spacingMD),
-            GradientButton(
-              text: 'Upload $title',
-              onPressed: onUpload,
-              isFullWidth: true,
-              icon: Icons.upload,
+            TextButton(
+              onPressed: () {
+                setState(() => _historyVisible = !_historyVisible);
+                if (!_historyVisible) return;
+                ref.read(profileProvider.notifier).loadVerificationHistory();
+              },
+              child: Text(_historyVisible ? 'Hide' : 'Show'),
             ),
           ],
-        ],
-      ),
+        ),
+        AnimatedSize(
+          duration: MediaQuery.of(context).disableAnimations
+              ? Duration.zero
+              : const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          child: _historyVisible
+              ? history.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.spacingLG,
+                      ),
+                      child: Text(
+                        'No previous submissions',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.55),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < history.length; i++) ...[
+                          VerificationHistoryCard(item: history[i]),
+                          if (i < history.length - 1)
+                            SizedBox(height: AppSpacing.spacingSM),
+                        ],
+                      ],
+                    )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
-  }
-
-  Widget _buildGuidelineItem(String text, Color textColor) {
-    return Text(
-      text,
-      style: AppTypography.body.copyWith(
-        color: textColor,
-      ),
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
-    if (difference.inDays < 1) {
-      return 'today';
-    } else if (difference.inDays == 1) {
-      return 'yesterday';
-    } else {
-      return '${difference.inDays} days ago';
-    }
   }
 }

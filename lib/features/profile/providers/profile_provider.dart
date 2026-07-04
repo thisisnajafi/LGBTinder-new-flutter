@@ -38,11 +38,41 @@ final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((re
   );
 });
 
+/// Upload progress for a verification type submission.
+class VerificationUploadState {
+  final String? activeType;
+  final double progress;
+  final bool isUploading;
+
+  const VerificationUploadState({
+    this.activeType,
+    this.progress = 0,
+    this.isUploading = false,
+  });
+
+  VerificationUploadState copyWith({
+    String? activeType,
+    double? progress,
+    bool? isUploading,
+  }) {
+    return VerificationUploadState(
+      activeType: activeType ?? this.activeType,
+      progress: progress ?? this.progress,
+      isUploading: isUploading ?? this.isUploading,
+    );
+  }
+}
+
 /// Profile state
 class ProfileState {
   final UserProfile? profile;
   final List<UserImage> images;
   final ProfileVerification? verification;
+  final VerificationGuidelines? verificationGuidelines;
+  final List<VerificationHistoryItem> verificationHistory;
+  final VerificationUploadState verificationUpload;
+  final bool isVerificationLoading;
+  final bool isVerificationHistoryLoading;
   final ProfileCompletion? completion;
   final bool isLoading;
   final String? error;
@@ -53,6 +83,11 @@ class ProfileState {
     this.profile,
     this.images = const [],
     this.verification,
+    this.verificationGuidelines,
+    this.verificationHistory = const [],
+    this.verificationUpload = const VerificationUploadState(),
+    this.isVerificationLoading = false,
+    this.isVerificationHistoryLoading = false,
     this.completion,
     this.isLoading = false,
     this.error,
@@ -64,19 +99,33 @@ class ProfileState {
     UserProfile? profile,
     List<UserImage>? images,
     ProfileVerification? verification,
+    VerificationGuidelines? verificationGuidelines,
+    List<VerificationHistoryItem>? verificationHistory,
+    VerificationUploadState? verificationUpload,
+    bool? isVerificationLoading,
+    bool? isVerificationHistoryLoading,
     ProfileCompletion? completion,
     bool? isLoading,
     String? error,
     bool? isUpdating,
     bool? isUploadingImage,
+    bool clearError = false,
   }) {
     return ProfileState(
       profile: profile ?? this.profile,
       images: images ?? this.images,
       verification: verification ?? this.verification,
+      verificationGuidelines:
+          verificationGuidelines ?? this.verificationGuidelines,
+      verificationHistory: verificationHistory ?? this.verificationHistory,
+      verificationUpload: verificationUpload ?? this.verificationUpload,
+      isVerificationLoading:
+          isVerificationLoading ?? this.isVerificationLoading,
+      isVerificationHistoryLoading:
+          isVerificationHistoryLoading ?? this.isVerificationHistoryLoading,
       completion: completion ?? this.completion,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
       isUpdating: isUpdating ?? this.isUpdating,
       isUploadingImage: isUploadingImage ?? this.isUploadingImage,
     );
@@ -183,41 +232,125 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   /// Load verification status
   Future<void> loadVerificationStatus() async {
+    state = state.copyWith(isVerificationLoading: true, clearError: true);
     try {
       final verification = await _verifyProfileUseCase.getVerificationStatus();
-      state = state.copyWith(verification: verification);
+      state = state.copyWith(
+        verification: verification,
+        isVerificationLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isVerificationLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Load verification guidelines
+  Future<void> loadVerificationGuidelines() async {
+    try {
+      final guidelines =
+          await _verifyProfileUseCase.getVerificationGuidelines();
+      state = state.copyWith(verificationGuidelines: guidelines);
     } catch (e) {
       state = state.copyWith(error: e.toString());
+    }
+  }
+
+  /// Load verification history
+  Future<void> loadVerificationHistory() async {
+    state = state.copyWith(isVerificationHistoryLoading: true);
+    try {
+      final history = await _verifyProfileUseCase.getVerificationHistory();
+      state = state.copyWith(
+        verificationHistory: history,
+        isVerificationHistoryLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isVerificationHistoryLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> _submitWithProgress(
+    String type,
+    Future<ProfileVerification> Function(void Function(double) onProgress)
+        submit,
+  ) async {
+    state = state.copyWith(
+      verificationUpload: VerificationUploadState(
+        activeType: type,
+        isUploading: true,
+        progress: 0,
+      ),
+      clearError: true,
+    );
+    try {
+      final verification = await submit((progress) {
+        state = state.copyWith(
+          verificationUpload: state.verificationUpload.copyWith(
+            progress: progress,
+          ),
+        );
+      });
+      state = state.copyWith(
+        verification: verification,
+        verificationUpload: const VerificationUploadState(),
+      );
+    } catch (e) {
+      state = state.copyWith(
+        verificationUpload: const VerificationUploadState(),
+        error: e.toString(),
+      );
+      rethrow;
     }
   }
 
   /// Submit photo verification
   Future<void> submitPhotoVerification(String photoPath) async {
-    try {
-      final verification = await _verifyProfileUseCase.submitPhotoVerification(photoPath);
-      state = state.copyWith(verification: verification);
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-    }
+    await _submitWithProgress(
+      'photo',
+      (onProgress) => _verifyProfileUseCase.submitPhotoVerification(
+        photoPath,
+        onUploadProgress: onProgress,
+      ),
+    );
   }
 
   /// Submit ID verification
   Future<void> submitIdVerification(String idPath) async {
-    try {
-      final verification = await _verifyProfileUseCase.submitIdVerification(idPath);
-      state = state.copyWith(verification: verification);
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-    }
+    await _submitWithProgress(
+      'id',
+      (onProgress) => _verifyProfileUseCase.submitIdVerification(
+        idPath,
+        onUploadProgress: onProgress,
+      ),
+    );
   }
 
   /// Submit video verification
   Future<void> submitVideoVerification(String videoPath) async {
+    await _submitWithProgress(
+      'video',
+      (onProgress) => _verifyProfileUseCase.submitVideoVerification(
+        videoPath,
+        onUploadProgress: onProgress,
+      ),
+    );
+  }
+
+  /// Cancel a pending verification
+  Future<void> cancelVerification(int verificationId) async {
     try {
-      final verification = await _verifyProfileUseCase.submitVideoVerification(videoPath);
-      state = state.copyWith(verification: verification);
+      final verification =
+          await _verifyProfileUseCase.cancelVerification(verificationId);
+      state = state.copyWith(verification: verification, clearError: true);
     } catch (e) {
       state = state.copyWith(error: e.toString());
+      rethrow;
     }
   }
 

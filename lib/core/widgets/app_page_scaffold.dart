@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
 import '../../routes/app_router.dart';
@@ -56,18 +57,21 @@ class AppPageScaffold extends StatelessWidget {
       bottomNavigationBar: bottomNavigationBar,
       floatingActionButton: floatingActionButton,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppPageHeader(
-              title: title,
-              action: action,
-              showBackButton: showBackButton,
-              onBack: onBack ?? () => defaultBack(context),
-            ),
-            const SizedBox(height: AppSpacing.spacingLG),
-            content,
-          ],
+        child: ResponsiveGrid.constrained(
+          context,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppPageHeader(
+                title: title,
+                action: action,
+                showBackButton: showBackButton,
+                onBack: onBack ?? () => defaultBack(context),
+              ),
+              const SizedBox(height: AppSpacing.spacingLG),
+              content,
+            ],
+          ),
         ),
       ),
     );

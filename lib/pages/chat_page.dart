@@ -58,12 +58,16 @@ class ChatPage extends ConsumerStatefulWidget {
   final int userId;
   final String? userName;
   final String? avatarUrl;
+  final bool embedded;
+  final VoidCallback? onEmbeddedClose;
 
   const ChatPage({
     Key? key,
     required this.userId,
     this.userName,
     this.avatarUrl,
+    this.embedded = false,
+    this.onEmbeddedClose,
   }) : super(key: key);
 
   @override
@@ -1451,7 +1455,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           avatarUrl: _peerAvatarUrl,
           isOnline: _isOnline,
           lastSeenAt: _lastSeenAt,
-          onBack: () => Navigator.of(context).pop(),
+          onBack: widget.embedded
+              ? (widget.onEmbeddedClose ?? () {})
+              : () => Navigator.of(context).pop(),
           onHeaderTap: _openConversationInfo,
           onInfo: _openConversationInfo,
           onCall: () {

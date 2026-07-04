@@ -33,11 +33,7 @@ class PremiumFeaturesScreen extends ConsumerWidget {
     final currentTier = ref.watch(userTierProvider);
 
     bool unlocked(UserTier minTier) => currentTier.atLeast(minTier);
-    String tierLabel(UserTier tier) => switch (tier) {
-          UserTier.basid => 'Basid',
-          UserTier.silder => 'Silder',
-          UserTier.golden => 'Golden',
-        };
+    String tierLabel(UserTier tier) => tier.displayLabel;
 
     final isPremium = unlocked(UserTier.silder);
 

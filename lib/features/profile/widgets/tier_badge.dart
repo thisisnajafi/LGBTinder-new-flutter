@@ -25,11 +25,7 @@ class TierBadge extends ConsumerWidget {
     );
   }
 
-  String get _label => switch (tier) {
-        UserTier.basid => 'Basid',
-        UserTier.silder => 'Silder',
-        UserTier.golden => 'Golden',
-      };
+  String get _label => tier.displayLabel;
 
   LinearGradient get _gradient {
     if (tier == UserTier.golden) {
