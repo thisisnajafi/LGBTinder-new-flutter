@@ -110,12 +110,16 @@ class PremiumSectionHeader extends StatelessWidget {
                   color: textColor,
                   letterSpacing: -0.2,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   subtitle!,
                   style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -130,6 +134,8 @@ class PremiumSectionHeader extends StatelessWidget {
                 color: AppColors.accentPink,
                 fontWeight: FontWeight.w700,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           )
         else if (onEdit != null)

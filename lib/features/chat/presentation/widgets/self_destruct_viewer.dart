@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
@@ -164,9 +165,15 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer> {
 
     if (_error != null || _imageUrl == null) {
       return Center(
-        child: Text(
-          _error ?? 'Photo unavailable',
-          style: AppTypography.body.copyWith(color: Colors.white70),
+        child: Padding(
+          padding: ResponsivePadding.page(context),
+          child: Text(
+            _error ?? 'Photo unavailable',
+            style: AppTypography.body.copyWith(color: Colors.white70),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       );
     }

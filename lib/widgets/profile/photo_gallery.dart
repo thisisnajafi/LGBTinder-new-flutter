@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../images/optimized_image.dart';
@@ -16,7 +17,7 @@ class PhotoGallery extends ConsumerWidget {
   final Function(int, String)? onImageTap;
   final bool isEditable;
   final VoidCallback? onAddPhoto;
-  final int crossAxisCount;
+  final int? crossAxisCount;
 
   const PhotoGallery({
     Key? key,
@@ -24,7 +25,7 @@ class PhotoGallery extends ConsumerWidget {
     this.onImageTap,
     this.isEditable = false,
     this.onAddPhoto,
-    this.crossAxisCount = 2,
+    this.crossAxisCount,
   }) : super(key: key);
 
   @override
@@ -37,6 +38,9 @@ class PhotoGallery extends ConsumerWidget {
     if (imageUrls.isEmpty && !isEditable) {
       return const SizedBox.shrink();
     }
+
+    final columns =
+        crossAxisCount ?? ResponsiveGrid.photoColumns(context);
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
@@ -54,7 +58,7 @@ class PhotoGallery extends ConsumerWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
+              crossAxisCount: columns,
               crossAxisSpacing: AppSpacing.spacingSM,
               mainAxisSpacing: AppSpacing.spacingSM,
               childAspectRatio: 0.75,

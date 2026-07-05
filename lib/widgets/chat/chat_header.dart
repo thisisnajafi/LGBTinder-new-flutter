@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
@@ -42,6 +43,8 @@ class ChatHeader extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     final textColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final actionSize =
+        MediaQuery.sizeOf(context).width < 400 ? 36.0 : 40.0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -59,86 +62,100 @@ class ChatHeader extends ConsumerWidget {
           SizedBox(
             height: 64,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.spacingSM,
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                left: AppSpacing.spacingSM,
+                right: AppSpacing.spacingSM,
               ),
-              child: Row(
-                children: [
-                  if (onBack != null)
-                    PremiumTapScale(
-                      onTap: onBack!,
-                      semanticLabel: 'Back',
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.spacingXS),
-                        child: AppSvgIcon(
-                          assetPath: AppIcons.arrowLeft,
-                          size: 24,
-                          color: textColor,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 320;
+                  final headerActionSize =
+                      compact ? 32.0 : actionSize;
+                  final showVideoCall =
+                      onVideoCall != null && (!compact || onCall == null);
+
+                  return Row(
+                    children: [
+                      if (onBack != null)
+                        PremiumTapScale(
+                          onTap: onBack!,
+                          semanticLabel: 'Back',
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.spacingXS),
+                            child: AppSvgIcon(
+                              assetPath: AppIcons.arrowLeft,
+                              size: 24,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      PremiumTapScale(
+                        onTap: onHeaderTap ?? onInfo ?? () {},
+                        semanticLabel: 'Open $name profile',
+                        child: _HeaderAvatar(
+                          imageUrl: avatarUrl,
+                          isOnline: isOnline,
                         ),
                       ),
-                    ),
-                  PremiumTapScale(
-                    onTap: onHeaderTap ?? onInfo ?? () {},
-                    semanticLabel: 'Open $name profile',
-                    child: _HeaderAvatar(
-                      imageUrl: avatarUrl,
-                      isOnline: isOnline,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.spacingMD),
-                  Expanded(
-                    child: PremiumTapScale(
-                      onTap: onHeaderTap ?? onInfo ?? () {},
-                      semanticLabel: 'Chat with $name',
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.spacingXS,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: textColor,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: AppSpacing.spacingMD),
+                      Expanded(
+                        child: PremiumTapScale(
+                          onTap: onHeaderTap ?? onInfo ?? () {},
+                          semanticLabel: 'Chat with $name',
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.spacingXS,
                             ),
-                            LastSeenWidget(
-                              isOnline: isOnline,
-                              lastSeenAt: lastSeenAt,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  name,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                LastSeenWidget(
+                                  isOnline: isOnline,
+                                  lastSeenAt: lastSeenAt,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  if (onCall != null)
-                    _HeaderAction(
-                      iconPath: AppIcons.call,
-                      color: AppColors.accentViolet,
-                      label: 'Voice call',
-                      onTap: onCall!,
-                    ),
-                  if (onVideoCall != null)
-                    _HeaderAction(
-                      iconPath: AppIcons.videoCall,
-                      color: AppColors.accentRose,
-                      label: 'Video call',
-                      onTap: onVideoCall!,
-                    ),
-                  if (onInfo != null)
-                    _HeaderAction(
-                      iconPath: AppIcons.infoCircle,
-                      color: AppColors.accentViolet,
-                      label: 'Chat info',
-                      onTap: onInfo!,
-                    ),
-                ],
+                      if (onCall != null)
+                        _HeaderAction(
+                          iconPath: AppIcons.call,
+                          color: AppColors.accentViolet,
+                          label: 'Voice call',
+                          size: headerActionSize,
+                          onTap: onCall!,
+                        ),
+                      if (showVideoCall)
+                        _HeaderAction(
+                          iconPath: AppIcons.videoCall,
+                          color: AppColors.accentRose,
+                          label: 'Video call',
+                          size: headerActionSize,
+                          onTap: onVideoCall!,
+                        ),
+                      if (onInfo != null)
+                        _HeaderAction(
+                          iconPath: AppIcons.infoCircle,
+                          color: AppColors.accentViolet,
+                          label: 'Chat info',
+                          size: headerActionSize,
+                          onTap: onInfo!,
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -231,12 +248,14 @@ class _HeaderAction extends StatelessWidget {
     required this.color,
     required this.label,
     required this.onTap,
+    this.size = 40,
   });
 
   final String iconPath;
   final Color color;
   final String label;
   final VoidCallback onTap;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -246,8 +265,8 @@ class _HeaderAction extends StatelessWidget {
         onTap: onTap,
         semanticLabel: label,
         child: Container(
-          width: 40,
-          height: 40,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: color.withValues(alpha: 0.12),

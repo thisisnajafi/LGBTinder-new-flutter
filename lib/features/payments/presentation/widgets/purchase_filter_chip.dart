@@ -23,7 +23,11 @@ class PurchaseFilterChip extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return FilterChip(
-      label: Text(label),
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       selected: isSelected,
       onSelected: (_) => onSelected(),
       selectedColor: AppColors.accentPurple.withOpacity(0.2),

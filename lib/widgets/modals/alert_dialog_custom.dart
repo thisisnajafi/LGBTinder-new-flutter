@@ -67,7 +67,13 @@ class AlertDialogCustom extends ConsumerWidget {
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+        ),
+        child: SingleChildScrollView(
+          child: Container(
         padding: EdgeInsets.all(AppSpacing.spacingXL),
         decoration: BoxDecoration(
           color: surfaceColor,
@@ -95,12 +101,16 @@ class AlertDialogCustom extends ConsumerWidget {
               title,
               style: AppTypography.h2.copyWith(color: textColor),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingMD),
             Text(
               message,
               style: AppTypography.body.copyWith(color: secondaryTextColor),
               textAlign: TextAlign.center,
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingXXL),
             GradientButton(
@@ -108,6 +118,8 @@ class AlertDialogCustom extends ConsumerWidget {
               onPressed: onButtonTap ?? () => Navigator.of(context).pop(),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

@@ -159,14 +159,19 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  Text(
-                                    _formatCurrency(
-                                      transaction['amount'] as double,
-                                      transaction['currency'] as String,
-                                    ),
-                                    style: AppTypography.bodyLarge.copyWith(
-                                      color: textColor,
-                                      fontWeight: FontWeight.w700,
+                                  Flexible(
+                                    child: Text(
+                                      _formatCurrency(
+                                        transaction['amount'] as double,
+                                        transaction['currency'] as String,
+                                      ),
+                                      style: AppTypography.bodyLarge.copyWith(
+                                        color: textColor,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.end,
                                     ),
                                   ),
                                 ],

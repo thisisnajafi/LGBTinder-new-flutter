@@ -70,6 +70,8 @@ class DiscoverPassportBanner extends StatelessWidget {
                         color: AppColors.accentRose,
                         fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(

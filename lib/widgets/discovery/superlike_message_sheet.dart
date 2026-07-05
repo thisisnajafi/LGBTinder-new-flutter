@@ -152,6 +152,8 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                                     : AppColors.feedbackError,
                                 fontWeight: FontWeight.w600,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (canSuperlike) ...[
                               SizedBox(height: AppSpacing.spacingXS),
@@ -160,6 +162,8 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                                 style: AppTypography.bodySmall.copyWith(
                                   color: textSecondary,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ] else ...[
                               SizedBox(height: AppSpacing.spacingXS),
@@ -168,6 +172,8 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                                 style: AppTypography.bodySmall.copyWith(
                                   color: textSecondary,
                                 ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ],

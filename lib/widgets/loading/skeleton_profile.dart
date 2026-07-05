@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
@@ -12,7 +13,9 @@ class SkeletonProfile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SingleChildScrollView(
+    return ResponsiveGrid.constrained(
+      context,
+      SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -144,6 +147,7 @@ class SkeletonProfile extends StatelessWidget {
           ),
           SizedBox(height: AppSpacing.spacingXXL),
         ],
+      ),
       ),
     );
   }

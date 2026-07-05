@@ -50,14 +50,14 @@ class PurchaseHistoryItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: purchase.isSubscription
                           ? AppColors.accentPurple.withOpacity(0.2)
-                          : AppColors.accentBlue.withOpacity(0.2),
+                          : AppColors.accentViolet.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                     ),
                     child: Icon(
                       purchase.isSubscription ? Icons.sync : Icons.star,
                       color: purchase.isSubscription
                           ? AppColors.accentPurple
-                          : AppColors.accentBlue,
+                          : AppColors.accentViolet,
                       size: 20,
                     ),
                   ),
@@ -73,6 +73,8 @@ class PurchaseHistoryItem extends StatelessWidget {
                             color: textColor,
                             fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: AppSpacing.spacingXS),
                         Text(
@@ -81,6 +83,8 @@ class PurchaseHistoryItem extends StatelessWidget {
                             color: secondaryTextColor,
                             fontFamily: 'monospace',
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -93,11 +97,10 @@ class PurchaseHistoryItem extends StatelessWidget {
               SizedBox(height: AppSpacing.spacingMD),
 
               // Details Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Price
-                  Column(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stackDetails = constraints.maxWidth < 320;
+                  final priceColumn = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -113,15 +116,16 @@ class PurchaseHistoryItem extends StatelessWidget {
                           color: textColor,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                  // Purchase Date
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  );
+                  final dateColumn = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Purchase Date',
+                        'Purchased',
                         style: AppTypography.caption.copyWith(
                           color: secondaryTextColor,
                         ),
@@ -134,10 +138,32 @@ class PurchaseHistoryItem extends StatelessWidget {
                         style: AppTypography.body.copyWith(
                           color: textColor,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                ],
+                  );
+
+                  if (stackDetails) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        priceColumn,
+                        SizedBox(height: AppSpacing.spacingSM),
+                        dateColumn,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: priceColumn),
+                      SizedBox(width: AppSpacing.spacingMD),
+                      Expanded(child: dateColumn),
+                    ],
+                  );
+                },
               ),
 
               // Expiry Date (for subscriptions)

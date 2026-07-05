@@ -2,6 +2,7 @@
 // Emoji picker for messages
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
@@ -87,10 +88,18 @@ class _EmojiPickerWidgetState extends ConsumerState<EmojiPickerWidget> {
           ),
           // Emoji grid
           Expanded(
-            child: GridView.builder(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = AppBreakpoints.value(
+                  context,
+                  phone: 8,
+                  tablet: 10,
+                  desktop: 12,
+                );
+                return GridView.builder(
               padding: EdgeInsets.all(AppSpacing.spacingMD),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 8,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
@@ -114,6 +123,8 @@ class _EmojiPickerWidgetState extends ConsumerState<EmojiPickerWidget> {
                     ),
                   ),
                 );
+              },
+            );
               },
             ),
           ),

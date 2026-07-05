@@ -35,7 +35,12 @@ class MentionTextWidget extends ConsumerWidget {
     final matches = mentionPattern.allMatches(text);
 
     if (matches.isEmpty) {
-      return Text(text, style: defaultStyle);
+      return Text(
+        text,
+        style: defaultStyle,
+        maxLines: 10,
+        overflow: TextOverflow.ellipsis,
+      );
     }
 
     final spans = <TextSpan>[];
@@ -73,8 +78,10 @@ class MentionTextWidget extends ConsumerWidget {
       ));
     }
 
-    return RichText(
-      text: TextSpan(children: spans),
+    return Text.rich(
+      TextSpan(children: spans),
+      maxLines: 20,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

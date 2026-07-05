@@ -255,6 +255,8 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                     style: AppTypography.caption.copyWith(
                       color: textColor,
                     ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -312,6 +314,8 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                         color: textColor,
                         fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: AppSpacing.spacingXS),
                     Text(
@@ -319,6 +323,8 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                       style: AppTypography.caption.copyWith(
                         color: secondaryTextColor,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

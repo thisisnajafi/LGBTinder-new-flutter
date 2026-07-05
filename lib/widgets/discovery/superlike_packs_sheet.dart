@@ -205,6 +205,8 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                           style: AppTypography.titleLarge.copyWith(
                             color: textPrimary,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -224,6 +226,8 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                           style: AppTypography.bodyMedium.copyWith(
                             color: textPrimary,
                           ),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -266,6 +270,9 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                               style: AppTypography.bodyMedium.copyWith(
                                 color: textSecondary,
                               ),
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           )
                         : ListView.separated(
@@ -319,6 +326,8 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                                                     .copyWith(
                                                   color: textPrimary,
                                                 ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                               SizedBox(
                                                 height: AppSpacing.spacingXS,
@@ -329,6 +338,8 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                                                     .copyWith(
                                                   color: textSecondary,
                                                 ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
                                           ),

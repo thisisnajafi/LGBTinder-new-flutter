@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -238,28 +239,35 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
   }
 
   Widget _buildEmptyState(Color textColor, Color secondaryTextColor) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.spacingXL),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.shopping_bag_outlined,
-              size: 64,
-              color: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingLG),
-            Text(
-              'No Purchases Found',
-              style: AppTypography.h2.copyWith(color: textColor),
-            ),
-            SizedBox(height: AppSpacing.spacingSM),
-            Text(
-              'You haven\'t made any Google Play purchases yet.',
-              style: AppTypography.body.copyWith(color: secondaryTextColor),
-              textAlign: TextAlign.center,
-            ),
+    return ResponsiveGrid.constrained(
+      context,
+      Center(
+        child: Padding(
+          padding: ResponsivePadding.page(context),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.shopping_bag_outlined,
+                size: 64,
+                color: secondaryTextColor,
+              ),
+              SizedBox(height: AppSpacing.spacingLG),
+              Text(
+                'No Purchases Found',
+                style: AppTypography.h2.copyWith(color: textColor),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: AppSpacing.spacingSM),
+              Text(
+                'You haven\'t made any Google Play purchases yet.',
+                style: AppTypography.body.copyWith(color: secondaryTextColor),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
             SizedBox(height: AppSpacing.spacingLG),
             ElevatedButton.icon(
               onPressed: () {
@@ -276,6 +284,7 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
             ),
           ],
         ),
+      ),
       ),
     );
   }

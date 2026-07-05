@@ -48,59 +48,109 @@ class DiscoverSwipeLimitBanner extends StatelessWidget {
           horizontal: AppSpacing.spacingMD,
           vertical: AppSpacing.spacingSM,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: accent.withValues(alpha: 0.14),
-              ),
-              child: Center(
-                child: AppSvgIcon(
-                  assetPath: isHealthy
-                      ? AppIcons.getIconPath('heart')
-                      : AppIcons.getIconPath('warning-2'),
-                  size: 18,
-                  color: accent,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.spacingSM),
-            Expanded(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 320;
+            final message = Expanded(
               child: Text(
                 '$remaining swipes left today ($used/$limit used)',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: accent,
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            if (!limits.planInfo.isPremium)
-              PremiumTapScale(
-                onTap: () => context.push(AppRoutes.subscriptionPlans),
-                semanticLabel: 'Upgrade for more swipes',
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingXS,
+            );
+            final upgradeChip = !limits.planInfo.isPremium
+                ? PremiumTapScale(
+                    onTap: () => context.push(AppRoutes.subscriptionPlans),
+                    semanticLabel: 'Upgrade for more swipes',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingMD,
+                        vertical: AppSpacing.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(99),
+                        color: accent.withValues(alpha: 0.14),
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Text(
+                        'Upgrade',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                : null;
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accent.withValues(alpha: 0.14),
+                        ),
+                        child: Center(
+                          child: AppSvgIcon(
+                            assetPath: isHealthy
+                                ? AppIcons.getIconPath('heart')
+                                : AppIcons.getIconPath('warning-2'),
+                            size: 18,
+                            color: accent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.spacingSM),
+                      message,
+                    ],
                   ),
+                  if (upgradeChip != null) ...[
+                    const SizedBox(height: AppSpacing.spacingSM),
+                    Align(alignment: Alignment.centerRight, child: upgradeChip),
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(99),
+                    shape: BoxShape.circle,
                     color: accent.withValues(alpha: 0.14),
-                    border: Border.all(color: accent.withValues(alpha: 0.35)),
                   ),
-                  child: Text(
-                    'Upgrade',
-                    style: theme.textTheme.labelMedium?.copyWith(
+                  child: Center(
+                    child: AppSvgIcon(
+                      assetPath: isHealthy
+                          ? AppIcons.getIconPath('heart')
+                          : AppIcons.getIconPath('warning-2'),
+                      size: 18,
                       color: accent,
-                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-              ),
-          ],
+                const SizedBox(width: AppSpacing.spacingSM),
+                message,
+                if (upgradeChip != null) upgradeChip,
+              ],
+            );
+          },
         ),
       ),
     );

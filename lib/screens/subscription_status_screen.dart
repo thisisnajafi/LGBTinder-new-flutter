@@ -84,6 +84,8 @@ class SubscriptionStatusScreen extends ConsumerWidget {
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (end != null) ...[
                             const SizedBox(height: AppSpacing.spacingSM),
@@ -92,6 +94,8 @@ class SubscriptionStatusScreen extends ConsumerWidget {
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: muted,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ],

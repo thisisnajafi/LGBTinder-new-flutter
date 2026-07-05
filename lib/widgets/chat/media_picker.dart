@@ -71,37 +71,59 @@ class _MediaPickerState extends ConsumerState<MediaPicker> {
 
     return Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildOption(
-            context: context,
-            icon: Icons.image,
-            label: 'Photo',
-            onTap: _pickImage,
-            textColor: textColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildOption(
-            context: context,
-            icon: Icons.videocam,
-            label: 'Video',
-            onTap: _pickVideo,
-            textColor: textColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          _buildOption(
-            context: context,
-            icon: Icons.insert_drive_file,
-            label: 'File',
-            onTap: _pickFile,
-            textColor: textColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final useColumn = constraints.maxWidth < 320;
+          final options = [
+            _buildOption(
+              context: context,
+              icon: Icons.image,
+              label: 'Photo',
+              onTap: _pickImage,
+              textColor: textColor,
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              expanded: useColumn,
+            ),
+            _buildOption(
+              context: context,
+              icon: Icons.videocam,
+              label: 'Video',
+              onTap: _pickVideo,
+              textColor: textColor,
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              expanded: useColumn,
+            ),
+            _buildOption(
+              context: context,
+              icon: Icons.insert_drive_file,
+              label: 'File',
+              onTap: _pickFile,
+              textColor: textColor,
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              expanded: useColumn,
+            ),
+          ];
+
+          if (useColumn) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < options.length; i++) ...[
+                  if (i > 0) SizedBox(height: AppSpacing.spacingMD),
+                  options[i],
+                ],
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: options,
+          );
+        },
       ),
     );
   }
@@ -114,10 +136,12 @@ class _MediaPickerState extends ConsumerState<MediaPicker> {
     required Color textColor,
     required Color surfaceColor,
     required Color borderColor,
+    bool expanded = false,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        width: expanded ? double.infinity : null,
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         decoration: BoxDecoration(
           color: surfaceColor,
@@ -134,6 +158,8 @@ class _MediaPickerState extends ConsumerState<MediaPicker> {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: textColor,
                   ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

@@ -114,7 +114,8 @@ class PremiumHubCard extends StatelessWidget {
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
                   )
                 else if (data.statusLabel != null)
-                  Container(
+                  Flexible(
+                    child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: (data.statusColor ?? AppColors.feedbackSuccess)
@@ -128,7 +129,10 @@ class PremiumHubCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: data.statusColor ?? AppColors.feedbackSuccess,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
                   ),
               ],
             ),

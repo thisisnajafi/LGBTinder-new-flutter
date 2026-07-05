@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
@@ -61,7 +62,7 @@ class ProfileImageCarousel extends ConsumerWidget {
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: ResponsivePadding.horizontal(context),
         itemCount: images.length,
         itemBuilder: (context, index) {
           final image = images[index];
@@ -116,6 +117,8 @@ class ProfileImageCarousel extends ConsumerWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),

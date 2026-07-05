@@ -81,14 +81,18 @@ class _MediaViewerState extends ConsumerState<MediaViewer> {
               ),
       ),
       bottomNavigationBar: widget.caption != null
-          ? Container(
+          ? SafeArea(
+              child: Container(
               padding: EdgeInsets.all(AppSpacing.spacingLG),
               color: backgroundColor,
               child: Text(
                 widget.caption!,
                 style: const TextStyle(color: Colors.white),
                 textAlign: TextAlign.center,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
+            ),
             )
           : null,
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/constants/app_constants.dart';
+import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
@@ -91,8 +92,8 @@ class PremiumPhotosSection extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveGrid.photoColumns(context),
               childAspectRatio: 0.82,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
@@ -190,6 +191,8 @@ class _AddPhotoTile extends StatelessWidget {
                     color: AppColors.accentViolet,
                     fontWeight: FontWeight.w600,
                   ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -262,6 +265,8 @@ class PremiumPersonalitySection extends StatelessWidget {
                         fontStyle:
                             quoteBio ? FontStyle.italic : FontStyle.normal,
                       ),
+                      maxLines: 8,
+                      overflow: TextOverflow.ellipsis,
                     )
                   : PremiumTapScale(
                       onTap: onEdit ?? () {},
@@ -281,6 +286,8 @@ class PremiumPersonalitySection extends StatelessWidget {
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.65),
                               ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -328,6 +335,8 @@ class PremiumPersonalitySection extends StatelessWidget {
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -450,6 +459,8 @@ class _DetailChip extends StatelessWidget {
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   data.value,
@@ -639,6 +650,8 @@ class _GradientInterestPill extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: accent,
             ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -761,6 +774,8 @@ class PremiumMembershipSection extends StatelessWidget {
                                 ? Colors.white
                                 : AppColors.textPrimaryLight,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         if (!isBasid && expiryText != null)
                           Text(
@@ -770,6 +785,8 @@ class PremiumMembershipSection extends StatelessWidget {
                                   ? Colors.white.withValues(alpha: 0.75)
                                   : AppColors.textSecondaryLight,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                       ],
                     ),
@@ -808,6 +825,8 @@ class PremiumMembershipSection extends StatelessWidget {
                                 ? Colors.white
                                 : AppColors.accentViolet,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )

@@ -458,13 +458,14 @@ class _SubscriptionManagementPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: AppSpacing.spacingSM,
+                      runSpacing: AppSpacing.spacingXS,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '$tierName ${subPlan.durationLabel}',
-                            style: theme.textTheme.titleSmall,
-                          ),
+                        Text(
+                          '$tierName ${subPlan.durationLabel}',
+                          style: theme.textTheme.titleSmall,
                         ),
                         if (isYearly)
                           Container(
@@ -497,6 +498,8 @@ class _SubscriptionManagementPageState
                       Text(
                         subPlan.description!,
                         style: theme.textTheme.bodySmall,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],
@@ -614,12 +617,16 @@ class _SubscriptionManagementPageState
                   style: AppTypography.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (startedDate != null)
                   Text(
                     'Started ${_formatDate(startedDate)}'
                     '${endedDate != null ? ' · Ended ${_formatDate(endedDate)}' : ''}',
                     style: AppTypography.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),

@@ -112,6 +112,8 @@ class AppSettingsSectionFootnote extends StatelessWidget {
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
         ),
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

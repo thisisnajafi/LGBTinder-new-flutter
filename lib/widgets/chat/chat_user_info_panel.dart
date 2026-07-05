@@ -252,6 +252,8 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
                 child: Text(
                   widget.name,
                   style: AppTypography.h2.copyWith(color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
@@ -274,9 +276,13 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
                   color: secondaryTextColor,
                 ),
                 SizedBox(width: AppSpacing.spacingXS),
-                Text(
-                  location,
-                  style: AppTypography.caption.copyWith(color: secondaryTextColor),
+                Expanded(
+                  child: Text(
+                    location,
+                    style: AppTypography.caption.copyWith(color: secondaryTextColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -345,6 +351,8 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
                         style: AppTypography.caption.copyWith(
                           color: accentColor,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   )

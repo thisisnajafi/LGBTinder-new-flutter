@@ -304,6 +304,8 @@ class _AnimationSettingsScreenState
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor,
                 ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],
@@ -363,6 +365,8 @@ class _SettingOption extends StatelessWidget {
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

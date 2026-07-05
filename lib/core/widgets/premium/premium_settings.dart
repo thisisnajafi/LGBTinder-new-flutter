@@ -64,6 +64,8 @@ class PremiumSettingsTile extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: titleColor,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
@@ -72,6 +74,8 @@ class PremiumSettingsTile extends StatelessWidget {
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
@@ -197,6 +201,8 @@ class PremiumToggleRow extends StatelessWidget {
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
@@ -205,6 +211,8 @@ class PremiumToggleRow extends StatelessWidget {
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
@@ -267,6 +275,8 @@ class PremiumInfoRow extends StatelessWidget {
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -274,22 +284,30 @@ class PremiumInfoRow extends StatelessWidget {
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           if (badge != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: (badgeColor ?? AppColors.accentPink).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(99),
-              ),
-              child: Text(
-                badge!,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: badgeColor ?? AppColors.accentPink,
-                  fontWeight: FontWeight.w700,
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (badgeColor ?? AppColors.accentPink)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  badge!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: badgeColor ?? AppColors.accentPink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
                 ),
               ),
             ),
@@ -361,6 +379,8 @@ class PremiumSoundOptionTile extends StatelessWidget {
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (isSelected)
                       Text(
@@ -430,6 +450,8 @@ class PremiumFaqTile extends StatelessWidget {
           title: Text(
             question,
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
           iconColor: AppColors.accentViolet,
           collapsedIconColor: theme.colorScheme.onSurface.withValues(alpha: 0.45),

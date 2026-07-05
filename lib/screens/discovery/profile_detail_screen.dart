@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../features/profile/data/models/user_profile.dart';
 import '../../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
 import '../../features/profile/presentation/widgets/other_user_profile/profile_more_options_sheet.dart';
@@ -312,7 +313,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: OtherUserProfileView(
+      body: ResponsiveGrid.constrained(
+        context,
+        OtherUserProfileView(
           profile: profile,
           showInteractionActions: widget.showInteractionActions,
           isMatched: _isMatched,
@@ -356,6 +359,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
             refs: preferredGendersRef,
           ),
         ),
+      ),
     );
   }
 }

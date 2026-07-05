@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/responsive/responsive.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 
@@ -22,7 +23,7 @@ class ProfileImagePicker extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: ResponsivePadding.page(context),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -39,28 +40,56 @@ class ProfileImagePicker extends ConsumerWidget {
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildOptionButton(
-                  context: context,
-                  icon: AppIcons.camera,
-                  label: 'Camera',
-                  onTap: () => _pickImage(context, ImageSource.camera),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildOptionButton(
-                  context: context,
-                  icon: AppIcons.gallery,
-                  label: 'Gallery',
-                  onTap: () => _pickImage(context, ImageSource.gallery),
-                ),
-              ),
-            ],
+          SizedBox(height: AppSpacing.spacingLG),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackVertically = constraints.maxWidth < 320;
+
+              if (stackVertically) {
+                return Column(
+                  children: [
+                    _buildOptionButton(
+                      context: context,
+                      icon: AppIcons.camera,
+                      label: 'Camera',
+                      onTap: () => _pickImage(context, ImageSource.camera),
+                    ),
+                    SizedBox(height: AppSpacing.spacingMD),
+                    _buildOptionButton(
+                      context: context,
+                      icon: AppIcons.gallery,
+                      label: 'Gallery',
+                      onTap: () => _pickImage(context, ImageSource.gallery),
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildOptionButton(
+                      context: context,
+                      icon: AppIcons.camera,
+                      label: 'Camera',
+                      onTap: () => _pickImage(context, ImageSource.camera),
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.spacingMD),
+                  Expanded(
+                    child: _buildOptionButton(
+                      context: context,
+                      icon: AppIcons.gallery,
+                      label: 'Gallery',
+                      onTap: () => _pickImage(context, ImageSource.gallery),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -114,6 +143,8 @@ class ProfileImagePicker extends ConsumerWidget {
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -139,7 +170,7 @@ class ProfileImagePicker extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to pick image: $e'),
-            backgroundColor: theme.colorScheme.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

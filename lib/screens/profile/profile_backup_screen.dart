@@ -400,6 +400,8 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
@@ -425,9 +427,13 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
             color: AppColors.onlineGreen,
           ),
           SizedBox(width: AppSpacing.spacingSM),
-          Text(
-            text,
-            style: AppTypography.body.copyWith(color: textColor),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.body.copyWith(color: textColor),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

@@ -465,13 +465,24 @@ class _DailyRewardsScreenState extends ConsumerState<DailyRewardsScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(streak, style: AppTypography.body),
+          Expanded(
+            child: Text(
+              streak,
+              style: AppTypography.body,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.spacingSM),
           Text(
             bonus,
             style: AppTypography.body.copyWith(
               color: AppColors.onlineGreen,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
           ),
         ],
       ),

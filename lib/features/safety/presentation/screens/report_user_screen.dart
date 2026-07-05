@@ -1,6 +1,7 @@
 // Screen: ReportUserScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -138,15 +139,18 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
       showBackButton: true,
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Form(
+        child: ResponsiveGrid.constrained(
+          context,
+          Form(
           key: _formKey,
           child: ListView(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
             children: [
-              // Header
               Text(
                 'Why are you reporting this user?',
                 style: AppTypography.h3.copyWith(color: textColor),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingMD),
               Text(
@@ -154,6 +158,8 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
                 style: AppTypography.body.copyWith(
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingXXL),
 
@@ -186,6 +192,8 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
                     title: Text(
                       _reasonLabels[reason] ?? reason,
                       style: AppTypography.body.copyWith(color: textColor),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     value: reason,
                     groupValue: _selectedReason,
@@ -242,6 +250,7 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -208,6 +208,8 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
                       color: onSurface.withValues(alpha: 0.45),
                       fontWeight: FontWeight.w500,
                     ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -276,6 +278,8 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
               color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

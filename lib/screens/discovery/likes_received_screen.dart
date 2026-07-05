@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/api_endpoints.dart';
 import '../../core/providers/api_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
@@ -426,21 +427,33 @@ class _LikeCard extends StatelessWidget {
                 horizontal: AppSpacing.spacingLG,
                 vertical: AppSpacing.spacingMD,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  DiscoverySwipeActionButton(
-                    type: DiscoverySwipeActionType.dislike,
-                    size: 52,
-                    onPressed: onPass,
-                  ),
-                  const SizedBox(width: AppSpacing.spacingXL),
-                  DiscoverySwipeActionButton(
-                    type: DiscoverySwipeActionType.like,
-                    size: 52,
-                    onPressed: onAccept,
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final buttonSize =
+                      (constraints.maxWidth * 0.14).clamp(48.0, 56.0);
+                  final gap = AppBreakpoints.value(
+                    context,
+                    phone: AppSpacing.spacingXL,
+                    tablet: AppSpacing.spacingXXL,
+                  );
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      DiscoverySwipeActionButton(
+                        type: DiscoverySwipeActionType.dislike,
+                        size: buttonSize,
+                        onPressed: onPass,
+                      ),
+                      SizedBox(width: gap),
+                      DiscoverySwipeActionButton(
+                        type: DiscoverySwipeActionType.like,
+                        size: buttonSize,
+                        onPressed: onAccept,
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

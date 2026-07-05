@@ -52,6 +52,8 @@ class StatusIndicator extends ConsumerWidget {
             color: statusColor,
             fontWeight: FontWeight.w500,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

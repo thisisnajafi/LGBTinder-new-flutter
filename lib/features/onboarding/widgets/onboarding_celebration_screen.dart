@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/animation_constants.dart';
+import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
@@ -169,66 +170,76 @@ class _OnboardingCelebrationScreenState
                       AppSpacing.spacingXL,
                       AppSpacing.spacingMD,
                     ),
-                    child: Column(
-                      children: [
-                        FadeTransition(
-                          opacity: _headerFade,
-                          child: Column(
-                            children: [
-                              _CelebrationBadge(textTheme: textTheme),
-                              SizedBox(height: AppSpacing.spacingLG),
-                              Text(
-                                "You're in!",
-                                style: textTheme.displayMedium?.copyWith(
-                                  color: AppColors.textPrimaryDark,
-                                  fontStyle: FontStyle.italic,
-                                  fontWeight: FontWeight.w800,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withValues(alpha: 0.18),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                    child: ResponsiveGrid.constrained(
+                      context,
+                      Column(
+                        children: [
+                          FadeTransition(
+                            opacity: _headerFade,
+                            child: Column(
+                              children: [
+                                _CelebrationBadge(textTheme: textTheme),
+                                SizedBox(height: AppSpacing.spacingLG),
+                                Text(
+                                  "You're in!",
+                                  style: textTheme.displayMedium?.copyWith(
+                                    color: AppColors.textPrimaryDark,
+                                    fontStyle: FontStyle.italic,
+                                    fontWeight: FontWeight.w800,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.18),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: AppSpacing.spacingSM),
-                              Text(
-                                'Your profile is ready to shine',
-                                style: textTheme.bodyLarge?.copyWith(
-                                  color: AppColors.textPrimaryDark
-                                      .withValues(alpha: 0.92),
+                                SizedBox(height: AppSpacing.spacingSM),
+                                Text(
+                                  'Your profile is ready to shine',
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    color: AppColors.textPrimaryDark
+                                        .withValues(alpha: 0.92),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: AppSpacing.spacingSM),
-                              Text(
-                                'This is how others will see you on Discover',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textPrimaryDark
-                                      .withValues(alpha: 0.78),
+                                SizedBox(height: AppSpacing.spacingSM),
+                                Text(
+                                  'This is how others will see you on Discover',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textPrimaryDark
+                                        .withValues(alpha: 0.78),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        SizedBox(height: AppSpacing.spacingXL),
-                        ScaleTransition(
-                          scale: _cardScale,
-                          child: OnboardingProfilePreviewCard(
-                            displayName: widget.displayName,
-                            age: widget.age,
-                            location: widget.location,
-                            bio: widget.bio,
-                            relationshipGoal: widget.relationshipGoal,
-                            heightCm: widget.heightCm,
-                            photoSources: widget.photoSources,
-                            interests: widget.topInterests,
+                          SizedBox(height: AppSpacing.spacingXL),
+                          ScaleTransition(
+                            scale: _cardScale,
+                            child: OnboardingProfilePreviewCard(
+                              displayName: widget.displayName,
+                              age: widget.age,
+                              location: widget.location,
+                              bio: widget.bio,
+                              relationshipGoal: widget.relationshipGoal,
+                              heightCm: widget.heightCm,
+                              photoSources: widget.photoSources,
+                              interests: widget.topInterests,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -243,29 +254,32 @@ class _OnboardingCelebrationScreenState
                         AppSpacing.spacingXL,
                         AppSpacing.spacingLG,
                       ),
-                      child: Column(
-                        children: [
-                          Semantics(
-                            label: 'Start discovering matches',
-                            button: true,
-                            child: _CelebrationButton(
-                              label: 'Start Discovering',
-                              iconPath: AppIcons.discover,
-                              primary: true,
-                              onPressed: _startDiscovering,
+                      child: ResponsiveGrid.constrained(
+                        context,
+                        Column(
+                          children: [
+                            Semantics(
+                              label: 'Start discovering matches',
+                              button: true,
+                              child: _CelebrationButton(
+                                label: 'Start Discovering',
+                                iconPath: AppIcons.discover,
+                                primary: true,
+                                onPressed: _startDiscovering,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Semantics(
-                            label: 'Edit profile before discovering',
-                            button: true,
-                            child: _CelebrationButton(
-                              label: 'Edit Profile',
-                              iconPath: AppIcons.userEdit,
-                              onPressed: _editProfile,
+                            SizedBox(height: AppSpacing.spacingMD),
+                            Semantics(
+                              label: 'Edit profile before discovering',
+                              button: true,
+                              child: _CelebrationButton(
+                                label: 'Edit Profile',
+                                iconPath: AppIcons.userEdit,
+                                onPressed: _editProfile,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -464,6 +478,8 @@ class _CelebrationBadge extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -536,11 +552,16 @@ class _CelebrationButtonState extends State<_CelebrationButton>
             color: AppColors.textPrimaryDark,
           ),
           SizedBox(width: AppSpacing.spacingSM),
-          Text(
-            widget.label,
-            style: AppTypography.titleMedium.copyWith(
-              color: AppColors.textPrimaryDark,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              widget.label,
+              style: AppTypography.titleMedium.copyWith(
+                color: AppColors.textPrimaryDark,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ),
         ],

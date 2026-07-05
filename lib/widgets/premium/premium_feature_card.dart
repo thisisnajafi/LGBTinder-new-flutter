@@ -93,6 +93,8 @@ class PremiumFeatureCard extends ConsumerWidget {
                             color: textColor,
                             fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (!isUnlocked)

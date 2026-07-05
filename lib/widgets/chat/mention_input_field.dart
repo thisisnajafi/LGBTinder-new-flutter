@@ -149,6 +149,8 @@ class _MentionInputFieldState extends ConsumerState<MentionInputField> {
                   title: Text(
                     user['name'] ?? 'User',
                     style: AppTypography.body.copyWith(color: textColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   onTap: () => _selectMention(user),
                 );

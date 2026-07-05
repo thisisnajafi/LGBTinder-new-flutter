@@ -21,6 +21,8 @@ class FilterSubsectionTitle extends StatelessWidget {
       child: Text(
         title,
         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -75,6 +77,8 @@ class FilterSectionHeader extends StatelessWidget {
               color: textColor,
               fontWeight: FontWeight.w800,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -173,6 +177,8 @@ class FilterGenderChip extends StatelessWidget {
               color: isSelected ? AppColors.accentPurple : textColor,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -238,6 +244,8 @@ class FilterToggleRow extends StatelessWidget {
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (trailing != null) trailing!,
@@ -247,6 +255,8 @@ class FilterToggleRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTypography.caption.copyWith(color: secondaryColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -291,6 +301,9 @@ class FilterValuePill extends StatelessWidget {
             color: AppColors.accentPurple,
             fontWeight: FontWeight.w700,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -376,6 +389,8 @@ class FilterPremiumGate extends StatelessWidget {
                       color: AppColors.accentPurple,
                       fontWeight: FontWeight.w700,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

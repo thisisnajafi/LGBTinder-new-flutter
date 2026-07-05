@@ -2,6 +2,7 @@
 // Profile image editing
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
@@ -62,20 +63,24 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
             style: theme.textTheme.headlineMedium?.copyWith(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           if (!widget.galleryOnly && widget.imageUrls.length > 1) ...[
             SizedBox(height: AppSpacing.spacingXS),
             Text(
               'Hold and drag to reorder. Tap a photo to set it as primary.',
               style: theme.textTheme.bodySmall?.copyWith(color: secondaryTextColor),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
           SizedBox(height: AppSpacing.spacingMD),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveGrid.photoColumns(context),
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               childAspectRatio: 0.75,

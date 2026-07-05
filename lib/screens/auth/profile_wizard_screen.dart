@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -131,11 +132,7 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
           context,
           title: 'Profile Complete!',
           message: 'Your profile has been set up successfully. Start discovering matches!',
-          icon: AppSvgIcon(
-            assetPath: AppIcons.checkCircle,
-            size: 24,
-            color: AppColors.onlineGreen,
-          ),
+          iconPath: AppIcons.checkCircle,
           iconColor: AppColors.onlineGreen,
         ).then((_) {
           if (context.canPop()) {
@@ -185,8 +182,10 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
               ),
             )
           : null,
-      body: Column(
-        children: [
+      body: ResponsiveGrid.constrainedTo(
+        context,
+        Column(
+          children: [
           // Progress bar
           Container(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
@@ -252,15 +251,15 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                 onPressed: _isSaving ? null : _nextStep,
                 isLoading: _isSaving && _currentStep == _totalSteps - 1,
                 isFullWidth: true,
-                icon: AppSvgIcon(
-                  assetPath: _currentStep == _totalSteps - 1 ? AppIcons.checkCircle : AppIcons.forward,
-                  size: 24,
-                  color: Colors.white,
-                ),
+                iconPath: _currentStep == _totalSteps - 1
+                    ? AppIcons.checkCircle
+                    : AppIcons.forward,
               ),
             ),
           ),
         ],
+        ),
+        tablet: 500,
       ),
     );
   }
@@ -1081,17 +1080,13 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         border: Border.all(color: borderColor),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackVertical = constraints.maxWidth < 360;
+          final options = Wrap(
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
+            alignment: stackVertical ? WrapAlignment.start : WrapAlignment.end,
             children: [
               _buildTriStateOption(
                 label: 'No',
@@ -1101,7 +1096,6 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                 surfaceColor: surfaceColor,
                 borderColor: borderColor,
               ),
-              SizedBox(width: AppSpacing.spacingSM),
               _buildTriStateOption(
                 label: 'Sometimes',
                 isSelected: value == null,
@@ -1110,7 +1104,6 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                 surfaceColor: surfaceColor,
                 borderColor: borderColor,
               ),
-              SizedBox(width: AppSpacing.spacingSM),
               _buildTriStateOption(
                 label: 'Yes',
                 isSelected: value == true,
@@ -1120,8 +1113,44 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
                 borderColor: borderColor,
               ),
             ],
-          ),
-        ],
+          );
+
+          if (stackVertical) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTypography.body.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: AppSpacing.spacingSM),
+                options,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.body.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              options,
+            ],
+          );
+        },
       ),
     );
   }

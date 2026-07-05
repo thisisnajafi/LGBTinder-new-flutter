@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 
@@ -34,43 +35,61 @@ class ProfileStatsRow extends ConsumerWidget {
           color: theme.colorScheme.outline.withOpacity(0.1),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildStatItem(
-            context: context,
-            icon: AppIcons.eye,
-            label: 'Views',
-            value: viewsCount ?? 0,
-            color: AppColors.feedbackInfo,
-          ),
-          _buildDivider(context),
-          _buildStatItem(
-            context: context,
-            icon: AppIcons.heart,
-            label: 'Likes',
-            value: likesCount ?? 0,
-            color: AppColors.feedbackError,
-          ),
-          _buildDivider(context),
-          _buildStatItem(
-            context: context,
-            icon: AppIcons.star,
-            label: 'Matches',
-            value: matchesCount ?? 0,
-            color: AppColors.feedbackSuccess,
-          ),
-          if (superLikesCount != null && superLikesCount! > 0) ...[
-            _buildDivider(context),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 340;
+
+          final statItems = [
+            _buildStatItem(
+              context: context,
+              icon: AppIcons.eye,
+              label: 'Views',
+              value: viewsCount ?? 0,
+              color: AppColors.feedbackInfo,
+            ),
+            _buildStatItem(
+              context: context,
+              icon: AppIcons.heart,
+              label: 'Likes',
+              value: likesCount ?? 0,
+              color: AppColors.feedbackError,
+            ),
             _buildStatItem(
               context: context,
               icon: AppIcons.star,
-              label: 'Super Likes',
-              value: superLikesCount!,
-              color: AppColors.primaryLight,
+              label: 'Matches',
+              value: matchesCount ?? 0,
+              color: AppColors.feedbackSuccess,
             ),
-          ],
-        ],
+            if (superLikesCount != null && superLikesCount! > 0)
+              _buildStatItem(
+                context: context,
+                icon: AppIcons.star,
+                label: 'Super Likes',
+                value: superLikesCount!,
+                color: AppColors.primaryLight,
+              ),
+          ];
+
+          if (compact) {
+            return Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
+              children: statItems,
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (var i = 0; i < statItems.length; i++) ...[
+                if (i > 0) _buildDivider(context),
+                Expanded(child: statItems[i]),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -99,12 +118,17 @@ class ProfileStatsRow extends ConsumerWidget {
             fontWeight: FontWeight.w600,
             color: color,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         Text(
           label,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
         ),
       ],
     );

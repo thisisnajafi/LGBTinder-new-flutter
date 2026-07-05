@@ -424,6 +424,8 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
                                     color: textColor,
                                     fontWeight: FontWeight.w700,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (pack.isPopular)

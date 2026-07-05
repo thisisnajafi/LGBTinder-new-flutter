@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -186,6 +187,8 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppColors.feedbackError,
                           ),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -226,6 +229,8 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (!_loading && !_saving)
                             Align(

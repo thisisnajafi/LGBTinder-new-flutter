@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -95,9 +96,11 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
                         style: AppTypography.body.copyWith(color: textColor),
                       ),
                     )
-                  : SingleChildScrollView(
-                      padding: EdgeInsets.all(AppSpacing.spacingLG),
-                      child: Column(
+                  : ResponsiveGrid.constrained(
+                      context,
+                      SingleChildScrollView(
+                        padding: ResponsivePadding.page(context),
+                        child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Purchase Info Card
@@ -232,6 +235,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
                         ],
                       ),
                     ),
+                    ),
     );
   }
 
@@ -251,6 +255,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
             style: AppTypography.h3.copyWith(
               fontWeight: FontWeight.bold,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           ...children,
@@ -278,6 +284,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
               style: AppTypography.body.copyWith(
                 color: secondaryTextColor,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
@@ -290,6 +298,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
                 fontFamily: isMonospace ? 'monospace' : null,
               ),
               textAlign: TextAlign.right,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

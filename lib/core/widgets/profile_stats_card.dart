@@ -116,6 +116,9 @@ class ProfileStatsCard extends ConsumerWidget {
             style: AppTypography.bodySmall.copyWith(
               color: secondaryTextColor,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
         ],
       ),

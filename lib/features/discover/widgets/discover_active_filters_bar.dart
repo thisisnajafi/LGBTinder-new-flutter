@@ -40,85 +40,119 @@ class DiscoverActiveFiltersBar extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.accentViolet.withValues(alpha: 0.12),
-                  ),
-                  child: Center(
-                    child: AppSvgIcon(
-                      assetPath: AppIcons.filter,
-                      size: 16,
-                      color: AppColors.accentViolet,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.spacingSM),
-                Expanded(
-                  child: Text(
-                    'Active filters',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                PremiumTapScale(
-                  onTap: onClear,
-                  semanticLabel: 'Clear all filters',
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.spacingXS,
-                      vertical: AppSpacing.spacingXS,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.close,
-                          size: 14,
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.45),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 320;
+                final titleRow = Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.accentViolet.withValues(alpha: 0.12),
+                      ),
+                      child: Center(
+                        child: AppSvgIcon(
+                          assetPath: AppIcons.filter,
+                          size: 16,
+                          color: AppColors.accentViolet,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Clear',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.55),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.spacingXS),
-                PremiumTapScale(
-                  onTap: onEdit,
-                  semanticLabel: 'Edit filters',
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.spacingMD,
-                      vertical: AppSpacing.spacingXS,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(99),
-                      gradient: AppColors.brandGradient,
-                    ),
-                    child: Text(
-                      'Edit',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(width: AppSpacing.spacingSM),
+                    Expanded(
+                      child: Text(
+                        'Active filters',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                );
+                final actions = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    PremiumTapScale(
+                      onTap: onClear,
+                      semanticLabel: 'Clear all filters',
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingXS,
+                          vertical: AppSpacing.spacingXS,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppSvgIcon(
+                              assetPath: AppIcons.close,
+                              size: 14,
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.45),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Clear',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.55),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.spacingXS),
+                    PremiumTapScale(
+                      onTap: onEdit,
+                      semanticLabel: 'Edit filters',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingMD,
+                          vertical: AppSpacing.spacingXS,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(99),
+                          gradient: AppColors.brandGradient,
+                        ),
+                        child: Text(
+                          'Edit',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      titleRow,
+                      const SizedBox(height: AppSpacing.spacingSM),
+                      Align(alignment: Alignment.centerRight, child: actions),
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(child: titleRow),
+                    actions,
+                  ],
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.spacingSM),
             SingleChildScrollView(
@@ -163,6 +197,8 @@ class _DiscoverFilterChip extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: AppColors.accentViolet,
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

@@ -178,6 +178,8 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
             color: strength.color,
             fontWeight: FontWeight.w500,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -225,12 +227,16 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
                 : textColor.withValues(alpha: 0.4),
           ),
           SizedBox(width: AppSpacing.spacingXS),
-          Text(
-            rule.text,
-            style: AppTypography.bodySmall.copyWith(
-              color: rule.isValid
-                  ? AppColors.feedbackSuccess
-                  : textColor.withValues(alpha: 0.6),
+          Expanded(
+            child: Text(
+              rule.text,
+              style: AppTypography.bodySmall.copyWith(
+                color: rule.isValid
+                    ? AppColors.feedbackSuccess
+                    : textColor.withValues(alpha: 0.6),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

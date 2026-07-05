@@ -143,11 +143,15 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
           Text(
             widget.sectionTitle,
             style: AppTypography.h2.copyWith(color: textColor),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Text(
             'Select ${widget.sectionTitle.toLowerCase()}',
             style: AppTypography.body.copyWith(color: secondaryTextColor),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           if (widget.showSearch) ...[
@@ -223,6 +227,8 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
                               ? FontWeight.w600
                               : FontWeight.normal,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -232,21 +238,10 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
           ),
           if (!widget.autoSave) ...[
             SizedBox(height: AppSpacing.spacingXXL),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (widget.onCancel != null)
-                  TextButton(
-                    onPressed: widget.onCancel,
-                    child: Text(
-                      'Cancel',
-                      style: AppTypography.button.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                  ),
-                SizedBox(width: AppSpacing.spacingMD),
-                GradientButton(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stackActions = constraints.maxWidth < 320;
+                final saveButton = GradientButton(
                   text: 'Save',
                   onPressed: () {
                     if (widget.minSelections != null &&
@@ -264,10 +259,48 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
                     }
                     widget.onSave?.call(_selectedOptions);
                   },
-                  isFullWidth: false,
+                  isFullWidth: stackActions,
                   height: 40,
-                ),
-              ],
+                );
+                if (stackActions) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (widget.onCancel != null)
+                        TextButton(
+                          onPressed: widget.onCancel,
+                          child: Text(
+                            'Cancel',
+                            style: AppTypography.button.copyWith(
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                        ),
+                      if (widget.onCancel != null)
+                        SizedBox(height: AppSpacing.spacingSM),
+                      saveButton,
+                    ],
+                  );
+                }
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (widget.onCancel != null)
+                      TextButton(
+                        onPressed: widget.onCancel,
+                        child: Text(
+                          'Cancel',
+                          style: AppTypography.button.copyWith(
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                    if (widget.onCancel != null)
+                      SizedBox(width: AppSpacing.spacingMD),
+                    saveButton,
+                  ],
+                );
+              },
             ),
           ],
         ],

@@ -88,10 +88,13 @@ class PlanCard extends ConsumerWidget {
             Text(
               planName,
               style: AppTypography.h2.copyWith(color: textColor),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingSM),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: AppSpacing.spacingXS,
               children: [
                 Text(
                   price,
@@ -100,10 +103,9 @@ class PlanCard extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (period != null) ...[
-                  SizedBox(width: AppSpacing.spacingXS),
+                if (period != null)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
                       period!,
                       style: AppTypography.body.copyWith(
@@ -111,7 +113,6 @@ class PlanCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                ],
               ],
             ),
             if (features.isNotEmpty) ...[
@@ -131,6 +132,8 @@ class PlanCard extends ConsumerWidget {
                         child: Text(
                           feature,
                           style: AppTypography.body.copyWith(color: textColor),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

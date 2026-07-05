@@ -72,6 +72,8 @@ class ListTileCustom extends ConsumerWidget {
                         color: enabled ? textColor : secondaryTextColor,
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   if (subtitle != null) ...[
                     SizedBox(height: AppSpacing.spacingXS),
@@ -80,6 +82,8 @@ class ListTileCustom extends ConsumerWidget {
                       style: AppTypography.caption.copyWith(
                         color: secondaryTextColor,
                       ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],

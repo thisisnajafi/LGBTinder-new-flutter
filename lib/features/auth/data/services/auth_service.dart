@@ -506,7 +506,7 @@ class AuthService {
         );
         response = await _apiService.postFormData<Map<String, dynamic>>(
           ApiEndpoints.completeRegistration,
-          fields: fields,
+          data: FormData.fromMap(fields),
           fromJson: (json) => json as Map<String, dynamic>,
           options: authOptions,
         );

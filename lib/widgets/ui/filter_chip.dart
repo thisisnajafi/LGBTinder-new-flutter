@@ -68,6 +68,8 @@ class FilterChip extends ConsumerWidget {
                 color: isSelected ? selectedColorValue : textColor,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             if (isSelected) ...[
               SizedBox(width: AppSpacing.spacingXS),

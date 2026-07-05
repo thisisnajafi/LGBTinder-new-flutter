@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
@@ -204,38 +205,43 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   }) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackControls = constraints.maxWidth < 520;
+
+          final titleBlock = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const FilterProBadge(),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.spacingXS),
-                Text(
-                  subtitle,
-                  style: AppTypography.caption.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(
-                          alpha: 0.6,
-                        ),
                   ),
+                  const FilterProBadge(),
+                ],
+              ),
+              SizedBox(height: AppSpacing.spacingXS),
+              Text(
+                subtitle,
+                style: AppTypography.caption.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(
+                        alpha: 0.6,
+                      ),
                 ),
-              ],
-            ),
-          ),
-          SegmentedButton<bool?>(
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          );
+
+          final segments = SegmentedButton<bool?>(
             segments: const [
               ButtonSegment<bool?>(
                 value: null,
@@ -252,8 +258,28 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
             ],
             selected: {value},
             onSelectionChanged: (selection) => onChanged(selection.first),
-          ),
-        ],
+          );
+
+          if (stackControls) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleBlock,
+                SizedBox(height: AppSpacing.spacingMD),
+                segments,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: titleBlock),
+              SizedBox(width: AppSpacing.spacingSM),
+              segments,
+            ],
+          );
+        },
       ),
     );
   }
@@ -564,6 +590,8 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                     'Tip: widen age or distance if you see fewer profiles nearby.',
                     style: AppTypography.caption.copyWith(color: secondaryColor),
                     textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

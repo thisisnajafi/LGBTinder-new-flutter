@@ -28,8 +28,9 @@ class UnreadBadge extends ConsumerWidget {
     final displayCount = count > 99 ? '99+' : count.toString();
 
     return Container(
-      width: badgeSize,
-      height: badgeSize,
+      padding: EdgeInsets.symmetric(
+        horizontal: displayCount.length > 1 ? 4 : 0,
+      ),
       constraints: BoxConstraints(
         minWidth: badgeSize,
         minHeight: badgeSize,
@@ -39,14 +40,18 @@ class UnreadBadge extends ConsumerWidget {
         shape: BoxShape.circle,
       ),
       child: Center(
-        child: Text(
-          displayCount,
-          style: AppTypography.caption.copyWith(
-            color: Colors.white,
-            fontSize: count > 99 ? 8 : 10,
-            fontWeight: FontWeight.w600,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            displayCount,
+            style: AppTypography.caption.copyWith(
+              color: Colors.white,
+              fontSize: count > 99 ? 8 : 10,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
           ),
-          textAlign: TextAlign.center,
         ),
       ),
     );

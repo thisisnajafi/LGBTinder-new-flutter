@@ -462,11 +462,15 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                 size: 20,
               ),
               SizedBox(width: AppSpacing.spacingSM),
-              Text(
-                'Payment via ${paymentSystem.displayName}',
-                style: AppTypography.body.copyWith(
-                  color: AppColors.accentPurple,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Payment via ${paymentSystem.displayName}',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.accentPurple,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -645,7 +649,10 @@ class _PlanCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            spacing: AppSpacing.spacingSM,
+                            runSpacing: AppSpacing.spacingXS,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 plan.name,
@@ -654,8 +661,7 @@ class _PlanCard extends StatelessWidget {
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              if (planTheme.isPopular) ...[
-                                SizedBox(width: AppSpacing.spacingSM),
+                              if (planTheme.isPopular)
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: AppSpacing.spacingSM,
@@ -674,7 +680,6 @@ class _PlanCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                              ],
                             ],
                           ),
                           SizedBox(height: AppSpacing.spacingXS),
@@ -684,6 +689,8 @@ class _PlanCard extends StatelessWidget {
                               color: secondaryTextColor,
                               height: 1.35,
                             ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (planSubPlans.isNotEmpty) ...[
                             SizedBox(height: AppSpacing.spacingSM),

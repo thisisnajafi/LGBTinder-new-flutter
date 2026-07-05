@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/responsive/responsive.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
@@ -245,15 +246,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         : RefreshIndicator(
                             onRefresh: _loadResults,
                             child: GridView.builder(
-                              padding: const EdgeInsets.all(
-                                PremiumPageHeader.horizontalPadding,
+                              padding: EdgeInsets.all(
+                                AppBreakpoints.value(
+                                  context,
+                                  phone: PremiumPageHeader.horizontalPadding,
+                                  tablet: AppSpacing.spacingXL,
+                                ),
                               ),
                               gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: AppBreakpoints.value(
+                                  context,
+                                  phone: 2,
+                                  tablet: 3,
+                                  desktop: 4,
+                                ),
                                 crossAxisSpacing: AppSpacing.spacingMD,
                                 mainAxisSpacing: AppSpacing.spacingMD,
-                                childAspectRatio: 0.75,
+                                childAspectRatio: AppBreakpoints.value(
+                                  context,
+                                  phone: 0.75,
+                                  tablet: 0.8,
+                                  desktop: 0.85,
+                                ),
                               ),
                               itemCount: _results.length,
                               itemBuilder: (context, index) {
@@ -348,6 +363,8 @@ class _SearchFilterChip extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: isSelected ? Colors.white : AppColors.accentViolet,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -370,11 +387,13 @@ class _SearchEmptyState extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: PremiumPageHeader.horizontalPadding,
-        ),
-        child: PremiumShell(
+      child: ResponsiveGrid.constrained(
+        context,
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: PremiumPageHeader.horizontalPadding,
+          ),
+          child: PremiumShell(
           margin: EdgeInsets.zero,
           padding: const EdgeInsets.all(AppSpacing.spacingXL),
           child: Column(
@@ -416,6 +435,7 @@ class _SearchEmptyState extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

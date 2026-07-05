@@ -188,9 +188,13 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Profile Completion',
-                        style: AppTypography.h3.copyWith(color: textColor),
+                      Expanded(
+                        child: Text(
+                          'Profile Completion',
+                          style: AppTypography.h3.copyWith(color: textColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       Text(
                         '$_completionPercentage%',

@@ -92,6 +92,8 @@ class PaymentMethodTile extends ConsumerWidget {
             color: textColor,
             fontWeight: FontWeight.w500,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: isDefault
             ? Text(
@@ -99,6 +101,8 @@ class PaymentMethodTile extends ConsumerWidget {
                 style: AppTypography.caption.copyWith(
                   color: AppColors.accentPurple,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               )
             : null,
         trailing: Row(

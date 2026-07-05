@@ -178,6 +178,9 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
               style: AppTypography.body.copyWith(
                 color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
             GestureDetector(

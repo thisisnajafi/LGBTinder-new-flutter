@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -82,7 +83,9 @@ class _AudioRecorderWidgetState extends ConsumerState<AudioRecorderWidget> {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
-    return Container(
+    return ResponsiveGrid.constrained(
+      context,
+      Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -107,22 +110,22 @@ class _AudioRecorderWidgetState extends ConsumerState<AudioRecorderWidget> {
                   ),
                 ),
               if (_isRecording) SizedBox(width: AppSpacing.spacingSM),
-              Text(
-                _formatDuration(_recordingDuration),
-                style: AppTypography.h2.copyWith(color: textColor),
+              Flexible(
+                child: Text(
+                  _formatDuration(_recordingDuration),
+                  style: AppTypography.h2.copyWith(color: textColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ],
           ),
           SizedBox(height: AppSpacing.spacingLG),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              if (_isRecording)
-                IconButton(
-                  icon: Icon(Icons.close, color: textColor),
-                  onPressed: _cancelRecording,
-                ),
-              GestureDetector(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackControls = constraints.maxWidth < 280;
+              final recordButton = GestureDetector(
                 onTap: _isRecording ? _stopRecording : _startRecording,
                 child: Container(
                   width: 64,
@@ -139,15 +142,57 @@ class _AudioRecorderWidgetState extends ConsumerState<AudioRecorderWidget> {
                     size: 32,
                   ),
                 ),
-              ),
-              if (_isRecording)
-                IconButton(
-                  icon: Icon(Icons.check, color: AppColors.onlineGreen),
-                  onPressed: _stopRecording,
-                ),
-            ],
+              );
+
+              if (stackControls) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    recordButton,
+                    if (_isRecording) ...[
+                      SizedBox(height: AppSpacing.spacingMD),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close, color: textColor),
+                            onPressed: _cancelRecording,
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.check, color: AppColors.onlineGreen),
+                            onPressed: _stopRecording,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (_isRecording)
+                    IconButton(
+                      icon: Icon(Icons.close, color: textColor),
+                      onPressed: _cancelRecording,
+                    )
+                  else
+                    const SizedBox(width: 48),
+                  recordButton,
+                  if (_isRecording)
+                    IconButton(
+                      icon: Icon(Icons.check, color: AppColors.onlineGreen),
+                      onPressed: _stopRecording,
+                    )
+                  else
+                    const SizedBox(width: 48),
+                ],
+              );
+            },
           ),
         ],
+      ),
       ),
     );
   }

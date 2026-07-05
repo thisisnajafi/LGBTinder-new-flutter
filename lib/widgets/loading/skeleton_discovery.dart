@@ -179,6 +179,9 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondaryLight,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
               ],

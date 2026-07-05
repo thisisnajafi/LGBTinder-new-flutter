@@ -1,6 +1,7 @@
 ﻿// Screen: ProfileAnalyticsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
@@ -159,7 +160,12 @@ class _ProfileAnalyticsScreenState extends ConsumerState<ProfileAnalyticsScreen>
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
+                  crossAxisCount: AppBreakpoints.value(
+                    context,
+                    phone: 2,
+                    tablet: 3,
+                    desktop: 4,
+                  ),
                   crossAxisSpacing: AppSpacing.spacingMD,
                   mainAxisSpacing: AppSpacing.spacingMD,
                   childAspectRatio: 1.2,

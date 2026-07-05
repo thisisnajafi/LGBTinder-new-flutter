@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/responsive/responsive.dart';
 import '../../features/chat/providers/chat_typing_providers.dart';
 import 'typing_indicator.dart';
 
@@ -21,7 +22,7 @@ class ChatPeerTypingIndicator extends ConsumerWidget {
     if (!isTyping) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: ResponsivePadding.page(context).copyWith(top: 8, bottom: 8),
       child: Align(
         alignment: Alignment.centerLeft,
         child: TypingIndicator(displayName: displayName),

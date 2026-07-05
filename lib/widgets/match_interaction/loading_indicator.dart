@@ -25,7 +25,9 @@ class LoadingIndicator extends ConsumerWidget {
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
     return Center(
-      child: Column(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           CircularProgress(
@@ -39,9 +41,13 @@ class LoadingIndicator extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: textColor,
                   ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
+      ),
       ),
     );
   }

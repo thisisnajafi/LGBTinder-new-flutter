@@ -97,7 +97,10 @@ class PlanDurationOptions extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Wrap(
+                              spacing: AppSpacing.spacingSM,
+                              runSpacing: AppSpacing.spacingXS,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
                                   option.durationLabel,
@@ -106,21 +109,17 @@ class PlanDurationOptions extends StatelessWidget {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                if (isBestValue) ...[
-                                  SizedBox(width: AppSpacing.spacingSM),
+                                if (isBestValue)
                                   _Badge(
                                     label: 'Best value',
                                     background: accent,
                                   ),
-                                ],
                                 if (pricing.hasBundleDiscount &&
-                                    pricing.discountPercent != null) ...[
-                                  SizedBox(width: AppSpacing.spacingSM),
+                                    pricing.discountPercent != null)
                                   _Badge(
                                     label: '${pricing.discountPercent}% OFF',
                                     background: AppColors.feedbackSuccess,
                                   ),
-                                ],
                               ],
                             ),
                             if (option.monthsCount > 1) ...[

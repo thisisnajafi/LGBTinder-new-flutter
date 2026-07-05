@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
+import '../core/responsive/responsive.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
@@ -432,12 +433,17 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     late final OverlayEntry overlayEntry;
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: 50,
-        right: 20,
+        top: MediaQuery.paddingOf(context).top + AppSpacing.spacingMD,
+        right: AppSpacing.spacingLG,
+        left: AppSpacing.spacingLG,
         child: Material(
           color: Colors.transparent,
-          child: Container(
-            width: 280,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: (MediaQuery.sizeOf(context).width - AppSpacing.spacingLG * 2)
+                  .clamp(240.0, 320.0),
+            ),
+            child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
@@ -509,6 +515,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
           ),
         ),
       ),
+    ),
     );
 
     // Insert the overlay
@@ -545,6 +552,12 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final avatarSize =
+        (MediaQuery.sizeOf(context).width * 0.45).clamp(120.0, 200.0);
+    final primaryButtonSize =
+        (MediaQuery.sizeOf(context).width * 0.16).clamp(56.0, 64.0);
+    final secondaryButtonSize =
+        (MediaQuery.sizeOf(context).width * 0.14).clamp(48.0, 56.0);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -553,7 +566,10 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
           children: [
             // Status bar
             Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                top: AppSpacing.spacingLG,
+                bottom: AppSpacing.spacingLG,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -574,14 +590,16 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
             ),
             // User info
             Expanded(
-              child: Column(
+              child: Padding(
+                padding: ResponsivePadding.horizontal(context),
+                child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AvatarWithStatus(
                     imageUrl: widget.userAvatarUrl,
                     name: widget.userName,
                     isOnline: false,
-                    size: 200.0,
+                    size: avatarSize,
                     showRing: true,
                   ),
                   SizedBox(height: AppSpacing.spacingXXL),
@@ -591,6 +609,9 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                       color: textColor,
                       fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
                   if (_isCallActive)
@@ -610,34 +631,36 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                 ],
               ),
             ),
+            ),
             // Call controls
             Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingXXL),
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                bottom: AppSpacing.spacingXXL,
+                top: AppSpacing.spacingMD,
+              ),
               child: Column(
                 children: [
                   if (!_isCallActive && widget.isIncoming) ...[
-                    // Incoming call buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         IconButtonCircle(
                           svgIcon: AppIcons.callMissed,
                           onTap: _endCall,
-                          size: 64.0,
+                          size: primaryButtonSize,
                           backgroundColor: AppColors.notificationRed,
                           iconColor: Colors.white,
                         ),
                         IconButtonCircle(
                           svgIcon: AppIcons.call,
                           onTap: _acceptCall,
-                          size: 64.0,
+                          size: primaryButtonSize,
                           backgroundColor: AppColors.onlineGreen,
                           iconColor: Colors.white,
                         ),
                       ],
                     ),
                   ] else ...[
-                    // Active call controls
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -646,7 +669,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                               ? AppIcons.microphoneSlash
                               : AppIcons.microphone,
                           onTap: _toggleMute,
-                          size: 56.0,
+                          size: secondaryButtonSize,
                           backgroundColor: _isMuted
                               ? AppColors.notificationRed.withOpacity(0.2)
                               : null,
@@ -659,7 +682,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                               ? AppIcons.getIconPath('volume-high')
                               : AppIcons.getIconPath('volume-low'),
                           onTap: _toggleSpeaker,
-                          size: 56.0,
+                          size: secondaryButtonSize,
                           backgroundColor: _isSpeakerOn
                               ? AppColors.accentPurple.withOpacity(0.2)
                               : null,
@@ -670,7 +693,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                         IconButtonCircle(
                           svgIcon: AppIcons.callMissed,
                           onTap: _endCall,
-                          size: 64.0,
+                          size: primaryButtonSize,
                           backgroundColor: AppColors.notificationRed,
                           iconColor: Colors.white,
                         ),

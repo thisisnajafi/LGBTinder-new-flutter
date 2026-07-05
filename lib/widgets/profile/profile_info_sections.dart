@@ -213,6 +213,8 @@ class _Section extends StatelessWidget {
           Text(
             title,
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           child,

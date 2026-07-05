@@ -232,6 +232,8 @@ class _SingleSelectBottomSheetState<T>
                                       ? FontWeight.w600
                                       : FontWeight.normal,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (isSelected)
@@ -518,6 +520,8 @@ class _MultiSelectBottomSheetState<T>
                                           ? FontWeight.w600
                                           : FontWeight.normal,
                                     ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

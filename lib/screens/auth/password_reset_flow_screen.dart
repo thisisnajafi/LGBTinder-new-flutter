@@ -530,20 +530,38 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
             'We\'ve sent a 6-digit code to ${_emailController.text}',
             style: AppTypography.body.copyWith(color: secondaryTextColor),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingXXL),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(6, (index) {
-              return _buildOtpField(
-                index: index,
-                controller: _otpControllers[index],
-                focusNode: _otpFocusNodes[index],
-                textColor: textColor,
-                surfaceColor: surfaceColor,
-                borderColor: borderColor,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const gap = AppSpacing.spacingSM;
+              const fieldCount = 6;
+              final fieldWidth = ((constraints.maxWidth - gap * (fieldCount - 1)) /
+                      fieldCount)
+                  .clamp(40.0, 56.0);
+              final fieldHeight = (fieldWidth * 1.2).clamp(52.0, 60.0);
+
+              return Row(
+                children: [
+                  for (var index = 0; index < fieldCount; index++) ...[
+                    if (index > 0) SizedBox(width: gap),
+                    Expanded(
+                      child: _buildOtpField(
+                        index: index,
+                        controller: _otpControllers[index],
+                        focusNode: _otpFocusNodes[index],
+                        textColor: textColor,
+                        surfaceColor: surfaceColor,
+                        borderColor: borderColor,
+                        height: fieldHeight,
+                      ),
+                    ),
+                  ],
+                ],
               );
-            }),
+            },
           ),
           SizedBox(height: AppSpacing.spacingXL),
           GradientButton(
@@ -554,8 +572,9 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
             iconPath: AppIcons.shieldTick,
           ),
           SizedBox(height: AppSpacing.spacingLG),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'Didn\'t receive the code? ',
@@ -729,20 +748,26 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     required Color textColor,
     required Color surfaceColor,
     required Color borderColor,
+    required double height,
   }) {
-    return Container(
-      width: 50,
-      height: 60,
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(
-          color: focusNode.hasFocus
-              ? AppColors.accentPurple
-              : borderColor,
-          width: focusNode.hasFocus ? 2 : 1,
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: focusNode,
+      builder: (context, child) {
+        return Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            border: Border.all(
+              color: focusNode.hasFocus
+                  ? AppColors.accentPurple
+                  : borderColor,
+              width: focusNode.hasFocus ? 2 : 1,
+            ),
+          ),
+          child: child,
+        );
+      },
       child: TextField(
         controller: controller,
         focusNode: focusNode,

@@ -53,9 +53,13 @@ class ReferenceDropdown extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(
-                label,
-                style: AppTypography.h3.copyWith(color: textColor),
+              Flexible(
+                child: Text(
+                  label,
+                  style: AppTypography.h3.copyWith(color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               if (required)
                 Text(
@@ -99,6 +103,8 @@ class ReferenceDropdown extends ConsumerWidget {
                   child: Text(
                     item.title,
                     style: AppTypography.body.copyWith(color: textColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 );
               }).toList(),

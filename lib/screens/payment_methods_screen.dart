@@ -205,13 +205,14 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Flexible(
+                                      Expanded(
                                         child: Text(
                                           '${method['brand']} •••• ${method['last4']}',
                                           style: theme.textTheme.titleSmall
                                               ?.copyWith(
                                             fontWeight: FontWeight.w700,
                                           ),
+                                          maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
@@ -249,6 +250,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: muted,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),

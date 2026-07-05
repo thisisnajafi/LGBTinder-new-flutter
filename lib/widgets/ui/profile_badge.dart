@@ -66,6 +66,8 @@ class ProfileBadge extends ConsumerWidget {
                 color: customColor ?? AppColors.accentPurple,
                 fontWeight: FontWeight.w600,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

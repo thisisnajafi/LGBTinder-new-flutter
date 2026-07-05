@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
@@ -135,9 +136,19 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         ? '${_formatDuration(_position)} / $totalLabel'
         : totalLabel;
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 236, maxWidth: 280),
-      child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = ResponsiveGrid.chatBubbleMaxWidth(
+          context,
+          fraction: 0.72,
+        ).clamp(200.0, 280.0);
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: 200,
+            maxWidth: maxWidth,
+          ),
+          child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Semantics(
@@ -219,6 +230,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
           ),
         ],
       ),
+        );
+      },
     );
   }
 }

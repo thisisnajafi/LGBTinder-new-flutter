@@ -73,6 +73,8 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
           Text(
             widget.label,
             style: AppTypography.h3.copyWith(color: textColor),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           TextField(
@@ -106,27 +108,48 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
           ),
           if (widget.showSaveButton) ...[
             SizedBox(height: AppSpacing.spacingLG),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (widget.onCancel != null)
-                  TextButton(
-                    onPressed: widget.onCancel,
-                    child: Text(
-                      'Cancel',
-                      style: AppTypography.button.copyWith(
-                        color: secondaryTextColor,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stackActions = constraints.maxWidth < 320;
+                final actions = [
+                  if (widget.onCancel != null)
+                    TextButton(
+                      onPressed: widget.onCancel,
+                      child: Text(
+                        'Cancel',
+                        style: AppTypography.button.copyWith(
+                          color: secondaryTextColor,
+                        ),
                       ),
                     ),
+                  GradientButton(
+                    text: 'Save',
+                    onPressed: () => widget.onSave?.call(_controller.text),
+                    isFullWidth: stackActions,
+                    height: 40,
                   ),
-                SizedBox(width: AppSpacing.spacingMD),
-                GradientButton(
-                  text: 'Save',
-                  onPressed: () => widget.onSave?.call(_controller.text),
-                  isFullWidth: false,
-                  height: 40,
-                ),
-              ],
+                ];
+                if (stackActions) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < actions.length; i++) ...[
+                        if (i > 0) SizedBox(height: AppSpacing.spacingSM),
+                        actions[i],
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (widget.onCancel != null) actions[0],
+                    if (widget.onCancel != null)
+                      SizedBox(width: AppSpacing.spacingMD),
+                    actions[widget.onCancel != null ? 1 : 0],
+                  ],
+                );
+              },
             ),
           ],
         ],

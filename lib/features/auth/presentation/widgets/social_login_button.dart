@@ -102,12 +102,17 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
                       children: [
                         const _GoogleLogoMark(size: 24),
                         SizedBox(width: AppSpacing.spacingMD),
-                        Text(
-                          'Continue with Google',
-                          style: AppTypography.button.copyWith(
-                            color: foregroundColor,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.1,
+                        Flexible(
+                          child: Text(
+                            'Continue with Google',
+                            style: AppTypography.button.copyWith(
+                              color: foregroundColor,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.1,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],

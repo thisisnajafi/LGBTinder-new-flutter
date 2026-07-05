@@ -1,6 +1,7 @@
 ﻿// Screen: ProfileTemplatesScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../core/theme/typography.dart';
@@ -160,8 +161,13 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: AppBreakpoints.value(
+                context,
+                phone: 2,
+                tablet: 3,
+                desktop: 4,
+              ),
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               childAspectRatio: 0.85,

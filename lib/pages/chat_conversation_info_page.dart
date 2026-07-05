@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:photo_view/photo_view.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/responsive/responsive.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
@@ -347,10 +348,18 @@ class _ChatConversationInfoPageState
               : RefreshIndicator(
                   onRefresh: _loadData,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      PremiumPageHeader.horizontalPadding,
+                    padding: EdgeInsets.fromLTRB(
+                      AppBreakpoints.value(
+                        context,
+                        phone: PremiumPageHeader.horizontalPadding,
+                        tablet: AppSpacing.spacingXL,
+                      ),
                       AppSpacing.spacingMD,
-                      PremiumPageHeader.horizontalPadding,
+                      AppBreakpoints.value(
+                        context,
+                        phone: PremiumPageHeader.horizontalPadding,
+                        tablet: AppSpacing.spacingXL,
+                      ),
                       AppSpacing.spacingXXL,
                     ),
                     children: [
@@ -367,6 +376,8 @@ class _ChatConversationInfoPageState
                               _displayName,
                               style: AppTypography.h2.copyWith(color: textColor),
                               textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (_profile != null &&
                                 _locationLabel(_profile!) != null) ...[
@@ -380,10 +391,15 @@ class _ChatConversationInfoPageState
                                     color: secondaryTextColor,
                                   ),
                                   const SizedBox(width: AppSpacing.spacingXS),
-                                  Text(
-                                    _locationLabel(_profile!)!,
-                                    style: AppTypography.caption
-                                        .copyWith(color: secondaryTextColor),
+                                  Flexible(
+                                    child: Text(
+                                      _locationLabel(_profile!)!,
+                                      style: AppTypography.caption
+                                          .copyWith(color: secondaryTextColor),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -406,6 +422,8 @@ class _ChatConversationInfoPageState
                                   _profile!.profileBio!.trim(),
                                   style: AppTypography.body
                                       .copyWith(color: secondaryTextColor),
+                                  maxLines: 8,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -447,6 +465,8 @@ class _ChatConversationInfoPageState
                                               color: AppColors.accentViolet,
                                               fontWeight: FontWeight.w600,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       )
@@ -487,8 +507,8 @@ class _ChatConversationInfoPageState
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _sharedMedia.length,
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: ResponsiveGrid.photoColumns(context),
                             mainAxisSpacing: AppSpacing.spacingSM,
                             crossAxisSpacing: AppSpacing.spacingSM,
                           ),

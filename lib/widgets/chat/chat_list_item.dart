@@ -140,22 +140,27 @@ class ChatListItem extends ConsumerWidget {
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: mutedColor,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     if (unreadCount > 0) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
                       Container(
-                        constraints: const BoxConstraints(minWidth: 18),
-                        height: 18,
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(100),
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          unreadCount > 99 ? '99+' : '$unreadCount',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onPrimary,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            unreadCount > 99 ? '99+' : '$unreadCount',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                            maxLines: 1,
                           ),
                         ),
                       ),

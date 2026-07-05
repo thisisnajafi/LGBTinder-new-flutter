@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 
@@ -62,12 +63,12 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: ResponsivePadding.page(context),
       child: Row(
         children: [
           if (widget.showAvatar) ...[
@@ -79,9 +80,12 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
             const SizedBox(width: 8),
           ],
 
-          Container(
+          Flexible(
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: const BoxConstraints(maxWidth: 200),
+            constraints: BoxConstraints(
+              maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.75),
+            ),
             decoration: BoxDecoration(
               color: isDark ? AppColors.backgroundDark : Colors.white,
               borderRadius: const BorderRadius.only(
@@ -106,12 +110,16 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '${widget.typingUserName} is typing',
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
+                Flexible(
+                  child: Text(
+                    '${widget.typingUserName} is typing',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -133,6 +141,7 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),
@@ -170,12 +179,15 @@ class MultiUserTypingIndicator extends ConsumerWidget {
         : '${typingUsers[0]}, ${typingUsers[1]} and ${typingUsers.length - 2} others';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: ResponsivePadding.page(context),
       child: Row(
         children: [
-          Container(
+          Flexible(
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: const BoxConstraints(maxWidth: 200),
+            constraints: BoxConstraints(
+              maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.75),
+            ),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: const BorderRadius.only(
@@ -194,12 +206,16 @@ class MultiUserTypingIndicator extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '$userNames are typing',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
+                Flexible(
+                  child: Text(
+                    '$userNames are typing',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -216,6 +232,7 @@ class MultiUserTypingIndicator extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
           ),
         ],
       ),

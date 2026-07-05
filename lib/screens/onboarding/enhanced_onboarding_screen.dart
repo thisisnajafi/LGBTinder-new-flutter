@@ -1,11 +1,13 @@
 // Screen: EnhancedOnboardingScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../features/onboarding/providers/onboarding_provider.dart';
 import '../../widgets/buttons/gradient_button.dart';
 
 /// Enhanced onboarding screen - Enhanced onboarding with more steps and animations
@@ -145,8 +147,10 @@ class _EnhancedOnboardingScreenState extends ConsumerState<EnhancedOnboardingScr
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: ResponsiveGrid.constrainedTo(
+          context,
+          Column(
+            children: [
             // Skip button
             Align(
               alignment: Alignment.topRight,
@@ -229,6 +233,8 @@ class _EnhancedOnboardingScreenState extends ConsumerState<EnhancedOnboardingScr
             ),
             SizedBox(height: AppSpacing.spacingLG),
           ],
+          ),
+          tablet: 500,
         ),
       ),
     );
@@ -273,15 +279,18 @@ class _EnhancedOnboardingScreenState extends ConsumerState<EnhancedOnboardingScr
               color: textColor,
             ),
             textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingLG),
-          // Description
           Text(
             slide.description,
             style: AppTypography.body.copyWith(
               color: secondaryTextColor,
             ),
             textAlign: TextAlign.center,
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

@@ -78,6 +78,8 @@ class TierBadge extends ConsumerWidget {
                 color: AppColors.textPrimaryDark,
                 fontWeight: FontWeight.w700,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
@@ -125,6 +127,8 @@ class ProfileOverlayHeader extends ConsumerWidget {
                   color: AppColors.textPrimaryDark,
                   fontWeight: FontWeight.w800,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isVerified) ...[
@@ -140,7 +144,9 @@ class ProfileOverlayHeader extends ConsumerWidget {
         SizedBox(height: AppSpacing.spacingSM),
         Row(
           children: [
-            TierBadge(tier: resolvedTier, compact: false),
+            Flexible(
+              child: TierBadge(tier: resolvedTier, compact: false),
+            ),
             if (location != null || distance != null) ...[
               SizedBox(width: AppSpacing.spacingMD),
               Expanded(

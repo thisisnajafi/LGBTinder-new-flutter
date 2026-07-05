@@ -31,7 +31,13 @@ class UpgradeDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Container(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceElevatedDark : AppColors.surfaceElevatedLight,
@@ -68,6 +74,8 @@ class UpgradeDialog extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 12),
 
@@ -78,6 +86,8 @@ class UpgradeDialog extends StatelessWidget {
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
               textAlign: TextAlign.center,
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
             ),
 
             // Limit info (if provided)
@@ -111,6 +121,8 @@ class UpgradeDialog extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -134,6 +146,8 @@ class UpgradeDialog extends StatelessWidget {
                     child: Text(
                       feature,
                       style: theme.textTheme.bodyMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -190,6 +204,8 @@ class UpgradeDialog extends StatelessWidget {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

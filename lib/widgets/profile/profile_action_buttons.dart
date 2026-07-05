@@ -173,6 +173,8 @@ class ProfileFloatingEditButton extends StatelessWidget {
                 color: AppColors.textPrimaryDark,
                 fontWeight: FontWeight.w600,
               ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

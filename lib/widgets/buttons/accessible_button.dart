@@ -87,9 +87,13 @@ class AccessibleButton extends ConsumerWidget {
                       Icon(icon, color: txtColor, size: 20),
                       SizedBox(width: AppSpacing.spacingSM),
                     ],
-                    Text(
-                      text,
-                      style: AppTypography.button.copyWith(color: txtColor),
+                    Flexible(
+                      child: Text(
+                        text,
+                        style: AppTypography.button.copyWith(color: txtColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ],

@@ -73,6 +73,8 @@ class InterestTag extends ConsumerWidget {
                     ? FontWeight.w600
                     : FontWeight.normal,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

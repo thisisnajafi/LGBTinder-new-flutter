@@ -35,11 +35,15 @@ class ProfileBioSection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(
-                'About Me',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  'About Me',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isEditable && onEdit != null) ...[
@@ -64,6 +68,8 @@ class ProfileBioSection extends ConsumerWidget {
                 color: theme.colorScheme.onSurface.withOpacity(0.8),
                 height: 1.5,
               ),
+              maxLines: 8,
+              overflow: TextOverflow.ellipsis,
             )
           else
             Text(

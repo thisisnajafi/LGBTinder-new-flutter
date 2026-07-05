@@ -54,6 +54,8 @@ class AppPageHeader extends StatelessWidget {
                 style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (action != null) action!,
@@ -73,10 +75,14 @@ class AppPageHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (action != null) action!,

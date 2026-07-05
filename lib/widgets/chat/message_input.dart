@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -177,6 +178,10 @@ class _MessageInputState extends ConsumerState<MessageInput>
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final hasText = _controller.text.trim().isNotEmpty;
     final canRecord = !hasText && widget.onVoiceRecordStart != null;
+    final maxInputHeight =
+        (MediaQuery.sizeOf(context).height * 0.25).clamp(80.0, 160.0);
+    final actionSize =
+        (MediaQuery.sizeOf(context).width * 0.11).clamp(44.0, 52.0);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -188,9 +193,9 @@ class _MessageInputState extends ConsumerState<MessageInput>
         ),
       ),
       child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingLG,
-              vertical: AppSpacing.spacingMD,
+            padding: ResponsivePadding.horizontal(context).copyWith(
+              top: AppSpacing.spacingMD,
+              bottom: AppSpacing.spacingMD,
             ),
             child: SafeArea(
               top: false,
@@ -199,8 +204,8 @@ class _MessageInputState extends ConsumerState<MessageInput>
                 children: [
                   Expanded(
                     child: Container(
-                      constraints: const BoxConstraints(
-                        maxHeight: 120,
+                      constraints: BoxConstraints(
+                        maxHeight: maxInputHeight,
                       ),
                       decoration: BoxDecoration(
                         color: isDark
@@ -222,35 +227,51 @@ class _MessageInputState extends ConsumerState<MessageInput>
                                   horizontal: AppSpacing.spacingLG,
                                   vertical: AppSpacing.spacingMD,
                                 ),
-                                child: Row(
-                                  children: [
-                                    PulsingRecordDot(color: AppColors.feedbackError),
-                                    SizedBox(width: AppSpacing.spacingSM),
-                                    Text(
-                                      _formatRecordingDuration(_recordingSeconds),
-                                      style: AppTypography.body.copyWith(
-                                        color: textColor,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingMD),
-                                    Expanded(
-                                      child: VoiceWaveformBars(
-                                        active: true,
-                                        color: AppColors.primaryLight,
-                                        height: 20,
-                                        barCount: 10,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSpacing.spacingSM),
-                                    Text(
-                                      '< Slide to cancel',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTypography.bodySmall.copyWith(
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                  ],
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final compact =
+                                        constraints.maxWidth < 300;
+                                    return Row(
+                                      children: [
+                                        PulsingRecordDot(
+                                          color: AppColors.feedbackError,
+                                        ),
+                                        SizedBox(width: AppSpacing.spacingSM),
+                                        Text(
+                                          _formatRecordingDuration(
+                                            _recordingSeconds,
+                                          ),
+                                          style: AppTypography.body.copyWith(
+                                            color: textColor,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(width: AppSpacing.spacingMD),
+                                        Expanded(
+                                          child: VoiceWaveformBars(
+                                            active: true,
+                                            color: AppColors.primaryLight,
+                                            height: 20,
+                                            barCount: 10,
+                                          ),
+                                        ),
+                                        if (!compact) ...[
+                                          SizedBox(width: AppSpacing.spacingSM),
+                                          Text(
+                                            '< Slide to cancel',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTypography.bodySmall
+                                                .copyWith(
+                                              color: secondaryTextColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    );
+                                  },
                                 ),
                               )
                             : TextField(
@@ -290,8 +311,8 @@ class _MessageInputState extends ConsumerState<MessageInput>
                         onTap: widget.enabled ? widget.onMediaTap! : () {},
                         semanticLabel: 'Attach media',
                         child: Container(
-                        width: 44,
-                        height: 44,
+                        width: actionSize,
+                        height: actionSize,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: AppColors.accentViolet.withValues(alpha: 0.1),
@@ -341,10 +362,12 @@ class _MessageInputState extends ConsumerState<MessageInput>
                             ),
                           ),
                           onPressed: hasText && widget.enabled ? _handleSend : null,
-                          padding: EdgeInsets.all(AppSpacing.spacingMD),
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
+                          padding: EdgeInsets.all(
+                            AppSpacing.spacingSM + 2,
+                          ),
+                          constraints: BoxConstraints(
+                            minWidth: actionSize,
+                            minHeight: actionSize,
                           ),
                         ),
                       ),

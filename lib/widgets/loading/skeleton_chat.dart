@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
@@ -15,6 +16,10 @@ class SkeletonChat extends StatelessWidget {
       itemCount: 6,
       itemBuilder: (context, index) {
         final isSent = index % 2 == 0;
+        final bubbleWidth = ResponsiveGrid.chatBubbleMaxWidth(
+          context,
+          fraction: 0.65,
+        ).clamp(120.0, 240.0);
         return Container(
           margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
           child: Row(
@@ -31,7 +36,7 @@ class SkeletonChat extends StatelessWidget {
               ],
               Flexible(
                 child: SkeletonLoader(
-                  width: 200,
+                  width: bubbleWidth,
                   height: 50,
                   borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                 ),

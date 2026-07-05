@@ -53,9 +53,13 @@ class SafetyVerificationSection extends ConsumerWidget {
                 size: 24,
               ),
               SizedBox(width: AppSpacing.spacingMD),
-              Text(
-                'Safety & Verification',
-                style: AppTypography.h3.copyWith(color: textColor),
+              Expanded(
+                child: Text(
+                  'Safety & Verification',
+                  style: AppTypography.h3.copyWith(color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -124,6 +128,8 @@ class SafetyVerificationSection extends ConsumerWidget {
           child: Text(
             label,
             style: AppTypography.body.copyWith(color: textColor),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         if (isVerified)

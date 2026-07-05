@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
@@ -31,9 +32,16 @@ class VoiceSendingPlaceholder extends StatelessWidget {
         (isSent ? Colors.white : Theme.of(context).colorScheme.primary);
     final chipFill = color.withValues(alpha: isSent ? 0.16 : 0.1);
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 236, maxWidth: 280),
-      child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = ResponsiveGrid.chatBubbleMaxWidth(
+          context,
+          fraction: 0.72,
+        ).clamp(200.0, 280.0);
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(minWidth: 200, maxWidth: maxWidth),
+          child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
@@ -112,6 +120,8 @@ class VoiceSendingPlaceholder extends StatelessWidget {
           ),
         ],
       ),
+        );
+      },
     );
   }
 }

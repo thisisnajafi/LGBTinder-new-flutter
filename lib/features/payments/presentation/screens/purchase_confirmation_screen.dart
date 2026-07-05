@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -42,14 +43,16 @@ class PurchaseConfirmationScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.spacingXL),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(height: AppSpacing.spacingXXL),
+        child: ResponsiveGrid.constrainedTo(
+          context,
+          SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.spacingXL),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: AppSpacing.spacingXXL),
 
-              // Success Icon
+                // Success Icon
               Container(
                 width: 100,
                 height: 100,
@@ -74,6 +77,8 @@ class PurchaseConfirmationScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
 
               SizedBox(height: AppSpacing.spacingMD),
@@ -84,6 +89,8 @@ class PurchaseConfirmationScreen extends StatelessWidget {
                   color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
 
               SizedBox(height: AppSpacing.spacingXXL),
@@ -189,6 +196,8 @@ class PurchaseConfirmationScreen extends StatelessWidget {
             ],
           ),
         ),
+          tablet: 500,
+        ),
       ),
     );
   }
@@ -197,19 +206,31 @@ class PurchaseConfirmationScreen extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: AppTypography.body.copyWith(
-              color: secondaryTextColor,
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: AppTypography.body.copyWith(
+                color: secondaryTextColor,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            value,
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: AppSpacing.spacingSM),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: AppTypography.body.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
             ),
           ),
         ],
@@ -255,14 +276,16 @@ class PurchaseErrorScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.spacingXL),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(height: AppSpacing.spacingXXL),
+        child: ResponsiveGrid.constrainedTo(
+          context,
+          SingleChildScrollView(
+            padding: EdgeInsets.all(AppSpacing.spacingXL),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: AppSpacing.spacingXXL),
 
-              // Error Icon
+                // Error Icon
               Container(
                 width: 100,
                 height: 100,
@@ -297,6 +320,8 @@ class PurchaseErrorScreen extends StatelessWidget {
                   color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
               ),
 
               if (suggestedAction != null) ...[
@@ -324,6 +349,8 @@ class PurchaseErrorScreen extends StatelessWidget {
                           style: AppTypography.body.copyWith(
                             color: textColor,
                           ),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -369,6 +396,8 @@ class PurchaseErrorScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+          tablet: 500,
         ),
       ),
     );

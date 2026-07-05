@@ -1,6 +1,7 @@
 ﻿// Screen: AddPaymentMethodScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/responsive/responsive.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -11,6 +12,7 @@ import '../widgets/common/section_header.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
 import '../core/constants/api_endpoints.dart';
+import '../core/providers/api_providers.dart';
 
 /// Add payment method screen - Add new payment method
 class AddPaymentMethodScreen extends ConsumerStatefulWidget {
@@ -98,9 +100,11 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
       title: 'Add Payment Method',
       showBackButton: true,
       backgroundColor: backgroundColor,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSpacing.spacingLG),
-        child: Form(
+      body: ResponsiveGrid.constrainedTo(
+        context,
+        SingleChildScrollView(
+          padding: ResponsivePadding.page(context),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -262,6 +266,8 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
                 title: Text(
                   'Set as default payment method',
                   style: AppTypography.body.copyWith(color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 value: _setAsDefault,
                 onChanged: (value) {
@@ -286,10 +292,14 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
                   color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
+        ),
+        tablet: 500,
       ),
     );
   }

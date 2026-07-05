@@ -40,6 +40,8 @@ class BannedAccountScreen extends ConsumerWidget {
                   Text(
                     'Your account has been banned',
                     textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -49,6 +51,8 @@ class BannedAccountScreen extends ConsumerWidget {
                     'You can no longer use LGBTinder. All matches have been removed. '
                     'Contact support if you believe this is a mistake.',
                     textAlign: TextAlign.center,
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: secondaryTextColor,
                       height: 1.5,

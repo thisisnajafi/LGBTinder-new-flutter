@@ -68,6 +68,8 @@ class SectionHeader extends ConsumerWidget {
             child: Text(
               title,
               style: AppTypography.h2.copyWith(color: textColor),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (actionLabel != null && onAction != null)
@@ -78,6 +80,8 @@ class SectionHeader extends ConsumerWidget {
                 style: AppTypography.button.copyWith(
                   color: AppColors.accentPurple,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],

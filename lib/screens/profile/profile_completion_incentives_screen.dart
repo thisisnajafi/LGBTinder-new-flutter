@@ -371,6 +371,8 @@ class _ProfileCompletionIncentivesScreenState extends ConsumerState<ProfileCompl
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXS),
                 Text(
@@ -378,6 +380,8 @@ class _ProfileCompletionIncentivesScreenState extends ConsumerState<ProfileCompl
                   style: AppTypography.caption.copyWith(
                     color: secondaryTextColor,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -59,6 +59,8 @@ class MessageReplyWidget extends ConsumerWidget {
                       color: borderColor,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 SizedBox(height: AppSpacing.spacingXS),
                 if (repliedToMessage != null)

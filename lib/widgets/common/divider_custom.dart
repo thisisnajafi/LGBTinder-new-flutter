@@ -42,13 +42,18 @@ class DividerCustom extends ConsumerWidget {
               endIndent: AppSpacing.spacingMD,
             ),
           ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingMD),
-            child: Text(
-              text!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: textColor,
-                  ),
+          Flexible(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingMD),
+              child: Text(
+                text!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: textColor,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           Expanded(

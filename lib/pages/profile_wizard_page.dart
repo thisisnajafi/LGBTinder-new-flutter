@@ -6,6 +6,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/cache/cache_providers.dart';
+import '../core/responsive/responsive.dart';
 import '../core/constants/animation_constants.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
@@ -25,6 +26,7 @@ import '../widgets/common/selection_bottom_sheet.dart';
 import '../widgets/common/reference_bottom_sheet_field.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../features/auth/providers/auth_service_provider.dart';
+import '../features/profile/providers/profile_providers.dart';
 import '../features/auth/data/models/complete_registration_request.dart';
 import '../features/auth/data/models/check_token_response.dart';
 import '../shared/models/api_error.dart';
@@ -1982,8 +1984,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: ResponsiveGrid.photoColumns(context),
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
                       childAspectRatio: 1.0,

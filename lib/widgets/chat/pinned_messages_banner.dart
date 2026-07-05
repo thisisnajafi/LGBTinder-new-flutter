@@ -64,6 +64,8 @@ class PinnedMessagesBanner extends ConsumerWidget {
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               AppSvgIcon(

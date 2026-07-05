@@ -2,6 +2,7 @@
 // Audio message player with controls
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -64,7 +65,16 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
         ? Colors.white
         : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
-    return Container(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = ResponsiveGrid.chatBubbleMaxWidth(
+          context,
+          fraction: 0.72,
+        ).clamp(160.0, 280.0);
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Container(
       padding: EdgeInsets.all(AppSpacing.spacingMD),
       decoration: BoxDecoration(
         color: bgColor,
@@ -92,30 +102,34 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
             ),
           ),
           SizedBox(width: AppSpacing.spacingMD),
-          Column(
+          Expanded(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 200,
-                child: LinearProgressIndicator(
-                  value: _totalDuration.inMilliseconds > 0
-                      ? _currentPosition.inMilliseconds /
-                          _totalDuration.inMilliseconds
-                      : 0.0,
-                  backgroundColor: textColor.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                ),
+              LinearProgressIndicator(
+                value: _totalDuration.inMilliseconds > 0
+                    ? _currentPosition.inMilliseconds /
+                        _totalDuration.inMilliseconds
+                    : 0.0,
+                backgroundColor: textColor.withOpacity(0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(textColor),
               ),
               SizedBox(height: AppSpacing.spacingXS),
               Text(
                 '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}',
                 style: AppTypography.caption.copyWith(color: textColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
+          ),
         ],
       ),
+          ),
+        );
+      },
     );
   }
 }

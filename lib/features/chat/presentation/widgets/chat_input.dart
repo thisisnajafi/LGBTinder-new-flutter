@@ -7,6 +7,8 @@ import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/animation_constants.dart';
+import '../../../../core/responsive/responsive.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../models/message_attachment.dart';
@@ -86,7 +88,7 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -98,7 +100,10 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
         SizeTransition(
           sizeFactor: _attachmentAnimation,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: ResponsivePadding.horizontal(context).copyWith(
+              top: AppSpacing.spacingSM,
+              bottom: AppSpacing.spacingSM,
+            ),
             decoration: BoxDecoration(
               color: isDark ? AppColors.backgroundDark : Colors.grey[100],
               border: Border(
@@ -108,8 +113,10 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
                 ),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              spacing: AppSpacing.spacingSM,
+              runSpacing: AppSpacing.spacingSM,
               children: [
                 _buildAttachmentButton(
                   icon: AppIcons.image,
@@ -138,7 +145,10 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
 
         // Main input area
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: ResponsivePadding.horizontal(context).copyWith(
+            top: AppSpacing.spacingMD,
+            bottom: AppSpacing.spacingMD,
+          ),
           decoration: BoxDecoration(
             color: isDark ? AppColors.backgroundDark : Colors.white,
             border: Border(
@@ -294,6 +304,8 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -420,7 +432,7 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
       }
 
       // Clear text field
-      _messageController.clear();
+      _textController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send attachment: $e')),
@@ -570,21 +582,25 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              TextButton.icon(
-                onPressed: widget.onCancel,
-                icon: const Icon(Icons.close, color: AppColors.feedbackError),
-                label: const Text('Cancel'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.feedbackError,
+              Flexible(
+                child: TextButton.icon(
+                  onPressed: widget.onCancel,
+                  icon: const Icon(Icons.close, color: AppColors.feedbackError),
+                  label: const Text('Cancel'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.feedbackError,
+                  ),
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: widget.onStop,
-                icon: const Icon(Icons.stop, color: Colors.white),
-                label: const Text('Stop'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.feedbackError,
-                  foregroundColor: Colors.white,
+              Flexible(
+                child: ElevatedButton.icon(
+                  onPressed: widget.onStop,
+                  icon: const Icon(Icons.stop, color: Colors.white),
+                  label: const Text('Stop'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.feedbackError,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -18,7 +19,9 @@ class SkeletonSubscriptionPlans extends StatelessWidget {
         ? AppColors.borderMediumDark
         : AppColors.borderMediumLight;
 
-    return Column(
+    return ResponsiveGrid.constrained(
+      context,
+      Column(
       children: [
         Expanded(
           child: ListView(
@@ -93,6 +96,7 @@ class SkeletonSubscriptionPlans extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }

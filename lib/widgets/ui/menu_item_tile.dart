@@ -74,6 +74,8 @@ class MenuItemTile extends ConsumerWidget {
                           color: textColor,
                           fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (subtitle != null) ...[
                         SizedBox(height: AppSpacing.spacingXS),
@@ -82,6 +84,8 @@ class MenuItemTile extends ConsumerWidget {
                           style: AppTypography.caption.copyWith(
                             color: secondaryTextColor,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],

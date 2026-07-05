@@ -75,23 +75,30 @@ class SubscriptionStatusCard extends ConsumerWidget {
                   style: AppTypography.h2.copyWith(
                     color: isPremium ? Colors.white : textColor,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (status != null)
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingXS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: getStatusColor().withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  ),
-                  child: Text(
-                    status!.toUpperCase(),
-                    style: AppTypography.caption.copyWith(
-                      color: getStatusColor(),
-                      fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingMD,
+                      vertical: AppSpacing.spacingXS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: getStatusColor().withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                    ),
+                    child: Text(
+                      status!.toUpperCase(),
+                      style: AppTypography.caption.copyWith(
+                        color: getStatusColor(),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                     ),
                   ),
                 ),
@@ -109,14 +116,18 @@ class SubscriptionStatusCard extends ConsumerWidget {
                       : secondaryTextColor,
                 ),
                 SizedBox(width: AppSpacing.spacingSM),
-                Text(
-                  status?.toLowerCase() == 'active'
-                      ? 'Renews ${_formatDate(expiresAt!)}'
-                      : 'Expires ${_formatDate(expiresAt!)}',
-                  style: AppTypography.body.copyWith(
-                    color: isPremium
-                        ? Colors.white70
-                        : secondaryTextColor,
+                Expanded(
+                  child: Text(
+                    status?.toLowerCase() == 'active'
+                        ? 'Renews ${_formatDate(expiresAt!)}'
+                        : 'Expires ${_formatDate(expiresAt!)}',
+                    style: AppTypography.body.copyWith(
+                      color: isPremium
+                          ? Colors.white70
+                          : secondaryTextColor,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

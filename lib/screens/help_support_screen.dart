@@ -377,6 +377,8 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               color: textColor,
               fontWeight: FontWeight.bold,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         if (settings.tagline != null && settings.tagline!.isNotEmpty) ...[
           SizedBox(height: AppSpacing.spacingXS),
@@ -386,6 +388,8 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
               color: AppColors.accentPurple,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
         if (settings.description != null && settings.description!.isNotEmpty) ...[
@@ -393,6 +397,8 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
           Text(
             settings.description!,
             style: AppTypography.body.copyWith(color: secondaryTextColor),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
         if ((settings.appStoreUrl != null && settings.appStoreUrl!.isNotEmpty) ||
@@ -457,6 +463,8 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                 s.label ?? '',
                 style: AppTypography.caption.copyWith(color: secondaryTextColor),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -481,6 +489,8 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                 color: textColor,
                 fontStyle: FontStyle.italic,
               ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
             ),
           if (t.author != null || t.location != null) ...[
             SizedBox(height: AppSpacing.spacingXS),

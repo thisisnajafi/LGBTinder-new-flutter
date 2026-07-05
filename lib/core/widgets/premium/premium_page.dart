@@ -83,12 +83,16 @@ class PremiumPageHeader extends StatelessWidget {
                         color: textColor,
                         letterSpacing: -0.4,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],

@@ -71,11 +71,16 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
       mainAxisSize: MainAxisSize.min,
       children: [
         if (showLabel) ...[
-          Text(
-            '$label is typing',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: dotColor,
-              fontStyle: FontStyle.italic,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 180),
+            child: Text(
+              '$label is typing',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: dotColor,
+                fontStyle: FontStyle.italic,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           SizedBox(width: AppSpacing.spacingSM),

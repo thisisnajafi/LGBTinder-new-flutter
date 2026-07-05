@@ -172,6 +172,8 @@ class _TierCard extends StatelessWidget {
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (highlight)
@@ -202,6 +204,8 @@ class _TierCard extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
             ...bullets.map(
@@ -222,6 +226,8 @@ class _TierCard extends StatelessWidget {
                         style: theme.textTheme.bodyMedium?.copyWith(
                           height: 1.35,
                         ),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

@@ -2,7 +2,6 @@
 // Action buttons row
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../buttons/icon_button_circle.dart';
 
@@ -24,8 +23,9 @@ class ActionButtonRow extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return Row(
+    final row = Row(
       mainAxisAlignment: alignment,
+      mainAxisSize: MainAxisSize.min,
       children: buttons.map((button) {
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
@@ -39,6 +39,26 @@ class ActionButtonRow extends ConsumerWidget {
           ),
         );
       }).toList(),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final estimatedWidth = buttons.fold<double>(
+          0,
+          (sum, button) =>
+              sum + (button.size ?? 48.0) + AppSpacing.spacingSM * 2,
+        );
+
+        if (estimatedWidth > constraints.maxWidth) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: row,
+          );
+        }
+
+        return row;
+      },
     );
   }
 }

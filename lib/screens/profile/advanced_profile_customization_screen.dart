@@ -278,13 +278,16 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Profile Opacity',
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        'Profile Opacity',
+                        style: AppTypography.body.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
@@ -371,6 +374,8 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
@@ -436,6 +441,8 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
@@ -480,6 +487,8 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXS),
                 Text(
@@ -487,6 +496,8 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
                   style: AppTypography.caption.copyWith(
                     color: secondaryTextColor,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -539,6 +550,8 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)

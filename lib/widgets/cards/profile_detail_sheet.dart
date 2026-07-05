@@ -459,8 +459,8 @@ class ProfileSheetContent extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveGrid.photoColumns(context),
               childAspectRatio: 1,
               mainAxisSpacing: AppSpacing.spacingXS,
               crossAxisSpacing: AppSpacing.spacingXS,

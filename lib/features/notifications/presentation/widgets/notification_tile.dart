@@ -220,6 +220,8 @@ class NotificationTile extends ConsumerWidget {
                                   ? FontWeight.normal
                                   : FontWeight.w600,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (!notification.isRead)

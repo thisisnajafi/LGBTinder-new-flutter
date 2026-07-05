@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -21,12 +22,12 @@ class ChatEmptyConversation extends StatelessWidget {
         ? 'Say hi to ${peerName!.trim()}'
         : 'Start the conversation';
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: PremiumPageHeader.horizontalPadding,
-        ),
-        child: PremiumShell(
+    return ResponsiveGrid.constrained(
+      context,
+      Center(
+        child: Padding(
+          padding: ResponsivePadding.page(context),
+          child: PremiumShell(
           margin: EdgeInsets.zero,
           padding: const EdgeInsets.all(AppSpacing.spacingXL),
           child: Column(
@@ -61,6 +62,8 @@ class ChatEmptyConversation extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.spacingSM),
               Text(
@@ -69,11 +72,14 @@ class ChatEmptyConversation extends StatelessWidget {
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
       ),
+    ),
     );
   }
 }

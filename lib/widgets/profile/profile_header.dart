@@ -123,9 +123,14 @@ class ProfileHeader extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                name,
-                style: AppTypography.h1.copyWith(color: textColor),
+              Flexible(
+                child: Text(
+                  name,
+                  style: AppTypography.h1.copyWith(color: textColor),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               if (isVerified) ...[
                 SizedBox(width: AppSpacing.spacingSM),
@@ -149,20 +154,26 @@ class ProfileHeader extends ConsumerWidget {
                     style: AppTypography.body.copyWith(color: secondaryTextColor),
                   ),
                 if (location != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppSvgIcon(
-                        assetPath: AppIcons.location,
-                        size: 16,
-                        color: secondaryTextColor,
-                      ),
-                      SizedBox(width: AppSpacing.spacingXS),
-                      Text(
-                        location!,
-                        style: AppTypography.body.copyWith(color: secondaryTextColor),
-                      ),
-                    ],
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppSvgIcon(
+                          assetPath: AppIcons.location,
+                          size: 16,
+                          color: secondaryTextColor,
+                        ),
+                        SizedBox(width: AppSpacing.spacingXS),
+                        Flexible(
+                          child: Text(
+                            location!,
+                            style: AppTypography.body.copyWith(color: secondaryTextColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),

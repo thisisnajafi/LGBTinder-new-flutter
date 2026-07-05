@@ -1,5 +1,6 @@
 /// Skeleton loading widget
 import 'package:flutter/material.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 
@@ -46,34 +47,37 @@ class SkeletonListLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: itemCount,
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-          child: Row(
-            children: [
-              SkeletonLoading(
-                width: 60,
-                height: 60,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              SizedBox(width: AppSpacing.spacingMD),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SkeletonLoading(height: 16),
-                    SizedBox(height: AppSpacing.spacingXS),
-                    SkeletonLoading(height: 12, width: 150),
-                  ],
+    return ResponsiveGrid.constrained(
+      context,
+      ListView.builder(
+        itemCount: itemCount,
+        padding: EdgeInsets.all(AppSpacing.spacingMD),
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
+            child: Row(
+              children: [
+                SkeletonLoading(
+                  width: 60,
+                  height: 60,
+                  borderRadius: BorderRadius.circular(30),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+                SizedBox(width: AppSpacing.spacingMD),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonLoading(height: 16),
+                      SizedBox(height: AppSpacing.spacingXS),
+                      SkeletonLoading(height: 12, width: 150),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

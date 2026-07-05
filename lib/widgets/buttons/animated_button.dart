@@ -134,9 +134,13 @@ class _AnimatedButtonState extends ConsumerState<AnimatedButton>
                       ),
                       SizedBox(width: AppSpacing.spacingSM),
                     ],
-                    Text(
-                      widget.text,
-                      style: AppTypography.button.copyWith(color: textColor),
+                    Flexible(
+                      child: Text(
+                        widget.text,
+                        style: AppTypography.button.copyWith(color: textColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

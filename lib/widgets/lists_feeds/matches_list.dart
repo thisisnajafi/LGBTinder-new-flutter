@@ -133,6 +133,8 @@ class MatchesList extends ConsumerWidget {
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: textColor,
                               ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (match['is_premium'] == true)
@@ -155,6 +157,8 @@ class MatchesList extends ConsumerWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: secondaryTextColor,
                           ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                 ],
               ),

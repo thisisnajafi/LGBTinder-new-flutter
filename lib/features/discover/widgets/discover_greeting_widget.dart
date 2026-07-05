@@ -144,7 +144,6 @@ class DiscoverGreetingWidget extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.spacingXS),
                   if (firstName == null)
                     const SkeletonLoader(
-                      width: 120,
                       height: 16,
                       borderRadius: BorderRadius.all(
                         Radius.circular(AppRadius.radiusSM),

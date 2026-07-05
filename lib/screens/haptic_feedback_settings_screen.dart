@@ -286,6 +286,8 @@ class _HapticFeedbackSettingsScreenState
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor,
                 ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],
@@ -340,6 +342,8 @@ class _IntensityOption extends StatelessWidget {
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

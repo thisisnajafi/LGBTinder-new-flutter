@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -116,7 +117,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
           ),
         ),
         child: SafeArea(
-          child: Column(
+          child: ResponsiveGrid.constrained(
+            context,
+            Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Celebration icon — fade + slight scale, minimal
@@ -165,6 +168,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   );
@@ -184,67 +189,101 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   );
                 },
               ),
               SizedBox(height: AppSpacing.spacingMD),
-              Text(
-                'You and ${widget.match.firstName} liked each other!',
-                style: AppTypography.body.copyWith(
-                  color: secondaryTextColor,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+                child: Text(
+                  'You and ${widget.match.firstName} liked each other!',
+                  style: AppTypography.body.copyWith(
+                    color: secondaryTextColor,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSpacing.spacingXXL),
               // Profile images with heart frames
               AnimatedBuilder(
                 animation: _heartAnimation,
                 builder: (context, child) {
-                  return Transform.scale(
-                    scale: 0.8 + (_heartAnimation.value * 0.2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // User's profile image
-                        _buildProfileImage(
-                          imageUrl: user?.images != null && user!.images!.isNotEmpty
-                              ? user.images!.first.toString()
-                              : null,
-                          isDark: isDark,
-                          fallbackInitial: user?.firstName,
-                        ),
-                        SizedBox(width: AppSpacing.spacingLG),
-                        // Heart icon
-                        AnimatedBuilder(
-                          animation: _heartAnimation,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: 0.5 + (_heartAnimation.value * 0.5),
-                              child: Container(
-                                padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: AppColors.brandGradient,
-                                ),
-                                child: AppSvgIcon(
-                                  assetPath: AppIcons.heart,
-                                  size: 40,
-                                  color: Colors.white,
-                                ),
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackAvatars = constraints.maxWidth < 320;
+                      final heartWidget = AnimatedBuilder(
+                        animation: _heartAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: 0.5 + (_heartAnimation.value * 0.5),
+                            child: Container(
+                              padding: EdgeInsets.all(AppSpacing.spacingMD),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: AppColors.brandGradient,
                               ),
-                            );
-                          },
-                        ),
-                        SizedBox(width: AppSpacing.spacingLG),
-                        // Matched user's profile image
-                        _buildProfileImage(
-                          imageUrl: widget.match.primaryImageUrl,
-                          isDark: isDark,
-                          fallbackInitial: widget.match.firstName,
-                        ),
-                      ],
-                    ),
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.heart,
+                                size: 40,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+
+                      return Transform.scale(
+                        scale: 0.8 + (_heartAnimation.value * 0.2),
+                        child: stackAvatars
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildProfileImage(
+                                    imageUrl: user?.images != null &&
+                                            user!.images!.isNotEmpty
+                                        ? user.images!.first.toString()
+                                        : null,
+                                    isDark: isDark,
+                                    fallbackInitial: user?.firstName,
+                                  ),
+                                  SizedBox(height: AppSpacing.spacingMD),
+                                  heartWidget,
+                                  SizedBox(height: AppSpacing.spacingMD),
+                                  _buildProfileImage(
+                                    imageUrl: widget.match.primaryImageUrl,
+                                    isDark: isDark,
+                                    fallbackInitial: widget.match.firstName,
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildProfileImage(
+                                    imageUrl: user?.images != null &&
+                                            user!.images!.isNotEmpty
+                                        ? user.images!.first.toString()
+                                        : null,
+                                    isDark: isDark,
+                                    fallbackInitial: user?.firstName,
+                                  ),
+                                  SizedBox(width: AppSpacing.spacingLG),
+                                  heartWidget,
+                                  SizedBox(width: AppSpacing.spacingLG),
+                                  _buildProfileImage(
+                                    imageUrl: widget.match.primaryImageUrl,
+                                    isDark: isDark,
+                                    fallbackInitial: widget.match.firstName,
+                                  ),
+                                ],
+                              ),
+                      );
+                    },
                   );
                 },
               ),
@@ -284,6 +323,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               color: AppColors.accentViolet,
                             ),
                             textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
@@ -292,6 +333,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

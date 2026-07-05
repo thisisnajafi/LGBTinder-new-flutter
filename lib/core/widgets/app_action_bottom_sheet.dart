@@ -200,6 +200,8 @@ class _TitleHeader extends StatelessWidget {
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -275,6 +277,8 @@ class AppBottomSheetActionTile extends StatelessWidget {
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (item.subtitle != null) ...[
                         const SizedBox(height: 2),
@@ -284,6 +288,8 @@ class AppBottomSheetActionTile extends StatelessWidget {
                             color: theme.colorScheme.onSurface
                                 .withValues(alpha: 0.55),
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],
@@ -372,6 +378,8 @@ class AppBottomSheetConfirmBody extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
             Text(
@@ -380,6 +388,8 @@ class AppBottomSheetConfirmBody extends StatelessWidget {
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             SizedBox(

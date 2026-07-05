@@ -130,11 +130,15 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Call Minutes',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Call Minutes',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
@@ -142,6 +146,8 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
                 style: AppTypography.bodySmall.copyWith(
                   color: secondaryTextColor,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -172,13 +178,24 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Used: ${usedMinutes}min',
-                style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+              Expanded(
+                child: Text(
+                  'Used: ${usedMinutes}min',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: secondaryTextColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: AppSpacing.spacingSM),
               Text(
                 'Total: ${totalMinutes}min',
-                style: AppTypography.bodySmall.copyWith(color: secondaryTextColor),
+                style: AppTypography.bodySmall.copyWith(
+                  color: secondaryTextColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -192,6 +209,8 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
                 color: secondaryTextColor,
                 fontStyle: FontStyle.italic,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],

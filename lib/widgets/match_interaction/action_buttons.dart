@@ -2,6 +2,7 @@
 // Swipe action buttons
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../buttons/dislike_button.dart';
 import '../buttons/superlike_button.dart';
@@ -30,7 +31,10 @@ class ActionButtons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXL),
+      padding: ResponsivePadding.horizontal(context).copyWith(
+        top: AppSpacing.spacingXL,
+        bottom: AppSpacing.spacingXL,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [

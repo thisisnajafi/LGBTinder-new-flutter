@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/responsive/responsive.dart';
 import '../../../core/constants/animation_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
@@ -39,104 +40,119 @@ class DiscoverEmptyState extends StatelessWidget {
     final reduceMotion = !AppAnimations.animationsEnabled(context);
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: PremiumPageHeader.horizontalPadding,
-        ),
-        child: PremiumShell(
-          margin: EdgeInsets.zero,
-          padding: const EdgeInsets.all(AppSpacing.spacingXL),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _EmptyIllustration(animate: !reduceMotion),
-              const SizedBox(height: AppSpacing.spacingXL),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                  height: 1.2,
+      child: ResponsiveGrid.constrained(
+        context,
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: PremiumPageHeader.horizontalPadding,
+          ),
+          child: PremiumShell(
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.all(AppSpacing.spacingXL),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _EmptyIllustration(animate: !reduceMotion),
+                const SizedBox(height: AppSpacing.spacingXL),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                    height: 1.2,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: AppSpacing.spacingSM),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.spacingXL),
-              if (onPrimaryAction != null)
-                GradientButton(
-                  text: primaryActionLabel,
-                  iconPath: AppIcons.filter,
-                  onPressed: onPrimaryAction,
-                  isFullWidth: true,
-                ),
-              if (secondaryActionLabel != null && onSecondaryAction != null) ...[
                 const SizedBox(height: AppSpacing.spacingSM),
-                PremiumTapScale(
-                  onTap: onSecondaryAction!,
-                  semanticLabel: secondaryActionLabel!,
-                  child: Container(
-                    width: double.infinity,
-                    height: 48,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                      border: Border.all(
-                        color: AppColors.accentViolet.withValues(alpha: 0.35),
-                      ),
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.04)
-                          : AppColors.accentViolet.withValues(alpha: 0.06),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppSvgIcon(
-                          assetPath: AppIcons.location,
-                          size: 18,
-                          color: AppColors.accentViolet,
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
+                    height: 1.45,
+                  ),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.spacingXL),
+                if (onPrimaryAction != null)
+                  GradientButton(
+                    text: primaryActionLabel,
+                    iconPath: AppIcons.filter,
+                    onPressed: onPrimaryAction,
+                    isFullWidth: true,
+                  ),
+                if (secondaryActionLabel != null && onSecondaryAction != null) ...[
+                  const SizedBox(height: AppSpacing.spacingSM),
+                  PremiumTapScale(
+                    onTap: onSecondaryAction!,
+                    semanticLabel: secondaryActionLabel!,
+                    child: Container(
+                      width: double.infinity,
+                      height: 48,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.radiusRound),
+                        border: Border.all(
+                          color: AppColors.accentViolet.withValues(alpha: 0.35),
                         ),
-                        const SizedBox(width: AppSpacing.spacingSM),
-                        Text(
-                          secondaryActionLabel!,
-                          style: theme.textTheme.labelLarge?.copyWith(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.04)
+                            : AppColors.accentViolet.withValues(alpha: 0.06),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AppSvgIcon(
+                            assetPath: AppIcons.location,
+                            size: 18,
                             color: AppColors.accentViolet,
-                            fontWeight: FontWeight.w700,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              if (tertiaryActionLabel != null && onTertiaryAction != null) ...[
-                const SizedBox(height: AppSpacing.spacingSM),
-                PremiumTapScale(
-                  onTap: onTertiaryAction!,
-                  semanticLabel: tertiaryActionLabel!,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.spacingXS,
-                    ),
-                    child: Text(
-                      tertiaryActionLabel!,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: AppColors.accentRose,
-                        fontWeight: FontWeight.w700,
+                          const SizedBox(width: AppSpacing.spacingSM),
+                          Flexible(
+                            child: Text(
+                              secondaryActionLabel!,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: AppColors.accentViolet,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
+                ],
+                if (tertiaryActionLabel != null && onTertiaryAction != null) ...[
+                  const SizedBox(height: AppSpacing.spacingSM),
+                  PremiumTapScale(
+                    onTap: onTertiaryAction!,
+                    semanticLabel: tertiaryActionLabel!,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.spacingXS,
+                      ),
+                      child: Text(
+                        tertiaryActionLabel!,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppColors.accentRose,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

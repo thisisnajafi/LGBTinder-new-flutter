@@ -134,6 +134,8 @@ class _CountryPhoneInputState extends State<CountryPhoneInput> {
                         ? widget.dialCodeController!.text
                         : _dialCode,
                     style: Theme.of(context).textTheme.bodyLarge,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
         ),

@@ -533,6 +533,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
                       ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

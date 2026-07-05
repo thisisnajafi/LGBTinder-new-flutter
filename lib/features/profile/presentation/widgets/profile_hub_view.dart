@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -168,33 +169,40 @@ class _ProfileHeroBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.spacingMD),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              fullName,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            if (isVerified) ...[
-              const SizedBox(width: AppSpacing.spacingXS),
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: AppSvgIcon(
-                  assetPath: AppIcons.check,
-                  size: 11,
-                  color: theme.colorScheme.onPrimary,
+        Padding(
+          padding: ResponsivePadding.horizontal(context),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  fullName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
+              if (isVerified) ...[
+                const SizedBox(width: AppSpacing.spacingXS),
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.check,
+                    size: 11,
+                    color: theme.colorScheme.onPrimary,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ],
     );

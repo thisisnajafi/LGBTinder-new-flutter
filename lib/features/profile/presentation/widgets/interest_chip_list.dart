@@ -44,11 +44,15 @@ class InterestChipList extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(
-                'Interests',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  'Interests',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isEditable && onEdit != null) ...[
@@ -116,6 +120,8 @@ class InterestChipList extends ConsumerWidget {
           color: color,
           fontWeight: FontWeight.w500,
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
       backgroundColor: color.withOpacity(0.1),
       side: BorderSide(

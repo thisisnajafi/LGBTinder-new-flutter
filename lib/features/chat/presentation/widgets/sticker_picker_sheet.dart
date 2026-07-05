@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -134,6 +135,8 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
                               ? AppColors.textPrimaryDark
                               : AppColors.textPrimaryLight,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Semantics(
@@ -336,8 +339,13 @@ class _StickerGrid extends ConsumerWidget {
       data: (stickers) {
         return GridView.builder(
           padding: const EdgeInsets.all(AppSpacing.spacingLG),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: AppBreakpoints.value(
+              context,
+              phone: 4,
+              tablet: 6,
+              desktop: 8,
+            ),
             mainAxisSpacing: AppSpacing.spacingMD,
             crossAxisSpacing: AppSpacing.spacingMD,
           ),
@@ -401,6 +409,8 @@ class _LockedPackOverlay extends StatelessWidget {
                     ? AppColors.textPrimaryDark
                     : AppColors.textPrimaryLight,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingSM),
             Text(
@@ -411,6 +421,8 @@ class _LockedPackOverlay extends StatelessWidget {
                     ? AppColors.textSecondaryDark
                     : AppColors.textSecondaryLight,
               ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingLG),
             Semantics(

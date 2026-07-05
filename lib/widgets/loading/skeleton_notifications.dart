@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/widgets/app_page_header.dart';
@@ -13,7 +14,9 @@ class SkeletonNotifications extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return ResponsiveGrid.constrained(
+      context,
+      ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         AppPageHeader.horizontalPadding,
@@ -104,6 +107,7 @@ class SkeletonNotifications extends StatelessWidget {
           ),
         );
       },
+    ),
     );
   }
 }

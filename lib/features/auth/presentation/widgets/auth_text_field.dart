@@ -219,6 +219,8 @@ class _AuthTextFieldState extends ConsumerState<AuthTextField> {
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.feedbackError,
                     ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

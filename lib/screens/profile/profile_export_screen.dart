@@ -365,9 +365,13 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
             color: AppColors.onlineGreen,
           ),
           SizedBox(width: AppSpacing.spacingSM),
-          Text(
-            text,
-            style: AppTypography.body.copyWith(color: textColor),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.body.copyWith(color: textColor),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

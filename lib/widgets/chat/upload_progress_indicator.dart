@@ -2,6 +2,7 @@
 // File upload progress
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -30,7 +31,11 @@ class UploadProgressIndicator extends ConsumerWidget {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
-    return Container(
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.85),
+      ),
+      child: Container(
       padding: EdgeInsets.all(AppSpacing.spacingMD),
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -82,6 +87,7 @@ class UploadProgressIndicator extends ConsumerWidget {
             style: AppTypography.caption.copyWith(color: secondaryTextColor),
           ),
         ],
+      ),
       ),
     );
   }

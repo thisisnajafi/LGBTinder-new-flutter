@@ -40,6 +40,8 @@ class LastSeenWidget extends ConsumerWidget {
           Text(
             'Online',
             style: AppTypography.caption.copyWith(color: textColor),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       );
@@ -49,6 +51,8 @@ class LastSeenWidget extends ConsumerWidget {
       return Text(
         'Offline',
         style: AppTypography.caption.copyWith(color: textColor),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
     }
 
@@ -71,6 +75,8 @@ class LastSeenWidget extends ConsumerWidget {
     return Text(
       'Last seen $text',
       style: AppTypography.caption.copyWith(color: textColor),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

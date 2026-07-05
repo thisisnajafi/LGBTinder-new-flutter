@@ -121,6 +121,8 @@ class _FloatingBanner extends StatelessWidget {
                   color: onBannerColor,
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (state == NetworkConnectionState.disconnected)

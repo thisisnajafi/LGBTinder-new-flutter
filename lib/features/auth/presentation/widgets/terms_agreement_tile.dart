@@ -110,6 +110,8 @@ class TermsAgreementTile extends StatelessWidget {
                     ),
                   ],
                 ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),

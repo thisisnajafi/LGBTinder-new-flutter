@@ -281,6 +281,8 @@ class FriendStatusCard extends ConsumerWidget {
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onSurface,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -294,6 +296,8 @@ class FriendStatusCard extends ConsumerWidget {
                             ? Colors.green
                             : theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

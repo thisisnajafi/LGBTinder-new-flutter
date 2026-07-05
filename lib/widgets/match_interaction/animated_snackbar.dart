@@ -46,15 +46,21 @@ class AnimatedSnackbar extends ConsumerWidget {
           top: false,
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: AnimatedSnackbar(
-            message: message,
-            type: type,
-            duration: duration,
-            onAction: onAction,
-            actionLabel: actionLabel,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: AnimatedSnackbar(
+                  message: message,
+                  type: type,
+                  duration: duration,
+                  onAction: onAction,
+                  actionLabel: actionLabel,
+                ),
+              ),
+            ),
           ),
         ),
-      ),
       ),
     );
     overlay.insert(entry);
@@ -126,6 +132,8 @@ class AnimatedSnackbar extends ConsumerWidget {
             child: Text(
               message,
               style: AppTypography.body.copyWith(color: textColor),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (onAction != null && actionLabel != null) ...[
@@ -138,6 +146,8 @@ class AnimatedSnackbar extends ConsumerWidget {
                   color: textColor,
                   fontWeight: FontWeight.bold,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

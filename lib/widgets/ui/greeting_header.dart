@@ -62,12 +62,16 @@ class GreetingHeader extends ConsumerWidget {
                 Text(
                   '${_getGreeting()}, $userName',
                   style: AppTypography.h2.copyWith(color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null) ...[
                   SizedBox(height: AppSpacing.spacingXS),
                   Text(
                     subtitle!,
                     style: AppTypography.body.copyWith(color: secondaryTextColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],
@@ -98,14 +102,17 @@ class GreetingHeader extends ConsumerWidget {
                         minWidth: 16,
                         minHeight: 16,
                       ),
-                      child: Text(
-                        notificationCount! > 99 ? '99+' : '${notificationCount!}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          notificationCount! > 99 ? '99+' : '${notificationCount!}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),

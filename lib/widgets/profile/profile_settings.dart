@@ -153,11 +153,15 @@ class ProfileSettings extends ConsumerWidget {
                   Text(
                     title,
                     style: AppTypography.h3.copyWith(color: textColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: AppSpacing.spacingXS),
                   Text(
                     subtitle,
                     style: AppTypography.caption.copyWith(color: secondaryTextColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

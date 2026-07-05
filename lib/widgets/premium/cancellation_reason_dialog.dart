@@ -66,7 +66,13 @@ class _CancellationReasonDialogState
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          child: Container(
         padding: EdgeInsets.all(AppSpacing.spacingXL),
         decoration: BoxDecoration(
           color: surfaceColor,
@@ -80,11 +86,15 @@ class _CancellationReasonDialogState
             Text(
               'Why are you canceling?',
               style: AppTypography.h2.copyWith(color: textColor),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingMD),
             Text(
               'Your feedback helps us improve',
               style: AppTypography.body.copyWith(color: secondaryTextColor),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingLG),
             ..._reasons.map((reason) {
@@ -94,6 +104,8 @@ class _CancellationReasonDialogState
                   title: Text(
                     reason,
                     style: AppTypography.body.copyWith(color: textColor),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   value: reason,
                   groupValue: _selectedReason,
@@ -107,7 +119,33 @@ class _CancellationReasonDialogState
               );
             }),
             SizedBox(height: AppSpacing.spacingLG),
-            Row(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 320) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GradientButton(
+                        text: 'Continue',
+                        onPressed: _selectedReason != null
+                            ? () => widget.onReasonSelected?.call(_selectedReason!)
+                            : null,
+                        isFullWidth: true,
+                        height: 40,
+                      ),
+                      TextButton(
+                        onPressed: widget.onCancel,
+                        child: Text(
+                          'Skip',
+                          style: AppTypography.button.copyWith(
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
@@ -129,8 +167,12 @@ class _CancellationReasonDialogState
                   height: 40,
                 ),
               ],
+            );
+              },
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/admin_provider.dart';
 import '../widgets/analytics_card.dart';
@@ -75,31 +76,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ],
       ),
-      body: adminState.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => adminNotifier.refreshDashboard(),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    _buildHeader(),
-
-                    const SizedBox(height: 24),
-
-                    // Analytics Cards
-                    if (adminState.analytics != null) ...[
-                      _buildAnalyticsSection(adminState.analytics!),
+      body: ResponsiveGrid.constrained(
+        context,
+        adminState.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: () => adminNotifier.refreshDashboard(),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
                       const SizedBox(height: 24),
-                    ],
-
-                    // System Health
-                    if (adminState.systemHealth != null) ...[
-                      _buildSystemHealthSection(adminState.systemHealth!),
-                      const SizedBox(height: 24),
-                    ],
+                      if (adminState.analytics != null) ...[
+                        _buildAnalyticsSection(adminState.analytics!),
+                        const SizedBox(height: 24),
+                      ],
+                      if (adminState.systemHealth != null) ...[
+                        _buildSystemHealthSection(adminState.systemHealth!),
+                        const SizedBox(height: 24),
+                      ],
 
                     // Quick Actions
                     _buildQuickActions(),
@@ -112,6 +109,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
               ),
             ),
+      ),
 
       // Error display
       bottomSheet: adminState.error != null
@@ -126,6 +124,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     child: Text(
                       adminState.error!,
                       style: const TextStyle(color: Colors.red),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
@@ -396,7 +396,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
+          crossAxisCount: AppBreakpoints.value(
+            context,
+            phone: 2,
+            tablet: 3,
+            desktop: 4,
+          ),
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           childAspectRatio: 2.5,
@@ -451,6 +456,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             child: Text(
               title,
               style: const TextStyle(fontWeight: FontWeight.w500),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

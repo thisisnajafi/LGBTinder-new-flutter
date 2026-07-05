@@ -83,34 +83,69 @@ class ConfirmationDialog extends ConsumerWidget {
                 Text(
                   title,
                   style: AppTypography.h2.copyWith(color: textColor),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
                 Text(
                   message,
                   style: AppTypography.body.copyWith(color: secondaryTextColor),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
-                Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: onCancel ?? () => Navigator.of(context).pop(false),
-                  child: Text(
-                    cancelText,
-                    style: AppTypography.button.copyWith(
-                      color: secondaryTextColor,
-                    ),
-                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final stackActions = constraints.maxWidth < 320;
+                    if (stackActions) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          GradientButton(
+                            text: confirmText,
+                            onPressed: onConfirm ??
+                                () => Navigator.of(context).pop(true),
+                            isFullWidth: true,
+                            height: 40,
+                          ),
+                          TextButton(
+                            onPressed: onCancel ??
+                                () => Navigator.of(context).pop(false),
+                            child: Text(
+                              cancelText,
+                              style: AppTypography.button.copyWith(
+                                color: secondaryTextColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: onCancel ??
+                              () => Navigator.of(context).pop(false),
+                          child: Text(
+                            cancelText,
+                            style: AppTypography.button.copyWith(
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.spacingMD),
+                        GradientButton(
+                          text: confirmText,
+                          onPressed: onConfirm ??
+                              () => Navigator.of(context).pop(true),
+                          isFullWidth: false,
+                          height: 40,
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                SizedBox(width: AppSpacing.spacingMD),
-                GradientButton(
-                  text: confirmText,
-                  onPressed: onConfirm ?? () => Navigator.of(context).pop(true),
-                  isFullWidth: false,
-                  height: 40,
-                ),
-              ],
-            ),
           ],
         ),
       ),

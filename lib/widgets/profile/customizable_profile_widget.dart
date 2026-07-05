@@ -2,6 +2,7 @@
 // Customizable profile display
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import 'profile_header.dart';
@@ -42,7 +43,9 @@ class CustomizableProfileWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SingleChildScrollView(
+    return ResponsiveGrid.constrained(
+      context,
+      SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -118,6 +121,7 @@ class CustomizableProfileWidget extends ConsumerWidget {
               isMatched: userData['is_matched'] ?? false,
             ),
         ],
+      ),
       ),
     );
   }

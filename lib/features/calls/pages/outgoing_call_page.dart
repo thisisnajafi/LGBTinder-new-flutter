@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_icons.dart';
@@ -298,13 +299,20 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             if (showVideoLayer)
               Positioned(
                 top: AppSpacing.spacingMD,
-                left: AppSpacing.spacingLG,
+                left: AppBreakpoints.value(
+                  context,
+                  phone: AppSpacing.spacingLG,
+                  tablet: AppSpacing.spacingXL,
+                ),
+                right: AppSpacing.spacingLG,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.recipientName,
                       style: AppTypography.titleLarge.copyWith(color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       _formatDuration(_duration),
@@ -349,7 +357,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             Positioned(
               left: 0,
               right: 0,
-              bottom: AppSpacing.spacingXL,
+              bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.spacingXL,
               child: _buildControls(theme, isDark),
             ),
           ],
@@ -364,54 +372,78 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     Color textPrimary,
     Color textSecondary,
   ) {
+    final ringSize =
+        (MediaQuery.sizeOf(context).width * 0.55).clamp(160.0, 220.0);
+    final avatarSize = (ringSize * 0.64).clamp(100.0, 140.0);
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 220,
-            height: 220,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (!_callConnected) ...[
-                  _PulsingRing(controller: _pulseController, intervalBegin: 0.0, intervalEnd: 0.33),
-                  _PulsingRing(controller: _pulseController, intervalBegin: 0.33, intervalEnd: 0.66),
-                  _PulsingRing(controller: _pulseController, intervalBegin: 0.66, intervalEnd: 1.0),
+      child: Padding(
+        padding: ResponsivePadding.horizontal(context),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: ringSize,
+              height: ringSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (!_callConnected) ...[
+                    _PulsingRing(
+                      controller: _pulseController,
+                      intervalBegin: 0.0,
+                      intervalEnd: 0.33,
+                      size: avatarSize,
+                    ),
+                    _PulsingRing(
+                      controller: _pulseController,
+                      intervalBegin: 0.33,
+                      intervalEnd: 0.66,
+                      size: avatarSize,
+                    ),
+                    _PulsingRing(
+                      controller: _pulseController,
+                      intervalBegin: 0.66,
+                      intervalEnd: 1.0,
+                      size: avatarSize,
+                    ),
+                  ],
+                  ClipOval(
+                    child: widget.recipientAvatarUrl != null
+                        ? ImageFiltered(
+                            imageFilter: ImageFilter.blur(
+                              sigmaX: _callConnected ? 0 : 8,
+                              sigmaY: _callConnected ? 0 : 8,
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: widget.recipientAvatarUrl!,
+                              width: avatarSize,
+                              height: avatarSize,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Container(
+                            width: avatarSize,
+                            height: avatarSize,
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: AppSvgIcon(
+                              assetPath: AppIcons.userOutline,
+                              size: avatarSize * 0.34,
+                              color: textSecondary,
+                            ),
+                          ),
+                  ),
                 ],
-                ClipOval(
-                  child: widget.recipientAvatarUrl != null
-                      ? ImageFiltered(
-                          imageFilter: ImageFilter.blur(
-                            sigmaX: _callConnected ? 0 : 8,
-                            sigmaY: _callConnected ? 0 : 8,
-                          ),
-                          child: CachedNetworkImage(
-                            imageUrl: widget.recipientAvatarUrl!,
-                            width: 140,
-                            height: 140,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : Container(
-                          width: 140,
-                          height: 140,
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: AppSvgIcon(
-                            assetPath: AppIcons.userOutline,
-                            size: 48,
-                            color: textSecondary,
-                          ),
-                        ),
-                ),
-              ],
+              ),
             ),
-          ),
-          SizedBox(height: AppSpacing.spacingLG),
-          Text(
-            widget.recipientName,
-            style: AppTypography.headlineSmall.copyWith(color: textPrimary),
-          ),
+            SizedBox(height: AppSpacing.spacingLG),
+            Text(
+              widget.recipientName,
+              style: AppTypography.headlineSmall.copyWith(color: textPrimary),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           SizedBox(height: AppSpacing.spacingSM),
           Text(
             _showDeclinedMessage
@@ -423,74 +455,88 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
           ),
         ],
       ),
+    ),
     );
   }
 
   Widget _buildControls(ThemeData theme, bool isDark) {
     final isVideo = widget.type == OutgoingCallType.video;
+    final actionCount = isVideo ? 4.0 : 3.0;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Semantics(
-            label: _isMuted ? 'Unmute microphone' : 'Mute microphone',
-            button: true,
-            child: _CallActionButton(
-              icon: _isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
-              label: _isMuted ? 'Unmute' : 'Mute',
-              onTap: _toggleMute,
-              isDark: isDark,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final buttonSize =
+            (constraints.maxWidth / (actionCount + 1)).clamp(48.0, 56.0);
+
+        return Padding(
+          padding: ResponsivePadding.horizontal(context),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Semantics(
+                label: _isMuted ? 'Unmute microphone' : 'Mute microphone',
+                button: true,
+                child: _CallActionButton(
+                  icon: _isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
+                  label: _isMuted ? 'Unmute' : 'Mute',
+                  onTap: _toggleMute,
+                  isDark: isDark,
+                  size: buttonSize,
+                ),
+              ),
+              Semantics(
+                label: 'End call',
+                button: true,
+                child: _CallActionButton(
+                  icon: AppIcons.callMissed,
+                  label: 'End',
+                  onTap: _endCall,
+                  isDark: isDark,
+                  isDestructive: true,
+                  size: buttonSize,
+                ),
+              ),
+              if (isVideo)
+                Semantics(
+                  label: _isCameraOn ? 'Turn camera off' : 'Turn camera on',
+                  button: true,
+                  child: _CallActionButton(
+                    icon: AppIcons.video,
+                    label: _isCameraOn ? 'Camera' : 'Cam off',
+                    onTap: _toggleCamera,
+                    isDark: isDark,
+                    size: buttonSize,
+                  ),
+                )
+              else
+                Semantics(
+                  label: _isSpeakerOn ? 'Speaker on' : 'Speaker off',
+                  button: true,
+                  child: _CallActionButton(
+                    icon: AppIcons.getIconPath('volume-high'),
+                    label: 'Speaker',
+                    onTap: _toggleSpeaker,
+                    isDark: isDark,
+                    isActive: _isSpeakerOn,
+                    size: buttonSize,
+                  ),
+                ),
+              if (isVideo)
+                Semantics(
+                  label: 'Flip camera',
+                  button: true,
+                  child: _CallActionButton(
+                    icon: AppIcons.getIconPath('rotate-right'),
+                    label: 'Flip',
+                    onTap: _flipCamera,
+                    isDark: isDark,
+                    size: buttonSize,
+                  ),
+                ),
+            ],
           ),
-          Semantics(
-            label: 'End call',
-            button: true,
-            child: _CallActionButton(
-              icon: AppIcons.callMissed,
-              label: 'End',
-              onTap: _endCall,
-              isDark: isDark,
-              isDestructive: true,
-            ),
-          ),
-          if (isVideo)
-            Semantics(
-              label: _isCameraOn ? 'Turn camera off' : 'Turn camera on',
-              button: true,
-              child: _CallActionButton(
-                icon: AppIcons.video,
-                label: _isCameraOn ? 'Camera' : 'Cam off',
-                onTap: _toggleCamera,
-                isDark: isDark,
-              ),
-            )
-          else
-            Semantics(
-              label: _isSpeakerOn ? 'Speaker on' : 'Speaker off',
-              button: true,
-              child: _CallActionButton(
-                icon: AppIcons.getIconPath('volume-high'),
-                label: 'Speaker',
-                onTap: _toggleSpeaker,
-                isDark: isDark,
-                isActive: _isSpeakerOn,
-              ),
-            ),
-          if (isVideo)
-            Semantics(
-              label: 'Flip camera',
-              button: true,
-              child: _CallActionButton(
-                icon: AppIcons.getIconPath('rotate-right'),
-                label: 'Flip',
-                onTap: _flipCamera,
-                isDark: isDark,
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -505,11 +551,13 @@ class _PulsingRing extends StatelessWidget {
   final AnimationController controller;
   final double intervalBegin;
   final double intervalEnd;
+  final double size;
 
   const _PulsingRing({
     required this.controller,
     required this.intervalBegin,
     required this.intervalEnd,
+    this.size = 140,
   });
 
   @override
@@ -540,8 +588,8 @@ class _PulsingRing extends StatelessWidget {
           child: Opacity(
             opacity: opacity.value,
             child: Container(
-              width: 140,
-              height: 140,
+              width: size,
+              height: size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: theme.colorScheme.primary, width: 2),
@@ -561,6 +609,7 @@ class _CallActionButton extends StatelessWidget {
   final bool isDark;
   final bool isDestructive;
   final bool isActive;
+  final double size;
 
   const _CallActionButton({
     required this.icon,
@@ -569,6 +618,7 @@ class _CallActionButton extends StatelessWidget {
     required this.isDark,
     this.isDestructive = false,
     this.isActive = false,
+    this.size = 56,
   });
 
   @override
@@ -597,10 +647,14 @@ class _CallActionButton extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onTap,
             child: SizedBox(
-              width: 56,
-              height: 56,
+              width: size,
+              height: size,
               child: Center(
-                child: AppSvgIcon(assetPath: icon, size: 24, color: fg),
+                child: AppSvgIcon(
+                  assetPath: icon,
+                  size: size * 0.43,
+                  color: fg,
+                ),
               ),
             ),
           ),
@@ -611,6 +665,8 @@ class _CallActionButton extends StatelessWidget {
           style: AppTypography.labelSmall.copyWith(
             color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

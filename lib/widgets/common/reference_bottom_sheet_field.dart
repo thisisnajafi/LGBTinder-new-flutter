@@ -91,9 +91,13 @@ class ReferenceBottomSheetField extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                label,
-                style: AppTypography.h3.copyWith(color: textColor),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.h3.copyWith(color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               if (required)
                 Text(
@@ -124,6 +128,8 @@ class ReferenceBottomSheetField extends StatelessWidget {
                       style: AppTypography.body.copyWith(
                         color: selectedItem.id != -1 ? textColor : secondaryTextColor,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   AppSvgIcon(

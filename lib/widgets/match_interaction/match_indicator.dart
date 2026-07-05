@@ -84,28 +84,43 @@ class MatchIndicator extends ConsumerWidget {
         ),
         if (matchReasons != null && matchReasons!.isNotEmpty) ...[
           SizedBox(height: AppSpacing.spacingMD),
-          ...matchReasons!.take(3).map((reason) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.spacingXS),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    size: 16,
-                    color: getMatchColor(),
-                  ),
-                  SizedBox(width: AppSpacing.spacingXS),
-                  Text(
-                    reason,
-                    style: AppTypography.caption.copyWith(
-                      color: textColor,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final maxReasonWidth = constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : 280.0;
+              return SizedBox(
+                width: maxReasonWidth,
+                child: Column(
+                  children: matchReasons!.take(3).map((reason) {
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: AppSpacing.spacingXS),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: getMatchColor(),
+                          ),
+                          SizedBox(width: AppSpacing.spacingXS),
+                          Expanded(
+                            child: Text(
+                              reason,
+                              style: AppTypography.caption.copyWith(
+                                color: textColor,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            },
+          ),
         ],
       ],
     );

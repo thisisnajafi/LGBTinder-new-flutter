@@ -211,7 +211,8 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                                       ),
                                 SizedBox(width: AppSpacing.spacingSM),
                               ],
-                              Text(
+                              Flexible(
+                                child: Text(
                                 widget.text,
                                 style: AppTypography.button.copyWith(
                                   color: Colors.white,
@@ -227,6 +228,9 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                                         ]
                                       : null,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               ),
                             ],
                           ),

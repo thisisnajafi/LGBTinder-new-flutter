@@ -137,7 +137,11 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
                             radius: 22,
                             fallbackInitial: chat.firstName,
                           ),
-                          title: Text(chat.firstName),
+                          title: Text(
+                            chat.firstName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           trailing: AppSvgIcon(
                             assetPath: AppIcons.share,
                             size: 20,

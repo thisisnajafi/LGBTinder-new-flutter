@@ -299,6 +299,8 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
                                     style: theme.textTheme.titleSmall?.copyWith(
                                       fontWeight: FontWeight.w700,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   if (contact['phone'] != null)
                                     Text(
@@ -307,6 +309,8 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
                                         color: theme.colorScheme.onSurface
                                             .withValues(alpha: 0.55),
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   if (contact['relationship'] != null)
                                     Text(
@@ -315,6 +319,8 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
                                         color: theme.colorScheme.onSurface
                                             .withValues(alpha: 0.45),
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                 ],
                               ),

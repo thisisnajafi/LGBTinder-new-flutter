@@ -66,7 +66,13 @@ class RetentionOfferDialog extends ConsumerWidget {
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          child: Container(
         padding: EdgeInsets.all(AppSpacing.spacingXL),
         decoration: BoxDecoration(
           gradient: AppTheme.accentGradient,
@@ -84,6 +90,8 @@ class RetentionOfferDialog extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingMD),
             Container(
@@ -105,19 +113,29 @@ class RetentionOfferDialog extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        originalPrice,
-                        style: AppTypography.body.copyWith(
-                          color: Colors.white70,
-                          decoration: TextDecoration.lineThrough,
+                      Flexible(
+                        child: Text(
+                          originalPrice,
+                          style: AppTypography.body.copyWith(
+                            color: Colors.white70,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                       SizedBox(width: AppSpacing.spacingSM),
-                      Text(
-                        discountedPrice,
-                        style: AppTypography.h2.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Text(
+                          discountedPrice,
+                          style: AppTypography.h2.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ],
@@ -132,9 +150,52 @@ class RetentionOfferDialog extends ConsumerWidget {
                 color: Colors.white70,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingXXL),
-            Row(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 320) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ElevatedButton(
+                        onPressed: onAccept,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.spacingMD,
+                          ),
+                        ),
+                        child: Text(
+                          'Keep Premium',
+                          style: AppTypography.button.copyWith(
+                            color: AppColors.accentPurple,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.spacingSM),
+                      OutlinedButton(
+                        onPressed: onDecline,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.white),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.spacingMD,
+                          ),
+                        ),
+                        child: Text(
+                          'No Thanks',
+                          style: AppTypography.button.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
@@ -173,8 +234,12 @@ class RetentionOfferDialog extends ConsumerWidget {
                   ),
                 ),
               ],
+            );
+              },
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

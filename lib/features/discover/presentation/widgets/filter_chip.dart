@@ -36,6 +36,8 @@ class FilterChip extends ConsumerWidget {
             color: textColor ?? (isDark ? Colors.white : Colors.black87),
             fontWeight: FontWeight.w500,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         backgroundColor: backgroundColor ?? AppColors.primaryLight.withOpacity(0.1),
         side: BorderSide(

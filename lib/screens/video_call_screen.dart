@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
+import '../core/responsive/responsive.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
@@ -508,12 +509,17 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     late final OverlayEntry overlayEntry;
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: 50,
-        right: 20,
+        top: MediaQuery.paddingOf(context).top + AppSpacing.spacingMD,
+        right: AppSpacing.spacingLG,
+        left: AppSpacing.spacingLG,
         child: Material(
           color: Colors.transparent,
-          child: Container(
-            width: 280,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: (MediaQuery.sizeOf(context).width - AppSpacing.spacingLG * 2)
+                  .clamp(240.0, 320.0),
+            ),
+            child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
@@ -597,6 +603,7 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
           ),
         ),
       ),
+    ),
     );
 
     // Insert the overlay
@@ -631,7 +638,13 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = Colors.white; // Always white for video call overlay
+    final textColor = Colors.white;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final pipWidth = (screenWidth * 0.28).clamp(96.0, 140.0);
+    final pipHeight = pipWidth * 1.33;
+    final primaryButtonSize = (screenWidth * 0.16).clamp(56.0, 64.0);
+    final secondaryButtonSize = (screenWidth * 0.13).clamp(44.0, 56.0);
+    final fallbackAvatarSize = (screenWidth * 0.45).clamp(120.0, 200.0);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -654,18 +667,18 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                       imageUrl: widget.userAvatarUrl,
                       name: widget.userName,
                       isOnline: false,
-                      size: 200.0,
+                      size: fallbackAvatarSize,
                     ),
                   ),
           ),
           // Local video (picture-in-picture)
           if (_isCallActive && !_isVideoOff)
             Positioned(
-              top: 60,
-              right: 20,
+              top: MediaQuery.paddingOf(context).top + AppSpacing.spacingMD,
+              right: AppSpacing.spacingLG,
               child: Container(
-                width: 120,
-                height: 160,
+                width: pipWidth,
+                height: pipHeight,
                 decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(AppRadius.radiusMD),
@@ -705,20 +718,26 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
           // Top bar
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                top: AppSpacing.spacingLG,
+                bottom: AppSpacing.spacingLG,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.userName,
-                        style: AppTypography.h2.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.userName,
+                          style: AppTypography.h2.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
                       if (_isCallActive)
                         Text(
                           _formatDuration(_callDuration),
@@ -733,7 +752,8 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                             color: textColor.withOpacity(0.8),
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: AppSvgIcon(
@@ -754,84 +774,97 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: EdgeInsets.all(AppSpacing.spacingXXL),
+                padding: ResponsivePadding.horizontal(context).copyWith(
+                  bottom: AppSpacing.spacingXXL,
+                  top: AppSpacing.spacingMD,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (!_isCallActive && widget.isIncoming) ...[
-                      // Incoming call buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           IconButtonCircle(
                             svgIcon: AppIcons.callMissed,
                             onTap: _endCall,
-                            size: 64.0,
+                            size: primaryButtonSize,
                             backgroundColor: AppColors.notificationRed,
                             iconColor: Colors.white,
                           ),
                           IconButtonCircle(
                             svgIcon: AppIcons.video,
                             onTap: _acceptCall,
-                            size: 64.0,
+                            size: primaryButtonSize,
                             backgroundColor: AppColors.onlineGreen,
                             iconColor: Colors.white,
                           ),
                         ],
                       ),
                     ] else ...[
-                      // Active call controls
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          IconButtonCircle(
-                            svgIcon: _isMuted
-                                ? AppIcons.microphoneSlash
-                                : AppIcons.microphone,
-                            onTap: _toggleMute,
-                            size: 56.0,
-                            backgroundColor: _isMuted
-                                ? AppColors.notificationRed.withOpacity(0.3)
-                                : Colors.white.withOpacity(0.2),
-                            iconColor: textColor,
-                          ),
-                          IconButtonCircle(
-                            svgIcon: _isVideoOff
-                                ? AppIcons.getIconPath('video-slash')
-                                : AppIcons.video,
-                            onTap: _toggleVideo,
-                            size: 56.0,
-                            backgroundColor: _isVideoOff
-                                ? AppColors.notificationRed.withOpacity(0.3)
-                                : Colors.white.withOpacity(0.2),
-                            iconColor: textColor,
-                          ),
-                          IconButtonCircle(
-                            svgIcon: AppIcons.getIconPath('rotate-right'),
-                            onTap: _switchCamera,
-                            size: 56.0,
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            iconColor: textColor,
-                          ),
-                          IconButtonCircle(
-                            svgIcon: _isSpeakerOn
-                                ? AppIcons.getIconPath('volume-high')
-                                : AppIcons.getIconPath('volume-low'),
-                            onTap: _toggleSpeaker,
-                            size: 56.0,
-                            backgroundColor: _isSpeakerOn
-                                ? AppColors.accentPurple.withOpacity(0.3)
-                                : Colors.white.withOpacity(0.2),
-                            iconColor: textColor,
-                          ),
-                          IconButtonCircle(
-                            svgIcon: AppIcons.callMissed,
-                            onTap: _endCall,
-                            size: 64.0,
-                            backgroundColor: AppColors.notificationRed,
-                            iconColor: Colors.white,
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 380;
+                          final btnSize = compact
+                              ? secondaryButtonSize
+                              : secondaryButtonSize.clamp(48.0, 56.0);
+                          final endSize = primaryButtonSize;
+
+                          return Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: AppSpacing.spacingSM,
+                            runSpacing: AppSpacing.spacingSM,
+                            children: [
+                              IconButtonCircle(
+                                svgIcon: _isMuted
+                                    ? AppIcons.microphoneSlash
+                                    : AppIcons.microphone,
+                                onTap: _toggleMute,
+                                size: btnSize,
+                                backgroundColor: _isMuted
+                                    ? AppColors.notificationRed.withOpacity(0.3)
+                                    : Colors.white.withOpacity(0.2),
+                                iconColor: textColor,
+                              ),
+                              IconButtonCircle(
+                                svgIcon: _isVideoOff
+                                    ? AppIcons.getIconPath('video-slash')
+                                    : AppIcons.video,
+                                onTap: _toggleVideo,
+                                size: btnSize,
+                                backgroundColor: _isVideoOff
+                                    ? AppColors.notificationRed.withOpacity(0.3)
+                                    : Colors.white.withOpacity(0.2),
+                                iconColor: textColor,
+                              ),
+                              IconButtonCircle(
+                                svgIcon: AppIcons.getIconPath('rotate-right'),
+                                onTap: _switchCamera,
+                                size: btnSize,
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                iconColor: textColor,
+                              ),
+                              IconButtonCircle(
+                                svgIcon: _isSpeakerOn
+                                    ? AppIcons.getIconPath('volume-high')
+                                    : AppIcons.getIconPath('volume-low'),
+                                onTap: _toggleSpeaker,
+                                size: btnSize,
+                                backgroundColor: _isSpeakerOn
+                                    ? AppColors.accentPurple.withOpacity(0.3)
+                                    : Colors.white.withOpacity(0.2),
+                                iconColor: textColor,
+                              ),
+                              IconButtonCircle(
+                                svgIcon: AppIcons.callMissed,
+                                onTap: _endCall,
+                                size: endSize,
+                                backgroundColor: AppColors.notificationRed,
+                                iconColor: Colors.white,
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ],

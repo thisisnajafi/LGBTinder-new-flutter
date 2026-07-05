@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/constants/animation_constants.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
@@ -243,29 +244,32 @@ class OtherUserProfileHero extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
-                Row(
-                  children: [
-                    if (matchPercent != null) ...[
-                      _HeroStatChip(
-                        icon: AppIcons.heart,
-                        label: '$matchPercent% match',
-                      ),
-                      const SizedBox(width: AppSpacing.spacingSM),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      if (matchPercent != null) ...[
+                        _HeroStatChip(
+                          icon: AppIcons.heart,
+                          label: '$matchPercent% match',
+                        ),
+                        const SizedBox(width: AppSpacing.spacingSM),
+                      ],
+                      if (sharedInterestCount > 0)
+                        _HeroStatChip(
+                          icon: AppIcons.getIconPath('heart-tick'),
+                          label:
+                              '$sharedInterestCount shared interest${sharedInterestCount == 1 ? '' : 's'}',
+                        ),
+                      if (recentlyActiveLabel != null) ...[
+                        const SizedBox(width: AppSpacing.spacingSM),
+                        _HeroStatChip(
+                          icon: AppIcons.clock,
+                          label: recentlyActiveLabel!,
+                        ),
+                      ],
                     ],
-                    if (sharedInterestCount > 0)
-                      _HeroStatChip(
-                        icon: AppIcons.getIconPath('heart-tick'),
-                        label:
-                            '$sharedInterestCount shared interest${sharedInterestCount == 1 ? '' : 's'}',
-                      ),
-                    if (recentlyActiveLabel != null) ...[
-                      const SizedBox(width: AppSpacing.spacingSM),
-                      _HeroStatChip(
-                        icon: AppIcons.clock,
-                        label: recentlyActiveLabel!,
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -373,7 +377,8 @@ class _HeroMetaPill extends StatelessWidget {
         children: [
           AppSvgIcon(assetPath: icon, size: 13, color: color),
           const SizedBox(width: 4),
-          Flexible(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 180),
             child: Text(
               label,
               maxLines: 1,
@@ -410,12 +415,17 @@ class _HeroStatChip extends StatelessWidget {
         children: [
           AppSvgIcon(assetPath: icon, size: 12, color: Colors.white),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 200),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -493,11 +503,15 @@ class OtherUserProfileActionBar extends StatelessWidget {
                         color: Colors.white,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        isMatched ? 'Message' : 'Say hi',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          isMatched ? 'Message' : 'Say hi',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -695,6 +709,8 @@ class PremiumCompatibilitySection extends StatelessWidget {
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -702,6 +718,8 @@ class PremiumCompatibilitySection extends StatelessWidget {
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -779,6 +797,8 @@ class _CompatRow extends StatelessWidget {
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -786,6 +806,8 @@ class _CompatRow extends StatelessWidget {
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -909,6 +931,8 @@ class _InterestGroupTitle extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: AppColors.accentViolet,
           ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -952,6 +976,8 @@ class _InterestPill extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: shared ? Colors.white : accent,
                 ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1042,10 +1068,14 @@ class _DetailGroupCard extends StatelessWidget {
                 color: AppColors.accentViolet,
               ),
               const SizedBox(width: 8),
-              Text(
-                group.title,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  group.title,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -1083,12 +1113,16 @@ class _DetailGroupCard extends StatelessWidget {
                                 .withValues(alpha: 0.5),
                             fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           chip.value,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -1135,8 +1169,8 @@ class PremiumViewerPhotosSection extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveGrid.photoColumns(context),
               childAspectRatio: 0.82,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,

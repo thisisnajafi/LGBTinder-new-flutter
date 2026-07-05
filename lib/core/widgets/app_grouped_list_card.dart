@@ -48,6 +48,8 @@ class AppGroupedListSection extends StatelessWidget {
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.60),
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           Material(
@@ -132,6 +134,8 @@ class AppGroupedListTile extends StatelessWidget {
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (subtitle != null && subtitle!.isNotEmpty) ...[
                             const SizedBox(height: 2),
@@ -385,6 +389,8 @@ class AppGroupedInfoTile extends StatelessWidget {
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.spacingXS),
                     Text(
@@ -392,6 +398,8 @@ class AppGroupedInfoTile extends StatelessWidget {
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -403,6 +411,8 @@ class AppGroupedInfoTile extends StatelessWidget {
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
             ],
           ),
@@ -429,6 +439,8 @@ class _GroupedRowLabels extends StatelessWidget {
         Text(
           label,
           style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         if (subtitle != null && subtitle!.isNotEmpty) ...[
           const SizedBox(height: 2),

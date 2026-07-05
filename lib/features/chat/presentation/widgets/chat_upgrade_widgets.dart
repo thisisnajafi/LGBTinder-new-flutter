@@ -82,6 +82,8 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
               'Daily message limit reached',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingSM),
             Text(
@@ -92,6 +94,8 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
                     ? AppColors.textSecondaryDark
                     : AppColors.textSecondaryLight,
               ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingLG),
             Semantics(
@@ -104,7 +108,11 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
                     Navigator.of(context).pop();
                     context.push(AppRoutes.subscriptionPlans);
                   },
-                  child: const Text('View plans'),
+                  child: Text(
+                    'View plans',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
             ),
@@ -156,49 +164,94 @@ class ChatPremiumBanner extends StatelessWidget {
             color: AppColors.primaryLight.withValues(alpha: 0.35),
           ),
         ),
-        child: Row(
-          children: [
-            AppSvgIcon(
-              assetPath: AppIcons.crown,
-              size: 28,
-              color: AppColors.primaryLight,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 360;
+            final content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Unlock full chat access',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'See all messages and send without daily limits.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            );
+
+            if (compact) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Unlock full chat access',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
+                  Row(
+                    children: [
+                      AppSvgIcon(
+                        assetPath: AppIcons.crown,
+                        size: 28,
+                        color: AppColors.primaryLight,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: content),
+                      IconButton(
+                        onPressed: onDismiss,
+                        icon: AppSvgIcon(
+                          assetPath: AppIcons.close,
+                          size: 18,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    'See all messages and send without daily limits.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: onUpgrade,
+                      child: const Text('Upgrade'),
                     ),
                   ),
                 ],
-              ),
-            ),
-            TextButton(onPressed: onUpgrade, child: const Text('Upgrade')),
-            IconButton(
-              onPressed: onDismiss,
-              icon: AppSvgIcon(
-                assetPath: AppIcons.close,
-                size: 18,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
-            ),
-          ],
+              );
+            }
+
+            return Row(
+              children: [
+                AppSvgIcon(
+                  assetPath: AppIcons.crown,
+                  size: 28,
+                  color: AppColors.primaryLight,
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: content),
+                TextButton(onPressed: onUpgrade, child: const Text('Upgrade')),
+                IconButton(
+                  onPressed: onDismiss,
+                  icon: AppSvgIcon(
+                    assetPath: AppIcons.close,
+                    size: 18,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

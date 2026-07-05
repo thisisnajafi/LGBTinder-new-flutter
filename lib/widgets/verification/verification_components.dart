@@ -161,6 +161,8 @@ class VerificationBadgeChip extends StatelessWidget {
               color: color,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -278,11 +280,15 @@ class VerificationHistoryCard extends StatelessWidget {
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (item.submittedAt != null)
                   Text(
                     'Submitted ${formatVerificationTimeAgo(item.submittedAt!)}',
                     style: theme.textTheme.labelSmall?.copyWith(color: muted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 if (item.adminNotes != null && item.status == 'rejected')
                   Text(
@@ -290,6 +296,8 @@ class VerificationHistoryCard extends StatelessWidget {
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.error,
                     ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),
