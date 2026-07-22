@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/cache/cache_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Image size presets for consistent memory usage
 enum ImageSize {
@@ -233,13 +234,14 @@ class OptimizedAvatar extends StatelessWidget {
       return CircleAvatar(
         radius: radius,
         backgroundColor: bgColor,
-        child: Text(
+        child: AppText(
           (fallbackText ?? '?').substring(0, 1).toUpperCase(),
           style: TextStyle(
             fontSize: radius * 0.8,
             fontWeight: FontWeight.bold,
             color: AppColors.accentPurple,
           ),
+          maxLines: 1,
         ),
       );
     }

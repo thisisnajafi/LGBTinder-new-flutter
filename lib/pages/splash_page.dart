@@ -531,7 +531,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                               position: _titleSlide,
                               child: FadeTransition(
                                 opacity: _titleFade,
-                                child: Text(
+                                child: AppText(
                                   'LGBTFinder',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
@@ -541,7 +541,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
                                     letterSpacing: 0.5,
                                   ),
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -551,7 +550,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
                               position: _taglineSlide,
                               child: FadeTransition(
                                 opacity: _taglineFade,
-                                child: Text(
+                                child: AppText(
                                   'Find your perfect match',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
@@ -561,7 +560,6 @@ class _SplashPageState extends ConsumerState<SplashPage>
                                     letterSpacing: 0.2,
                                   ),
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
                                 ),
                               ),

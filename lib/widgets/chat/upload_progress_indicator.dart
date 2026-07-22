@@ -55,11 +55,10 @@ class UploadProgressIndicator extends ConsumerWidget {
               ),
               SizedBox(width: AppSpacing.spacingSM),
               Expanded(
-                child: Text(
+                child: AppText(
                   fileName ?? 'Uploading...',
                   style: AppTypography.body.copyWith(color: textColor),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (onCancel != null)

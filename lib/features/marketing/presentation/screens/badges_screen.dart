@@ -258,13 +258,12 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-        Text(
+        AppText(
           label,
           style: AppTypography.caption.copyWith(
             color: Colors.white.withOpacity(0.9),
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

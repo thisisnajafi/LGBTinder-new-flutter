@@ -9,6 +9,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../badges/verification_badge.dart';
 import '../badges/premium_badge.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile badge widget
 /// Displays profile badges (verified, premium, etc.)
@@ -60,14 +61,13 @@ class ProfileBadge extends ConsumerWidget {
               ),
               SizedBox(width: AppSpacing.spacingXS),
             ],
-            Text(
+            AppText(
               customBadge!,
               style: AppTypography.caption.copyWith(
                 color: customColor ?? AppColors.accentPurple,
                 fontWeight: FontWeight.w600,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

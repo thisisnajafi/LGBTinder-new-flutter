@@ -238,7 +238,7 @@ class _SlideContent extends StatelessWidget {
                   const OnboardingTypingDots(),
                 ],
                 SizedBox(height: AppSpacing.spacingXL),
-                Text(
+                AppText(
                   slide.title,
                   style: textTheme.displayMedium?.copyWith(
                     color: AppColors.textPrimaryDark,
@@ -246,10 +246,9 @@ class _SlideContent extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
-                Text(
+                AppText(
                   slide.description,
                   style: textTheme.bodyLarge?.copyWith(
                     color: AppColors.textPrimaryDark.withValues(alpha: 0.92),
@@ -257,7 +256,6 @@ class _SlideContent extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

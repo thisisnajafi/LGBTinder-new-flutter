@@ -34,14 +34,13 @@ class ProfileImagePicker extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             'Add Profile Photo',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingLG),
           LayoutBuilder(
@@ -136,7 +135,7 @@ class ProfileImagePicker extends ConsumerWidget {
                 color: theme.colorScheme.primary,
               ),
             const SizedBox(height: 8),
-            Text(
+            AppText(
               label,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.primary,
@@ -144,7 +143,6 @@ class ProfileImagePicker extends ConsumerWidget {
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

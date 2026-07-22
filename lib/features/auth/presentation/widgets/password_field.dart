@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Password field widget with validation and strength indicator
 class PasswordField extends ConsumerStatefulWidget {
@@ -172,14 +173,13 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
         ),
         SizedBox(height: AppSpacing.spacingXS),
         // Strength text
-        Text(
+        AppText(
           strength.label,
           style: AppTypography.labelSmall.copyWith(
             color: strength.color,
             fontWeight: FontWeight.w500,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -228,7 +228,7 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
           ),
           SizedBox(width: AppSpacing.spacingXS),
           Expanded(
-            child: Text(
+            child: AppText(
               rule.text,
               style: AppTypography.bodySmall.copyWith(
                 color: rule.isValid
@@ -236,7 +236,6 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
                     : textColor.withValues(alpha: 0.6),
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

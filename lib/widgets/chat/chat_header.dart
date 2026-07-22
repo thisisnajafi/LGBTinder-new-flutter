@@ -110,7 +110,7 @@ class ChatHeader extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
+                                AppText(
                                   name,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     color: textColor,
@@ -118,7 +118,6 @@ class ChatHeader extends ConsumerWidget {
                                     letterSpacing: -0.2,
                                   ),
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 LastSeenWidget(
                                   isOnline: isOnline,

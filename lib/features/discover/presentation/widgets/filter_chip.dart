@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Filter chip widget for discovery filters
 /// Displays active filters as chips that can be removed
@@ -30,14 +31,13 @@ class FilterChip extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(right: 8, bottom: 4),
       child: Chip(
-        label: Text(
+        label: AppText(
           displayText,
           style: theme.textTheme.labelMedium?.copyWith(
             color: textColor ?? (isDark ? Colors.white : Colors.black87),
             fontWeight: FontWeight.w500,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
         backgroundColor: backgroundColor ?? AppColors.primaryLight.withOpacity(0.1),
         side: BorderSide(

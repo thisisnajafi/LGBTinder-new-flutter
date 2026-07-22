@@ -546,13 +546,12 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      AppText(
                         widget.userName,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         _isCallActive ? 'Video call in progress' : 'Connecting...',
@@ -729,14 +728,13 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           widget.userName,
                           style: AppTypography.h2.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       if (_isCallActive)
                         Text(

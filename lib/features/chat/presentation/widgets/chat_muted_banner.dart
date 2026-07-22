@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Premium strip shown when conversation notifications are muted.
 class ChatMutedBanner extends StatelessWidget {
@@ -45,13 +46,12 @@ class ChatMutedBanner extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.spacingSM),
             Expanded(
-              child: Text(
+              child: AppText(
                 'Notifications muted for this chat',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Mention text widget
 /// Displays text with highlighted @mentions
@@ -35,11 +36,10 @@ class MentionTextWidget extends ConsumerWidget {
     final matches = mentionPattern.allMatches(text);
 
     if (matches.isEmpty) {
-      return Text(
+      return AppText(
         text,
         style: defaultStyle,
         maxLines: 10,
-        overflow: TextOverflow.ellipsis,
       );
     }
 

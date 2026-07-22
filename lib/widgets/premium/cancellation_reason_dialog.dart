@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../modals/bottom_sheet_custom.dart';
 import '../buttons/gradient_button.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Cancellation reason dialog widget
 /// Dialog for collecting cancellation reasons when user cancels subscription
@@ -83,29 +84,26 @@ class _CancellationReasonDialogState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            AppText(
               'Why are you canceling?',
               style: AppTypography.h2.copyWith(color: textColor),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               'Your feedback helps us improve',
               style: AppTypography.body.copyWith(color: secondaryTextColor),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingLG),
             ..._reasons.map((reason) {
               return Padding(
                 padding: EdgeInsets.only(bottom: AppSpacing.spacingSM),
                 child: RadioListTile<String>(
-                  title: Text(
+                  title: AppText(
                     reason,
                     style: AppTypography.body.copyWith(color: textColor),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   value: reason,
                   groupValue: _selectedReason,

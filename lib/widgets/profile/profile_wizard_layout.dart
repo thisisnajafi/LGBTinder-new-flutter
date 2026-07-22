@@ -8,6 +8,7 @@ import '../../core/widgets/premium/premium_design_system.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../widgets/common/selection_bottom_sheet.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Shared layout helpers — profile wizard steps use the same grouped UI as
 /// settings detail pages and [ProfileEditPage].
@@ -87,19 +88,17 @@ class ProfileWizardLayout {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     required ? '$label *' : label,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  AppText(
                     display,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(
                         alpha: isPlaceholder ? 0.45 : 0.72,

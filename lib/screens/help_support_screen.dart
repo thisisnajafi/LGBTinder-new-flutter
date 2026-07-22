@@ -16,6 +16,7 @@ import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../routes/app_router.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../core/responsive/responsive.dart';
 
 /// Fetches landing/settings for About section (app store links, tagline, description).
 final _landingSettingsProvider = FutureProvider.autoDispose<LandingSettings?>((ref) {
@@ -371,34 +372,31 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (settings.siteName != null && settings.siteName!.isNotEmpty)
-          Text(
+          AppText(
             settings.siteName!,
             style: AppTypography.h3.copyWith(
               color: textColor,
               fontWeight: FontWeight.bold,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         if (settings.tagline != null && settings.tagline!.isNotEmpty) ...[
           SizedBox(height: AppSpacing.spacingXS),
-          Text(
+          AppText(
             settings.tagline!,
             style: AppTypography.body.copyWith(
               color: AppColors.accentPurple,
               fontWeight: FontWeight.w600,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
         if (settings.description != null && settings.description!.isNotEmpty) ...[
           SizedBox(height: AppSpacing.spacingMD),
-          Text(
+          AppText(
             settings.description!,
             style: AppTypography.body.copyWith(color: secondaryTextColor),
             maxLines: 6,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
         if ((settings.appStoreUrl != null && settings.appStoreUrl!.isNotEmpty) ||
@@ -459,12 +457,11 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Text(
+              AppText(
                 s.label ?? '',
                 style: AppTypography.caption.copyWith(color: secondaryTextColor),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -483,14 +480,13 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
       children: [
         for (final t in list.take(3)) ...[
           if (t.quote != null && t.quote!.isNotEmpty)
-            Text(
+            AppText(
               '"${t.quote}"',
               style: AppTypography.body.copyWith(
                 color: textColor,
                 fontStyle: FontStyle.italic,
               ),
               maxLines: 4,
-              overflow: TextOverflow.ellipsis,
             ),
           if (t.author != null || t.location != null) ...[
             SizedBox(height: AppSpacing.spacingXS),

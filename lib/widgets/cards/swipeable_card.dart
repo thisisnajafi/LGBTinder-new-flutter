@@ -14,6 +14,7 @@ import '../../core/theme/match_percentage_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
 import '../ui/distance_tag.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Online status indicator — functional color permitted by design spec.
 const Color kDiscoveryOnlineGreen = Color(0xFF22C55E);
@@ -722,10 +723,9 @@ class _BottomTextBlock extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Flexible(
-                    child: Text(
+                    child: AppText(
                       age != null ? '$name, $age' : name,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -786,10 +786,9 @@ class _BottomTextBlock extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           city!,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: Colors.white.withValues(alpha: 0.75),
                           ),
@@ -836,10 +835,9 @@ class _BioPreview extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (bio.length <= 60) {
-      return Text(
+      return AppText(
         bio,
         maxLines: 3,
-        overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(
           color: Colors.white.withValues(alpha: 0.75),
         ),

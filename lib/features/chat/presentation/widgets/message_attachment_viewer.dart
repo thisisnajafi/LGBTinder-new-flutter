@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/cache/image_cache_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -71,11 +72,10 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: widget.onClose ?? () => Navigator.of(context).pop(),
               ),
-              title: Text(
+              title: AppText(
                 widget.attachment.filename,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
               actions: [
                 IconButton(
@@ -267,34 +267,37 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
   }
 
   Widget _buildFileViewer() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(16),
+    return Padding(
+      padding: ResponsivePadding.horizontal(context),
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                _getFileIcon(),
+                color: AppColors.primaryLight,
+                size: 64,
+              ),
             ),
-            child: Icon(
-              _getFileIcon(),
-              color: AppColors.primaryLight,
-              size: 64,
+            const SizedBox(height: 24),
+            AppText(
+              widget.attachment.filename,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            widget.attachment.filename,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
           const SizedBox(height: 8),
           Text(
             widget.attachment.formattedSize,
@@ -307,7 +310,10 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
           ElevatedButton.icon(
             onPressed: _downloadAttachment,
             icon: const Icon(Icons.download),
-            label: const Text('Download File'),
+            label: const AppText(
+              'Download File',
+              maxLines: 1,
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryLight,
               foregroundColor: Colors.white,
@@ -315,6 +321,7 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -538,16 +545,18 @@ class _VoicePlaybackControlsState extends State<_VoicePlaybackControls> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.spacingXL),
+      padding: ResponsivePadding.page(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
+          AppText(
             'Voice Message',
             style: theme.textTheme.headlineSmall?.copyWith(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
               fontWeight: FontWeight.w600,
             ),
+            maxLines: 1,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
 

@@ -16,6 +16,7 @@ import '../../features/safety/presentation/screens/report_user_screen.dart';
 import '../../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Slide-down peer info panel shown below the chat header.
 class ChatUserInfoPanel extends ConsumerStatefulWidget {
@@ -249,11 +250,10 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   widget.name,
                   style: AppTypography.h2.copyWith(color: textColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
@@ -277,11 +277,10 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
                 ),
                 SizedBox(width: AppSpacing.spacingXS),
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     location,
                     style: AppTypography.caption.copyWith(color: secondaryTextColor),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -346,13 +345,12 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
                         color: accentColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(AppRadius.radiusRound),
                       ),
-                      child: Text(
+                      child: AppText(
                         label,
                         style: AppTypography.caption.copyWith(
                           color: accentColor,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   )

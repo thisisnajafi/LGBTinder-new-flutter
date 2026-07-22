@@ -116,11 +116,10 @@ class _AudioPlayerWidgetState extends ConsumerState<AudioPlayerWidget> {
                 valueColor: AlwaysStoppedAnimation<Color>(textColor),
               ),
               SizedBox(height: AppSpacing.spacingXS),
-              Text(
+              AppText(
                 '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}',
                 style: AppTypography.caption.copyWith(color: textColor),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

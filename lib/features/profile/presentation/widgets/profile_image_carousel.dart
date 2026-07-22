@@ -111,14 +111,13 @@ class ProfileImageCarousel extends ConsumerWidget {
                   color: AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
+                child: AppText(
                   'Primary',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),

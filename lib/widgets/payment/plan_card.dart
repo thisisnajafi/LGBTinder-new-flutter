@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../buttons/gradient_button.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Plan card widget
 /// Displays subscription plan with features and pricing
@@ -85,11 +86,10 @@ class PlanCard extends ConsumerWidget {
                 ),
               ),
             if (isPopular) SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               planName,
               style: AppTypography.h2.copyWith(color: textColor),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingSM),
             Wrap(
@@ -129,11 +129,10 @@ class PlanCard extends ConsumerWidget {
                       ),
                       SizedBox(width: AppSpacing.spacingSM),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           feature,
                           style: AppTypography.body.copyWith(color: textColor),
                           maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

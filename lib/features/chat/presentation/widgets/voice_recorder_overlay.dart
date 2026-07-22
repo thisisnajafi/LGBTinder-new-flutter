@@ -12,6 +12,7 @@ import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/chat_providers.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Hold-to-record voice capture overlay for chat.
 class VoiceRecorderOverlay extends ConsumerStatefulWidget {
@@ -171,7 +172,7 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            AppText(
               _isSending
                   ? 'Sending voice message...'
                   : (_isRecording ? 'Recording… release to send' : 'Hold to record'),
@@ -180,7 +181,6 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
             GestureDetector(

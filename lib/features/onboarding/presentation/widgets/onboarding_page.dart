@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -45,7 +46,7 @@ class OnboardingPage extends ConsumerWidget {
 
     return Container(
       color: backgroundColor ?? (isDark ? AppColors.backgroundDark : Colors.white),
-      padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: padding ?? ResponsivePadding.page(context),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: contentAlignment,
@@ -110,7 +111,7 @@ class OnboardingPage extends ConsumerWidget {
           const SizedBox(height: 32),
 
           // Title
-          Text(
+          AppText(
             title,
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
@@ -120,12 +121,13 @@ class OnboardingPage extends ConsumerWidget {
             textAlign: contentAlignment == CrossAxisAlignment.center
                 ? TextAlign.center
                 : TextAlign.start,
+            maxLines: 3,
           ),
 
           const SizedBox(height: 16),
 
           // Subtitle
-          Text(
+          AppText(
             subtitle,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: subtitleColor ?? theme.colorScheme.onSurface.withOpacity(0.7),
@@ -134,12 +136,13 @@ class OnboardingPage extends ConsumerWidget {
             textAlign: contentAlignment == CrossAxisAlignment.center
                 ? TextAlign.center
                 : TextAlign.start,
+            maxLines: 3,
           ),
 
           // Description (if provided)
           if (description != null) ...[
             const SizedBox(height: 12),
-            Text(
+            AppText(
               description!,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -148,6 +151,7 @@ class OnboardingPage extends ConsumerWidget {
               textAlign: contentAlignment == CrossAxisAlignment.center
                   ? TextAlign.center
                   : TextAlign.start,
+              maxLines: 6,
             ),
           ],
 

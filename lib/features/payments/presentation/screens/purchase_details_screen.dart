@@ -250,13 +250,12 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             title,
             style: AppTypography.h3.copyWith(
               fontWeight: FontWeight.bold,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           ...children,
@@ -279,18 +278,17 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
         children: [
           Expanded(
             flex: 2,
-            child: Text(
+            child: AppText(
               label,
               style: AppTypography.body.copyWith(
                 color: secondaryTextColor,
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           Expanded(
             flex: 3,
-            child: Text(
+            child: AppText(
               value,
               style: AppTypography.body.copyWith(
                 color: textColor,
@@ -299,7 +297,6 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
               ),
               textAlign: TextAlign.right,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

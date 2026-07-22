@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../core/responsive/responsive.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/app_settings_detail.dart';
@@ -864,7 +865,10 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 ),
                 OutlinedButton(
                   onPressed: _isUpdatingLocation ? null : _saveAdministrativeLocation,
-                  child: const Text('Save country & city'),
+                  child: const AppText(
+                    'Save country & city',
+                    maxLines: 1,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
                 FilledButton(
@@ -875,7 +879,10 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Update my GPS location'),
+                      : const AppText(
+                          'Update my GPS location',
+                          maxLines: 1,
+                        ),
                 ),
               ],
             ),
@@ -948,11 +955,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   'Update interests and matching preferences from discovery settings.',
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSettingsLayout.horizontalPadding,
-                AppSpacing.spacingXL,
-                AppSettingsLayout.horizontalPadding,
-                0,
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                top: AppSpacing.spacingXL,
               ),
               child: GradientButton(
                 text: 'Save changes',

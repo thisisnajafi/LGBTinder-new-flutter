@@ -470,13 +470,12 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      AppText(
                         widget.userName,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         _isCallActive ? 'Call in progress' : 'Connecting...',
@@ -603,7 +602,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                     showRing: true,
                   ),
                   SizedBox(height: AppSpacing.spacingXXL),
-                  Text(
+                  AppText(
                     widget.userName,
                     style: AppTypography.h1.copyWith(
                       color: textColor,
@@ -611,7 +610,6 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
                   if (_isCallActive)

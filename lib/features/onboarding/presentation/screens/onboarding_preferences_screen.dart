@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../providers/onboarding_provider.dart';
+import '../../providers/onboarding_provider.dart';
 
 /// Onboarding preferences screen
 /// Allows users to set and update their onboarding preferences
@@ -48,14 +49,17 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
         actions: [
           TextButton(
             onPressed: () => _savePreferences(onboardingNotifier),
-            child: const Text('Save'),
+            child: const AppText(
+              'Save',
+              maxLines: 1,
+            ),
           ),
         ],
       ),
       body: onboardingState.isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: ResponsivePadding.page(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -68,11 +72,12 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
 
                   const SizedBox(height: 8),
 
-                  Text(
+                  AppText(
                     '${(onboardingState.completionPercentage * 100).round()}% Complete',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
+                    maxLines: 1,
                   ),
 
                   const SizedBox(height: 24),
@@ -144,12 +149,13 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
                           borderRadius: BorderRadius.circular(24),
                         ),
                       ),
-                      child: const Text(
+                      child: const AppText(
                         'Save Preferences',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
                       ),
                     ),
                   ),
@@ -184,10 +190,13 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
                 color: AppColors.primaryLight,
               ),
               const SizedBox(width: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: AppText(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
                 ),
               ),
             ],
@@ -261,11 +270,12 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
           }).toList(),
         ),
         const SizedBox(height: 8),
-        Text(
+        AppText(
           'Select at least 3 interests',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
+          maxLines: 2,
         ),
       ],
     );
@@ -355,9 +365,11 @@ class _OnboardingPreferencesScreenState extends ConsumerState<OnboardingPreferen
           },
           activeColor: AppColors.primaryLight,
         ),
-        Text(
+        AppText(
           '${state.preferences.maxDistance?.round() ?? 50} kilometers',
           style: Theme.of(context).textTheme.bodyMedium,
+          maxLines: 1,
+          textAlign: TextAlign.center,
         ),
       ],
     );

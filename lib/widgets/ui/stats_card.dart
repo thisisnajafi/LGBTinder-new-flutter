@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Statistics card widget
 /// Displays a statistic with label, value, and optional icon
@@ -55,21 +56,19 @@ class StatsCard extends ConsumerWidget {
               ),
               SizedBox(height: AppSpacing.spacingMD),
             ],
-            Text(
+            AppText(
               value,
               style: AppTypography.h1.copyWith(
                 color: textColor,
                 fontWeight: FontWeight.bold,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingXS),
-            Text(
+            AppText(
               label,
               style: AppTypography.body.copyWith(color: secondaryTextColor),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

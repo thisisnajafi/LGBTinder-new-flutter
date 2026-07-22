@@ -11,6 +11,7 @@ import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import '../../data/models/notification.dart' as app_models;
 import 'notification_visuals.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Notification tile widget for displaying individual notifications.
 class NotificationTile extends ConsumerWidget {
@@ -210,7 +211,7 @@ class NotificationTile extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
+                          child: AppText(
                             notification.title.isNotEmpty
                                 ? notification.title
                                 : _getDefaultTitle(),
@@ -221,7 +222,6 @@ class NotificationTile extends ConsumerWidget {
                                   : FontWeight.w600,
                             ),
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (!notification.isRead)
@@ -236,13 +236,12 @@ class NotificationTile extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.spacingXS),
-                    Text(
+                    AppText(
                       notification.message,
                       style: AppTypography.caption.copyWith(
                         color: secondaryTextColor,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.spacingXS),
                     Text(

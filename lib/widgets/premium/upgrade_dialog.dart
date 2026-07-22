@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Upgrade Dialog
 /// 
@@ -68,26 +69,24 @@ class UpgradeDialog extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Title
-            Text(
+            AppText(
               title,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 12),
 
             // Message
-            Text(
+            AppText(
               message,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
               textAlign: TextAlign.center,
               maxLines: 5,
-              overflow: TextOverflow.ellipsis,
             ),
 
             // Limit info (if provided)
@@ -114,7 +113,7 @@ class UpgradeDialog extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Flexible(
-                      child: Text(
+                      child: AppText(
                         limitInfo!,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.accentPurple,
@@ -122,7 +121,6 @@ class UpgradeDialog extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -143,11 +141,10 @@ class UpgradeDialog extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       feature,
                       style: theme.textTheme.bodyMedium,
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

@@ -21,6 +21,7 @@ import '../../shared/services/error_handler_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../pages/profile_wizard_page.dart';
 import '../../routes/app_router.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Email verification screen - Email verification flow with 6-digit code
 class EmailVerificationScreen extends ConsumerStatefulWidget {
@@ -318,7 +319,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSpacing.spacingXS),
-              Text(
+              AppText(
                 widget.email,
                 style: AppTypography.body.copyWith(
                   color: AppColors.accentPurple,
@@ -326,7 +327,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingXXL),
               // Code input fields — flexible width for small screens

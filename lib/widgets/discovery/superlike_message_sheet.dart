@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/widgets/app_action_bottom_sheet.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -142,7 +143,7 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                               ),
                             ),
                             SizedBox(height: AppSpacing.spacingXS),
-                            Text(
+                            AppText(
                               canSuperlike
                                   ? widget.superlikeInfo.remainingLabel
                                   : 'No Super Likes remaining',
@@ -153,27 +154,24 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                                 fontWeight: FontWeight.w600,
                               ),
                               maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             if (canSuperlike) ...[
                               SizedBox(height: AppSpacing.spacingXS),
-                              Text(
+                              AppText(
                                 'Stand out with a personal note',
                                 style: AppTypography.bodySmall.copyWith(
                                   color: textSecondary,
                                 ),
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ] else ...[
                               SizedBox(height: AppSpacing.spacingXS),
-                              Text(
+                              AppText(
                                 'Purchase extra Super Likes or wait for your daily reset.',
                                 style: AppTypography.bodySmall.copyWith(
                                   color: textSecondary,
                                 ),
                                 maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ],
@@ -347,13 +345,13 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                                   ),
                                   SizedBox(width: AppSpacing.spacingSM),
                                   Flexible(
-                                    child: Text(
+                                    child: AppText(
                                       'Purchase Super Likes',
                                       style: AppTypography.button.copyWith(
                                         fontWeight: FontWeight.w700,
                                         color: Colors.white,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ],

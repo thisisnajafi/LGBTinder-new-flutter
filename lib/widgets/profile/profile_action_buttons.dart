@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../buttons/icon_button_circle.dart';
+import '../../core/responsive/responsive.dart';
 
 class ProfileActionButtons extends ConsumerStatefulWidget {
   final VoidCallback? onLike;
@@ -167,14 +168,13 @@ class ProfileFloatingEditButton extends StatelessWidget {
           size: 20,
           color: AppColors.textPrimaryDark,
         ),
-        label: Text(
+        label: AppText(
           'Edit Profile',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: AppColors.textPrimaryDark,
                 fontWeight: FontWeight.w600,
               ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

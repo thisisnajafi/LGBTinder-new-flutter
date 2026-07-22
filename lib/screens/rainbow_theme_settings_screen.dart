@@ -7,6 +7,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../core/responsive/responsive.dart';
 
 /// Rainbow theme settings screen - Customize rainbow theme
 class RainbowThemeSettingsScreen extends ConsumerStatefulWidget {
@@ -268,13 +269,12 @@ class _SliderCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   title,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: AppSpacing.spacingSM),
@@ -342,13 +342,12 @@ class _SettingOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

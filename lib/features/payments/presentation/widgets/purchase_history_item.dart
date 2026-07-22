@@ -5,6 +5,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../data/models/google_play_purchase_history.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Widget to display a single purchase history item
 class PurchaseHistoryItem extends StatelessWidget {
@@ -67,24 +68,22 @@ class PurchaseHistoryItem extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           purchase.productName,
                           style: AppTypography.h3.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         SizedBox(height: AppSpacing.spacingXS),
-                        Text(
+                        AppText(
                           purchase.productId,
                           style: AppTypography.caption.copyWith(
                             color: secondaryTextColor,
                             fontFamily: 'monospace',
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -110,14 +109,13 @@ class PurchaseHistoryItem extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: AppSpacing.spacingXS),
-                      Text(
+                      AppText(
                         purchase.formattedPrice,
                         style: AppTypography.body.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.bold,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   );
@@ -131,7 +129,7 @@ class PurchaseHistoryItem extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: AppSpacing.spacingXS),
-                      Text(
+                      AppText(
                         purchase.purchaseDate != null
                             ? DateFormat('MMM d, y').format(purchase.purchaseDate!)
                             : 'N/A',
@@ -139,7 +137,6 @@ class PurchaseHistoryItem extends StatelessWidget {
                           color: textColor,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   );

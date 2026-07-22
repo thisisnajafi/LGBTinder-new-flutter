@@ -20,6 +20,7 @@ import '../../../../widgets/loading/skeleton_subscription_plans.dart';
 import '../../data/models/superlike_pack.dart';
 import '../../data/services/plan_limits_service.dart';
 import '../../providers/payment_providers.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Full-screen superlike pack purchase — mirrors subscription plans UX.
 class SuperlikePacksScreen extends ConsumerStatefulWidget {
@@ -418,14 +419,13 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: Text(
+                                child: AppText(
                                   pack.name,
                                   style: AppTypography.h3.copyWith(
                                     color: textColor,
                                     fontWeight: FontWeight.w700,
                                   ),
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (pack.isPopular)

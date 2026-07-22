@@ -103,12 +103,11 @@ class _EmptyStateState extends ConsumerState<EmptyState>
                     ),
               SizedBox(height: AppSpacing.spacingXL),
             ],
-            Text(
+            AppText(
               widget.title,
               style: AppTypography.h3.copyWith(color: textColor),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             if (widget.showPrideAccent) ...[
               SizedBox(height: AppSpacing.spacingMD),
@@ -127,12 +126,11 @@ class _EmptyStateState extends ConsumerState<EmptyState>
             ],
             if (widget.message != null) ...[
               SizedBox(height: AppSpacing.spacingMD),
-              Text(
+              AppText(
                 widget.message!,
                 style: AppTypography.body.copyWith(color: secondaryTextColor),
                 textAlign: TextAlign.center,
                 maxLines: 5,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
             if (widget.actionLabel != null && widget.onAction != null) ...[

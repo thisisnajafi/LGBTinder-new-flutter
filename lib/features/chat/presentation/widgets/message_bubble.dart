@@ -306,14 +306,13 @@ class _MessageBubbleState extends ConsumerState<MessageBubble>
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child: AppText(
               widget.message.message.isNotEmpty ? widget.message.message : 'File attachment',
               style: TextStyle(
                 color: widget.isSentByCurrentUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

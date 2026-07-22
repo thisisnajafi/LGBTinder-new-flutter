@@ -244,20 +244,36 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _showBlockConfirmation(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Block User'),
-        content: Text('Are you sure you want to block ${_getFullName()}? You won\'t see each other anymore.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder: (context) => ResponsiveGrid.constrainedTo(
+        context,
+        AlertDialog(
+          title: const AppText(
+            'Block User',
+            maxLines: 1,
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentRed),
-            child: const Text('Block'),
+          content: AppText(
+            'Are you sure you want to block ${_getFullName()}? You won\'t see each other anymore.',
+            maxLines: 4,
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const AppText(
+                'Cancel',
+                maxLines: 1,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.accentRed),
+              child: const AppText(
+                'Block',
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+        tablet: 400,
       ),
     );
 

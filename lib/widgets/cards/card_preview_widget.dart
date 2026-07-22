@@ -10,6 +10,7 @@ import '../images/optimized_image.dart';
 import '../badges/verification_badge.dart';
 import '../badges/premium_badge.dart';
 import 'swipeable_card.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Card preview widget
 /// Compact preview of a swipeable card for lists/grids
@@ -101,11 +102,10 @@ class CardPreviewWidget extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           name,
                           style: AppTypography.h3.copyWith(color: textColor),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (age != null)

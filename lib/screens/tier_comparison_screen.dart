@@ -11,6 +11,7 @@ import '../core/widgets/premium/premium_design_system.dart';
 import '../routes/app_router.dart';
 import '../shared/analytics/app_event_tracker.dart';
 import '../widgets/buttons/gradient_button.dart';
+import '../core/responsive/responsive.dart';
 
 class TierComparisonScreen extends StatelessWidget {
   const TierComparisonScreen({super.key});
@@ -167,13 +168,12 @@ class _TierCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     title,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (highlight)
@@ -199,13 +199,12 @@ class _TierCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.spacingXS),
-            Text(
+            AppText(
               subtitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
             ...bullets.map(
@@ -221,13 +220,12 @@ class _TierCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.spacingSM),
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         bullet,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           height: 1.35,
                         ),
                         maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

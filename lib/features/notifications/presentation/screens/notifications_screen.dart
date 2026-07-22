@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
@@ -223,11 +224,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         if (unreadCount > 0)
           const PopupMenuItem(
             value: 'read',
-            child: Text('Mark all read'),
+            child: AppText(
+              'Mark all read',
+              maxLines: 1,
+            ),
           ),
         const PopupMenuItem(
           value: 'clear',
-          child: Text('Clear all'),
+          child: AppText(
+            'Clear all',
+            maxLines: 1,
+          ),
         ),
       ],
     );
@@ -300,11 +307,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          PremiumPageHeader.horizontalPadding,
-          0,
-          PremiumPageHeader.horizontalPadding,
-          AppSpacing.spacingLG,
+        padding: ResponsivePadding.horizontal(context).copyWith(
+          bottom: AppSpacing.spacingLG,
         ),
         itemCount: notifications.length + 2 + footerCount,
         itemBuilder: (context, index) {
@@ -322,12 +326,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           if (index == 1) {
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
-              child: Text(
+              child: AppText(
                 notifications.isEmpty ? 'No activity in this category' : 'Recent',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: mutedColor,
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 1,
               ),
             );
           }

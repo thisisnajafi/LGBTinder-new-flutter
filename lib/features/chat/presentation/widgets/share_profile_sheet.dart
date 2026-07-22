@@ -8,6 +8,7 @@ import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import '../../providers/chat_providers.dart';
 import '../../data/models/chat.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Bottom sheet to pick a match and share their profile in chat.
 class ShareProfileSheet extends ConsumerStatefulWidget {
@@ -137,10 +138,9 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
                             radius: 22,
                             fallbackInitial: chat.firstName,
                           ),
-                          title: Text(
+                          title: AppText(
                             chat.firstName,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           trailing: AppSvgIcon(
                             assetPath: AppIcons.share,

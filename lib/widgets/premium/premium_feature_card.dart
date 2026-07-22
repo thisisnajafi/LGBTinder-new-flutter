@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../badges/premium_badge.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Premium feature card widget
 /// Displays a premium feature with icon, title, description, and badge
@@ -87,14 +88,13 @@ class PremiumFeatureCard extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           title,
                           style: AppTypography.h3.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (!isUnlocked)
@@ -102,13 +102,12 @@ class PremiumFeatureCard extends ConsumerWidget {
                     ],
                   ),
                   SizedBox(height: AppSpacing.spacingXS),
-                  Text(
+                  AppText(
                     description,
                     style: AppTypography.body.copyWith(
                       color: secondaryTextColor,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

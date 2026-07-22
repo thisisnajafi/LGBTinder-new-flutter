@@ -16,6 +16,7 @@ import '../../features/discover/widgets/discover_empty_state.dart';
 import '../../features/discover/utils/discovery_image_prefetch.dart';
 import '../../widgets/loading/skeleton_loader.dart';
 import '../../core/widgets/loading_indicator.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Card stack manager widget
 /// Manages a stack of swipeable cards for discovery screen
@@ -526,7 +527,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
                   color: iconColor,
                 ),
                 const SizedBox(width: 6),
-                Text(
+                AppText(
                   text,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: textColor,
@@ -534,7 +535,6 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
                         letterSpacing: 1.2,
                       ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

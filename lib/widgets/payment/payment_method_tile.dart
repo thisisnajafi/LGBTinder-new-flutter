@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Payment method tile widget
 /// Displays payment method with icon, details, and actions
@@ -86,23 +87,21 @@ class PaymentMethodTile extends ConsumerWidget {
           color: AppColors.accentPurple,
           size: 32,
         ),
-        title: Text(
+        title: AppText(
           _getDisplayName(),
           style: AppTypography.body.copyWith(
             color: textColor,
             fontWeight: FontWeight.w500,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
         subtitle: isDefault
-            ? Text(
+            ? AppText(
                 'Default payment method',
                 style: AppTypography.caption.copyWith(
                   color: AppColors.accentPurple,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               )
             : null,
         trailing: Row(

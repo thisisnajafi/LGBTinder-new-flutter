@@ -11,6 +11,7 @@ import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile backup screen - Backup profile data
 class ProfileBackupScreen extends ConsumerStatefulWidget {
@@ -394,14 +395,13 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
               ),
               SizedBox(width: AppSpacing.spacingMD),
               Expanded(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
@@ -428,11 +428,10 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
           ),
           SizedBox(width: AppSpacing.spacingSM),
           Expanded(
-            child: Text(
+            child: AppText(
               text,
               style: AppTypography.body.copyWith(color: textColor),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

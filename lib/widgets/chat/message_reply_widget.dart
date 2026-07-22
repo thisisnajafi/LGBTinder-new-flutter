@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Message reply widget
 /// Displays a preview of the message being replied to
@@ -53,24 +54,22 @@ class MessageReplyWidget extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (repliedToName != null)
-                  Text(
+                  AppText(
                     repliedToName!,
                     style: AppTypography.caption.copyWith(
                       color: borderColor,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 SizedBox(height: AppSpacing.spacingXS),
                 if (repliedToMessage != null)
-                  Text(
+                  AppText(
                     _getMessagePreview(repliedToMessage!, repliedToMessageType),
                     style: AppTypography.body.copyWith(
                       color: secondaryTextColor,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),

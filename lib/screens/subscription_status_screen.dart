@@ -11,6 +11,7 @@ import '../routes/app_router.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loading.dart';
+import '../core/responsive/responsive.dart';
 
 class SubscriptionStatusScreen extends ConsumerWidget {
   const SubscriptionStatusScreen({super.key});
@@ -79,23 +80,21 @@ class SubscriptionStatusScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: AppSpacing.spacingXS),
-                          Text(
+                          AppText(
                             planName,
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           if (end != null) ...[
                             const SizedBox(height: AppSpacing.spacingSM),
-                            Text(
+                            AppText(
                               'Ends: ${end.toLocal().toString().split('.').first}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: muted,
                               ),
                               maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ],

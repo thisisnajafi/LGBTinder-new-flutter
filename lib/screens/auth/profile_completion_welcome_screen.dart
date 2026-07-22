@@ -50,7 +50,7 @@ class _ProfileCompletionWelcomeScreenState
                   showPulse: true,
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
-                Text(
+                AppText(
                   'Complete Your Profile',
                   style: AppTypography.h1.copyWith(
                     color: textColor,
@@ -58,17 +58,15 @@ class _ProfileCompletionWelcomeScreenState
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
-                Text(
+                AppText(
                   'Add more details to your profile to get better matches and increase your chances of finding someone special!',
                   style: AppTypography.body.copyWith(
                     color: secondaryTextColor,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
                 _buildBenefitItem(
@@ -136,14 +134,13 @@ class _ProfileCompletionWelcomeScreenState
         ),
         SizedBox(width: AppSpacing.spacingMD),
         Flexible(
-          child: Text(
+          child: AppText(
             text,
             style: AppTypography.body.copyWith(
               color: textColor,
               fontWeight: FontWeight.w500,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

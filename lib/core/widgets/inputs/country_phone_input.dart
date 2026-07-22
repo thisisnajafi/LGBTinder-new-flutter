@@ -5,6 +5,7 @@ import '../../../features/reference_data/data/models/reference_item.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/country_phone_utils.dart';
 import 'national_phone_input_formatter.dart';
+import '../../responsive/responsive.dart';
 
 /// Country-aware phone row: read-only dial code + formatted national number field.
 class CountryPhoneInput extends StatefulWidget {
@@ -129,13 +130,12 @@ class _CountryPhoneInputState extends State<CountryPhoneInput> {
                         .surfaceContainerHighest
                         .withValues(alpha: 0.35),
                   ),
-                  child: Text(
+                  child: AppText(
                     widget.dialCodeController?.text.isNotEmpty == true
                         ? widget.dialCodeController!.text
                         : _dialCode,
                     style: Theme.of(context).textTheme.bodyLarge,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
         ),

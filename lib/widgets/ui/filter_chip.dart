@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Filter chip widget
 /// Custom filter chip with selection state
@@ -62,14 +63,13 @@ class FilterChip extends ConsumerWidget {
               ),
               SizedBox(width: AppSpacing.spacingXS),
             ],
-            Text(
+            AppText(
               label,
               style: AppTypography.body.copyWith(
                 color: isSelected ? selectedColorValue : textColor,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
             if (isSelected) ...[
               SizedBox(width: AppSpacing.spacingXS),

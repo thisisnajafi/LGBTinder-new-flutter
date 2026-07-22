@@ -6,6 +6,7 @@ import '../../theme/border_radius_constants.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
 import '../app_page_header.dart';
+import '../../responsive/responsive.dart';
 
 /// Glass card shell — source of truth for premium surfaces across the app.
 class PremiumShell extends StatelessWidget {
@@ -103,7 +104,7 @@ class PremiumSectionHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              AppText(
                 title,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
@@ -111,15 +112,13 @@ class PremiumSectionHeader extends StatelessWidget {
                   letterSpacing: -0.2,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
-                Text(
+                AppText(
                   subtitle!,
                   style: theme.textTheme.bodySmall?.copyWith(color: muted),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -128,14 +127,13 @@ class PremiumSectionHeader extends StatelessWidget {
         if (actionLabel != null && onAction != null)
           TextButton(
             onPressed: onAction,
-            child: Text(
+            child: AppText(
               actionLabel!,
               style: theme.textTheme.labelLarge?.copyWith(
                 color: AppColors.accentPink,
                 fontWeight: FontWeight.w700,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           )
         else if (onEdit != null)

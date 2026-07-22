@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Profile bio section widget
 /// Displays user's profile bio with proper formatting
@@ -36,14 +37,13 @@ class ProfileBioSection extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   'About Me',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isEditable && onEdit != null) ...[
@@ -62,14 +62,13 @@ class ProfileBioSection extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           if (bio != null && bio!.isNotEmpty)
-            Text(
+            AppText(
               bio!,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withOpacity(0.8),
                 height: 1.5,
               ),
               maxLines: 8,
-              overflow: TextOverflow.ellipsis,
             )
           else
             Text(

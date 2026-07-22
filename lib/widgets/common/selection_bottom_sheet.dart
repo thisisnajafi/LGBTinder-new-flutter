@@ -6,6 +6,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/widgets/app_action_bottom_sheet.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Reusable bottom sheet for single and multi-select dropdowns
 class SelectionBottomSheet {
@@ -222,7 +223,7 @@ class _SingleSelectBottomSheetState<T>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: Text(
+                              child: AppText(
                                 widget.getTitle(item),
                                 style: AppTypography.body.copyWith(
                                   color: isSelected
@@ -233,7 +234,6 @@ class _SingleSelectBottomSheetState<T>
                                       : FontWeight.normal,
                                 ),
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (isSelected)
@@ -510,7 +510,7 @@ class _MultiSelectBottomSheetState<T>
                                 ),
                                 SizedBox(width: AppSpacing.spacingMD),
                                 Expanded(
-                                  child: Text(
+                                  child: AppText(
                                     widget.getTitle(item),
                                     style: AppTypography.body.copyWith(
                                       color: isSelected
@@ -521,7 +521,6 @@ class _MultiSelectBottomSheetState<T>
                                           : FontWeight.normal,
                                     ),
                                     maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

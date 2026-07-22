@@ -7,6 +7,7 @@ import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../features/payments/presentation/utils/plan_theme_helper.dart';
 import '../../../shared/models/user_tier.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Tier badge for basid / silder / golden users.
 class TierBadge extends ConsumerWidget {
@@ -72,14 +73,13 @@ class TierBadge extends ConsumerWidget {
           ),
           if (!compact) ...[
             SizedBox(width: AppSpacing.spacingXS),
-            Text(
+            AppText(
               _label,
               style: textTheme.labelSmall?.copyWith(
                 color: AppColors.textPrimaryDark,
                 fontWeight: FontWeight.w700,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
@@ -121,14 +121,13 @@ class ProfileOverlayHeader extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 age != null ? '$name, $age' : name,
                 style: textTheme.displaySmall?.copyWith(
                   color: AppColors.textPrimaryDark,
                   fontWeight: FontWeight.w800,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isVerified) ...[
@@ -159,7 +158,7 @@ class ProfileOverlayHeader extends ConsumerWidget {
                     ),
                     SizedBox(width: AppSpacing.spacingXS),
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         [
                           if (distance != null) distance,
                           if (location != null) location,
@@ -168,7 +167,6 @@ class ProfileOverlayHeader extends ConsumerWidget {
                           color: AppColors.textPrimaryDark.withValues(alpha: 0.9),
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

@@ -167,12 +167,11 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer> {
       return Center(
         child: Padding(
           padding: ResponsivePadding.page(context),
-          child: Text(
+          child: AppText(
             _error ?? 'Photo unavailable',
             style: AppTypography.body.copyWith(color: Colors.white70),
             textAlign: TextAlign.center,
             maxLines: 3,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       );

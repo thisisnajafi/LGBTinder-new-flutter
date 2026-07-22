@@ -7,6 +7,7 @@ import 'package:lgbtindernew/core/theme/typography.dart';
 import 'package:lgbtindernew/core/utils/app_icons.dart';
 import 'package:lgbtindernew/features/calls/data/models/call.dart';
 import 'package:lgbtindernew/features/calls/utils/call_log_labels.dart';
+import '../../../../core/responsive/responsive.dart';
 /// Centered call log bubble shown inline in a chat thread (WhatsApp-style).
 class CallHistoryBubble extends StatelessWidget {
   final Call call;
@@ -45,48 +46,54 @@ class CallHistoryBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.center,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: AppSpacing.spacingSM,
-          horizontal: AppSpacing.spacingLG,
+        padding: ResponsivePadding.horizontal(context).copyWith(
+          top: AppSpacing.spacingSM,
+          bottom: AppSpacing.spacingSM,
         ),
-        child: Semantics(
-          label: label,
-          button: onTap != null,
-          child: Material(
-            color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight)
-                .withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            child: InkWell(
-              onTap: onTap,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.85),
+          ),
+          child: Semantics(
+            label: label,
+            button: onTap != null,
+            child: Material(
+              color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight)
+                  .withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingMD,
-                  vertical: AppSpacing.spacingSM,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppSvgIcon(
-                      assetPath: directionIcon,
-                      size: 14,
-                      color: textColor,
-                    ),
-                    SizedBox(width: AppSpacing.spacingXS),
-                    AppSvgIcon(
-                      assetPath: isNegative ? AppIcons.callMissed : iconPath,
-                      size: 16,
-                      color: textColor,
-                    ),
-                    SizedBox(width: AppSpacing.spacingXS),
-                    Flexible(
-                      child: Text(
-                        label,
-                        style: AppTypography.labelMedium.copyWith(color: textColor),
-                        textAlign: TextAlign.center,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingMD,
+                    vertical: AppSpacing.spacingSM,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppSvgIcon(
+                        assetPath: directionIcon,
+                        size: 14,
+                        color: textColor,
                       ),
-                    ),
-                  ],
+                      SizedBox(width: AppSpacing.spacingXS),
+                      AppSvgIcon(
+                        assetPath: isNegative ? AppIcons.callMissed : iconPath,
+                        size: 16,
+                        color: textColor,
+                      ),
+                      SizedBox(width: AppSpacing.spacingXS),
+                      Flexible(
+                        child: AppText(
+                          label,
+                          style: AppTypography.labelMedium.copyWith(color: textColor),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
@@ -72,12 +73,12 @@ class _ComprehensiveSettingsScreenState
                         Row(
                           children: [
                             Flexible(
-                              child: Text(
+                              child: AppText(
                                 _userName,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w800,
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                             if (_isVerified) ...[

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -27,7 +28,10 @@ class MatchCard extends ConsumerWidget {
 
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: ResponsivePadding.horizontal(context).copyWith(
+        top: 4,
+        bottom: 4,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -52,14 +56,13 @@ class MatchCard extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
+                          child: AppText(
                             '${match.firstName}${match.lastName != null ? ' ${match.lastName}' : ''}',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (isUnread) ...[
@@ -80,7 +83,7 @@ class MatchCard extends ConsumerWidget {
 
                     // Last message or matched time
                     if (match.lastMessage != null && match.lastMessage!.isNotEmpty) ...[
-                      Text(
+                      AppText(
                         match.lastMessage!,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: isUnread
@@ -89,30 +92,32 @@ class MatchCard extends ConsumerWidget {
                           fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      AppText(
                         _formatMessageTime(match.lastMessageAt ?? match.matchedAt),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
+                        maxLines: 1,
                       ),
                     ] else ...[
-                      Text(
+                      AppText(
                         'You matched ${_formatMatchTime(match.matchedAt)}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                           fontStyle: FontStyle.italic,
                         ),
+                        maxLines: 2,
                       ),
                       const SizedBox(height: 2),
-                      Text(
+                      AppText(
                         'Say hello!',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.primaryLight,
                           fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 1,
                       ),
                     ],
                   ],

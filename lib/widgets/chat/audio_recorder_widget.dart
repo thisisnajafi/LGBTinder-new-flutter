@@ -111,11 +111,10 @@ class _AudioRecorderWidgetState extends ConsumerState<AudioRecorderWidget> {
                 ),
               if (_isRecording) SizedBox(width: AppSpacing.spacingSM),
               Flexible(
-                child: Text(
+                child: AppText(
                   _formatDuration(_recordingDuration),
                   style: AppTypography.h2.copyWith(color: textColor),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
               ),

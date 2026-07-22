@@ -2,6 +2,7 @@
 // Full-screen media viewer
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../images/optimized_image.dart';
@@ -71,11 +72,12 @@ class _MediaViewerState extends ConsumerState<MediaViewer> {
                 ),
               )
             : Container(
-                // TODO: Implement video player
                 child: const Center(
-                  child: Text(
+                  child: AppText(
                     'Video playback not implemented',
                     style: TextStyle(color: Colors.white),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
@@ -83,14 +85,16 @@ class _MediaViewerState extends ConsumerState<MediaViewer> {
       bottomNavigationBar: widget.caption != null
           ? SafeArea(
               child: Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                top: AppSpacing.spacingLG,
+                bottom: AppSpacing.spacingLG,
+              ),
               color: backgroundColor,
-              child: Text(
+              child: AppText(
                 widget.caption!,
                 style: const TextStyle(color: Colors.white),
                 textAlign: TextAlign.center,
                 maxLines: 4,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             )

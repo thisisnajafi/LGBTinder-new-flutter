@@ -9,6 +9,7 @@ import '../../features/reference_data/data/models/reference_item.dart';
 import '../../core/utils/app_icons.dart';
 import '../profile/profile_wizard_layout.dart';
 import 'selection_bottom_sheet.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Field widget that opens a bottom sheet for selecting reference data
 class ReferenceBottomSheetField extends StatelessWidget {
@@ -92,11 +93,10 @@ class ReferenceBottomSheetField extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.h3.copyWith(color: textColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (required)
@@ -121,7 +121,7 @@ class ReferenceBottomSheetField extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       selectedItem.id != -1
                           ? selectedItem.title
                           : (hint ?? 'Select $label'),
@@ -129,7 +129,6 @@ class ReferenceBottomSheetField extends StatelessWidget {
                         color: selectedItem.id != -1 ? textColor : secondaryTextColor,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   AppSvgIcon(

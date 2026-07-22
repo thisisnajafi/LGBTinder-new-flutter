@@ -111,7 +111,7 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(
-                  child: Text(
+                  child: AppText(
                     '${widget.typingUserName} is typing',
                     style: TextStyle(
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -119,7 +119,6 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
                       fontStyle: FontStyle.italic,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -207,7 +206,7 @@ class MultiUserTypingIndicator extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(
-                  child: Text(
+                  child: AppText(
                     '$userNames are typing',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -215,7 +214,6 @@ class MultiUserTypingIndicator extends ConsumerWidget {
                       fontStyle: FontStyle.italic,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),

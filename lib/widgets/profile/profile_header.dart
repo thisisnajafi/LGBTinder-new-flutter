@@ -10,6 +10,7 @@ import '../avatar/avatar_with_status.dart';
 import '../badges/verification_badge.dart';
 import '../badges/premium_badge.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile header widget
 /// Displays user avatar, name, age, location, and badges
@@ -124,12 +125,11 @@ class ProfileHeader extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
-                child: Text(
+                child: AppText(
                   name,
                   style: AppTypography.h1.copyWith(color: textColor),
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isVerified) ...[
@@ -165,11 +165,10 @@ class ProfileHeader extends ConsumerWidget {
                         ),
                         SizedBox(width: AppSpacing.spacingXS),
                         Flexible(
-                          child: Text(
+                          child: AppText(
                             location!,
                             style: AppTypography.body.copyWith(color: secondaryTextColor),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

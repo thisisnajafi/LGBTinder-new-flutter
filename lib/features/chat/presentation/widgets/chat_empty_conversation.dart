@@ -56,24 +56,22 @@ class ChatEmptyConversation extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.spacingLG),
-              Text(
+              AppText(
                 'No messages yet',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.spacingSM),
-              Text(
+              AppText(
                 greeting,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

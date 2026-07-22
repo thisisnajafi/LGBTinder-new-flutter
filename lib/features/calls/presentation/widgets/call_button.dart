@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/call_provider.dart';
@@ -80,12 +82,14 @@ class CallButton extends ConsumerWidget {
         // Label (if enabled)
         if (showLabel) ...[
           const SizedBox(height: 4),
-          Text(
+          AppText(
             callType == 'video' ? 'Video Call' : 'Audio Call',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            textAlign: TextAlign.center,
           ),
         ],
       ],
@@ -165,7 +169,10 @@ class FloatingCallButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: ResponsivePadding.horizontal(context).copyWith(
+        top: AppSpacing.spacingMD,
+        bottom: AppSpacing.spacingMD,
+      ),
       child: CallButton(
         targetUserId: targetUserId,
         callType: callType,
@@ -197,31 +204,40 @@ class CallButtonRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Audio call button
-        CallButton(
-          targetUserId: targetUserId,
-          callType: 'audio',
-          onCallInitiated: onCallInitiated,
-          onCallFailed: onCallFailed,
-          size: 48,
-          showLabel: showLabels,
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final row = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CallButton(
+              targetUserId: targetUserId,
+              callType: 'audio',
+              onCallInitiated: onCallInitiated,
+              onCallFailed: onCallFailed,
+              size: 48,
+              showLabel: showLabels,
+            ),
+            SizedBox(width: spacing),
+            CallButton(
+              targetUserId: targetUserId,
+              callType: 'video',
+              onCallInitiated: onCallInitiated,
+              onCallFailed: onCallFailed,
+              size: 48,
+              showLabel: showLabels,
+            ),
+          ],
+        );
 
-        SizedBox(width: spacing),
+        if (constraints.maxWidth < 320) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: row,
+          );
+        }
 
-        // Video call button
-        CallButton(
-          targetUserId: targetUserId,
-          callType: 'video',
-          onCallInitiated: onCallInitiated,
-          onCallFailed: onCallFailed,
-          size: 48,
-          showLabel: showLabels,
-        ),
-      ],
+        return row;
+      },
     );
   }
 }
@@ -302,12 +318,14 @@ class PremiumCallButton extends ConsumerWidget {
         // Label
         if (showLabel) ...[
           const SizedBox(height: 4),
-          Text(
+          AppText(
             'Premium',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.primaryLight,
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            textAlign: TextAlign.center,
           ),
         ],
       ],
@@ -317,27 +335,35 @@ class PremiumCallButton extends ConsumerWidget {
   void _showUpgradeDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Premium Feature'),
-        content: Text(
-          'Video calling is a premium feature. Upgrade to premium to start video calls with your matches!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder: (context) => ResponsiveGrid.constrainedTo(
+        context,
+        AlertDialog(
+          title: const AppText(
+            'Premium Feature',
+            maxLines: 2,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onUpgradePressed?.call();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryLight,
+          content: AppText(
+            'Video calling is a premium feature. Upgrade to premium to start video calls with your matches!',
+            maxLines: 4,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
-            child: const Text('Upgrade'),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onUpgradePressed?.call();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryLight,
+              ),
+              child: const Text('Upgrade'),
+            ),
+          ],
+        ),
+        tablet: 400,
       ),
     );
   }

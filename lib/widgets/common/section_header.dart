@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Section header widget
 /// Displays a section title with optional action button
@@ -65,23 +66,21 @@ class SectionHeader extends ConsumerWidget {
             SizedBox(width: AppSpacing.spacingSM),
           ],
           Expanded(
-            child: Text(
+            child: AppText(
               title,
               style: AppTypography.h2.copyWith(color: textColor),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (actionLabel != null && onAction != null)
             TextButton(
               onPressed: onAction,
-              child: Text(
+              child: AppText(
                 actionLabel!,
                 style: AppTypography.button.copyWith(
                   color: AppColors.accentPurple,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],

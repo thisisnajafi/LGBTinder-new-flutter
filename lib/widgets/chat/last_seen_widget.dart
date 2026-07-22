@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Last seen timestamp widget
 /// Displays when a user was last seen online
@@ -37,22 +38,20 @@ class LastSeenWidget extends ConsumerWidget {
             ),
           ),
           SizedBox(width: AppSpacing.spacingXS),
-          Text(
+          AppText(
             'Online',
             style: AppTypography.caption.copyWith(color: textColor),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       );
     }
 
     if (lastSeenAt == null) {
-      return Text(
+      return AppText(
         'Offline',
         style: AppTypography.caption.copyWith(color: textColor),
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       );
     }
 
@@ -72,11 +71,10 @@ class LastSeenWidget extends ConsumerWidget {
       text = 'Last seen ${lastSeenAt!.day}/${lastSeenAt!.month}';
     }
 
-    return Text(
+    return AppText(
       'Last seen $text',
       style: AppTypography.caption.copyWith(color: textColor),
       maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }

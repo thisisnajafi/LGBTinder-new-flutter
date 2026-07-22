@@ -6,6 +6,7 @@ import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../common/selection_bottom_sheet.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Compact subsection label inside a [PremiumFilterSection].
 class FilterSubsectionTitle extends StatelessWidget {
@@ -18,11 +19,10 @@ class FilterSubsectionTitle extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
-      child: Text(
+      child: AppText(
         title,
         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         maxLines: 2,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -71,14 +71,13 @@ class FilterSectionHeader extends StatelessWidget {
         ),
         SizedBox(width: AppSpacing.spacingSM),
         Expanded(
-          child: Text(
+          child: AppText(
             title,
             style: AppTypography.titleMedium.copyWith(
               color: textColor,
               fontWeight: FontWeight.w800,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -171,14 +170,13 @@ class FilterGenderChip extends StatelessWidget {
               width: isSelected ? 1.5 : 1,
             ),
           ),
-          child: Text(
+          child: AppText(
             label,
             style: AppTypography.body.copyWith(
               color: isSelected ? AppColors.accentPurple : textColor,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
@@ -238,25 +236,23 @@ class FilterToggleRow extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         title,
                         style: AppTypography.body.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (trailing != null) trailing!,
                   ],
                 ),
                 SizedBox(height: AppSpacing.spacingXS),
-                Text(
+                AppText(
                   subtitle,
                   style: AppTypography.caption.copyWith(color: secondaryColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -295,14 +291,13 @@ class FilterValuePill extends StatelessWidget {
           color: AppColors.accentPurple.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.radiusRound),
         ),
-        child: Text(
+        child: AppText(
           label,
           style: AppTypography.h4.copyWith(
             color: AppColors.accentPurple,
             fontWeight: FontWeight.w700,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
         ),
       ),
@@ -383,14 +378,13 @@ class FilterPremiumGate extends StatelessWidget {
                     color: AppColors.accentPurple,
                   ),
                   SizedBox(width: AppSpacing.spacingSM),
-                  Text(
+                  AppText(
                     'Upgrade to unlock',
                     style: AppTypography.labelMedium.copyWith(
                       color: AppColors.accentPurple,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -498,7 +492,7 @@ class FilterMultiSelectDropdown extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       summary,
                       style: AppTypography.body.copyWith(
                         color: hasSelection ? textColor : secondaryColor,
@@ -506,7 +500,6 @@ class FilterMultiSelectDropdown extends StatelessWidget {
                             hasSelection ? FontWeight.w600 : FontWeight.w500,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   SizedBox(width: AppSpacing.spacingSM),

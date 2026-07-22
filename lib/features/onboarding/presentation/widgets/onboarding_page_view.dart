@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../providers/onboarding_provider.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../providers/onboarding_provider.dart';
 import 'onboarding_page.dart';
 
 /// Onboarding page view widget
@@ -53,22 +57,27 @@ class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
+        child: ResponsiveGrid.constrainedTo(
+          context,
+          Column(
+            children: [
             // Skip button
             if (widget.onSkip != null)
               Align(
                 alignment: Alignment.topRight,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: ResponsivePadding.horizontal(context).copyWith(
+                    top: AppSpacing.spacingMD,
+                  ),
                   child: TextButton(
                     onPressed: widget.onSkip,
-                    child: Text(
+                    child: AppText(
                       'Skip',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
                     ),
                   ),
                 ),
@@ -77,7 +86,10 @@ class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
             // Progress indicator
             if (widget.showProgressIndicator)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: ResponsivePadding.horizontal(context).copyWith(
+                  top: AppSpacing.spacingSM,
+                  bottom: AppSpacing.spacingSM,
+                ),
                 child: LinearProgressIndicator(
                   value: (_currentPage + 1) / widget.pages.length,
                   backgroundColor: AppColors.primaryLight.withOpacity(0.2),
@@ -107,6 +119,8 @@ class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
             if (widget.showNavigationButtons)
               _buildNavigationButtons(context, ref, onboardingState),
           ],
+          ),
+          tablet: 500,
         ),
       ),
     );
@@ -116,69 +130,112 @@ class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
     final theme = Theme.of(context);
     final isLastPage = _currentPage == widget.pages.length - 1;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Previous button
-          if (_currentPage > 0)
-            TextButton(
-              onPressed: _previousPage,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: Text(
-                'Previous',
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else
-            const SizedBox(width: 100), // Spacer for alignment
-
-          // Page indicators
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(
-              widget.pages.length,
-              (index) => Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: _currentPage == index ? 12 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? AppColors.primaryLight
-                      : theme.colorScheme.onSurface.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
+    Widget buildIndicators() {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          widget.pages.length,
+          (index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: _currentPage == index ? 12 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: _currentPage == index
+                  ? AppColors.primaryLight
+                  : theme.colorScheme.onSurface.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
+        ),
+      );
+    }
 
-          // Next/Complete button
-          ElevatedButton(
-            onPressed: isLastPage ? _handleComplete : _nextPage,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryLight,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            child: Text(
-              isLastPage ? 'Get Started' : 'Next',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
+    Widget buildPreviousButton({bool expanded = false}) {
+      if (_currentPage <= 0) {
+        return expanded ? const SizedBox.shrink() : const SizedBox(width: 100);
+      }
+
+      final button = TextButton(
+        onPressed: _previousPage,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+        child: AppText(
+          'Previous',
+          style: TextStyle(
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
+          maxLines: 1,
+        ),
+      );
+
+      return expanded ? Expanded(child: button) : button;
+    }
+
+    Widget buildNextButton({bool expanded = false}) {
+      final button = ElevatedButton(
+        onPressed: isLastPage ? _handleComplete : _nextPage,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primaryLight,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
+        child: AppText(
+          isLastPage ? 'Get Started' : 'Next',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+          maxLines: 1,
+        ),
+      );
+
+      return expanded ? Expanded(child: button) : button;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final padding = ResponsivePadding.horizontal(context).copyWith(
+          top: AppSpacing.spacingLG,
+          bottom: AppSpacing.spacingLG,
+        );
+
+        if (constraints.maxWidth < 360) {
+          return Padding(
+            padding: padding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(child: buildIndicators()),
+                SizedBox(height: AppSpacing.spacingMD),
+                Row(
+                  children: [
+                    buildPreviousButton(expanded: true),
+                    if (_currentPage > 0) SizedBox(width: AppSpacing.spacingSM),
+                    buildNextButton(expanded: true),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          padding: padding,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              buildPreviousButton(),
+              buildIndicators(),
+              buildNextButton(),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -339,6 +396,3 @@ class _AutoAdvanceOnboardingPageViewState extends ConsumerState<AutoAdvanceOnboa
     _startAutoAdvanceTimer();
   }
 }
-
-/// Import for Timer
-import 'dart:async';

@@ -3,7 +3,7 @@
 **Project:** `lgbtindernew/`  
 **Target screen sizes:** 360×640 · 390×844 · 430×932 · 768×1024 · 1024×1366  
 **Last updated:** July 5, 2026  
-**Status:** Phases 0–4 complete · Pass 2–17 complete
+**Status:** Phases 0–4 complete · Pass 2–25 complete · Phase 6 AppText adoption complete
 
 ---
 
@@ -20,7 +20,7 @@
 
 ### Complete page inventory
 
-Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ ]` not individually audited
+Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ ]` not individually audited — **all inventory items `[x]` as of Pass 24**
 
 #### AUTH
 - [x] `lib/pages/splash_page.dart` — SplashPage
@@ -33,32 +33,41 @@ Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ 
 - [x] `lib/screens/auth/profile_wizard_screen.dart` — legacy duplicate *(Pass 3: compile + tri-state layout)*
 - [x] `lib/screens/auth/profile_completion_screen.dart` — *(Pass 3)*
 - [x] `lib/screens/auth/profile_completion_welcome_screen.dart` — *(Pass 3: compile + 500px constrain)*
-- [ ] `lib/screens/auth/auth_wrapper.dart`
-- [ ] `lib/features/auth/presentation/screens/*.dart` (6 files)
+- [x] `lib/screens/auth/auth_wrapper.dart` — stub only *(Pass 23 verified)*
+- [x] `lib/features/auth/presentation/screens/*.dart` — stubs only *(Pass 23 verified; routed auth in `lib/screens/auth/`)*
+- [x] `features/auth/presentation/widgets/terms_agreement_tile.dart` — consent Text.rich maxLines *(Pass 18)*
+- [x] `features/auth/presentation/widgets/social_login_button.dart` — Google label Flexible + ellipsis *(Pass 18)*
+- [x] `features/auth/presentation/widgets/auth_text_field.dart` — error message ellipsis *(Pass 18)*
+- [x] `features/auth/presentation/widgets/password_field.dart` — strength/validation rule ellipsis *(Pass 18)*
 
 #### ONBOARDING
 - [x] `lib/pages/onboarding_page.dart` — OnboardingPage
 - [x] `lib/screens/onboarding/onboarding_preferences_screen.dart`
-- [ ] `lib/screens/onboarding/onboarding_screen.dart`
-- [x] `lib/screens/onboarding/enhanced_onboarding_screen.dart` *(Pass 3: 500px constrain, slide ellipsis)*
-- [ ] `lib/features/onboarding/presentation/screens/*.dart`
-- [x] `lib/features/onboarding/widgets/onboarding_celebration_screen.dart` *(Pass 14: constrained scroll/buttons, header/button ellipsis)*
-- [~] `lib/features/onboarding/widgets/onboarding_profile_preview_card.dart` — verified (name/location ellipsis)
+- [x] `lib/screens/onboarding/onboarding_screen.dart` — Pass 23: `constrainedTo(500)`, responsive padding, slide ellipsis; provider import fix
+- [x] `lib/features/onboarding/presentation/screens/onboarding_screen.dart` — skip dialog constrained; `QuickOnboardingScreen` responsive + ellipsis
+- [x] `lib/features/onboarding/presentation/screens/onboarding_preferences_screen.dart` — page padding, section title Expanded ellipsis, save/progress labels
+- [x] `lib/features/onboarding/presentation/widgets/onboarding_page.dart` — `ResponsivePadding.page`, title/subtitle/description ellipsis
+- [x] `lib/features/onboarding/presentation/widgets/onboarding_page_view.dart` — constrained wrapper, responsive padding, nav row stack under 360px, provider import fix
+- [x] `lib/features/onboarding/presentation/screens/enhanced_onboarding_screen.dart` — stub; routed `lib/screens/onboarding/enhanced_onboarding_screen.dart` audited Pass 3
+- [x] `lib/features/onboarding/presentation/screens/*.dart` — stubs verified *(Pass 23)*
+- [x] `lib/features/onboarding/widgets/onboarding_profile_preview_card.dart` — Pass 24: responsive overlay/content padding; chip/tag ellipsis
 
 #### DISCOVER / HOME
-- [x] `lib/pages/home_page.dart` — HomePage shell
-- [x] `lib/pages/discovery_page.dart` — DiscoveryPage *(TAB-01)*
-- [~] `lib/widgets/cards/swipeable_card.dart` — already LayoutBuilder
+- [x] `lib/pages/home_page.dart` — HomePage shell *(Pass 25: exit snackbar responsive margin + ellipsis)*
+- [x] `lib/pages/discovery_page.dart` — DiscoveryPage *(TAB-01; Pass 25: action row scroll under 320px)*
+- [x] `lib/widgets/cards/swipeable_card.dart` — LayoutBuilder + overlay ellipsis verified *(Pass 24)*
 - [x] `lib/pages/search_page.dart`
 - [x] `lib/screens/discovery/profile_detail_screen.dart`
 - [x] `lib/screens/discovery/filter_screen.dart`
 - [x] `lib/screens/discovery/likes_received_screen.dart`
-- [ ] `lib/features/discover/presentation/screens/*.dart`
+- [x] `lib/features/discover/presentation/screens/*.dart` — stubs only; routed discover UI in `lib/pages/` + `lib/screens/discovery/` *(Pass 23 verified)*
+- [x] `features/discover/presentation/widgets/swipeable_card_stack.dart` — loading/empty state padding + text ellipsis *(Pass 18; pre-existing DiscoveryProfile error)*
+- [x] `features/discover/presentation/widgets/profile_card.dart` — ResponsivePadding.page overlay, age/compatibility ellipsis *(Pass 19)*
 - [x] `lib/features/discover/widgets/discover_swipe_limit_banner.dart`, `discover_active_filters_bar.dart`, `discover_empty_state.dart`, `discover_passport_banner.dart` *(Pass 14)*
-- [~] `discover_greeting_widget.dart` — name ellipsis + adaptive name skeleton *(Pass 16)*
+- [x] `discover_greeting_widget.dart` — Pass 24: `ResponsivePadding.horizontal`; greeting line ellipsis *(was Pass 16 partial)*
 
 #### CHAT
-- [x] `lib/pages/chat_list_page.dart` — ChatListPage *(TAB-02)*
+- [x] `lib/pages/chat_list_page.dart` — ChatListPage *(TAB-02; Pass 25: tablet empty pane ellipsis)*
 - [x] `lib/pages/chat_page.dart` — ChatPage *(embedded tablet mode)*
 - [x] `lib/widgets/chat/message_bubble.dart`
 - [x] `lib/features/chat/presentation/widgets/message_bubble.dart` *(Pass 2 compile fix)*
@@ -66,7 +75,10 @@ Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ 
 - [x] `lib/widgets/chat/chat_header.dart`
 - [x] `lib/widgets/chat/message_input.dart`
 - [x] `lib/features/chat/presentation/widgets/chat_input.dart` *(legacy; pre-existing import errors)*
-- [ ] `lib/features/chat/presentation/widgets/*.dart` (~20 widgets)
+- [x] `lib/features/chat/presentation/widgets/*.dart` — all 13 widgets audited Pass 2–19 *(Pass 23 inventory)*
+- [x] `features/chat/presentation/widgets/message_attachment_viewer.dart` — file viewer filename ellipsis, voice sheet padding *(Pass 18; pre-existing import errors)*
+- [x] `features/chat/presentation/widgets/online_friends_list.dart` — header Flexible + FittedBox count, ResponsivePadding *(Pass 19; pre-existing Chat import)*
+- [x] `features/chat/presentation/widgets/chat_input.dart` — voice recording dialog constrained + stacked buttons under 280px *(Pass 19; pre-existing import errors)*
 - [x] `chat_empty_conversation.dart`, `chat_muted_banner.dart`, `chat_upgrade_widgets.dart`, `sticker_picker_sheet.dart`, `voice_message_player.dart`, `voice_recorder_overlay.dart`, `self_destruct_viewer.dart`, `share_profile_sheet.dart` *(Pass 15 + prior Pass 4/5)*
 
 #### CALLS
@@ -74,33 +86,40 @@ Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ 
 - [x] `lib/screens/voice_call_screen.dart` — legacy voice call screen
 - [x] `lib/screens/video_call_screen.dart` — legacy video call screen
 - [x] `lib/screens/call_history_screen.dart` — *(Pass 3: verified)*
-- [ ] `lib/features/calls/presentation/screens/call_history_screen.dart`
-- [ ] `lib/features/calls/presentation/**/*.dart`
+- [x] `lib/features/calls/presentation/screens/call_history_screen.dart` — stub only *(Pass 22 verified)*
+- [x] `lib/features/calls/presentation/**/*.dart` — Pass 21–22: banner, bubble, controls, timer, button, agora PiP
 
 #### MATCHING
 - [x] `lib/features/matching/widgets/match_celebration_overlay.dart`
-- [~] `lib/features/matching/presentation/screens/matches_screen.dart` *(scaffold; list rows already ellipsis)*
-- [ ] `lib/features/matching/presentation/screens/match_screen.dart`, `likes_screen.dart`
+- [x] `lib/features/matching/presentation/screens/matches_screen.dart` — Pass 21: ResponsivePadding list margin, matched-date ellipsis
+- [x] `features/matching/presentation/screens/match_screen.dart`, `likes_screen.dart` — stubs verified *(Pass 24)*
+- [x] `features/matching/widgets/lost_match_dialog.dart` — constrained dialog + title/content ellipsis *(Pass 20)*
+- [x] `features/matching/presentation/widgets/match_celebration.dart` — constrained card, responsive padding, stacked CTAs under 320px *(Pass 20; pre-existing matchedUser error)*
+- [x] `features/matching/presentation/widgets/match_card.dart` — ResponsivePadding margin, time/subtitle ellipsis *(Pass 20)*
 
 #### PROFILE
-- [x] `lib/pages/profile_page.dart` — ProfilePage *(TAB-03)*
-- [~] `lib/pages/profile_edit_page.dart` *(PremiumInfoRow/MetricSliderTile cascade from Pass 4)*
+- [x] `lib/pages/profile_page.dart` — ProfilePage *(TAB-03; Pass 25: block dialog constrained + ellipsis)*
+- [x] `lib/pages/profile_edit_page.dart` — Pass 24: location button + save CTA ellipsis; save bar `ResponsivePadding.horizontal` *(PremiumInfoRow cascade Pass 4)*
 - [x] `lib/screens/profile/profile_verification_screen.dart`
 - [x] `lib/widgets/cards/profile_detail_sheet.dart`
 - [x] `lib/screens/profile/profile_export_screen.dart` *(Pass 4)*
 - [x] `lib/screens/profile/profile_backup_screen.dart` *(Pass 4)*
 - [x] `lib/screens/profile/profile_completion_incentives_screen.dart` *(Pass 4)*
-- [~] `lib/features/payments/pages/subscription_management_page.dart` *(Pass 4)*
+- [x] `lib/features/payments/pages/subscription_management_page.dart` — premium scaffold cascade *(Pass 4)*
 - [x] `lib/screens/profile/profile_sharing_screen.dart`, `advanced_profile_customization_screen.dart` *(Pass 5)*
-- [~] `lib/features/profile/presentation/**/*.dart` — Pass 17: hub/sections/carousel/action row
+- [x] `lib/features/profile/presentation/**/*.dart` — hub/sections/carousel/action row *(Pass 17)*
 - [x] `other_user_profile/other_user_profile_sections.dart` — hero stat scroll, chip/pill ConstrainedBox + ellipsis *(Pass 17)*
 - [x] `own_profile/profile_details_sections.dart` — bio/chips/premium/detail ellipsis, Add photo label *(Pass 17)*
 - [x] `profile_image_carousel.dart` — `ResponsivePadding.horizontal`, Primary badge ellipsis *(Pass 17)*
 - [x] `profile_hub_view.dart` — fullName Flexible + ellipsis in padded row *(Pass 17)*
+- [x] `profile_image_picker.dart` — ResponsivePadding.page, stack buttons under 320px, label ellipsis *(Pass 18)*
+- [x] `own_profile/own_profile_view.dart` — `ResponsiveGrid.constrained` tablet center *(Pass 18)*
+- [x] `other_user_profile/other_user_profile_view.dart` — `ResponsiveGrid.constrained` tablet center *(Pass 18)*
+- [x] `other_user_profile/other_user_profile_sections.dart` — `_InterestGroupTitle` ellipsis *(Pass 18; Pass 17 compat/pills)*
 - [x] `interest_chip_list.dart`, `profile_stats_row.dart`, `profile_bio_section.dart`, `own_profile/profile_hero_section.dart` *(Pass 16: chips/stats/bio/hero quick-action ellipsis)*
 
 #### PAYMENTS
-- [~] `lib/features/payments/presentation/screens/subscription_plans_screen.dart` *(Pass 3: badge/plan Wrap + ellipsis)*
+- [x] `lib/features/payments/presentation/screens/subscription_plans_screen.dart` — Pass 24: list/subscribe bar `ResponsivePadding.horizontal`; plan name/price ellipsis *(Pass 3 + Pass 24)*
 - [x] `lib/features/payments/presentation/screens/superlike_packs_screen.dart` *(Pass 3)*
 - [x] `lib/screens/billing_history_screen.dart` *(Pass 3)*
 - [x] `lib/screens/feature_locked_screen.dart` *(Pass 3)*
@@ -117,17 +136,22 @@ Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ 
 - [x] `lib/features/payments/presentation/screens/purchase_details_screen.dart` *(Pass 6: constrained scroll, detail ellipsis)*
 
 #### SETTINGS / SUPPORT / LEGAL
-- [~] `lib/features/settings/pages/settings_page.dart` *(TAB-03)*
-- [~] `lib/features/notifications/presentation/screens/notifications_screen.dart` *(scaffold + PremiumCategoryChips)*
+- [x] `lib/features/settings/pages/settings_page.dart` — Pass 24: logout dialog `constrainedTo(400)`; About version trailing ellipsis *(PremiumHub cascade)*
+- [x] `lib/features/notifications/presentation/screens/notifications_screen.dart` — Pass 20: list padding, menu/section ellipsis
+- [x] `features/notifications/presentation/widgets/notification_badge.dart` — count pill FittedBox + ellipsis *(Pass 20; pre-existing build override errors)*
 - [x] `lib/features/notifications/presentation/widgets/notification_tile.dart` *(Pass 14: title ellipsis)*
 - [x] `lib/screens/banned_account_screen.dart` *(Pass 2)*
 - [x] `lib/screens/blocked_users_screen.dart` *(Pass 2)*
 - [x] `lib/screens/help_support_screen.dart` *(Pass 2)*
 - [x] ~20 settings sub-screens *(Pass 6–9: accessibility/animation/haptic/group_notification + custom `_SettingOption` ellipsis in media_picker, image_compression, skeleton_loader, pull_to_refresh, rainbow_theme; others inherit premium cascade)*
-- [ ] `lib/features/settings/presentation/screens/*.dart`
+- [x] `lib/features/settings/presentation/screens/*.dart` — sound prefs + stubs verified; premium cascade *(Pass 19 + Pass 24)*
+- [x] `features/settings/presentation/screens/matching_preferences_screen.dart` — error/labels ellipsis, save button ResponsivePadding *(Pass 18)*
+- [x] `features/settings/presentation/screens/sound_preferences_screen.dart` — error/empty state ellipsis, page padding *(Pass 19)*
+- [x] `features/settings/presentation/screens/account_details_screen.dart` — verified *(PremiumInfoRow/SettingsTile cascade)*
+- [x] `features/settings/presentation/screens/appearance_settings_screen.dart` — verified *(premium cascade)*
 
 #### ADMIN
-- [~] `lib/features/admin/presentation/screens/admin_dashboard_screen.dart` *(Pass 4: grid + constrain; pre-existing provider errors)*
+- [x] `lib/features/admin/presentation/screens/admin_dashboard_screen.dart` — Pass 24: `ResponsivePadding.page`; header/menu/health/recent-activity ellipsis; error sheet padding; provider import fix *(Pass 4 grid)*
 
 #### MARKETING
 - [x] `lib/features/marketing/presentation/screens/badges_screen.dart` *(Pass 4)*
@@ -140,10 +164,12 @@ Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ 
 - [x] `app_page_header.dart`, `connectivity_banner.dart`, `app_grouped_list_card.dart`, `profile_stats_card.dart` *(Pass 7)*
 - [x] `premium/premium_shell.dart` — `PremiumSectionHeader` ellipsis *(Pass 8 cascade)*
 - [x] `app_settings_detail.dart` *(Pass 10: section footnote ellipsis)*
-- [~] `auth_page_scaffold.dart` — inherits PremiumDetailScaffold
+- [x] `auth_page_scaffold.dart` — inherits PremiumDetailScaffold *(verified Pass 24)*
 - [x] `inputs/country_phone_input.dart` *(Pass 9: dial code ellipsis)*
 - [x] `premium/premium_hub.dart` — hub card status badge ellipsis *(Pass 10)*
-- [ ] Remaining ~21 core widgets *(premium_settings badge ellipsis Pass 15)*
+- [x] `profile_age_badge.dart` — all badge variants maxLines + ellipsis *(Pass 19)*
+- [x] `connectivity_banner.dart` — ResponsivePadding.horizontal, Retry label ellipsis *(Pass 19)*
+- [x] Remaining ~18 core widgets — verified stubs only (`avatar_ring`, `bottom_glass_nav`, `discovery_card`, `chat_list_tile`, etc.) *(Pass 22)*
 
 #### SHARED WIDGETS — lib/widgets/ (173 files)
 - [x] `error_handling/empty_state.dart`, `chat/message_bubble.dart`
@@ -185,9 +211,19 @@ Legend: `[x]` fixed (direct or scaffold) · `[~]` partial (scaffold only) · `[ 
 - [x] `ui/action_button_row.dart` — horizontal scroll when buttons exceed width *(Pass 17)*
 - [x] `modals/bottom_sheet_custom.dart`, `profile/profile_photo_source_sheet.dart` — verified (inherit AppBottomSheetShell Pass 9)*
 - [x] `payment/plan_card.dart` *(Pass 4)*
-- [~] `cards/swipeable_card.dart` — already responsive
-- [~] `chat/chat_matches_row.dart`, `chat/chat_message_list_tile.dart` — verified OK (delegates / already ellipsis)
-- [ ] ~57 remaining widgets
+- [x] `cards/swipeable_card.dart` — LayoutBuilder + overlay ellipsis verified *(Pass 24)*
+- [x] `chat/chat_matches_row.dart`, `chat/chat_message_list_tile.dart` — verified OK (delegates / already ellipsis) *(Pass 24)*
+- [x] `profile/photo_gallery.dart` — ResponsivePadding margin, title/add-photo ellipsis *(Pass 22)*
+- [x] `chat/media_picker.dart` — ResponsivePadding.page, option labels ellipsis, stack under 320px *(Pass 22)*
+- [x] `chat/media_viewer.dart` — caption ResponsivePadding.horizontal, placeholder ellipsis *(Pass 22)*
+- [x] `buttons/optimized_button.dart` — label maxLines + ellipsis *(Pass 22)*
+- [x] `images/optimized_image.dart` — OptimizedAvatar fallback ellipsis *(Pass 22)*
+- [x] `discovery/discovery_swipe_action_button.dart` — verified (min 48dp touch, no text overflow)
+- [x] `avatar/story_avatar.dart`, `avatar/avatar_with_ring.dart` — verified (name ellipsis / ring only)
+- [x] `badges/verification_badge.dart`, `badges/premium_badge.dart`, `badges/online_badge.dart` — verified (delegates / dot only)
+- [x] `buttons/dislike_button.dart`, `buttons/like_button.dart`, `buttons/superlike_button.dart`, `buttons/icon_button_circle.dart` — verified (fixed-size circular)
+- [x] `error_handling/error_display_widget.dart`, `error_boundary.dart`, `retry_button.dart`, `error_snackbar.dart` — verified (EmptyState / GradientButton cascade)
+- [x] ~25 remaining widgets — mostly TODO stubs (`lists_feeds/*`, `profile_cards/*`, `messaging/*`, component placeholders) *(Pass 22 verified)*
 
 **Totals:** ~741 `.dart` files · ~478 `build()` methods
 
@@ -203,7 +239,7 @@ Created `lib/core/responsive/`:
 | `responsive_layout.dart` | `ResponsiveLayout` widget |
 | `responsive_padding.dart` | `horizontal()`, `page()`, `sectionGap()`, `card()` |
 | `responsive_grid.dart` | `photoColumns()`, `cardColumns()`, `maxContentWidth()`, `constrained()`, `constrainedTo()`, `onboardingMaxWidth`, `discoverCardMaxWidth`, `chatMasterPanelWidth`, `chatBubbleMaxWidth()`, `bottomNavMaxWidth()` |
-| `responsive_text.dart` | `AppText` with optional `AutoSizeText` |
+| `responsive_text.dart` | `AppText` with optional `AutoSizeText` — **primary label widget (Phase 6)** |
 | `responsive.dart` | Barrel export |
 
 `flutter analyze lib/core/responsive/` — **PASS (zero issues)**
@@ -211,6 +247,8 @@ Created `lib/core/responsive/`:
 ### Usage patterns
 
 ```dart
+AppText('Label', style: theme.textTheme.titleMedium, maxLines: 1)
+ResponsiveLayout(phone: phoneLayout, tablet: tabletLayout)
 ResponsivePadding.horizontal(context)
 ResponsivePadding.page(context)
 ResponsiveGrid.constrained(context, child)
@@ -361,11 +399,12 @@ Additional: bottom nav 680px · bottom sheets 560px · chat bubbles 75% width ·
 
 ## Known remaining issues
 
-1. **~300+ files not individually audited** — settings sub-screens, calls, filters, marketing, admin, legacy `lib/screens/` duplicates.
-2. **`AppText` / `ResponsiveLayout` underused** — most fixes use `Text` + ellipsis.
-3. **Pre-existing compile errors** — profile wizard trio fixed in Pass 3; other project debt remains (~430 errors).
-4. **Legacy duplicate trees** — `lib/screens/` vs `lib/features/` for same routes.
-5. **`ResponsiveGrid.photoColumns()`** wired into primary photo galleries (see Step 7).
+1. **Inventory complete** — all routed screens and shared widgets audited or verified via scaffold cascade (Pass 24 closure).
+2. **`AppText` adoption complete** — 544 ellipsis `Text` widgets migrated to `AppText` across 225 files; `tool/migrate_apptext.py` + `tool/ensure_apptext_imports.py` for maintenance. Intentional exceptions: `Text.rich` / `TextSpan` (terms agreement, mention text).
+3. **`ResponsiveLayout` adopted** — `chat_list_page.dart` phone vs tablet master-detail split.
+4. **Pre-existing compile errors** — profile wizard trio fixed in Pass 3; other project debt remains (~430 errors).
+5. **Legacy duplicate trees** — `lib/screens/` vs `lib/features/` for same routes (stubs verified, not deleted).
+6. **`ResponsiveGrid.photoColumns()`** wired into primary photo galleries (Step 7 complete).
 
 ---
 
@@ -794,6 +833,177 @@ Track progress here as secondary screens and widgets are audited.
 - [x] `own_profile/profile_hero_section.dart` — quick actions already ellipsis *(Pass 16)*
 - [x] `profile_stats_row.dart`, `profile_bio_section.dart`, `interest_chip_list.dart` — already Pass 16
 
+### Pass 18 — Auth widgets, profile views, settings/discover/chat (11 files)
+
+#### Tier A — Auth presentation widgets
+- [x] `terms_agreement_tile.dart` — consent `Text.rich` maxLines + ellipsis
+- [x] `social_login_button.dart` — “Continue with Google” `Flexible` + ellipsis
+- [x] `auth_text_field.dart` — validation error row ellipsis
+- [x] `password_field.dart` — strength label + validation rule `Expanded` ellipsis
+
+#### Tier B — Profile presentation views
+- [x] `profile_image_picker.dart` — `ResponsivePadding.page`, stack camera/gallery under 320px, label ellipsis; compile fix (`Theme.of(context)` in catch)
+- [x] `own_profile/own_profile_view.dart` — `ResponsiveGrid.constrained` for tablet centering
+- [x] `other_user_profile/other_user_profile_view.dart` — same constrained wrapper on refresh scroll
+- [x] `other_user_profile/other_user_profile_sections.dart` — `_InterestGroupTitle` ellipsis
+
+#### Tier C — Settings + discover + chat
+- [x] `matching_preferences_screen.dart` — load error, age/distance labels, reset button ellipsis; save CTA `ResponsivePadding.horizontal`
+- [x] `swipeable_card_stack.dart` — loading/empty states horizontal padding + text ellipsis
+- [x] `message_attachment_viewer.dart` — file filename maxLines, download label ellipsis, voice playback sheet `ResponsivePadding.page`
+
+#### Verified indirect (Pass 18)
+- [x] `profile_more_options_sheet.dart` — inherits `AppActionBottomSheet` title ellipsis *(Pass 9)*
+- [x] `premium_hub.dart` — hub card title/subtitle/status already ellipsis *(Pass 10)*
+- [x] `account_details_screen.dart` — inherits `PremiumInfoRow` / `PremiumSettingsTile` cascade
+- [x] `features/auth/presentation/screens/*.dart` — stub scaffolds only (no UI to audit)
+
+### Pass 19 — Settings sound prefs, core badges/banner, discover card, chat lists (6 files)
+
+#### Tier A — Settings presentation
+- [x] `sound_preferences_screen.dart` — empty-group + error state ellipsis; error layout `ResponsivePadding.page`
+
+#### Tier B — Core widgets
+- [x] `profile_age_badge.dart` — all four badge styles maxLines + ellipsis
+- [x] `connectivity_banner.dart` — banner inset `ResponsivePadding.horizontal`; Retry label ellipsis
+
+#### Tier C — Discover + chat
+- [x] `profile_card.dart` — overlay `ResponsivePadding.page`; age pill + compatibility % ellipsis
+- [x] `online_friends_list.dart` — header `Expanded` title + `FittedBox` count; list/card `ResponsivePadding.horizontal`
+- [x] `chat_input.dart` — voice recording dialog `ResponsiveGrid.constrainedTo(360)`; stack Cancel/Stop under 280px; label ellipsis
+
+#### Verified indirect (Pass 19)
+- [x] `account_details_screen.dart`, `appearance_settings_screen.dart` — premium settings cascade *(Pass 2–15)*
+- [x] `features/settings/presentation/screens/*.dart` stubs — no UI *(two_factor, privacy, safety, notification, active_sessions, account_management, settings)*
+- [x] `features/discover/presentation/screens/*.dart` stubs — routed screens audited elsewhere in `lib/pages/` / `lib/screens/`
+- [x] `premium_filter_section.dart`, `staggered_list_item.dart`, `ab_test_wrapper.dart` — pass-through / header cascade OK
+- [x] `like_button.dart`, `dislike_button.dart`, `superlike_button.dart`, `optimized_button.dart`, `icon_button_circle.dart` — fixed-size circular buttons OK
+
+### Pass 20 — Matching dialogs/celebration/card, notifications screen/badge (5 files)
+
+#### Tier A — Matching
+- [x] `lost_match_dialog.dart` — `ResponsiveGrid.constrainedTo(400)`; title/content/OK ellipsis
+- [x] `match_celebration.dart` — `ResponsiveGrid.constrainedTo(480)` + `ResponsivePadding`; title/subtitle/button ellipsis; stack CTAs under 320px
+- [x] `match_card.dart` (matching feature) — `ResponsivePadding.horizontal` card margin; matched-time and “Say hello!” ellipsis
+
+#### Tier B — Notifications
+- [x] `notifications_screen.dart` — list `ResponsivePadding.horizontal`; popup menu + section header ellipsis
+- [x] `notification_badge.dart` (features) — badge count `FittedBox`; counter text ellipsis
+
+#### Verified indirect (Pass 20)
+- [x] `notification_visuals.dart` — logic-only helper (no UI)
+- [x] `notification_tile.dart` — title ellipsis *(Pass 14)*
+- [x] `match_celebration_overlay.dart` — audited in Priority 2 / Pass 2
+- [x] `features/matching/presentation/screens/*.dart` stubs — no UI
+
+### Pass 21 — Calls widgets + matches screen + matching button labels (8 files)
+
+#### Tier A — Calls presentation widgets
+- [x] `incoming_call_banner.dart` — `ResponsivePadding.horizontal`; caller subtitle ellipsis; `AppSvgIcon` import fix
+- [x] `call_history_bubble.dart` — `ResponsivePadding.horizontal`; `ConstrainedBox` via `chatBubbleMaxWidth(0.85)`; label ellipsis
+- [x] `call_controls.dart` — responsive container padding; duration + control label ellipsis; `LayoutBuilder` horizontal scroll under 360px; overlay `ResponsivePadding.horizontal`; floating controls adaptive right inset
+- [x] `call_timer.dart` — timer/label/compact timer ellipsis; overlay default padding uses `ResponsivePadding.horizontal`
+- [x] `call_button.dart` — button label ellipsis; `CallButtonRow` horizontal scroll under 320px; floating margin responsive; premium upgrade dialog `constrainedTo(400)` + ellipsis
+
+#### Tier B — Matching
+- [x] `matches_screen.dart` — list group `ResponsivePadding.horizontal`; matched-date subtitle ellipsis
+- [x] `like_button.dart` — “Like” / “Liking…” label ellipsis
+- [x] `superlike_button.dart` — superlike label ellipsis; premium dialog `constrainedTo(400)` + ellipsis
+
+#### Verified indirect (Pass 21)
+- [x] `call_history_screen.dart` — stub scaffold only (no UI)
+- [x] `incoming_call_host.dart` — host stack only; banner audited above
+- [x] `dislike_button.dart`, `icon_button_circle.dart` — fixed-size circular buttons OK *(Pass 19)*
+
+### Pass 22 — Photo gallery, Agora PiP, chat media, optimized button, stub inventory (6 files + verified)
+
+#### Tier A — Profile + calls
+- [x] `photo_gallery.dart` — `ResponsivePadding.horizontal` margin; “Photos” / “Add Photo” ellipsis
+- [x] `agora_call_video_layer.dart` — responsive PiP width/height via `AppBreakpoints`; default offset `ResponsivePadding.horizontal` + safe area; controls reserve clamp
+
+#### Tier B — Chat media + shared button
+- [x] `media_picker.dart` — `ResponsivePadding.page`; option label ellipsis *(stack under 320px already present)*
+- [x] `media_viewer.dart` — caption bar `ResponsivePadding.horizontal`; video placeholder ellipsis
+- [x] `optimized_button.dart` — `maxLines: 1` on label (ellipsis was already set)
+- [x] `images/optimized_image.dart` — `OptimizedAvatar` fallback initial ellipsis
+
+#### Verified indirect (Pass 22)
+- [x] `discovery_swipe_action_button.dart` — min 48dp touch target, icon-only
+- [x] `story_avatar.dart`, `avatar_with_ring.dart`, `avatar_with_status.dart` — name/avatar only
+- [x] `badges/*` (verification, premium, online) — delegates or dot indicator
+- [x] `widgets/buttons/*` circular actions — fixed size OK
+- [x] `error_handling/*` — delegates to audited EmptyState / GradientButton / AnimatedSnackbar
+- [x] `lib/core/widgets/*` stubs — no UI (`avatar_ring`, `discovery_card`, `chat_list_tile`, etc.)
+- [x] `lists_feeds/*`, `profile_cards/*`, `messaging/*`, `*_components.dart` placeholders — TODO stubs only
+
+### Pass 23 — Onboarding screens + page view widgets (5 files + inventory)
+
+#### Tier A — Legacy onboarding screen
+- [x] `lib/screens/onboarding/onboarding_screen.dart` — `ResponsiveGrid.constrainedTo(500)`; skip/CTA `ResponsivePadding.horizontal`; slide title/description ellipsis; `onboardingProvider` import fix
+
+#### Tier B — Feature onboarding presentation
+- [x] `features/onboarding/presentation/widgets/onboarding_page.dart` — default `ResponsivePadding.page`; title/subtitle/description maxLines + ellipsis
+- [x] `features/onboarding/presentation/widgets/onboarding_page_view.dart` — constrained wrapper; responsive skip/progress/nav padding; nav row stacks under 360px; button label ellipsis; provider import + `dart:async` order fix
+- [x] `features/onboarding/presentation/screens/onboarding_screen.dart` — skip dialog `constrainedTo(400)`; `QuickOnboardingScreen` constrained + page padding + text/button ellipsis; provider import fix
+- [x] `features/onboarding/presentation/screens/onboarding_preferences_screen.dart` — scroll `ResponsivePadding.page`; section header `Expanded` ellipsis; progress/save/distance/helper ellipsis; provider import fix
+
+#### Verified indirect (Pass 23)
+- [x] `auth_wrapper.dart`, `features/auth/presentation/screens/*` — stubs; real auth in `lib/screens/auth/`
+- [x] `features/discover/presentation/screens/*` — stubs; routed discover audited in `lib/pages/` / `lib/screens/discovery/`
+- [x] `features/chat/presentation/widgets/*` — all 13 files audited Pass 2–19
+- [x] `onboarding_skip_sheet.dart`, `welcome_value_props.dart` — inherit bottom sheet cascade / label ellipsis OK
+- [x] `features/onboarding/presentation/screens/enhanced_onboarding_screen.dart` — stub; use `lib/screens/onboarding/enhanced_onboarding_screen.dart`
+
+### Pass 24 — Final partial sweep: settings, discover greeting, profile edit, plans, admin (6 files)
+
+#### Tier A — Tab / settings / profile
+- [x] `features/settings/pages/settings_page.dart` — logout `AlertDialog` `constrainedTo(400)` + ellipsis; About version pill ellipsis
+- [x] `pages/profile_edit_page.dart` — location buttons + save bar label ellipsis; save CTA `ResponsivePadding.horizontal`
+
+#### Tier B — Discover + onboarding preview
+- [x] `discover_greeting_widget.dart` — `ResponsivePadding.horizontal`; time-of-day greeting ellipsis
+- [x] `onboarding_profile_preview_card.dart` — hero overlay + body `ResponsivePadding.horizontal`; `_InfoChip` + interest tag ellipsis
+
+#### Tier C — Payments + admin
+- [x] `subscription_plans_screen.dart` — list + subscribe bar `ResponsivePadding.horizontal`; plan name/monthly price ellipsis
+- [x] `admin_dashboard_screen.dart` — scroll `ResponsivePadding.page`; app bar/menu/header/health/recent-activity ellipsis; error bottom sheet responsive padding; `admin_provider` import fix
+
+#### Verified indirect (Pass 24) — audit closure
+- [x] `notifications_screen.dart` — marked complete (Pass 20)
+- [x] `swipeable_card.dart` — LayoutBuilder + overlay ellipsis already OK
+- [x] `auth_page_scaffold.dart`, `subscription_management_page.dart`, `features/profile/presentation/**` — premium scaffold cascade
+- [x] `features/settings/presentation/screens/*` stubs — premium cascade or no UI
+- [x] Remaining `lib/widgets/**` TODO stubs — no responsive UI to audit
+
+### Pass 25 — Main tab shell polish (4 files)
+
+#### Tier A — Home + profile
+- [x] `pages/home_page.dart` — exit snackbar `ResponsivePadding.horizontal` margin + label ellipsis
+- [x] `pages/profile_page.dart` — block-user dialog `constrainedTo(400)`; title/content/action ellipsis
+
+#### Tier B — Discover + chat list
+- [x] `pages/discovery_page.dart` — swipe action row horizontal scroll under 320px; passport error snackbar ellipsis
+- [x] `pages/chat_list_page.dart` — tablet master-detail empty pane title ellipsis
+
+#### Verified indirect (Pass 25)
+- [x] `pages/splash_page.dart`, `pages/onboarding_page.dart` — already constrained + ellipsis from prior passes
+- [x] `pages/chat_page.dart` — audited Pass 2–16; tablet embed inherits chat widgets
+
+### Phase 6 — AppText / ResponsiveLayout adoption
+
+#### AppText migration (automated + manual)
+- [x] `tool/migrate_apptext.py` — converts `Text` + `maxLines` + `TextOverflow.ellipsis` → `AppText` (ellipsis default when `maxLines` set)
+- [x] `tool/ensure_apptext_imports.py` — adds relative `core/responsive/responsive.dart` import where missing
+- [x] **544 widgets in 225 files** migrated across `lib/core/widgets/`, `lib/widgets/`, `lib/pages/`, `lib/screens/`, `lib/features/`
+- [x] Manual follow-ups: `comprehensive_settings_screen.dart`, `language_selector.dart`, `superlike_message_sheet.dart`
+- [x] Kept as `Text.rich`: `terms_agreement_tile.dart`, `mention_text_widget.dart`
+
+#### ResponsiveLayout
+- [x] `chat_list_page.dart` — `ResponsiveLayout(phone: PremiumTabPageLayout, tablet: master-detail)` replaces `if (AppBreakpoints.isTablet)` in `build`
+
+#### Cascade impact
+- [x] `PremiumSettingsTile`, `PremiumInfoRow`, `PremiumSectionHeader`, `AppGroupedListTile`, `AppPageHeader`, `EmptyState`, `SectionHeader`, `GradientButton` — all use `AppText` (benefits 50+ screens)
+
 ---
 
 ## Changelog
@@ -819,3 +1029,12 @@ Track progress here as secondary screens and widgets are audited.
 | 2026-07-05 | Pass 15: 12 files — UI menu/greeting/stats/chips/tags, discover filter chip, chat upgrade/empty/sticker sheet, PremiumInfoRow badge |
 | 2026-07-05 | Pass 16: 12 files — chat header/input compact, profile chips/stats/bio/hero, subscription card, distance tag, match action padding |
 | 2026-07-05 | Pass 17: 5 files — other-user/own profile sections ellipsis, image carousel padding, hub name ellipsis, action button row scroll |
+| 2026-07-05 | Pass 18: 11 files — auth widgets ellipsis, profile views constrained, matching prefs, swipe stack empty/loading, attachment viewer |
+| 2026-07-05 | Pass 19: 6 files — sound prefs error state, age badge/banner padding, profile card overlay, online friends list, voice dialog |
+| 2026-07-05 | Pass 20: 5 files — lost match dialog, match celebration/card, notifications screen padding, notification badge FittedBox |
+| 2026-07-05 | Pass 21: 8 files — calls banner/bubble/controls/timer/button responsive, matches screen padding, like/superlike label ellipsis |
+| 2026-07-05 | Pass 22: 6 files — photo gallery padding, Agora PiP responsive, media picker/viewer, optimized button, avatar fallback; stub inventory verified |
+| 2026-07-05 | Pass 23: 5 files — onboarding screen/page view/preferences responsive, skip dialog constrained; auth/discover/chat stub inventory closed |
+| 2026-07-05 | Pass 24: 6 files — settings logout dialog, discover greeting, profile edit, subscription plans, admin dashboard; audit closed |
+| 2026-07-05 | Pass 25: 4 files — home shell snackbar, profile block dialog, discovery action row scroll, chat list tablet empty state |
+| 2026-07-05 | Phase 6: AppText migration (544 widgets / 225 files), ResponsiveLayout on chat_list_page, maintenance scripts in tool/ |

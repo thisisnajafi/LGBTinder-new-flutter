@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import '../../routes/app_router.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/analytics/app_event_tracker.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Login screen - User authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -370,13 +371,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 MaterialTapTargetSize.shrinkWrap,
                           ),
                           Flexible(
-                            child: Text(
+                            child: AppText(
                               'Remember me',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: textColor,
                               ),
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -386,14 +386,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () {
                         context.push(AppRoutes.forgotPassword);
                       },
-                      child: Text(
+                      child: AppText(
                         'Forgot Password?',
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: AppColors.accentViolet,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

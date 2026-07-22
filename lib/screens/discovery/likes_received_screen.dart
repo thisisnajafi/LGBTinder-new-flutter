@@ -357,13 +357,12 @@ class _LikeCard extends StatelessWidget {
                           Row(
                             children: [
                               Expanded(
-                                child: Text(
+                                child: AppText(
                                   title,
                                   style: theme.textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (like['is_premium'] == true)
@@ -409,13 +408,12 @@ class _LikeCard extends StatelessWidget {
                   AppSpacing.spacingMD,
                   AppSpacing.spacingSM,
                 ),
-                child: Text(
+                child: AppText(
                   bio,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             Divider(

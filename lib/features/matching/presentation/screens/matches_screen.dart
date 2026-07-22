@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/cache/cache_manager.dart';
 import '../../../../core/cache/user_profile_providers.dart';
 import '../../../../core/providers/api_providers.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -124,9 +125,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   title: 'Your matches',
                   subtitle:
                       '${matches.length} ${matches.length == 1 ? 'match' : 'matches'}',
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingLG,
-                  ),
+                  margin: ResponsivePadding.horizontal(context),
                   children: [
                     for (var i = 0; i < matches.length; i++)
                       _MatchRow(
@@ -196,33 +195,32 @@ class _MatchRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       displayName,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.spacingXS),
-                    Text(
+                    AppText(
                       'Matched ${formatDate(match.matchedAt)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color:
                             theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
+                      maxLines: 1,
                     ),
                     if (match.lastMessage != null &&
                         match.lastMessage!.trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
-                      Text(
+                      AppText(
                         match.lastMessage!,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface
                               .withValues(alpha: 0.45),
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],

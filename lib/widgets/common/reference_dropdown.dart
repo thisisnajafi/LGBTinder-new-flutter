@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Dropdown widget for selecting reference data items
 class ReferenceDropdown extends ConsumerWidget {
@@ -54,11 +55,10 @@ class ReferenceDropdown extends ConsumerWidget {
           Row(
             children: [
               Flexible(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.h3.copyWith(color: textColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (required)
@@ -100,11 +100,10 @@ class ReferenceDropdown extends ConsumerWidget {
               items: items.map((item) {
                 return DropdownMenuItem<int>(
                   value: item.id,
-                  child: Text(
+                  child: AppText(
                     item.title,
                     style: AppTypography.body.copyWith(color: textColor),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 );
               }).toList(),

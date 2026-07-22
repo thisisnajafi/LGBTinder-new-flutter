@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../data/models/subscription_plan.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Subscription status card widget
 /// Displays current subscription status and details
@@ -106,14 +107,13 @@ class SubscriptionStatusCard extends ConsumerWidget {
 
               // Plan name
               if (subscriptionStatus.planName != null) ...[
-                Text(
+                AppText(
                   subscriptionStatus.planName!,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
               ],
@@ -253,26 +253,24 @@ class SubscriptionStatusCard extends ConsumerWidget {
       children: [
         Expanded(
           flex: 2,
-          child: Text(
+          child: AppText(
             label,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           flex: 3,
-          child: Text(
+          child: AppText(
             value,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: theme.colorScheme.onSurface,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,
           ),
         ),

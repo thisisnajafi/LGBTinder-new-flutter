@@ -11,6 +11,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../images/optimized_image.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Avatar upload widget with gradient ring, SVG icons, and rim action button.
 class AvatarUpload extends ConsumerStatefulWidget {
@@ -202,14 +203,13 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
                 color: onSurface.withValues(alpha: 0.38),
               ),
               const SizedBox(height: AppSpacing.spacingXS),
-              Text(
+              AppText(
                 'Tap to add',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: onSurface.withValues(alpha: 0.45),
                       fontWeight: FontWeight.w500,
                     ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -272,14 +272,13 @@ class _AvatarUploadState extends ConsumerState<AvatarUpload> {
           ),
         ],
       ),
-      child: Text(
+      child: AppText(
         'Primary',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

@@ -298,14 +298,13 @@ class _ChatInputState extends ConsumerState<ChatInput> with TickerProviderStateM
               },
             ),
             const SizedBox(height: 4),
-            Text(
+            AppText(
               label,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -532,81 +531,138 @@ class _VoiceRecordingDialogState extends State<_VoiceRecordingDialog>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return AlertDialog(
-      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 16),
-          // Recording indicator
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _pulseAnimation.value,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.feedbackError.withOpacity(0.2),
+    return ResponsiveGrid.constrainedTo(
+      context,
+      AlertDialog(
+        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            // Recording indicator
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _pulseAnimation.value,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.feedbackError.withOpacity(0.2),
+                    ),
+                    child: const Icon(
+                      Icons.mic,
+                      color: AppColors.feedbackError,
+                      size: 40,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.mic,
-                    color: AppColors.feedbackError,
-                    size: 40,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Recording...',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-              fontWeight: FontWeight.w600,
+                );
+              },
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap stop when finished',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            const SizedBox(height: 24),
+            AppText(
+              'Recording...',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Flexible(
-                child: TextButton.icon(
-                  onPressed: widget.onCancel,
-                  icon: const Icon(Icons.close, color: AppColors.feedbackError),
-                  label: const Text('Cancel'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.feedbackError,
-                  ),
-                ),
+            const SizedBox(height: 8),
+            AppText(
+              'Tap stop when finished',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
               ),
-              Flexible(
-                child: ElevatedButton.icon(
-                  onPressed: widget.onStop,
-                  icon: const Icon(Icons.stop, color: Colors.white),
-                  label: const Text('Stop'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.feedbackError,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+              maxLines: 2,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stackVertically = constraints.maxWidth < 280;
+
+                if (stackVertically) {
+                  return Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: widget.onCancel,
+                          icon: const Icon(Icons.close, color: AppColors.feedbackError),
+                          label: const AppText(
+                            'Cancel',
+                            maxLines: 1,
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.feedbackError,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: widget.onStop,
+                          icon: const Icon(Icons.stop, color: Colors.white),
+                          label: const AppText(
+                            'Stop',
+                            maxLines: 1,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.feedbackError,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Flexible(
+                      child: TextButton.icon(
+                        onPressed: widget.onCancel,
+                        icon: const Icon(Icons.close, color: AppColors.feedbackError),
+                        label: const AppText(
+                          'Cancel',
+                          maxLines: 1,
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.feedbackError,
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: ElevatedButton.icon(
+                        onPressed: widget.onStop,
+                        icon: const Icon(Icons.stop, color: Colors.white),
+                        label: const AppText(
+                          'Stop',
+                          maxLines: 1,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.feedbackError,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
       ),
+      tablet: 360,
     );
   }
 }

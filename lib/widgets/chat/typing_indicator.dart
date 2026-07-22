@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Animated typing indicator widget
 /// Shows animated dots when user is typing
@@ -73,14 +74,13 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
         if (showLabel) ...[
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 180),
-            child: Text(
+            child: AppText(
               '$label is typing',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: dotColor,
                 fontStyle: FontStyle.italic,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           SizedBox(width: AppSpacing.spacingSM),

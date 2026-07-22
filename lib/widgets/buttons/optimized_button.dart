@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Optimized button widget
 /// Performance-optimized button with const constructors and minimal rebuilds
@@ -85,11 +86,11 @@ class OptimizedButton extends ConsumerWidget {
                     SizedBox(width: AppSpacing.spacingSM),
                   ],
                   Flexible(
-                    child: Text(
+                    child: AppText(
                       text,
                       style: AppTypography.button.copyWith(color: txtColor),
                       textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ],

@@ -7,6 +7,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../core/responsive/responsive.dart';
 
 /// Accessibility settings screen - Manage accessibility preferences
 class AccessibilitySettingsScreen extends ConsumerStatefulWidget {
@@ -105,13 +106,12 @@ class _AccessibilitySettingsScreenState
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(
+                          child: AppText(
                             'Font size',
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Text(
@@ -342,13 +342,12 @@ class _SliderCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   title,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
@@ -408,13 +407,12 @@ class _SettingOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

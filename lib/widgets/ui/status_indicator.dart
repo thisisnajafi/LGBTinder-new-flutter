@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Status indicator widget
 /// Displays online/offline status with text and color
@@ -46,14 +47,13 @@ class StatusIndicator extends ConsumerWidget {
           ),
         ),
         SizedBox(width: AppSpacing.spacingXS),
-        Text(
+        AppText(
           statusText,
           style: AppTypography.caption.copyWith(
             color: statusColor,
             fontWeight: FontWeight.w500,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

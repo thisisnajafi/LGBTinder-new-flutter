@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/animation_constants.dart';
+import '../core/responsive/responsive.dart';
 import '../core/widgets/app_bottom_nav_bar.dart';
 import '../pages/discovery_page.dart';
 import '../pages/chat_list_page.dart';
@@ -161,13 +162,17 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     _lastExitBackPressAt = now;
     final messenger = ScaffoldMessenger.of(context);
+    final horizontal = ResponsivePadding.horizontal(context).horizontal;
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
-        content: const Text('Press back again to exit'),
+        content: const AppText(
+          'Press back again to exit',
+          maxLines: 1,
+        ),
         duration: _exitConfirmWindow,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.fromLTRB(16, 0, 16, navBarReserve + 8),
+        margin: EdgeInsets.fromLTRB(horizontal, 0, horizontal, navBarReserve + 8),
       ),
     );
   }

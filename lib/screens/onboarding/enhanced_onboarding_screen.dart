@@ -273,24 +273,22 @@ class _EnhancedOnboardingScreenState extends ConsumerState<EnhancedOnboardingScr
           ),
           SizedBox(height: AppSpacing.spacingXXL),
           // Title
-          Text(
+          AppText(
             slide.title,
             style: AppTypography.h1.copyWith(
               color: textColor,
             ),
             textAlign: TextAlign.center,
             maxLines: 3,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingLG),
-          Text(
+          AppText(
             slide.description,
             style: AppTypography.body.copyWith(
               color: secondaryTextColor,
             ),
             textAlign: TextAlign.center,
             maxLines: 6,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

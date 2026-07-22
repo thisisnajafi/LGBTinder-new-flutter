@@ -14,6 +14,7 @@ import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
 import 'add_payment_method_screen.dart';
+import '../core/responsive/responsive.dart';
 
 /// Payment methods screen — manage saved cards and wallets.
 class PaymentMethodsScreen extends ConsumerStatefulWidget {
@@ -206,14 +207,13 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: Text(
+                                        child: AppText(
                                           '${method['brand']} •••• ${method['last4']}',
                                           style: theme.textTheme.titleSmall
                                               ?.copyWith(
                                             fontWeight: FontWeight.w700,
                                           ),
                                           maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       if (isDefault) ...[
@@ -245,13 +245,12 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: AppSpacing.spacingXS),
-                                  Text(
+                                  AppText(
                                     'Expires ${method['expiry']}',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: muted,
                                     ),
                                     maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),

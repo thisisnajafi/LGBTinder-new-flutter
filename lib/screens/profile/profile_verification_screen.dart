@@ -449,7 +449,7 @@ class _ProfileVerificationScreenState
           color: tint,
         ),
         SizedBox(height: AppSpacing.spacingSM),
-        Text(
+        AppText(
           verification.verificationBadge,
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
@@ -457,7 +457,6 @@ class _ProfileVerificationScreenState
           ),
           textAlign: TextAlign.center,
           maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
         SizedBox(height: AppSpacing.spacingXS),
         Text(

@@ -263,11 +263,10 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
               SizedBox(height: AppSpacing.spacingLG),
               // Set as default
               CheckboxListTile(
-                title: Text(
+                title: AppText(
                   'Set as default payment method',
                   style: AppTypography.body.copyWith(color: textColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 value: _setAsDefault,
                 onChanged: (value) {
@@ -286,14 +285,13 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
                 isFullWidth: true,
               ),
               SizedBox(height: AppSpacing.spacingMD),
-              Text(
+              AppText(
                 'Your payment information is secure and encrypted',
                 style: AppTypography.caption.copyWith(
                   color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

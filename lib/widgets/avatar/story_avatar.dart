@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../images/optimized_image.dart';
 import 'avatar_with_ring.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Story avatar widget
 /// Avatar with gradient ring for stories (viewed/unviewed states)
@@ -57,7 +58,7 @@ class StoryAvatar extends ConsumerWidget {
             SizedBox(height: AppSpacing.spacingXS),
             SizedBox(
               width: size + 6,
-              child: Text(
+              child: AppText(
                 name!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: isDark
@@ -65,7 +66,6 @@ class StoryAvatar extends ConsumerWidget {
                           : AppColors.textPrimaryLight,
                     ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
             ),

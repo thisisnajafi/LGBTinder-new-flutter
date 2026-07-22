@@ -5,6 +5,7 @@ import '../../theme/border_radius_constants.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
 import 'premium_shell.dart';
+import '../../responsive/responsive.dart';
 
 /// Single row inside a premium settings group.
 class PremiumSettingsTile extends StatelessWidget {
@@ -58,24 +59,22 @@ class PremiumSettingsTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     title,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: titleColor,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
-                    Text(
+                    AppText(
                       subtitle!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
@@ -196,23 +195,21 @@ class PremiumToggleRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     title,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
-                    Text(
+                    AppText(
                       subtitle!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
                       maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
@@ -269,23 +266,21 @@ class PremiumInfoRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   label,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AppText(
                   value,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -299,14 +294,13 @@ class PremiumInfoRow extends StatelessWidget {
                       .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(99),
                 ),
-                child: Text(
+                child: AppText(
                   badge!,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: badgeColor ?? AppColors.accentPink,
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
                 ),
               ),
@@ -374,13 +368,12 @@ class PremiumSoundOptionTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       label,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     if (isSelected)
                       Text(
@@ -447,11 +440,10 @@ class PremiumFaqTile extends StatelessWidget {
             AppSpacing.spacingMD,
             AppSpacing.spacingMD,
           ),
-          title: Text(
+          title: AppText(
             question,
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             maxLines: 3,
-            overflow: TextOverflow.ellipsis,
           ),
           iconColor: AppColors.accentViolet,
           collapsedIconColor: theme.colorScheme.onSurface.withValues(alpha: 0.45),

@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import 'skeleton_loader.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Animated skeleton loader for the discovery card stack.
 class SkeletonDiscovery extends StatefulWidget {
@@ -171,7 +172,7 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
                 ),
                 _PulsingDots(color: theme.colorScheme.primary),
                 const SizedBox(height: AppSpacing.spacingSM),
-                Text(
+                AppText(
                   'Finding your perfect matches...',
                   style: theme.textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
@@ -181,7 +182,6 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
               ],

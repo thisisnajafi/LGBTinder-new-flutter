@@ -70,7 +70,7 @@ class PurchaseConfirmationScreen extends StatelessWidget {
               SizedBox(height: AppSpacing.spacingXL),
 
               // Success Message
-              Text(
+              AppText(
                 'Purchase Successful!',
                 style: AppTypography.h1.copyWith(
                   color: textColor,
@@ -78,19 +78,17 @@ class PurchaseConfirmationScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
 
               SizedBox(height: AppSpacing.spacingMD),
 
-              Text(
+              AppText(
                 'Your purchase has been completed successfully',
                 style: AppTypography.body.copyWith(
                   color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
 
               SizedBox(height: AppSpacing.spacingXXL),
@@ -210,26 +208,24 @@ class PurchaseConfirmationScreen extends StatelessWidget {
         children: [
           Expanded(
             flex: 2,
-            child: Text(
+            child: AppText(
               label,
               style: AppTypography.body.copyWith(
                 color: secondaryTextColor,
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: AppSpacing.spacingSM),
           Expanded(
             flex: 3,
-            child: Text(
+            child: AppText(
               value,
               style: AppTypography.body.copyWith(
                 color: textColor,
                 fontWeight: FontWeight.w600,
               ),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
             ),
           ),
@@ -314,14 +310,13 @@ class PurchaseErrorScreen extends StatelessWidget {
 
               SizedBox(height: AppSpacing.spacingMD),
 
-              Text(
+              AppText(
                 userMessage ?? errorMessage ?? 'An error occurred while processing your purchase',
                 style: AppTypography.body.copyWith(
                   color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 5,
-                overflow: TextOverflow.ellipsis,
               ),
 
               if (suggestedAction != null) ...[
@@ -344,13 +339,12 @@ class PurchaseErrorScreen extends StatelessWidget {
                       ),
                       SizedBox(width: AppSpacing.spacingSM),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           suggestedAction!,
                           style: AppTypography.body.copyWith(
                             color: textColor,
                           ),
                           maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

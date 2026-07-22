@@ -7,6 +7,7 @@ import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../features/matching/data/models/match.dart';
 import '../../routes/app_router.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Horizontal scroll row of match avatar chips (REF-04).
 class ChatMatchesRow extends StatelessWidget {
@@ -127,10 +128,9 @@ class _MatchAvatarChip extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.spacingXS),
-            Text(
+            AppText(
               match.firstName,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: isNew ? FontWeight.w700 : FontWeight.w500,

@@ -8,6 +8,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../core/responsive/responsive.dart';
 
 /// Haptic feedback settings screen - Manage haptic feedback preferences
 class HapticFeedbackSettingsScreen extends ConsumerStatefulWidget {
@@ -281,13 +282,12 @@ class _HapticFeedbackSettingsScreenState
                 AppSettingsLayout.horizontalPadding,
                 0,
               ),
-              child: Text(
+              child: AppText(
                 'Enable haptic feedback above to customize interaction types.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor,
                 ),
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],
@@ -337,13 +337,12 @@ class _IntensityOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

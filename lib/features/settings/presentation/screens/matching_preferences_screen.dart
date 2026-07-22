@@ -182,13 +182,12 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                     PremiumSettingsGroup(
                       title: 'Could not load',
                       children: [
-                        Text(
+                        AppText(
                           _error!,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppColors.feedbackError,
                           ),
                           maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -224,24 +223,24 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                                     });
                                   },
                           ),
-                          Text(
+                          AppText(
                             '$_ageMin – $_ageMax years',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           if (!_loading && !_saving)
                             Align(
                               alignment: Alignment.centerLeft,
                               child: TextButton(
                                 onPressed: _resetAgeRange,
-                                child: Text(
+                                child: AppText(
                                   'Reset age range',
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     color: AppColors.accentViolet,
                                   ),
+                                  maxLines: 1,
                                 ),
                               ),
                             ),
@@ -271,11 +270,12 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                                       () => _distance = v.roundToDouble(),
                                     ),
                           ),
-                          Text(
+                          AppText(
                             'Up to ${_distance.round()} km',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                             ),
+                            maxLines: 1,
                           ),
                         ],
                       ),
@@ -302,11 +302,8 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
                     ],
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSettingsLayout.horizontalPadding,
-                      AppSpacing.spacingXL,
-                      AppSettingsLayout.horizontalPadding,
-                      0,
+                    padding: ResponsivePadding.horizontal(context).copyWith(
+                      top: AppSpacing.spacingXL,
                     ),
                     child: GradientButton(
                       text: 'Save preferences',

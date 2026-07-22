@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Menu item tile widget
 /// Custom list tile for menu items with icon, title, subtitle, and trailing
@@ -68,24 +69,22 @@ class MenuItemTile extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      AppText(
                         title,
                         style: AppTypography.body.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       if (subtitle != null) ...[
                         SizedBox(height: AppSpacing.spacingXS),
-                        Text(
+                        AppText(
                           subtitle!,
                           style: AppTypography.caption.copyWith(
                             color: secondaryTextColor,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],

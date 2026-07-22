@@ -372,12 +372,11 @@ class _ChatConversationInfoPageState
                               isOnline: widget.isOnline,
                             ),
                             const SizedBox(height: AppSpacing.spacingMD),
-                            Text(
+                            AppText(
                               _displayName,
                               style: AppTypography.h2.copyWith(color: textColor),
                               textAlign: TextAlign.center,
                               maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             if (_profile != null &&
                                 _locationLabel(_profile!) != null) ...[
@@ -392,12 +391,11 @@ class _ChatConversationInfoPageState
                                   ),
                                   const SizedBox(width: AppSpacing.spacingXS),
                                   Flexible(
-                                    child: Text(
+                                    child: AppText(
                                       _locationLabel(_profile!)!,
                                       style: AppTypography.caption
                                           .copyWith(color: secondaryTextColor),
                                       maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
@@ -418,12 +416,11 @@ class _ChatConversationInfoPageState
                               children: [
                                 PremiumSectionHeader(title: 'About'),
                                 const SizedBox(height: AppSpacing.spacingSM),
-                                Text(
+                                AppText(
                                   _profile!.profileBio!.trim(),
                                   style: AppTypography.body
                                       .copyWith(color: secondaryTextColor),
                                   maxLines: 8,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -459,14 +456,13 @@ class _ChatConversationInfoPageState
                                                   .withValues(alpha: 0.28),
                                             ),
                                           ),
-                                          child: Text(
+                                          child: AppText(
                                             label,
                                             style: AppTypography.caption.copyWith(
                                               color: AppColors.accentViolet,
                                               fontWeight: FontWeight.w600,
                                             ),
                                             maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       )

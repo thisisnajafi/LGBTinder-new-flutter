@@ -11,6 +11,7 @@ import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile export screen - Export profile data
 class ProfileExportScreen extends ConsumerStatefulWidget {
@@ -366,11 +367,10 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
           ),
           SizedBox(width: AppSpacing.spacingSM),
           Expanded(
-            child: Text(
+            child: AppText(
               text,
               style: AppTypography.body.copyWith(color: textColor),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

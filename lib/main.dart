@@ -30,6 +30,7 @@ import 'core/widgets/startup_cache_listener.dart';
 import 'core/providers/session_services_provider.dart';
 import 'features/payments/providers/payment_providers.dart';
 import 'core/utils/app_logger.dart' show startupLog, authLog;
+import 'core/responsive/responsive.dart';
 
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -322,7 +323,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        AppText(
                           details.exceptionAsString(),
                           style: const TextStyle(
                             fontSize: 12,
@@ -330,7 +331,6 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

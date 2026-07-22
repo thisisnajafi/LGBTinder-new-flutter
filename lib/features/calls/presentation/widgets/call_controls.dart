@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/call_provider.dart';
@@ -40,7 +42,10 @@ class CallControls extends ConsumerWidget {
     final callState = ref.watch(callProvider);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: ResponsivePadding.horizontal(context).copyWith(
+        top: AppSpacing.spacingMD,
+        bottom: AppSpacing.spacingMD,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -49,85 +54,99 @@ class CallControls extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Call duration
-          Text(
+          AppText(
             callState.formattedCallDuration,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
+            maxLines: 1,
+            textAlign: TextAlign.center,
           ),
 
           const SizedBox(height: 24),
 
-          // Control buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Mute button
-              _ControlButton(
-                iconPath: isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
-                label: isMuted ? 'Unmute' : 'Mute',
-                color: isMuted ? AppColors.feedbackError : AppColors.accentViolet,
-                onPressed: onToggleMute,
-              ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final controlsRow = Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisSize: MainAxisSize.min,
+                children: _buildControlButtons(context, ref),
+              );
 
-              _ControlButton(
-                iconPath: isSpeakerOn
-                    ? AppIcons.getIconPath('volume-high')
-                    : AppIcons.getIconPath('volume-low'),
-                label: isSpeakerOn ? 'Speaker' : 'Earpiece',
-                color: isSpeakerOn ? AppColors.accentViolet : AppColors.accentViolet.withValues(alpha: 0.55),
-                onPressed: onToggleSpeaker,
-              ),
+              if (constraints.maxWidth < 360) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: controlsRow,
+                );
+              }
 
-              if (isVideoCall) ...[
-                _ControlButton(
-                  iconPath: isCameraOn
-                      ? AppIcons.video
-                      : AppIcons.getIconPath('video-slash'),
-                  label: isCameraOn ? 'Camera' : 'Camera Off',
-                  color: isCameraOn ? AppColors.onlineGreen : AppColors.feedbackError,
-                  onPressed: onToggleCamera,
-                ),
-
-                if (canSwitchCamera)
-                  _ControlButton(
-                    iconPath: AppIcons.getIconPath('rotate-right'),
-                    label: 'Switch',
-                    color: AppColors.accentViolet.withValues(alpha: 0.7),
-                    onPressed: onSwitchCamera,
-                  ),
-              ],
-
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  color: AppColors.feedbackError,
-                  shape: BoxShape.circle,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onEndCall ?? () => _endCall(context, ref),
-                    borderRadius: BorderRadius.circular(32),
-                    child: Center(
-                      child: AppSvgIcon(
-                        assetPath: AppIcons.callMissed,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              return controlsRow;
+            },
           ),
 
           const SizedBox(height: 16),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildControlButtons(BuildContext context, WidgetRef ref) {
+    return [
+      _ControlButton(
+        iconPath: isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
+        label: isMuted ? 'Unmute' : 'Mute',
+        color: isMuted ? AppColors.feedbackError : AppColors.accentViolet,
+        onPressed: onToggleMute,
+      ),
+      _ControlButton(
+        iconPath: isSpeakerOn
+            ? AppIcons.getIconPath('volume-high')
+            : AppIcons.getIconPath('volume-low'),
+        label: isSpeakerOn ? 'Speaker' : 'Earpiece',
+        color: isSpeakerOn
+            ? AppColors.accentViolet
+            : AppColors.accentViolet.withValues(alpha: 0.55),
+        onPressed: onToggleSpeaker,
+      ),
+      if (isVideoCall) ...[
+        _ControlButton(
+          iconPath: isCameraOn ? AppIcons.video : AppIcons.getIconPath('video-slash'),
+          label: isCameraOn ? 'Camera' : 'Camera Off',
+          color: isCameraOn ? AppColors.onlineGreen : AppColors.feedbackError,
+          onPressed: onToggleCamera,
+        ),
+        if (canSwitchCamera)
+          _ControlButton(
+            iconPath: AppIcons.getIconPath('rotate-right'),
+            label: 'Switch',
+            color: AppColors.accentViolet.withValues(alpha: 0.7),
+            onPressed: onSwitchCamera,
+          ),
+      ],
+      Container(
+        width: 64,
+        height: 64,
+        decoration: const BoxDecoration(
+          color: AppColors.feedbackError,
+          shape: BoxShape.circle,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onEndCall ?? () => _endCall(context, ref),
+            borderRadius: BorderRadius.circular(32),
+            child: Center(
+              child: AppSvgIcon(
+                assetPath: AppIcons.callMissed,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 
   Future<void> _endCall(BuildContext context, WidgetRef ref) async {
@@ -194,13 +213,17 @@ class _ControlButton extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            fontSize: 11,
+        SizedBox(
+          width: size + 4,
+          child: AppText(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
           ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -238,13 +261,14 @@ class MinimalCallControls extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Call duration
-          Text(
+          AppText(
             callState.formattedCallDuration,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
           ),
 
           const SizedBox(width: 16),
@@ -337,20 +361,23 @@ class CallControlsOverlay extends ConsumerWidget {
 
     return Positioned(
       bottom: 40,
-      left: 20,
-      right: 20,
-      child: CallControls(
-        callId: callId,
-        isVideoCall: isVideoCall,
-        onEndCall: onEndCall,
-        onToggleMute: onToggleMute,
-        onToggleSpeaker: onToggleSpeaker,
-        onToggleCamera: onToggleCamera,
-        onSwitchCamera: onSwitchCamera,
-        isMuted: isMuted,
-        isSpeakerOn: isSpeakerOn,
-        isCameraOn: isCameraOn,
-        canSwitchCamera: canSwitchCamera,
+      left: 0,
+      right: 0,
+      child: Padding(
+        padding: ResponsivePadding.horizontal(context),
+        child: CallControls(
+          callId: callId,
+          isVideoCall: isVideoCall,
+          onEndCall: onEndCall,
+          onToggleMute: onToggleMute,
+          onToggleSpeaker: onToggleSpeaker,
+          onToggleCamera: onToggleCamera,
+          onSwitchCamera: onSwitchCamera,
+          isMuted: isMuted,
+          isSpeakerOn: isSpeakerOn,
+          isCameraOn: isCameraOn,
+          canSwitchCamera: canSwitchCamera,
+        ),
       ),
     );
   }
@@ -375,7 +402,7 @@ class FloatingCallControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Positioned(
       bottom: 100,
-      right: 20,
+      right: AppBreakpoints.value(context, phone: 20.0, tablet: 32.0, desktop: 40.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

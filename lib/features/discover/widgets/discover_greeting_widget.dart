@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
-import '../../../core/widgets/premium/premium_page.dart';
 import '../../../core/utils/app_haptics.dart';
 import '../../../core/widgets/profile_image_widget.dart';
 import '../../../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
@@ -41,9 +41,7 @@ class DiscoverGreetingWidget extends ConsumerWidget {
     final isOnline = profile?.isOnline ?? false;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: PremiumPageHeader.horizontalPadding,
-      ),
+      padding: ResponsivePadding.horizontal(context),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.spacingXS),
         padding: const EdgeInsets.symmetric(
@@ -135,11 +133,12 @@ class DiscoverGreetingWidget extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     greeting,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                     ),
+                    maxLines: 1,
                   ),
                   const SizedBox(height: AppSpacing.spacingXS),
                   if (firstName == null)
@@ -150,10 +149,9 @@ class DiscoverGreetingWidget extends ConsumerWidget {
                       ),
                     )
                   else
-                    Text(
+                    AppText(
                       'Hello, $firstName',
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),

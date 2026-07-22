@@ -357,14 +357,13 @@ class _SearchFilterChip extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.spacingXS),
             ],
-            Text(
+            AppText(
               label,
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: isSelected ? Colors.white : AppColors.accentViolet,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

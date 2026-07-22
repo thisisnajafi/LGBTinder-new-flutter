@@ -1119,14 +1119,13 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingSM),
                 options,
@@ -1137,14 +1136,13 @@ class _ProfileWizardScreenState extends ConsumerState<ProfileWizardScreen> {
           return Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               options,

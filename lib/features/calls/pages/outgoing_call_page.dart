@@ -308,11 +308,10 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       widget.recipientName,
                       style: AppTypography.titleLarge.copyWith(color: Colors.white),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       _formatDuration(_duration),
@@ -437,12 +436,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
               ),
             ),
             SizedBox(height: AppSpacing.spacingLG),
-            Text(
+            AppText(
               widget.recipientName,
               style: AppTypography.headlineSmall.copyWith(color: textPrimary),
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           SizedBox(height: AppSpacing.spacingSM),
           Text(
@@ -660,13 +658,12 @@ class _CallActionButton extends StatelessWidget {
           ),
         ),
         SizedBox(height: AppSpacing.spacingXS),
-        Text(
+        AppText(
           label,
           style: AppTypography.labelSmall.copyWith(
             color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

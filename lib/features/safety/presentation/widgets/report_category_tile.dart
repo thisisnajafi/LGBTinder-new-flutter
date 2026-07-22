@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Report category tile widget
 /// Displays report reason categories with icons and descriptions
@@ -78,13 +79,12 @@ class ReportCategoryTile extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    AppText(
                       description,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

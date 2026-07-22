@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../providers/notification_provider.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Notification badge widget
 /// Shows notification count with animated badge
@@ -85,14 +86,18 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
                   ],
                 ),
                 child: Center(
-                  child: Text(
-                    _getBadgeText(notificationState.unreadCount),
-                    style: TextStyle(
-                      color: widget.textColor,
-                      fontSize: widget.badgeSize * 0.5,
-                      fontWeight: FontWeight.bold,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _getBadgeText(notificationState.unreadCount),
+                      style: TextStyle(
+                        color: widget.textColor,
+                        fontSize: widget.badgeSize * 0.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
@@ -219,12 +224,13 @@ class _AnimatedNotificationCounterState extends ConsumerState<AnimatedNotificati
       builder: (context, child) {
         return Transform.scale(
           scale: _animation.value,
-          child: Text(
+          child: AppText(
             count.toString(),
             style: widget.style ?? Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppColors.feedbackError,
               fontWeight: FontWeight.bold,
             ),
+            maxLines: 1,
           ),
         );
       },

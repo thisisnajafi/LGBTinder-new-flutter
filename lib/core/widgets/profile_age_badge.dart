@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
+import '../responsive/responsive.dart';
 
 /// Small age pill used on profile avatars and overlays.
 enum ProfileAgeBadgeStyle {
@@ -79,13 +80,14 @@ class _AvatarOverlayBadge extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        child: Text(
+        child: AppText(
           '$age',
           style: theme.textTheme.labelSmall?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.2,
           ),
+          maxLines: 1,
         ),
       ),
     );
@@ -118,12 +120,13 @@ class _InlineBadge extends StatelessWidget {
           width: 0.5,
         ),
       ),
-      child: Text(
+      child: AppText(
         '$age',
         style: theme.textTheme.labelMedium?.copyWith(
           color: primary,
           fontWeight: FontWeight.w700,
         ),
+        maxLines: 1,
       ),
     );
   }
@@ -150,12 +153,13 @@ class _HeroOverlayBadge extends StatelessWidget {
           width: 0.5,
         ),
       ),
-      child: Text(
+      child: AppText(
         '$age',
         style: theme.textTheme.labelMedium?.copyWith(
           color: Colors.white,
           fontWeight: FontWeight.w700,
         ),
+        maxLines: 1,
       ),
     );
   }
@@ -198,7 +202,7 @@ class _PhotoOverlayBadge extends StatelessWidget {
           horizontal: AppSpacing.spacingMD,
           vertical: AppSpacing.spacingXS,
         ),
-        child: Text(
+        child: AppText(
           '$age',
           style: theme.textTheme.titleSmall?.copyWith(
             color: Colors.white,
@@ -206,6 +210,7 @@ class _PhotoOverlayBadge extends StatelessWidget {
             letterSpacing: 0.2,
             height: 1,
           ),
+          maxLines: 1,
         ),
       ),
     );

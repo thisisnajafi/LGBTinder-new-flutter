@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../widgets/navbar/lgbtfinder_logo.dart';
-import '../providers/onboarding_provider.dart';
+import '../../providers/onboarding_provider.dart';
 import '../widgets/onboarding_page.dart';
 import '../widgets/onboarding_page_view.dart';
 
@@ -125,28 +126,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // Show confirmation dialog
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Skip Onboarding?'),
-        content: const Text(
-          'You can always set up your preferences later in Settings. '
-          'Would you like to skip for now?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder: (context) => ResponsiveGrid.constrainedTo(
+        context,
+        AlertDialog(
+          title: const AppText(
+            'Skip Onboarding?',
+            maxLines: 2,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _skipOnboarding();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryLight,
+          content: const AppText(
+            'You can always set up your preferences later in Settings. '
+            'Would you like to skip for now?',
+            maxLines: 4,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
-            child: const Text('Skip'),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _skipOnboarding();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryLight,
+              ),
+              child: const Text('Skip'),
+            ),
+          ],
+        ),
+        tablet: 400,
       ),
     );
   }
@@ -166,34 +175,38 @@ class QuickOnboardingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+        child: ResponsiveGrid.constrainedTo(
+          context,
+          Padding(
+            padding: ResponsivePadding.page(context),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               // App logo (rainbow heart)
               const LGBTFinderLogo(size: 120),
 
               const SizedBox(height: 32),
 
               // Welcome back text
-              Text(
+              AppText(
                 'Welcome back!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
               ),
 
               const SizedBox(height: 16),
 
-              Text(
+              AppText(
                 'Your preferences are saved. Ready to discover?',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 3,
               ),
 
               const SizedBox(height: 48),
@@ -211,12 +224,13 @@ class QuickOnboardingScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  child: const Text(
+                  child: const AppText(
                     'Continue',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
                   ),
                 ),
               ),
@@ -226,16 +240,19 @@ class QuickOnboardingScreen extends ConsumerWidget {
               // Update preferences button
               TextButton(
                 onPressed: () => context.go('/onboarding/preferences'),
-                child: Text(
+                child: AppText(
                   'Update Preferences',
                   style: TextStyle(
                     color: AppColors.primaryLight,
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
                 ),
               ),
             ],
+            ),
           ),
+          tablet: 500,
         ),
       ),
     );

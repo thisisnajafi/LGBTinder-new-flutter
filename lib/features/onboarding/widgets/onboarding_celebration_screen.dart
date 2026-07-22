@@ -180,7 +180,7 @@ class _OnboardingCelebrationScreenState
                               children: [
                                 _CelebrationBadge(textTheme: textTheme),
                                 SizedBox(height: AppSpacing.spacingLG),
-                                Text(
+                                AppText(
                                   "You're in!",
                                   style: textTheme.displayMedium?.copyWith(
                                     color: AppColors.textPrimaryDark,
@@ -197,10 +197,9 @@ class _OnboardingCelebrationScreenState
                                   ),
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 SizedBox(height: AppSpacing.spacingSM),
-                                Text(
+                                AppText(
                                   'Your profile is ready to shine',
                                   style: textTheme.bodyLarge?.copyWith(
                                     color: AppColors.textPrimaryDark
@@ -208,10 +207,9 @@ class _OnboardingCelebrationScreenState
                                   ),
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 SizedBox(height: AppSpacing.spacingSM),
-                                Text(
+                                AppText(
                                   'This is how others will see you on Discover',
                                   style: textTheme.bodySmall?.copyWith(
                                     color: AppColors.textPrimaryDark
@@ -219,7 +217,6 @@ class _OnboardingCelebrationScreenState
                                   ),
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -471,7 +468,7 @@ class _CelebrationBadge extends StatelessWidget {
                   color: AppColors.textPrimaryDark,
                 ),
                 SizedBox(width: AppSpacing.spacingXS),
-                Text(
+                AppText(
                   'Profile complete',
                   style: textTheme.labelMedium?.copyWith(
                     color: AppColors.textPrimaryDark,
@@ -479,7 +476,6 @@ class _CelebrationBadge extends StatelessWidget {
                     letterSpacing: 0.2,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -553,14 +549,13 @@ class _CelebrationButtonState extends State<_CelebrationButton>
           ),
           SizedBox(width: AppSpacing.spacingSM),
           Flexible(
-            child: Text(
+            child: AppText(
               widget.label,
               style: AppTypography.titleMedium.copyWith(
                 color: AppColors.textPrimaryDark,
                 fontWeight: FontWeight.w700,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
           ),

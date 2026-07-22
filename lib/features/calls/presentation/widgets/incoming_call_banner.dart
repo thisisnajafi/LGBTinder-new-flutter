@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/animation_constants.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../data/models/incoming_call_data.dart';
 import '../../providers/incoming_call_provider.dart';
 /// Foreground incoming call banner — slides down from top.
@@ -72,9 +74,9 @@ class _IncomingCallBannerState extends ConsumerState<IncomingCallBanner>
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingLG,
-              vertical: AppSpacing.spacingMD,
+            padding: ResponsivePadding.horizontal(context).copyWith(
+              top: AppSpacing.spacingMD,
+              bottom: AppSpacing.spacingMD,
             ),
             child: Row(
               children: [
@@ -106,15 +108,15 @@ class _IncomingCallBannerState extends ConsumerState<IncomingCallBanner>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      AppText(
                         widget.callData.callerName,
                         style: AppTypography.titleMedium.copyWith(color: textPrimary),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
+                      AppText(
                         widget.callData.isVideo ? 'Incoming video call' : 'Incoming voice call',
                         style: AppTypography.bodySmall.copyWith(color: textSecondary),
+                        maxLines: 1,
                       ),
                     ],
                   ),

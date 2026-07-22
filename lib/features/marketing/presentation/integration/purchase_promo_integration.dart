@@ -8,6 +8,7 @@ import '../../../../core/theme/border_radius_constants.dart';
 import '../../providers/marketing_providers.dart';
 import '../../data/models/campaign_model.dart';
 import '../widgets/promo_code_input.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Purchase flow promo integration
 /// Part of the Marketing System Implementation (Task 3.6.4)
@@ -146,11 +147,10 @@ class _PurchasePromoSectionState extends ConsumerState<PurchasePromoSection> {
                   ),
                 ),
                 if (promo.description != null)
-                  Text(
+                  AppText(
                     promo.description!,
                     style: AppTypography.caption,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),

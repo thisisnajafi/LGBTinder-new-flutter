@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
@@ -55,7 +56,7 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
       return PremiumSettingsGroup(
         title: title,
         children: [
-          Text(
+          AppText(
             'No sounds available',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context)
@@ -63,6 +64,7 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
                       .onSurface
                       .withValues(alpha: 0.55),
                 ),
+            maxLines: 2,
           ),
         ],
       );
@@ -92,18 +94,29 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
       subtitle: 'Choose tones for messages, calls, and alerts',
       body: prefsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Failed to load sounds'),
-              const SizedBox(height: AppSpacing.spacingMD),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.read(soundPreferencesProvider.notifier).refresh(),
-                child: const Text('Retry'),
-              ),
-            ],
+        error: (error, _) => Padding(
+          padding: ResponsivePadding.page(context),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AppText(
+                  'Failed to load sounds',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: AppSpacing.spacingMD),
+                ElevatedButton(
+                  onPressed: () =>
+                      ref.read(soundPreferencesProvider.notifier).refresh(),
+                  child: const AppText(
+                    'Retry',
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         data: (prefs) {

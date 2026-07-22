@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../theme/app_colors.dart';
+import '../../theme/app_colors.dart';
+import '../../responsive/responsive.dart';
 import '../locale_provider.dart';
 
 /// Language selector widget
@@ -310,10 +311,10 @@ class CompactLanguageSelector extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       SupportedLocales.getDisplayName(locale),
                       style: Theme.of(context).textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ],

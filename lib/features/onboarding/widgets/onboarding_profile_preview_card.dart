@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
@@ -115,10 +116,12 @@ class _OnboardingProfilePreviewCardState
                   ),
                 ),
                 Positioned(
-                  left: AppSpacing.spacingLG,
-                  right: AppSpacing.spacingLG,
+                  left: 0,
+                  right: 0,
                   bottom: AppSpacing.spacingLG,
-                  child: Row(
+                  child: Padding(
+                    padding: ResponsivePadding.horizontal(context),
+                    child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
@@ -126,10 +129,9 @@ class _OnboardingProfilePreviewCardState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
+                            AppText(
                               widget.displayName,
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: textTheme.headlineSmall?.copyWith(
                                 color: AppColors.textPrimaryDark,
                                 fontWeight: FontWeight.w700,
@@ -148,10 +150,9 @@ class _OnboardingProfilePreviewCardState
                                   ),
                                   SizedBox(width: AppSpacing.spacingXS),
                                   Expanded(
-                                    child: Text(
+                                    child: AppText(
                                       widget.location!,
                                       maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                       style: textTheme.bodySmall?.copyWith(
                                         color: AppColors.textPrimaryDark
                                             .withValues(alpha: 0.85),
@@ -165,6 +166,7 @@ class _OnboardingProfilePreviewCardState
                         ),
                       ),
                     ],
+                  ),
                   ),
                 ),
                 if (widget.age != null)
@@ -249,20 +251,17 @@ class _OnboardingProfilePreviewCardState
               ),
             ),
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.spacingLG,
-              _photos.length > 1 ? 0 : AppSpacing.spacingMD,
-              AppSpacing.spacingLG,
-              AppSpacing.spacingLG,
+            padding: ResponsivePadding.horizontal(context).copyWith(
+              top: _photos.length > 1 ? 0 : AppSpacing.spacingMD,
+              bottom: AppSpacing.spacingLG,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (widget.bio != null && widget.bio!.trim().isNotEmpty) ...[
-                  Text(
+                  AppText(
                     widget.bio!.trim(),
                     maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                     style: textTheme.bodyMedium?.copyWith(
                       color: isDark
                           ? AppColors.textSecondaryDark
@@ -315,12 +314,13 @@ class _OnboardingProfilePreviewCardState
                             color: AppColors.accentRose.withValues(alpha: 0.35),
                           ),
                         ),
-                        child: Text(
+                        child: AppText(
                           tag,
                           style: textTheme.labelSmall?.copyWith(
                             color: AppColors.accentRose,
                             fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 1,
                         ),
                       );
                     }).toList(),
@@ -414,27 +414,35 @@ class _InfoChip extends StatelessWidget {
               isDark ? AppColors.borderSubtleDark : AppColors.borderSubtleLight,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppSvgIcon(
-            assetPath: iconPath,
-            size: 14,
-            color: isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight,
-          ),
-          SizedBox(width: AppSpacing.spacingXS),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
-          ),
-        ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSvgIcon(
+              assetPath: iconPath,
+              size: 14,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
+            ),
+            SizedBox(width: AppSpacing.spacingXS),
+            Flexible(
+              child: AppText(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

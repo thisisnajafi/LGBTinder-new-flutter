@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
@@ -35,7 +36,7 @@ class OnlineFriendsList extends ConsumerWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: ResponsivePadding.horizontal(context),
             child: Row(
               children: [
                 Container(
@@ -47,18 +48,24 @@ class OnlineFriendsList extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Online Now',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
+                Expanded(
+                  child: AppText(
+                    'Online Now',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  '(${onlineFriends.length})',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '(${onlineFriends.length})',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
                 ),
               ],
@@ -71,7 +78,7 @@ class OnlineFriendsList extends ConsumerWidget {
           Expanded(
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: ResponsivePadding.horizontal(context),
               itemCount: onlineFriends.length,
               itemBuilder: (context, index) {
                 final friend = onlineFriends[index];
@@ -137,7 +144,7 @@ class OnlineFriendsList extends ConsumerWidget {
             const SizedBox(height: 4),
 
             // Name
-            Text(
+            AppText(
               friend.firstName,
               style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w500,
@@ -145,7 +152,6 @@ class OnlineFriendsList extends ConsumerWidget {
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -226,7 +232,10 @@ class FriendStatusCard extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: ResponsivePadding.horizontal(context).copyWith(
+        top: 4,
+        bottom: 4,
+      ),
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -275,17 +284,16 @@ class FriendStatusCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       '${friend.firstName}${friend.lastName != null ? ' ${friend.lastName}' : ''}',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onSurface,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AppText(
                       friend.isOnline
                           ? 'Online'
                           : friend.lastSeen != null
@@ -297,7 +305,6 @@ class FriendStatusCard extends ConsumerWidget {
                             : theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Profile stats row widget
 /// Displays profile statistics like views, likes, matches
@@ -112,22 +113,20 @@ class ProfileStatsRow extends ConsumerWidget {
           color: color,
         ),
         const SizedBox(height: 4),
-        Text(
+        AppText(
           _formatNumber(value),
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: color,
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
-        Text(
+        AppText(
           label,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
         ),
       ],

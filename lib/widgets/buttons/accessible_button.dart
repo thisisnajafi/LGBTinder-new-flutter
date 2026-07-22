@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Accessible button widget
 /// Button with enhanced accessibility features (semantic labels, minimum touch targets)
@@ -88,11 +89,10 @@ class AccessibleButton extends ConsumerWidget {
                       SizedBox(width: AppSpacing.spacingSM),
                     ],
                     Flexible(
-                      child: Text(
+                      child: AppText(
                         text,
                         style: AppTypography.button.copyWith(color: txtColor),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

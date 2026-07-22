@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
@@ -85,7 +86,7 @@ class ProfileCard extends ConsumerWidget {
 
   Widget _buildContentOverlay(BuildContext context, ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: ResponsivePadding.page(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.end,
@@ -94,7 +95,7 @@ class ProfileCard extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   '${profile.firstName}${profile.lastName != null ? ' ${profile.lastName}' : ''}',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     color: Colors.white,
@@ -108,7 +109,6 @@ class ProfileCard extends ConsumerWidget {
                     ],
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (profile.age != null) ...[
@@ -119,12 +119,13 @@ class ProfileCard extends ConsumerWidget {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
+                  child: AppText(
                     '${profile.age}',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -145,7 +146,7 @@ class ProfileCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       profile.city!,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withOpacity(0.9),
@@ -158,7 +159,6 @@ class ProfileCard extends ConsumerWidget {
                         ],
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -177,7 +177,7 @@ class ProfileCard extends ConsumerWidget {
 
           // Bio preview
           if (profile.profileBio != null && profile.profileBio!.isNotEmpty) ...[
-            Text(
+            AppText(
               profile.profileBio!,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white.withOpacity(0.8),
@@ -190,7 +190,6 @@ class ProfileCard extends ConsumerWidget {
                 ],
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
 
@@ -271,12 +270,13 @@ class ProfileCard extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
+        AppText(
           '$percentage%',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
+          maxLines: 1,
         ),
       ],
     );

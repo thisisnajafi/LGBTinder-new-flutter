@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Banner showing pinned message count; tap to open pinned list.
 class PinnedMessagesBanner extends ConsumerWidget {
@@ -59,13 +60,12 @@ class PinnedMessagesBanner extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.spacingSM),
               Expanded(
-                child: Text(
+                child: AppText(
                   '$pinnedCount pinned message${pinnedCount > 1 ? 's' : ''}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               AppSvgIcon(

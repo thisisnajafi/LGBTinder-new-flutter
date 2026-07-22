@@ -7,6 +7,7 @@ import '../../core/widgets/avatar_widget.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Mention input field widget
 /// Text field with @mention support and user suggestions
@@ -146,11 +147,10 @@ class _MentionInputFieldState extends ConsumerState<MentionInputField> {
                     radius: 20,
                     fallbackInitial: user['name'] as String?,
                   ),
-                  title: Text(
+                  title: AppText(
                     user['name'] ?? 'User',
                     style: AppTypography.body.copyWith(color: textColor),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   onTap: () => _selectMention(user),
                 );

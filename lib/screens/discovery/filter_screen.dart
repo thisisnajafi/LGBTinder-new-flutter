@@ -215,20 +215,19 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       title,
                       style: AppTypography.body.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const FilterProBadge(),
                 ],
               ),
               SizedBox(height: AppSpacing.spacingXS),
-              Text(
+              AppText(
                 subtitle,
                 style: AppTypography.caption.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(
@@ -236,7 +235,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                       ),
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           );
@@ -586,12 +584,11 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.spacingSM),
-                  child: Text(
+                  child: AppText(
                     'Tip: widen age or distance if you see fewer profiles nearby.',
                     style: AppTypography.caption.copyWith(color: secondaryColor),
                     textAlign: TextAlign.center,
                     maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

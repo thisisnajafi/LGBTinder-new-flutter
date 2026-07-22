@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../loading/circular_progress.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Loading indicator widget for match interactions
 /// Shows loading state during match operations
@@ -36,14 +37,13 @@ class LoadingIndicator extends ConsumerWidget {
           ),
           if (message != null) ...[
             SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: textColor,
                   ),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],

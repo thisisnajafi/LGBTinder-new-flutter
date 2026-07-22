@@ -12,6 +12,7 @@ import '../../../../shared/services/error_handler_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/auth_service_provider.dart';
 import '../../utils/auth_navigation.dart';
+import '../../../../core/responsive/responsive.dart';
 
 typedef GoogleSignInCallback = Future<void> Function();
 
@@ -103,7 +104,7 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
                         const _GoogleLogoMark(size: 24),
                         SizedBox(width: AppSpacing.spacingMD),
                         Flexible(
-                          child: Text(
+                          child: AppText(
                             'Continue with Google',
                             style: AppTypography.button.copyWith(
                               color: foregroundColor,
@@ -111,7 +112,6 @@ class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
                               letterSpacing: 0.1,
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                           ),
                         ),

@@ -9,6 +9,7 @@ import '../core/utils/app_icons.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../features/payments/providers/payment_providers.dart';
+import '../core/responsive/responsive.dart';
 
 /// Billing history screen - View payment transactions
 class BillingHistoryScreen extends ConsumerStatefulWidget {
@@ -149,18 +150,17 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                                     width: AppSpacing.spacingMD,
                                   ),
                                   Expanded(
-                                    child: Text(
+                                    child: AppText(
                                       transaction['description'] as String,
                                       style: AppTypography.bodyLarge.copyWith(
                                         color: textColor,
                                         fontWeight: FontWeight.w700,
                                       ),
                                       maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Flexible(
-                                    child: Text(
+                                    child: AppText(
                                       _formatCurrency(
                                         transaction['amount'] as double,
                                         transaction['currency'] as String,
@@ -170,7 +170,6 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                                         fontWeight: FontWeight.w700,
                                       ),
                                       maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.end,
                                     ),
                                   ),

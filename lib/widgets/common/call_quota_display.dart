@@ -8,6 +8,7 @@ import '../../features/calls/providers/call_provider.dart';
 import '../../features/calls/data/models/call_quota.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Widget to display user's call quota and usage
 class CallQuotaDisplay extends ConsumerStatefulWidget {
@@ -131,23 +132,21 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   'Call Minutes',
                   style: AppTypography.bodyMedium.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(
+              AppText(
                 '$remainingMinutes remaining',
                 style: AppTypography.bodySmall.copyWith(
                   color: secondaryTextColor,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -179,23 +178,21 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   'Used: ${usedMinutes}min',
                   style: AppTypography.bodySmall.copyWith(
                     color: secondaryTextColor,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: AppSpacing.spacingSM),
-              Text(
+              AppText(
                 'Total: ${totalMinutes}min',
                 style: AppTypography.bodySmall.copyWith(
                   color: secondaryTextColor,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -203,14 +200,13 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
           // Reset info
           if (_quota!.resetsAt != null) ...[
             SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            AppText(
               'Resets ${_formatResetTime(_quota!.resetsAt!)}',
               style: AppTypography.bodySmall.copyWith(
                 color: secondaryTextColor,
                 fontStyle: FontStyle.italic,
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],

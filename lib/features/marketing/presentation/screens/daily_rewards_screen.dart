@@ -10,6 +10,7 @@ import '../../../../core/widgets/app_page_header.dart';
 import '../../providers/marketing_providers.dart';
 import '../../data/models/daily_reward_model.dart';
 import '../../data/services/daily_rewards_service.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Daily rewards screen with full reward calendar and history
 /// Part of the Marketing System Implementation (Task 3.5.2)
@@ -466,22 +467,20 @@ class _DailyRewardsScreenState extends ConsumerState<DailyRewardsScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
+            child: AppText(
               streak,
               style: AppTypography.body,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: AppSpacing.spacingSM),
-          Text(
+          AppText(
             bonus,
             style: AppTypography.body.copyWith(
               color: AppColors.onlineGreen,
               fontWeight: FontWeight.w600,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,
           ),
         ],

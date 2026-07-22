@@ -8,6 +8,7 @@ import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/matching_provider.dart';
 import '../../widgets/match_celebration_launcher.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Like button widget
 /// Handles liking profiles with visual feedback
@@ -133,13 +134,15 @@ class _LikeButtonState extends ConsumerState<LikeButton>
                   ),
                   if (widget.showLabel) ...[
                     const SizedBox(height: 2),
-                    Text(
+                    AppText(
                       matchingState.isLiking ? 'Liking...' : 'Like',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 10,
                       ),
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],

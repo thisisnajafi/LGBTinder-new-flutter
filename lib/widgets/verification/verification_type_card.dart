@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import 'verification_components.dart';
+import '../../core/responsive/responsive.dart';
 
 enum VerificationType { photo, id, video }
 
@@ -129,13 +130,12 @@ class VerificationTypeCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              AppText(
                 type.label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 'Adds ${type.points} points',
@@ -193,11 +193,10 @@ class VerificationTypeCard extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            AppText(
               guidelinesText,
               style: theme.textTheme.bodySmall?.copyWith(color: muted),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             if (status == VerificationCardStatus.rejected &&
                 adminNotes != null &&

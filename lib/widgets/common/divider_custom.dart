@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Custom divider widget
 /// Styled divider with optional text and spacing
@@ -45,13 +46,12 @@ class DividerCustom extends ConsumerWidget {
           Flexible(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingMD),
-              child: Text(
+              child: AppText(
                 text!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: textColor,
                     ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
             ),

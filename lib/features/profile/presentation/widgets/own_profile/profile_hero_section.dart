@@ -16,6 +16,7 @@ import '../../../../../features/matching/providers/likes_providers.dart';
 import '../../../../../routes/home_tab_routes.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../widgets/tier_badge.dart';
+import '../../../../../core/responsive/responsive.dart';
 
 /// Premium profile hero — identity, status, stats, and quick actions.
 class ProfileHeroSection extends ConsumerStatefulWidget {
@@ -436,11 +437,10 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Flexible(
-          child: Text(
+          child: AppText(
             widget.fullName,
             textAlign: TextAlign.center,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: nameStyle,
           ),
         ),
@@ -488,11 +488,10 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
               ),
               const SizedBox(width: 4),
               Flexible(
-                child: Text(
+                child: AppText(
                   widget.locationLabel!,
                   textAlign: TextAlign.center,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: muted,
                     fontWeight: FontWeight.w500,
@@ -840,7 +839,7 @@ class _QuickActionButton extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Flexible(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -851,7 +850,6 @@ class _QuickActionButton extends StatelessWidget {
                           : AppColors.textPrimaryLight),
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -906,11 +904,10 @@ class _StatCell extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 2),
-        Text(
+        AppText(
           label,
           textAlign: TextAlign.center,
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
             color: muted,
             fontSize: 10,

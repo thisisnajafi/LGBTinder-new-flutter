@@ -185,14 +185,13 @@ class _AddPhotoTile extends StatelessWidget {
               color: AppColors.accentViolet,
             ),
             const SizedBox(height: 6),
-            Text(
+            AppText(
               'Add',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: AppColors.accentViolet,
                     fontWeight: FontWeight.w600,
                   ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -257,7 +256,7 @@ class PremiumPersonalitySection extends StatelessWidget {
                 ),
               ),
               child: hasBio
-                  ? Text(
+                  ? AppText(
                       quoteBio ? '"$trimmed"' : trimmed,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         height: 1.55,
@@ -266,7 +265,6 @@ class PremiumPersonalitySection extends StatelessWidget {
                             quoteBio ? FontStyle.italic : FontStyle.normal,
                       ),
                       maxLines: 8,
-                      overflow: TextOverflow.ellipsis,
                     )
                   : PremiumTapScale(
                       onTap: onEdit ?? () {},
@@ -280,14 +278,13 @@ class PremiumPersonalitySection extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
+                            child: AppText(
                               'Write a bio that shows who you are — humor, passions, what you are looking for.',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.65),
                               ),
                               maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -330,13 +327,12 @@ class PremiumPersonalitySection extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           starter,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -453,19 +449,17 @@ class _DetailChip extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   data.label,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                AppText(
                   data.value,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -644,14 +638,13 @@ class _GradientInterestPill extends StatelessWidget {
         ),
         border: Border.all(color: accent.withValues(alpha: 0.22)),
       ),
-      child: Text(
+      child: AppText(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: accent,
             ),
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -766,7 +759,7 @@ class PremiumMembershipSection extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           isBasid ? 'Unlock Premium' : '$tierLabel Membership',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
@@ -775,10 +768,9 @@ class PremiumMembershipSection extends StatelessWidget {
                                 : AppColors.textPrimaryLight,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         if (!isBasid && expiryText != null)
-                          Text(
+                          AppText(
                             'Active until $expiryText',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: isDark
@@ -786,7 +778,6 @@ class PremiumMembershipSection extends StatelessWidget {
                                   : AppColors.textSecondaryLight,
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                       ],
                     ),
@@ -817,7 +808,7 @@ class PremiumMembershipSection extends StatelessWidget {
                                 .withValues(alpha: 0.25),
                           ),
                         ),
-                        child: Text(
+                        child: AppText(
                           b,
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -826,7 +817,6 @@ class PremiumMembershipSection extends StatelessWidget {
                                 : AppColors.accentViolet,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     )

@@ -9,6 +9,7 @@ import '../../../core/theme/border_radius_constants.dart';
 import '../../buttons/gradient_button.dart';
 import '../../../core/utils/app_icons.dart';
 import 'profile_field_editor.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Profile section editor widget
 /// Editor for profile sections like interests, jobs, etc. with multi-select
@@ -140,18 +141,16 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
+          AppText(
             widget.sectionTitle,
             style: AppTypography.h2.copyWith(color: textColor),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          Text(
+          AppText(
             'Select ${widget.sectionTitle.toLowerCase()}',
             style: AppTypography.body.copyWith(color: secondaryTextColor),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           if (widget.showSearch) ...[
@@ -217,7 +216,7 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
                           color: AppColors.accentViolet,
                         ),
                       if (isSelected) SizedBox(width: AppSpacing.spacingXS),
-                      Text(
+                      AppText(
                         option,
                         style: AppTypography.body.copyWith(
                           color: isSelected
@@ -228,7 +227,6 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
                               : FontWeight.normal,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

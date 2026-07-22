@@ -76,7 +76,7 @@ class PremiumPageHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       title,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -84,15 +84,13 @@ class PremiumPageHeader extends StatelessWidget {
                         letterSpacing: -0.4,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 4),
-                      Text(
+                      AppText(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(color: muted),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],

@@ -7,6 +7,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../core/responsive/responsive.dart';
 
 /// Animation settings screen - Manage animation preferences
 class AnimationSettingsScreen extends ConsumerStatefulWidget {
@@ -299,13 +300,12 @@ class _AnimationSettingsScreenState
                 AppSettingsLayout.horizontalPadding,
                 0,
               ),
-              child: Text(
+              child: AppText(
                 'Enable animations above to customize motion types.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor,
                 ),
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],
@@ -360,13 +360,12 @@ class _SettingOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

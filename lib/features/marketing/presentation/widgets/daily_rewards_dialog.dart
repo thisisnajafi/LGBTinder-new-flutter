@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../data/models/daily_reward_model.dart';
 import '../../providers/marketing_providers.dart';
 import '../../data/services/daily_rewards_service.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Daily rewards dialog widget
 /// Shows 7-day calendar with streak progress and claim button
@@ -387,7 +388,7 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
             size: 24,
           ),
           const SizedBox(height: 4),
-          Text(
+          AppText(
             _getRewardLabel(config),
             style: theme.textTheme.labelSmall?.copyWith(
               color: color,
@@ -395,7 +396,6 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

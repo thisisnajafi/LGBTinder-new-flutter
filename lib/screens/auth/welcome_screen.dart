@@ -179,7 +179,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ),
         ),
         SizedBox(height: AppSpacing.spacingMD),
-        Text(
+        AppText(
           'Connect with like-minded people in a safe, inclusive community designed for everyone.',
           style: _whiteText(
             context,
@@ -188,7 +188,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ).copyWith(height: 1.55, letterSpacing: 0.15),
           textAlign: TextAlign.center,
           maxLines: 4,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

@@ -237,7 +237,7 @@ class _MessageInputState extends ConsumerState<MessageInput>
                                           color: AppColors.feedbackError,
                                         ),
                                         SizedBox(width: AppSpacing.spacingSM),
-                                        Text(
+                                        AppText(
                                           _formatRecordingDuration(
                                             _recordingSeconds,
                                           ),
@@ -246,7 +246,6 @@ class _MessageInputState extends ConsumerState<MessageInput>
                                             fontWeight: FontWeight.w700,
                                           ),
                                           maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         SizedBox(width: AppSpacing.spacingMD),
                                         Expanded(
@@ -259,10 +258,9 @@ class _MessageInputState extends ConsumerState<MessageInput>
                                         ),
                                         if (!compact) ...[
                                           SizedBox(width: AppSpacing.spacingSM),
-                                          Text(
+                                          AppText(
                                             '< Slide to cancel',
                                             maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                             style: AppTypography.bodySmall
                                                 .copyWith(
                                               color: secondaryTextColor,

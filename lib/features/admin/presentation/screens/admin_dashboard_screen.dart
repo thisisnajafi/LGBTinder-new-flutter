@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../providers/admin_provider.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../providers/admin_provider.dart';
 import '../widgets/analytics_card.dart';
 
 /// Admin dashboard screen
@@ -32,7 +33,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: const AppText(
+          'Admin Dashboard',
+          maxLines: 1,
+        ),
         actions: [
           IconButton(
             onPressed: () => adminNotifier.refreshDashboard(),
@@ -58,19 +62,31 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'users',
-                child: Text('Manage Users'),
+                child: AppText(
+                  'Manage Users',
+                  maxLines: 1,
+                ),
               ),
               const PopupMenuItem(
                 value: 'analytics',
-                child: Text('Analytics'),
+                child: AppText(
+                  'Analytics',
+                  maxLines: 1,
+                ),
               ),
               const PopupMenuItem(
                 value: 'settings',
-                child: Text('Settings'),
+                child: AppText(
+                  'Settings',
+                  maxLines: 1,
+                ),
               ),
               const PopupMenuItem(
                 value: 'system',
-                child: Text('System'),
+                child: AppText(
+                  'System',
+                  maxLines: 1,
+                ),
               ),
             ],
           ),
@@ -83,7 +99,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             : RefreshIndicator(
                 onRefresh: () => adminNotifier.refreshDashboard(),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: ResponsivePadding.page(context),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -114,18 +130,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       // Error display
       bottomSheet: adminState.error != null
           ? Container(
-              padding: const EdgeInsets.all(16),
+              padding: ResponsivePadding.horizontal(context).copyWith(
+                top: AppSpacing.spacingMD,
+                bottom: AppSpacing.spacingMD,
+              ),
               color: Colors.red.withOpacity(0.1),
               child: Row(
                 children: [
                   const Icon(Icons.error, color: Colors.red),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       adminState.error!,
                       style: const TextStyle(color: Colors.red),
                       maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
@@ -143,18 +161,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           'Welcome back, Admin',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
+          maxLines: 2,
         ),
         const SizedBox(height: 4),
-        Text(
+        AppText(
           'Here\'s what\'s happening with your app today',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
+          maxLines: 2,
         ),
       ],
     );
@@ -248,24 +268,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            AppText(
               'System Health',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
+              maxLines: 1,
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getHealthColor(systemHealth.status).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                systemHealth.status.toUpperCase(),
-                style: TextStyle(
-                  color: _getHealthColor(systemHealth.status),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getHealthColor(systemHealth.status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: AppText(
+                  systemHealth.status.toUpperCase(),
+                  style: TextStyle(
+                    color: _getHealthColor(systemHealth.status),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  textAlign: TextAlign.end,
                 ),
               ),
             ),
@@ -359,23 +384,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       children: [
         Icon(icon, size: 20, color: color),
         const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+                maxLines: 1,
               ),
-            ),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: color,
+              AppText(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+                maxLines: 1,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -453,11 +482,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Icon(icon, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child: AppText(
               title,
               style: const TextStyle(fontWeight: FontWeight.w500),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -503,17 +531,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          AppText(
                             'New user registered',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
                           ),
-                          Text(
+                          AppText(
                             '2 minutes ago',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             ),
+                            maxLines: 1,
                           ),
                         ],
                       ),

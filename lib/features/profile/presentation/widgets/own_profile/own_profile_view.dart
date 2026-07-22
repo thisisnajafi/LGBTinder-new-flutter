@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/cache/session_cache_providers.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -112,7 +113,9 @@ class OwnProfileView extends ConsumerWidget {
       tier: tier,
     );
 
-    return CustomScrollView(      physics: const AlwaysScrollableScrollPhysics(),
+    return ResponsiveGrid.constrained(
+      context,
+      CustomScrollView(      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
           child: Column(
@@ -171,6 +174,7 @@ class OwnProfileView extends ConsumerWidget {
           ),
         ),
       ],
+    ),
     );
   }
 

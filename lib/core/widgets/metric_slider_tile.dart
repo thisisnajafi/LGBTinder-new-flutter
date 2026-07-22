@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
+import '../responsive/responsive.dart';
 
 /// App-wide slider styling (purple track, white thumb).
 class AppSliderTheme extends StatelessWidget {
@@ -71,14 +72,13 @@ class MetricSliderTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: AppSpacing.spacingSM),
@@ -194,14 +194,13 @@ class AgeRangeSliderTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 'Age range',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: AppSpacing.spacingSM),

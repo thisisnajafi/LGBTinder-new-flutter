@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Match indicator widget
 /// Circular progress indicator showing match percentage
@@ -104,13 +105,12 @@ class MatchIndicator extends ConsumerWidget {
                           ),
                           SizedBox(width: AppSpacing.spacingXS),
                           Expanded(
-                            child: Text(
+                            child: AppText(
                               reason,
                               style: AppTypography.caption.copyWith(
                                 color: textColor,
                               ),
                               maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

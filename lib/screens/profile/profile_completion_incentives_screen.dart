@@ -10,6 +10,7 @@ import '../../core/widgets/app_page_header.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile completion incentives screen - Incentives for completing profile
 class ProfileCompletionIncentivesScreen extends ConsumerStatefulWidget {
@@ -365,23 +366,21 @@ class _ProfileCompletionIncentivesScreenState extends ConsumerState<ProfileCompl
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   title,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXS),
-                Text(
+                AppText(
                   description,
                   style: AppTypography.caption.copyWith(
                     color: secondaryTextColor,
                   ),
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

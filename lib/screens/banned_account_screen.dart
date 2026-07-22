@@ -8,6 +8,7 @@ import '../core/widgets/premium/premium_design_system.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../routes/app_router.dart';
 import '../widgets/buttons/gradient_button.dart';
+import '../core/responsive/responsive.dart';
 
 /// Shown when the backend reports the account is banned.
 class BannedAccountScreen extends ConsumerWidget {
@@ -37,22 +38,20 @@ class BannedAccountScreen extends ConsumerWidget {
                     color: theme.colorScheme.error,
                   ),
                   const SizedBox(height: AppSpacing.spacingLG),
-                  Text(
+                  AppText(
                     'Your account has been banned',
                     textAlign: TextAlign.center,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.spacingMD),
-                  Text(
+                  AppText(
                     'You can no longer use LGBTinder. All matches have been removed. '
                     'Contact support if you believe this is a mistake.',
                     textAlign: TextAlign.center,
                     maxLines: 5,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: secondaryTextColor,
                       height: 1.5,

@@ -11,6 +11,7 @@ import '../badges/premium_badge.dart';
 import '../error_handling/empty_state.dart';
 import '../loading/skeleton_loader.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Matches list widget
 /// Displays a list of matched users
@@ -128,13 +129,12 @@ class MatchesList extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           match['name'] ?? 'User',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: textColor,
                               ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (match['is_premium'] == true)
@@ -143,22 +143,20 @@ class MatchesList extends ConsumerWidget {
                   ),
                   SizedBox(height: AppSpacing.spacingXS),
                   if (match['last_message'] != null)
-                    Text(
+                    AppText(
                       match['last_message'],
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: secondaryTextColor,
                           ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     )
                   else if (match['matched_at'] != null)
-                    Text(
+                    AppText(
                       'Matched ${_formatTime(match['matched_at'])}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: secondaryTextColor,
                           ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                 ],
               ),

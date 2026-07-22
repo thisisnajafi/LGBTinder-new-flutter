@@ -27,6 +27,7 @@ import '../../features/profile/data/models/update_profile_request.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import 'dart:developer' as developer;
+import '../../core/responsive/responsive.dart';
 
 /// Profile completion screen - Complete user profile
 class ProfileCompletionScreen extends ConsumerStatefulWidget {
@@ -189,11 +190,10 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           'Profile Completion',
                           style: AppTypography.h3.copyWith(color: textColor),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Text(

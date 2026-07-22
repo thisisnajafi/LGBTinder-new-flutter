@@ -484,10 +484,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                 color: muted,
               ),
               const SizedBox(height: AppSpacing.spacingLG),
-              Text(
+              AppText(
                 'Select a conversation',
                 style: theme.textTheme.titleMedium?.copyWith(color: muted),
                 textAlign: TextAlign.center,
+                maxLines: 2,
               ),
             ],
           ),
@@ -576,26 +577,25 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     final showPremiumBanner =
         !ref.watch(isPremiumProvider) && !_premiumBannerDismissed;
 
-    if (AppBreakpoints.isTablet(context)) {
-      return _buildTabletMasterDetail(
-        theme: theme,
-        typingUsers: typingUsers,
-        showPremiumBanner: showPremiumBanner,
-      );
-    }
-
-    return PremiumTabPageLayout(
-      title: 'Messenger',
-      subtitle: 'Your conversations & matches',
-      action: IconButton(
-        icon: AppSvgIcon(
-          assetPath: AppIcons.search,
-          size: 24,
-          color: theme.colorScheme.onSurface,
+    return ResponsiveLayout(
+      phone: PremiumTabPageLayout(
+        title: 'Messenger',
+        subtitle: 'Your conversations & matches',
+        action: IconButton(
+          icon: AppSvgIcon(
+            assetPath: AppIcons.search,
+            size: 24,
+            color: theme.colorScheme.onSurface,
+          ),
+          onPressed: () => setState(() => _showSearch = !_showSearch),
         ),
-        onPressed: () => setState(() => _showSearch = !_showSearch),
+        body: _buildMessengerBody(
+          theme: theme,
+          typingUsers: typingUsers,
+          showPremiumBanner: showPremiumBanner,
+        ),
       ),
-      body: _buildMessengerBody(
+      tablet: _buildTabletMasterDetail(
         theme: theme,
         typingUsers: typingUsers,
         showPremiumBanner: showPremiumBanner,

@@ -2,6 +2,7 @@
 // Media picker component
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
@@ -70,7 +71,10 @@ class _MediaPickerState extends ConsumerState<MediaPicker> {
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
+      padding: ResponsivePadding.page(context).copyWith(
+        top: AppSpacing.spacingLG,
+        bottom: AppSpacing.spacingLG,
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final useColumn = constraints.maxWidth < 320;
@@ -153,13 +157,12 @@ class _MediaPickerState extends ConsumerState<MediaPicker> {
           children: [
             Icon(icon, color: AppColors.accentPurple, size: 32),
             SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            AppText(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: textColor,
                   ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

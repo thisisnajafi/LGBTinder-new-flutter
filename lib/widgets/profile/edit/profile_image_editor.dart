@@ -58,21 +58,19 @@ class _ProfileImageEditorState extends ConsumerState<ProfileImageEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             widget.galleryOnly ? 'Images' : 'Profile Images',
             style: theme.textTheme.headlineMedium?.copyWith(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           if (!widget.galleryOnly && widget.imageUrls.length > 1) ...[
             SizedBox(height: AppSpacing.spacingXS),
-            Text(
+            AppText(
               'Hold and drag to reorder. Tap a photo to set it as primary.',
               style: theme.textTheme.bodySmall?.copyWith(color: secondaryTextColor),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
           SizedBox(height: AppSpacing.spacingMD),

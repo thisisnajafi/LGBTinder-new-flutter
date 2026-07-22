@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Interest tag widget
 /// Displays an interest with optional icon
@@ -63,7 +64,7 @@ class InterestTag extends ConsumerWidget {
               ),
               SizedBox(width: AppSpacing.spacingXS),
             ],
-            Text(
+            AppText(
               interest,
               style: AppTypography.body.copyWith(
                 color: isSelected
@@ -74,7 +75,6 @@ class InterestTag extends ConsumerWidget {
                     : FontWeight.normal,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

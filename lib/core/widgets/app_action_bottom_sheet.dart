@@ -195,13 +195,12 @@ class _TitleHeader extends StatelessWidget {
       ),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(
+        child: AppText(
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
           maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -272,24 +271,22 @@ class AppBottomSheetActionTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      AppText(
                         item.label,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       if (item.subtitle != null) ...[
                         const SizedBox(height: 2),
-                        Text(
+                        AppText(
                           item.subtitle!,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface
                                 .withValues(alpha: 0.55),
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],
@@ -372,24 +369,22 @@ class AppBottomSheetConfirmBody extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            AppText(
               title,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               message,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
               maxLines: 6,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             SizedBox(

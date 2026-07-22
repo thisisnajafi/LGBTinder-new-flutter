@@ -9,6 +9,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/constants/animation_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Animated snackbar widget
 /// Custom snackbar with slide-in animation and gradient background
@@ -129,25 +130,23 @@ class AnimatedSnackbar extends ConsumerWidget {
           ),
           SizedBox(width: AppSpacing.spacingMD),
           Expanded(
-            child: Text(
+            child: AppText(
               message,
               style: AppTypography.body.copyWith(color: textColor),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (onAction != null && actionLabel != null) ...[
             SizedBox(width: AppSpacing.spacingMD),
             TextButton(
               onPressed: onAction,
-              child: Text(
+              child: AppText(
                 actionLabel!,
                 style: AppTypography.button.copyWith(
                   color: textColor,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

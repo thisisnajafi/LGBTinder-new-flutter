@@ -17,6 +17,7 @@ import '../features/safety/data/models/block.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import 'package:intl/intl.dart';
+import '../core/responsive/responsive.dart';
 
 /// Blocked users screen - Manage blocked users
 class BlockedUsersScreen extends ConsumerStatefulWidget {
@@ -261,13 +262,12 @@ class _BlockedUserRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   fullName,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.spacingXS),
                 Text(
@@ -280,13 +280,12 @@ class _BlockedUserRow extends StatelessWidget {
                     blockedUser.reason!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.spacingXS),
-                    child: Text(
+                    child: AppText(
                       'Reason: ${blockedUser.reason}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
               ],

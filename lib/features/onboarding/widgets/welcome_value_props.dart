@@ -4,6 +4,7 @@ import '../../../core/constants/animation_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Three concise value props for the welcome screen hero area.
 class WelcomeValueProps extends StatefulWidget {
@@ -144,11 +145,10 @@ class _ValuePropTile extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.95),
             ),
             SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            AppText(
               item.label,
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,

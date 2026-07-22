@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Analytics card widget - displays analytics metrics
 class AnalyticsCard extends ConsumerWidget {
@@ -66,14 +67,13 @@ class AnalyticsCard extends ConsumerWidget {
                   ),
                   SizedBox(width: AppSpacing.spacingSM),
                   Expanded(
-                    child: Text(
+                    child: AppText(
                       title,
                       style: AppTypography.labelLarge.copyWith(
                         color: textColor,
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -92,13 +92,12 @@ class AnalyticsCard extends ConsumerWidget {
               // Subtitle (if provided)
               if (subtitle != null) ...[
                 SizedBox(height: AppSpacing.spacingXS),
-                Text(
+                AppText(
                   subtitle!,
                   style: AppTypography.bodySmall.copyWith(
                     color: subtitleColor,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],

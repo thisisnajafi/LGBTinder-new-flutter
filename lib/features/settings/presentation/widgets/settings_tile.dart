@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Settings tile widget
 /// Displays individual setting items with icons and actions
@@ -80,7 +81,7 @@ class SettingsTile extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      AppText(
                         title,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w500,
@@ -89,17 +90,15 @@ class SettingsTile extends ConsumerWidget {
                               : theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
-                        Text(
+                        AppText(
                           subtitle!,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ],

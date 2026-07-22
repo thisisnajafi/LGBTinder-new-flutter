@@ -6,6 +6,7 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../routes/app_router.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Full-screen chat image viewer with pinch-to-zoom.
 class ChatImageViewer extends StatelessWidget {
@@ -78,15 +79,14 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
               color: AppColors.primaryLight,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               'Daily message limit reached',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            AppText(
               'Upgrade to silder or golden to send unlimited messages in this chat.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -95,7 +95,6 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
                     : AppColors.textSecondaryLight,
               ),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingLG),
             Semantics(
@@ -108,10 +107,9 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
                     Navigator.of(context).pop();
                     context.push(AppRoutes.subscriptionPlans);
                   },
-                  child: Text(
+                  child: AppText(
                     'View plans',
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -170,7 +168,7 @@ class ChatPremiumBanner extends StatelessWidget {
             final content = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   'Unlock full chat access',
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: isDark
@@ -178,9 +176,8 @@ class ChatPremiumBanner extends StatelessWidget {
                         : AppColors.textPrimaryLight,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                AppText(
                   'See all messages and send without daily limits.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isDark
@@ -188,7 +185,6 @@ class ChatPremiumBanner extends StatelessWidget {
                         : AppColors.textSecondaryLight,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             );

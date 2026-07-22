@@ -54,7 +54,7 @@ class DiscoverEmptyState extends StatelessWidget {
               children: [
                 _EmptyIllustration(animate: !reduceMotion),
                 const SizedBox(height: AppSpacing.spacingXL),
-                Text(
+                AppText(
                   title,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(
@@ -63,10 +63,9 @@ class DiscoverEmptyState extends StatelessWidget {
                     height: 1.2,
                   ),
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
-                Text(
+                AppText(
                   subtitle,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -74,7 +73,6 @@ class DiscoverEmptyState extends StatelessWidget {
                     height: 1.45,
                   ),
                   maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.spacingXL),
                 if (onPrimaryAction != null)
@@ -113,14 +111,13 @@ class DiscoverEmptyState extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.spacingSM),
                           Flexible(
-                            child: Text(
+                            child: AppText(
                               secondaryActionLabel!,
                               style: theme.textTheme.labelLarge?.copyWith(
                                 color: AppColors.accentViolet,
                                 fontWeight: FontWeight.w700,
                               ),
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -138,14 +135,13 @@ class DiscoverEmptyState extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.spacingXS,
                       ),
-                      child: Text(
+                      child: AppText(
                         tertiaryActionLabel!,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: AppColors.accentRose,
                           fontWeight: FontWeight.w700,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
                     ),

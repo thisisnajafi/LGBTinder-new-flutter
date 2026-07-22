@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Compact premium bar showing active discovery filters on the Discover tab.
 class DiscoverActiveFiltersBar extends StatelessWidget {
@@ -62,13 +63,12 @@ class DiscoverActiveFiltersBar extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.spacingSM),
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         'Active filters',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -94,7 +94,7 @@ class DiscoverActiveFiltersBar extends StatelessWidget {
                                   .withValues(alpha: 0.45),
                             ),
                             const SizedBox(width: 4),
-                            Text(
+                            AppText(
                               'Clear',
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: theme.colorScheme.onSurface
@@ -102,7 +102,6 @@ class DiscoverActiveFiltersBar extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                               ),
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -121,14 +120,13 @@ class DiscoverActiveFiltersBar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(99),
                           gradient: AppColors.brandGradient,
                         ),
-                        child: Text(
+                        child: AppText(
                           'Edit',
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
@@ -191,14 +189,13 @@ class _DiscoverFilterChip extends StatelessWidget {
           color: AppColors.accentViolet.withValues(alpha: 0.22),
         ),
       ),
-      child: Text(
+      child: AppText(
         label,
         style: theme.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w700,
           color: AppColors.accentViolet,
         ),
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

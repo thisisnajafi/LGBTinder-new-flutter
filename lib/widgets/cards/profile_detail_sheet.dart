@@ -228,7 +228,7 @@ class ProfileSheetContent extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       profile.age != null
                           ? '${profile.firstName}, ${profile.age}'
                           : profile.firstName,
@@ -237,7 +237,6 @@ class ProfileSheetContent extends StatelessWidget {
                         letterSpacing: -0.3,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     if (profile.city != null || profile.country != null) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
@@ -250,7 +249,7 @@ class ProfileSheetContent extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.spacingXS),
                           Expanded(
-                            child: Text(
+                            child: AppText(
                               [
                                 if (profile.city != null) profile.city,
                                 if (profile.country != null) profile.country,
@@ -260,7 +259,6 @@ class ProfileSheetContent extends StatelessWidget {
                                     .withValues(alpha: 0.65),
                               ),
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

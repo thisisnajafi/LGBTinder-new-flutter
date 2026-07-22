@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../providers/discovery_provider.dart';
 import 'profile_card.dart';
@@ -229,45 +230,56 @@ class _SwipeableCardStackState extends ConsumerState<SwipeableCardStack>
   }
 
   Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            'Finding matches...',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ],
+    return Padding(
+      padding: ResponsivePadding.horizontal(context),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            AppText(
+              'Finding matches...',
+              style: Theme.of(context).textTheme.bodyLarge,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No more profiles to show',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Check back later for new matches!',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+    return Padding(
+      padding: ResponsivePadding.horizontal(context),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 16),
+            AppText(
+              'No more profiles to show',
+              style: Theme.of(context).textTheme.headlineSmall,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            AppText(
+              'Check back later for new matches!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+            ),
+          ],
+        ),
       ),
     );
   }

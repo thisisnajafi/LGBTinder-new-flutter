@@ -243,7 +243,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                       Semantics(
                         label: 'New Match',
                         header: true,
-                        child: Text(
+                        child: AppText(
                           'New Match!',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
@@ -253,11 +253,10 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       SizedBox(height: AppSpacing.spacingSM),
-                      Text(
+                      AppText(
                         'Congratulations! You and ${widget.matchedUser.firstName} liked each other.',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: isDark
@@ -266,7 +265,6 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

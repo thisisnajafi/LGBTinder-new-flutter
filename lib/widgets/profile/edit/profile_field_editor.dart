@@ -7,6 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../buttons/gradient_button.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Profile field editor widget
 /// Generic editor for a single profile field
@@ -70,11 +71,10 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
+          AppText(
             widget.label,
             style: AppTypography.h3.copyWith(color: textColor),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           TextField(

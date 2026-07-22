@@ -18,6 +18,7 @@ import '../data/models/subscription_plan.dart';
 import '../presentation/widgets/offline_purchase_queue_indicator.dart';
 import '../providers/google_play_billing_provider.dart';
 import '../providers/payment_providers.dart';
+import '../../../core/responsive/responsive.dart';
 
 const _googlePlaySubscriptionsUrl =
     'https://play.google.com/store/account/subscriptions';
@@ -495,11 +496,10 @@ class _SubscriptionManagementPageState
                     ),
                     if (subPlan.description != null) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
-                      Text(
+                      AppText(
                         subPlan.description!,
                         style: theme.textTheme.bodySmall,
                         maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],
@@ -612,21 +612,19 @@ class _SubscriptionManagementPageState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   '${_tierLabel(tier)} · ${status.replaceAll('_', ' ')}',
                   style: AppTypography.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (startedDate != null)
-                  Text(
+                  AppText(
                     'Started ${_formatDate(startedDate)}'
                     '${endedDate != null ? ' · Ended ${_formatDate(endedDate)}' : ''}',
                     style: AppTypography.bodySmall,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),

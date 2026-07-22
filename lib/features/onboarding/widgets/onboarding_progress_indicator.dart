@@ -4,6 +4,7 @@ import '../../../core/constants/animation_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
+import '../../../core/responsive/responsive.dart';
 
 enum OnboardingProgressStyle { dots, segmentedBar }
 
@@ -206,7 +207,7 @@ class _EnhancedWizardProgress extends StatelessWidget {
                       const SizedBox(height: 2),
                       _stepTransition(
                         context: context,
-                        child: Text(
+                        child: AppText(
                           stepTitle!,
                           key: ValueKey<String>('title-$currentStep'),
                           style: textTheme.bodySmall?.copyWith(
@@ -214,7 +215,6 @@ class _EnhancedWizardProgress extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

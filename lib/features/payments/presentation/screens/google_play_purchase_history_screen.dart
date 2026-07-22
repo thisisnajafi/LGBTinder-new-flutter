@@ -253,20 +253,18 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
                 color: secondaryTextColor,
               ),
               SizedBox(height: AppSpacing.spacingLG),
-              Text(
+              AppText(
                 'No Purchases Found',
                 style: AppTypography.h2.copyWith(color: textColor),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingSM),
-              Text(
+              AppText(
                 'You haven\'t made any Google Play purchases yet.',
                 style: AppTypography.body.copyWith(color: secondaryTextColor),
                 textAlign: TextAlign.center,
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             SizedBox(height: AppSpacing.spacingLG),
             ElevatedButton.icon(

@@ -11,6 +11,7 @@ import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Advanced profile customization screen - Advanced profile customization options
 class AdvancedProfileCustomizationScreen extends ConsumerStatefulWidget {
@@ -280,14 +281,13 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         'Profile Opacity',
                         style: AppTypography.body.copyWith(
                           color: textColor,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
@@ -368,14 +368,13 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
               ),
               SizedBox(width: AppSpacing.spacingMD),
               Expanded(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
@@ -435,14 +434,13 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
               ),
               SizedBox(width: AppSpacing.spacingMD),
               Expanded(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)
@@ -481,23 +479,21 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   title,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXS),
-                Text(
+                AppText(
                   description,
                   style: AppTypography.caption.copyWith(
                     color: secondaryTextColor,
                   ),
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -544,14 +540,13 @@ class _AdvancedProfileCustomizationScreenState extends ConsumerState<AdvancedPro
           child: Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSelected)

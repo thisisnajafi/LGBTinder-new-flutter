@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 class ProfileBio extends ConsumerStatefulWidget {
   final String? bio;
@@ -123,10 +124,9 @@ class _ProfileBioState extends ConsumerState<ProfileBio> {
             duration: AppAnimations.transitionPage,
             crossFadeState:
                 _expanded || !needsCollapse ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            firstChild: Text(
+            firstChild: AppText(
               bio,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
               style: textTheme.bodyMedium?.copyWith(color: textColor, height: 1.5),
             ),
             secondChild: Text(

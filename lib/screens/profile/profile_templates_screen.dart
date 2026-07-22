@@ -299,13 +299,12 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
                     ],
                   ),
                   SizedBox(height: AppSpacing.spacingXS),
-                  Text(
+                  AppText(
                     template['description'] ?? '',
                     style: AppTypography.caption.copyWith(
                       color: secondaryTextColor,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   if (isSelected) ...[
                     SizedBox(height: AppSpacing.spacingSM),

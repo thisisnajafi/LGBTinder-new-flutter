@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
@@ -311,11 +312,9 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                   : RefreshIndicator(
                       onRefresh: _loadPlans,
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.spacingLG,
-                          AppSpacing.spacingSM,
-                          AppSpacing.spacingLG,
-                          AppSpacing.spacingXXL,
+                        padding: ResponsivePadding.horizontal(context).copyWith(
+                          top: AppSpacing.spacingSM,
+                          bottom: AppSpacing.spacingXXL,
                         ),
                         children: [
                           _buildPaymentBadge(borderColor, textColor),
@@ -345,11 +344,9 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         : 'Select a plan and billing period';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.spacingLG,
-        AppSpacing.spacingMD,
-        AppSpacing.spacingLG,
-        AppSpacing.spacingLG,
+      padding: ResponsivePadding.horizontal(context).copyWith(
+        top: AppSpacing.spacingMD,
+        bottom: AppSpacing.spacingLG,
       ),
       decoration: BoxDecoration(
         color: isDark
@@ -369,11 +366,10 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            AppText(
               summary,
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: AppTypography.caption.copyWith(
                 color: isDark
                     ? AppColors.textSecondaryDark
@@ -463,14 +459,13 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
               ),
               SizedBox(width: AppSpacing.spacingSM),
               Expanded(
-                child: Text(
+                child: AppText(
                   'Payment via ${paymentSystem.displayName}',
                   style: AppTypography.body.copyWith(
                     color: AppColors.accentPurple,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -654,12 +649,13 @@ class _PlanCard extends StatelessWidget {
                             runSpacing: AppSpacing.spacingXS,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Text(
+                              AppText(
                                 plan.name,
                                 style: AppTypography.h2.copyWith(
                                   color: textColor,
                                   fontWeight: FontWeight.w700,
                                 ),
+                                maxLines: 1,
                               ),
                               if (planTheme.isPopular)
                                 Container(
@@ -683,23 +679,23 @@ class _PlanCard extends StatelessWidget {
                             ],
                           ),
                           SizedBox(height: AppSpacing.spacingXS),
-                          Text(
+                          AppText(
                             tagline,
                             style: AppTypography.body.copyWith(
                               color: secondaryTextColor,
                               height: 1.35,
                             ),
                             maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           if (planSubPlans.isNotEmpty) ...[
                             SizedBox(height: AppSpacing.spacingSM),
-                            Text(
+                            AppText(
                               'From ${_formatCardPrice(startingPerMonth, startingCurrency)}/month',
                               style: AppTypography.labelMedium.copyWith(
                                 color: planTheme.accent,
                                 fontWeight: FontWeight.w700,
                               ),
+                              maxLines: 1,
                             ),
                           ],
                         ],

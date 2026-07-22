@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/call_provider.dart';
 
@@ -81,9 +83,11 @@ class _CallTimerState extends ConsumerState<CallTimer> {
           fontWeight: widget.fontWeight ?? FontWeight.w500,
         );
 
-    return Text(
+    return AppText(
       _formatDuration(duration),
       style: textStyle,
+      maxLines: 1,
+      textAlign: TextAlign.center,
     );
   }
 
@@ -126,12 +130,14 @@ class CallTimerWithLabel extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: alignment,
       children: [
-        Text(
+        AppText(
           label,
           style: labelStyle ??
               Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
+          maxLines: 1,
+          textAlign: TextAlign.center,
         ),
 
         const SizedBox(height: 4),
@@ -167,7 +173,7 @@ class CompactCallTimer extends ConsumerWidget {
     final callState = ref.watch(callProvider);
     final duration = callState.callDuration;
 
-    return Text(
+    return AppText(
       _formatDuration(duration),
       style: TextStyle(
         color: color ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
@@ -175,6 +181,7 @@ class CompactCallTimer extends ConsumerWidget {
         fontWeight: FontWeight.w500,
         fontFeatures: [const FontFeature.tabularFigures()], // Monospace numbers
       ),
+      maxLines: 1,
     );
   }
 
@@ -203,7 +210,12 @@ class CallTimerOverlay extends ConsumerWidget {
     return Align(
       alignment: alignment,
       child: Padding(
-        padding: padding,
+        padding: padding == const EdgeInsets.all(20)
+            ? ResponsivePadding.horizontal(context).copyWith(
+                top: AppSpacing.spacingMD,
+                bottom: AppSpacing.spacingMD,
+              )
+            : padding,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(

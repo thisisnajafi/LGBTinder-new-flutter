@@ -189,10 +189,9 @@ class OtherUserProfileHero extends StatelessWidget {
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(
+                          AppText(
                             fullName,
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.headlineSmall?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
@@ -379,10 +378,9 @@ class _HeroMetaPill extends StatelessWidget {
           const SizedBox(width: 4),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 180),
-            child: Text(
+            child: AppText(
               label,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -417,14 +415,13 @@ class _HeroStatChip extends StatelessWidget {
           const SizedBox(width: 4),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 200),
-            child: Text(
+            child: AppText(
               label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                   ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -504,14 +501,13 @@ class OtherUserProfileActionBar extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text(
+                        child: AppText(
                           isMatched ? 'Message' : 'Say hi',
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -704,22 +700,20 @@ class PremiumCompatibilitySection extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      AppText(
                         'Strong match potential',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      AppText(
                         'Based on interests, goals, and lifestyle',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -792,22 +786,20 @@ class _CompatRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   title,
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AppText(
                   values.isEmpty ? empty : values.join(' · '),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
                   ),
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -925,14 +917,13 @@ class _InterestGroupTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    return AppText(
       title,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.accentViolet,
           ),
       maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -970,14 +961,13 @@ class _InterestPill extends StatelessWidget {
             ),
             const SizedBox(width: 6),
           ],
-          Text(
+          AppText(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: shared ? Colors.white : accent,
                 ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1069,13 +1059,12 @@ class _DetailGroupCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: AppText(
                   group.title,
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -1106,7 +1095,7 @@ class _DetailGroupCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           chip.label,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurface
@@ -1114,15 +1103,13 @@ class _DetailGroupCard extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
+                        AppText(
                           chip.value,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../buttons/gradient_button.dart';
 import 'app_dialog.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Confirmation dialog widget
 /// Custom styled confirmation dialog with title, message, and action buttons
@@ -80,18 +81,16 @@ class ConfirmationDialog extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   title,
                   style: AppTypography.h2.copyWith(color: textColor),
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
-                Text(
+                AppText(
                   message,
                   style: AppTypography.body.copyWith(color: secondaryTextColor),
                   maxLines: 8,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.spacingXXL),
                 LayoutBuilder(

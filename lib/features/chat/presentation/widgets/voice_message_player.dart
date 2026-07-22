@@ -205,7 +205,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         timeLabel,
                         style: AppTypography.labelSmall.copyWith(
                           color: mutedAccent,
@@ -213,7 +213,6 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                           letterSpacing: 0.15,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.spacingSM),

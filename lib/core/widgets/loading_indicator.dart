@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
+import '../responsive/responsive.dart';
 
 /// Loading indicator with optional message. Uses [CircularProgressIndicator] only.
 class LoadingIndicator extends ConsumerWidget {
@@ -44,7 +45,7 @@ class LoadingIndicator extends ConsumerWidget {
           ),
           if (message != null) ...[
             SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               message!,
               style: TextStyle(
                 color: textColor,
@@ -52,7 +53,6 @@ class LoadingIndicator extends ConsumerWidget {
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],

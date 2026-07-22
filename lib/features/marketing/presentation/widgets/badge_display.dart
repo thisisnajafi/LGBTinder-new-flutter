@@ -6,6 +6,7 @@ import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/badge_model.dart';
 import '../../providers/marketing_providers.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Badge display widget for showing badges on profiles
 /// Part of the Marketing System Implementation (Task 3.4.4)
@@ -43,7 +44,7 @@ class BadgeDisplay extends ConsumerWidget {
             const SizedBox(height: 4),
             SizedBox(
               width: size + 16,
-              child: Text(
+              child: AppText(
                 badge.name,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: isEarned
@@ -53,7 +54,6 @@ class BadgeDisplay extends ConsumerWidget {
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

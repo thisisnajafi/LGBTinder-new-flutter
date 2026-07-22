@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Interest chip list widget
 /// Displays a list of user interests as chips
@@ -45,14 +46,13 @@ class InterestChipList extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   'Interests',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isEditable && onEdit != null) ...[
@@ -114,14 +114,13 @@ class InterestChipList extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Chip(
-      label: Text(
+      label: AppText(
         interest,
         style: theme.textTheme.labelSmall?.copyWith(
           color: color,
           fontWeight: FontWeight.w500,
         ),
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
       backgroundColor: color.withOpacity(0.1),
       side: BorderSide(

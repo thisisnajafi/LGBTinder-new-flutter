@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../data/models/user_profile.dart';
@@ -180,10 +181,12 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     final hasAbout = (bio != null && bio.isNotEmpty) ||
         conversationStarters.isNotEmpty;
 
-    return RefreshIndicator(
-      onRefresh: widget.onRefresh ?? () async {},
-      edgeOffset: MediaQuery.paddingOf(context).top,
-      child: CustomScrollView(
+    return ResponsiveGrid.constrained(
+      context,
+      RefreshIndicator(
+        onRefresh: widget.onRefresh ?? () async {},
+        edgeOffset: MediaQuery.paddingOf(context).top,
+        child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
@@ -259,6 +262,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

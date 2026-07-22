@@ -4,6 +4,7 @@ import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
 import 'app_page_header.dart';
+import '../responsive/responsive.dart';
 
 /// Muted section label above a grouped settings/menu card (REF profile layout).
 class AppGroupedListSection extends StatelessWidget {
@@ -42,14 +43,13 @@ class AppGroupedListSection extends StatelessWidget {
                 top: AppSpacing.spacingXS,
                 bottom: AppSpacing.spacingMD,
               ),
-              child: Text(
+              child: AppText(
                 title,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.60),
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           Material(
@@ -129,20 +129,18 @@ class AppGroupedListTile extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          AppText(
                             label,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           if (subtitle != null && subtitle!.isNotEmpty) ...[
                             const SizedBox(height: 2),
-                            Text(
+                            AppText(
                               subtitle!,
                               maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.55),
@@ -383,36 +381,33 @@ class AppGroupedInfoTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       label,
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.spacingXS),
-                    Text(
+                    AppText(
                       value,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               if (badge != null)
-                Text(
+                AppText(
                   badge!,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
             ],
           ),
@@ -436,18 +431,16 @@ class _GroupedRowLabels extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
           maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
         if (subtitle != null && subtitle!.isNotEmpty) ...[
           const SizedBox(height: 2),
-          Text(
+          AppText(
             subtitle!,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
             ),

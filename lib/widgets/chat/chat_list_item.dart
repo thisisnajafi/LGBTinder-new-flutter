@@ -14,6 +14,7 @@ import '../../core/widgets/profile_image_widget.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../../features/chat/utils/chat_message_preview.dart';
 import 'typing_indicator.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Single conversation row in the messenger list.
 class ChatListItem extends ConsumerWidget {
@@ -109,10 +110,9 @@ class ChatListItem extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      AppText(
                         displayName,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurface,
@@ -135,13 +135,12 @@ class ChatListItem extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (lastMessageTime != null)
-                      Text(
+                      AppText(
                         _formatTime(lastMessageTime!),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: mutedColor,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     if (unreadCount > 0) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
@@ -226,19 +225,17 @@ class _MessagePreview extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.spacingXS),
               Expanded(
-                child: Text(
+                child: AppText(
                   previewText,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: textStyle,
                 ),
               ),
             ],
           )
-        : Text(
+        : AppText(
             previewText,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: textStyle,
           );
 

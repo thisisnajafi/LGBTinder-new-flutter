@@ -12,6 +12,7 @@ import '../../widgets/common/section_header.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile sharing screen - Share profile functionality
 class ProfileSharingScreen extends ConsumerStatefulWidget {
@@ -149,13 +150,12 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           _profileShareUrl ?? 'Generating...',
                           style: AppTypography.body.copyWith(
                             color: textColor,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
@@ -250,13 +250,12 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                 ),
                 SizedBox(width: AppSpacing.spacingMD),
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     'Anyone with this link can view your profile. Make sure you trust the person you\'re sharing with.',
                     style: AppTypography.caption.copyWith(
                       color: textColor,
                     ),
                     maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -308,23 +307,21 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       title,
                       style: AppTypography.body.copyWith(
                         color: textColor,
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: AppSpacing.spacingXS),
-                    Text(
+                    AppText(
                       description,
                       style: AppTypography.caption.copyWith(
                         color: secondaryTextColor,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

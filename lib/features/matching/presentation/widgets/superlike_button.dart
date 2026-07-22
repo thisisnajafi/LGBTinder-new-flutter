@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/cache/cache_manager.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/animation_constants.dart';
@@ -152,7 +153,7 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
                           ),
                     if (widget.showLabel) ...[
                       const SizedBox(height: 2),
-                      Text(
+                      AppText(
                         matchingState.isSuperliking
                             ? 'Superliking...'
                             : widget.isPremium
@@ -164,6 +165,7 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
                           fontSize: 9,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
                       ),
                     ],
                   ],
@@ -221,28 +223,35 @@ class _SuperlikeButtonState extends ConsumerState<SuperlikeButton>
   void _showPremiumRequiredDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Premium Feature'),
-        content: const Text(
-          'Super Likes are a premium feature. Upgrade to premium to send Super Likes and increase your chances of matching!',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+      builder: (context) => ResponsiveGrid.constrainedTo(
+        context,
+        AlertDialog(
+          title: const AppText(
+            'Premium Feature',
+            maxLines: 2,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Navigate to premium upgrade screen
-              context.go('/premium');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryLight,
+          content: const AppText(
+            'Super Likes are a premium feature. Upgrade to premium to send Super Likes and increase your chances of matching!',
+            maxLines: 4,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
-            child: const Text('Upgrade'),
-          ),
-        ],
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.go('/premium');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryLight,
+              ),
+              child: const Text('Upgrade'),
+            ),
+          ],
+        ),
+        tablet: 400,
       ),
     );
   }

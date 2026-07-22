@@ -7,6 +7,7 @@ import '../../../core/utils/app_icons.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../routes/app_router.dart';
 import '../../../features/payments/data/models/plan_limits.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Premium banner when daily swipe quota is running low.
 class DiscoverSwipeLimitBanner extends StatelessWidget {
@@ -52,14 +53,13 @@ class DiscoverSwipeLimitBanner extends StatelessWidget {
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 320;
             final message = Expanded(
-              child: Text(
+              child: AppText(
                 '$remaining swipes left today ($used/$limit used)',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: accent,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             );
             final upgradeChip = !limits.planInfo.isPremium
@@ -78,14 +78,13 @@ class DiscoverSwipeLimitBanner extends StatelessWidget {
                           color: accent.withValues(alpha: 0.35),
                         ),
                       ),
-                      child: Text(
+                      child: AppText(
                         'Upgrade',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: accent,
                           fontWeight: FontWeight.w700,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   )

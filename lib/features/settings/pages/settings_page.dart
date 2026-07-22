@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/providers/theme_mode_provider.dart';
+import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
@@ -60,17 +61,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Log out?'),
-        content: const Text('You will need to sign in again to use the app.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
-            child: const Text('Log out'),
+      builder: (ctx) => ResponsiveGrid.constrainedTo(
+        ctx,
+        AlertDialog(
+          title: const AppText(
+            'Log out?',
+            maxLines: 2,
           ),
-        ],
+          content: const AppText(
+            'You will need to sign in again to use the app.',
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.feedbackError),
+              child: const Text('Log out'),
+            ),
+          ],
+        ),
+        tablet: 400,
       ),
     );
     if (confirmed != true || !mounted) return;
@@ -202,7 +213,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: _appVersion != null ? 'Version $_appVersion' : 'Loading…',
                 onTap: () {},
                 trailing: _appVersion != null
-                    ? Text(
+                    ? AppText(
                         _appVersion!,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: Theme.of(context)
@@ -210,6 +221,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   .onSurface
                                   .withValues(alpha: 0.45),
                             ),
+                        maxLines: 1,
                       )
                     : null,
               ),

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
+import '../../../core/responsive/responsive.dart';
 
 /// Shown on discover when a premium passport search location is active.
 class DiscoverPassportBanner extends StatelessWidget {
@@ -64,23 +65,21 @@ class DiscoverPassportBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    AppText(
                       'Passport active',
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: AppColors.accentRose,
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    AppText(
                       'Exploring $label',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

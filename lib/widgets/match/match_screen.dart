@@ -162,14 +162,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                           ),
                         ],
                       ),
-                      child: Text(
+                      child: AppText(
                         '100% Match',
                         style: AppTypography.h3.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   );
@@ -182,7 +181,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                 builder: (context, child) {
                   return Transform.scale(
                     scale: _scaleAnimation.value,
-                    child: Text(
+                    child: AppText(
                       'It\'s a Match! 🎉',
                       style: AppTypography.h1Large.copyWith(
                         color: textColor,
@@ -190,7 +189,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   );
                 },
@@ -198,14 +196,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
               SizedBox(height: AppSpacing.spacingMD),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-                child: Text(
+                child: AppText(
                   'You and ${widget.match.firstName} liked each other!',
                   style: AppTypography.body.copyWith(
                     color: secondaryTextColor,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               SizedBox(height: AppSpacing.spacingXXL),
@@ -317,14 +314,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen>
                               color: AppColors.accentViolet.withValues(alpha: 0.35),
                             ),
                           ),
-                          child: Text(
+                          child: AppText(
                             'Keep Swiping',
                             style: AppTypography.button.copyWith(
                               color: AppColors.accentViolet,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),

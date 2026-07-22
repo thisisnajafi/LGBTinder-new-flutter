@@ -891,7 +891,12 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(
+          content: AppText(
+            e.toString(),
+            maxLines: 3,
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isClearingPassport = false);
@@ -1185,29 +1190,45 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Widget _buildDiscoveryActionRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        DiscoverySwipeActionButton(
-          type: DiscoverySwipeActionType.dislike,
-          size: 58,
-          onPressed:
-              _isSwipeInProgress ? null : () => _handleAction('dislike'),
-        ),
-        const SizedBox(width: AppSpacing.spacingXXL),
-        DiscoverySwipeActionButton(
-          type: DiscoverySwipeActionType.superlike,
-          size: 54,
-          onPressed:
-              _isSwipeInProgress ? null : () => _handleAction('superlike'),
-        ),
-        const SizedBox(width: AppSpacing.spacingXXL),
-        DiscoverySwipeActionButton(
-          type: DiscoverySwipeActionType.like,
-          size: 58,
-          onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
-        ),
-      ],
+    final buttons = [
+      DiscoverySwipeActionButton(
+        type: DiscoverySwipeActionType.dislike,
+        size: 58,
+        onPressed: _isSwipeInProgress ? null : () => _handleAction('dislike'),
+      ),
+      const SizedBox(width: AppSpacing.spacingXXL),
+      DiscoverySwipeActionButton(
+        type: DiscoverySwipeActionType.superlike,
+        size: 54,
+        onPressed: _isSwipeInProgress ? null : () => _handleAction('superlike'),
+      ),
+      const SizedBox(width: AppSpacing.spacingXXL),
+      DiscoverySwipeActionButton(
+        type: DiscoverySwipeActionType.like,
+        size: 58,
+        onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final row = Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: buttons,
+        );
+        if (constraints.maxWidth < 320) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: ResponsivePadding.horizontal(context),
+            child: row,
+          );
+        }
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: buttons,
+        );
+      },
     );
   }
 }

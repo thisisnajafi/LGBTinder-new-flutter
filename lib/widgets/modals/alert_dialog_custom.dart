@@ -9,6 +9,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../buttons/gradient_button.dart';
 import '../../core/utils/app_icons.dart';
 import 'app_dialog.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Custom alert dialog widget
 /// Styled alert dialog with title, message, and action button
@@ -97,20 +98,18 @@ class AlertDialogCustom extends ConsumerWidget {
                     ),
               SizedBox(height: AppSpacing.spacingLG),
             ],
-            Text(
+            AppText(
               title,
               style: AppTypography.h2.copyWith(color: textColor),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               message,
               style: AppTypography.body.copyWith(color: secondaryTextColor),
               textAlign: TextAlign.center,
               maxLines: 6,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingXXL),
             GradientButton(

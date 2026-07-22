@@ -1,26 +1,44 @@
 {
   "project_info": {
-    "project_number": "736944131777",
-    "project_id": "lgbtfinder-c2bdc",
-    "storage_bucket": "lgbtfinder-c2bdc.firebasestorage.app"
+    "project_number": "904491806534",
+    "project_id": "lgbtfinder-fa8e5",
+    "storage_bucket": "lgbtfinder-fa8e5.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:736944131777:android:66f153c01aa591b389ce40",
+        "mobilesdk_app_id": "1:904491806534:android:a4691709932728d6477f47",
         "android_client_info": {
           "package_name": "com.lgbtfinder"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "904491806534-ueuvnia2ttclul4kn1n4b3hab6nm5t8a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lgbtfinder",
+            "certificate_hash": "74c46f7ffb3d4504886b5855e9af36c05097c6ca"
+          }
+        },
+        {
+          "client_id": "904491806534-vdhds1qkgv3ijf857d67mtg41hg0elvd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyC4MyyZG-KRgr1zcRNVxr-oAROpKVPsNic"
+          "current_key": "AIzaSyC2PHqj5Budg3aPVMbCr-G9T16TzDTIKxE"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "904491806534-vdhds1qkgv3ijf857d67mtg41hg0elvd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

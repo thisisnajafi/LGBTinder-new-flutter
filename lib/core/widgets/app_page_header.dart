@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
+import '../responsive/responsive.dart';
 
 /// Flat page header — replaces elevated AppBar on target screens.
 class AppPageHeader extends StatelessWidget {
@@ -49,13 +50,12 @@ class AppPageHeader extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Text(
+              child: AppText(
                 title,
                 style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (action != null) action!,
@@ -76,13 +76,12 @@ class AppPageHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Text(
+            child: AppText(
               title,
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (action != null) action!,

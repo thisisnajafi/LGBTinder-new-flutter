@@ -7,6 +7,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Visual style for [DistanceTag].
 enum DistanceTagVariant {
@@ -66,14 +67,13 @@ class DistanceTag extends ConsumerWidget {
               color: Colors.white.withValues(alpha: 0.9),
             ),
             const SizedBox(width: AppSpacing.spacingXS),
-            Text(
+            AppText(
               _formatDistance(),
               style: AppTypography.caption.copyWith(
                 color: Colors.white.withValues(alpha: 0.95),
                 fontWeight: FontWeight.w600,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -106,14 +106,13 @@ class DistanceTag extends ConsumerWidget {
             color: AppColors.accentPurple,
           ),
           const SizedBox(width: AppSpacing.spacingXS),
-          Text(
+          AppText(
             _formatDistance(),
             style: AppTypography.caption.copyWith(
               color: textColor,
               fontWeight: FontWeight.w500,
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

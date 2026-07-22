@@ -5,6 +5,7 @@ import '../../theme/border_radius_constants.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
 import 'premium_shell.dart';
+import '../../responsive/responsive.dart';
 
 /// Hub action card data (settings, profile account hub, UI sync).
 class PremiumHubActionData {
@@ -122,7 +123,7 @@ class PremiumHubCard extends StatelessWidget {
                           .withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(99),
                     ),
-                    child: Text(
+                    child: AppText(
                       data.statusLabel!,
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontSize: 9,
@@ -130,23 +131,20 @@ class PremiumHubCard extends StatelessWidget {
                         color: data.statusColor ?? AppColors.feedbackSuccess,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   ),
               ],
             ),
             const Spacer(),
-            Text(
+            AppText(
               data.title,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
-            Text(
+            AppText(
               data.subtitle,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 height: 1.2,

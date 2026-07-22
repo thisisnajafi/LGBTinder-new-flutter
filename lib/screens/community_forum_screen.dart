@@ -12,6 +12,7 @@ import '../widgets/common/divider_custom.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../features/community/providers/forum_provider.dart';
 import '../features/community/data/models/forum_post.dart';
+import '../core/responsive/responsive.dart';
 
 /// Community forum screen - Community discussions
 class CommunityForumScreen extends ConsumerStatefulWidget {
@@ -327,13 +328,12 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
                                     const SizedBox(
                                       height: AppSpacing.spacingSM,
                                     ),
-                                    Text(
+                                    AppText(
                                       post.content,
                                       style: AppTypography.body.copyWith(
                                         color: secondaryTextColor,
                                       ),
                                       maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(
                                       height: AppSpacing.spacingMD,

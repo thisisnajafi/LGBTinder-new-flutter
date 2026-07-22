@@ -128,7 +128,7 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         'Stickers',
                         style: AppTypography.h4.copyWith(
                           color: isDark
@@ -136,7 +136,6 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
                               : AppColors.textPrimaryLight,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Semantics(
@@ -401,7 +400,7 @@ class _LockedPackOverlay extends StatelessWidget {
               color: AppColors.primaryLight,
             ),
             const SizedBox(height: AppSpacing.spacingMD),
-            Text(
+            AppText(
               '$packName is premium',
               textAlign: TextAlign.center,
               style: AppTypography.labelMedium.copyWith(
@@ -410,10 +409,9 @@ class _LockedPackOverlay extends StatelessWidget {
                     : AppColors.textPrimaryLight,
               ),
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            AppText(
               'Upgrade to silder or golden to unlock this sticker pack.',
               textAlign: TextAlign.center,
               style: AppTypography.bodySmall.copyWith(
@@ -422,7 +420,6 @@ class _LockedPackOverlay extends StatelessWidget {
                     : AppColors.textSecondaryLight,
               ),
               maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.spacingLG),
             Semantics(

@@ -1,6 +1,7 @@
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 
@@ -26,16 +27,38 @@ class AgoraCallVideoLayer extends StatefulWidget {
 }
 
 class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
-  static const double _pipWidth = 112;
-  static const double _pipHeight = 148;
+  Offset? _pipOffset;
 
-  Offset _pipOffset = const Offset(
-    AppSpacing.spacingLG,
-    AppSpacing.spacingXL + 48,
-  );
+  double _pipWidth(BuildContext context) => AppBreakpoints.value(
+        context,
+        phone: 112.0,
+        tablet: 128.0,
+        desktop: 144.0,
+      );
+
+  double _pipHeight(BuildContext context) => _pipWidth(context) * (148 / 112);
+
+  double _controlsReserve(BuildContext context) => AppBreakpoints.value(
+        context,
+        phone: 120.0,
+        tablet: 140.0,
+        desktop: 160.0,
+      );
+
+  Offset _defaultPipOffset(BuildContext context) {
+    final inset = ResponsivePadding.horizontal(context);
+    return Offset(
+      inset.left,
+      inset.top + MediaQuery.paddingOf(context).top + AppSpacing.spacingXL,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pipWidth = _pipWidth(context);
+    final pipHeight = _pipHeight(context);
+    final pipOffset = _pipOffset ?? _defaultPipOffset(context);
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -55,22 +78,23 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
         ),
         if (widget.showLocalPreview)
           Positioned(
-            left: _pipOffset.dx,
-            top: _pipOffset.dy,
+            left: pipOffset.dx,
+            top: pipOffset.dy,
             child: GestureDetector(
               onPanUpdate: (details) {
                 final size = MediaQuery.sizeOf(context);
                 setState(() {
-                  final next = _pipOffset + details.delta;
+                  final base = _pipOffset ?? _defaultPipOffset(context);
+                  final next = base + details.delta;
                   _pipOffset = Offset(
-                    next.dx.clamp(0, size.width - _pipWidth),
-                    next.dy.clamp(0, size.height - _pipHeight - 120),
+                    next.dx.clamp(0, size.width - pipWidth),
+                    next.dy.clamp(0, size.height - pipHeight - _controlsReserve(context)),
                   );
                 });
               },
               child: Container(
-                width: _pipWidth,
-                height: _pipHeight,
+                width: pipWidth,
+                height: pipHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                   border: Border.all(color: Colors.white24, width: 2),

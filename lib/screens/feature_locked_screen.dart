@@ -12,6 +12,7 @@ import '../routes/app_router.dart';
 import '../shared/models/user_tier.dart';
 import '../shared/analytics/app_event_tracker.dart';
 import '../widgets/buttons/gradient_button.dart';
+import '../core/responsive/responsive.dart';
 
 class FeatureLockedScreen extends StatelessWidget {
   final String featureTitle;
@@ -101,28 +102,26 @@ class FeatureLockedScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.spacingMD),
                           Expanded(
-                            child: Text(
+                            child: AppText(
                               featureTitle,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: textColor,
                               ),
                               maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                       if (featureDescription != null) ...[
                         const SizedBox(height: AppSpacing.spacingMD),
-                        Text(
+                        AppText(
                           featureDescription!,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: secondaryTextColor,
                             height: 1.5,
                           ),
                           maxLines: 5,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                       const SizedBox(height: AppSpacing.spacingMD),

@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/typography.dart';
 import '../theme/spacing_constants.dart';
 import '../theme/border_radius_constants.dart';
+import '../responsive/responsive.dart';
 
 /// Profile statistics card widget
 /// Displays matches, likes, and views count
@@ -111,13 +112,12 @@ class ProfileStatsCard extends ConsumerWidget {
             ),
           ),
           SizedBox(height: AppSpacing.spacingXS),
-          Text(
+          AppText(
             label,
             style: AppTypography.bodySmall.copyWith(
               color: secondaryTextColor,
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
           ),
         ],

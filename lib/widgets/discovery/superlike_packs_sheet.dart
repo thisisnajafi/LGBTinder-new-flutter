@@ -19,6 +19,7 @@ import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/loading/skeleton_loading.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Opens the superlike packs purchase bottom sheet.
 Future<void> showSuperlikePacksSheet(
@@ -200,13 +201,12 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                       ),
                       SizedBox(width: AppSpacing.spacingSM),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           'Get Superlikes',
                           style: AppTypography.titleLarge.copyWith(
                             color: textPrimary,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -221,13 +221,12 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                           borderRadius:
                               BorderRadius.circular(AppRadius.radiusMD),
                         ),
-                        child: Text(
+                        child: AppText(
                           widget.headerMessage!,
                           style: AppTypography.bodyMedium.copyWith(
                             color: textPrimary,
                           ),
                           maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -265,14 +264,13 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                     : packs.isEmpty
                         ? Padding(
                             padding: EdgeInsets.all(AppSpacing.spacingLG),
-                            child: Text(
+                            child: AppText(
                               'Superlike packs are not available at the moment.',
                               style: AppTypography.bodyMedium.copyWith(
                                 color: textSecondary,
                               ),
                               textAlign: TextAlign.center,
                               maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           )
                         : ListView.separated(
@@ -320,26 +318,24 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
+                                              AppText(
                                                 pack.name,
                                                 style: AppTypography.titleMedium
                                                     .copyWith(
                                                   color: textPrimary,
                                                 ),
                                                 maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
                                               ),
                                               SizedBox(
                                                 height: AppSpacing.spacingXS,
                                               ),
-                                              Text(
+                                              AppText(
                                                 '${pack.superlikeCount} Superlikes',
                                                 style: AppTypography.bodySmall
                                                     .copyWith(
                                                   color: textSecondary,
                                                 ),
                                                 maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
                                           ),

@@ -7,6 +7,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Profile settings widget
 /// Displays settings options for profile management
@@ -150,18 +151,16 @@ class ProfileSettings extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     title,
                     style: AppTypography.h3.copyWith(color: textColor),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: AppSpacing.spacingXS),
-                  Text(
+                  AppText(
                     subtitle,
                     style: AppTypography.caption.copyWith(color: secondaryTextColor),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

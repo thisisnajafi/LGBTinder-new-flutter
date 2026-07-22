@@ -10,6 +10,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/utils/app_haptics.dart';
 import '../../core/constants/animation_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Gradient button widget — primary CTA with accent or pride gradient.
 class GradientButton extends ConsumerStatefulWidget {
@@ -212,7 +213,7 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                                 SizedBox(width: AppSpacing.spacingSM),
                               ],
                               Flexible(
-                                child: Text(
+                                child: AppText(
                                 widget.text,
                                 style: AppTypography.button.copyWith(
                                   color: Colors.white,
@@ -229,7 +230,6 @@ class _GradientButtonState extends ConsumerState<GradientButton>
                                       : null,
                                 ),
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                               ),
                             ],

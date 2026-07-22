@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/api_providers.dart';
 import '../providers/connectivity_provider.dart';
+import '../responsive/responsive.dart';
 import '../services/connectivity_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_icons.dart';
@@ -51,7 +52,9 @@ class ConnectivityBanner extends ConsumerWidget {
                     child: SafeArea(
                       bottom: false,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: ResponsivePadding.horizontal(context).copyWith(
+                          top: 8,
+                        ),
                         child: visible
                             ? _FloatingBanner(state: state)
                             : const SizedBox.shrink(),
@@ -115,14 +118,13 @@ class _FloatingBanner extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
+              child: AppText(
                 message,
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: onBannerColor,
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (state == NetworkConnectionState.disconnected)
@@ -134,12 +136,13 @@ class _FloatingBanner extends StatelessWidget {
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text(
+                child: AppText(
                   'Retry',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: onBannerColor,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
                 ),
               ),
           ],

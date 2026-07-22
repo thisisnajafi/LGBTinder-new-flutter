@@ -43,15 +43,16 @@ class PhotoGallery extends ConsumerWidget {
         crossAxisCount ?? ResponsiveGrid.photoColumns(context);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+      margin: ResponsivePadding.horizontal(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             'Photos',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                 ),
+            maxLines: 1,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           GridView.builder(
@@ -117,12 +118,14 @@ class PhotoGallery extends ConsumerWidget {
               color: AppColors.accentPurple,
             ),
             SizedBox(height: AppSpacing.spacingSM),
-            Text(
+            AppText(
               'Add Photo',
               style: TextStyle(
                 color: AppColors.accentPurple,
                 fontSize: 12,
               ),
+              maxLines: 1,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

@@ -11,6 +11,7 @@ import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
 import '../badges/notification_badge.dart';
 import '../buttons/scale_tap_feedback.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Floating glass bottom navigation — no pill behind active tab; icon + label only.
 class BottomNavbar extends ConsumerWidget {
@@ -265,10 +266,9 @@ class _NavItem extends StatelessWidget {
                   color: isActive ? activeColor : inactiveLabelColor,
                   height: 1.1,
                 ),
-                child: Text(
+                child: AppText(
                   label,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
               ),

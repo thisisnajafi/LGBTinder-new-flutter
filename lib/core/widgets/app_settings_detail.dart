@@ -5,6 +5,7 @@ import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
 import 'app_grouped_list_card.dart';
 import 'premium/premium_design_system.dart';
+import '../responsive/responsive.dart';
 
 /// Title Case for settings page headings (every word capitalized).
 String formatSettingsTitle(String title) {
@@ -107,13 +108,12 @@ class AppSettingsSectionFootnote extends StatelessWidget {
         AppSettingsLayout.horizontalPadding,
         0,
       ),
-      child: Text(
+      child: AppText(
         text,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
         ),
         maxLines: 4,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

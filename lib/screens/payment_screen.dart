@@ -11,6 +11,7 @@ import '../core/utils/app_icons.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../features/payments/providers/payment_providers.dart';
 import '../routes/app_router.dart';
+import '../core/responsive/responsive.dart';
 
 /// Payment screen — billing overview, methods, and shortcuts.
 class PaymentScreen extends ConsumerStatefulWidget {
@@ -152,14 +153,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              AppText(
                                 title,
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: textColor,
                                 ),
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
@@ -174,14 +174,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
+                            AppText(
                               '\$${amount.toStringAsFixed(2)}',
                               style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: textColor,
                               ),
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Container(

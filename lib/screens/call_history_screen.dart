@@ -13,6 +13,7 @@ import '../widgets/loading/skeleton_loader.dart';
 import '../pages/chat_page.dart';
 import '../features/calls/providers/call_provider.dart';
 import '../features/calls/data/models/call.dart';
+import '../core/responsive/responsive.dart';
 
 /// Call history screen - View call history
 class CallHistoryScreen extends ConsumerStatefulWidget {
@@ -224,7 +225,7 @@ class _CallHistoryRow extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.spacingXS),
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           displayName,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -233,7 +234,6 @@ class _CallHistoryRow extends StatelessWidget {
                                 : theme.colorScheme.onSurface,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

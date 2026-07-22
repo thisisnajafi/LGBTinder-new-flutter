@@ -52,6 +52,7 @@ import '../features/chat/utils/chat_timeline_merger.dart';
 import '../features/calls/utils/call_navigation.dart';
 import '../routes/app_router.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../core/responsive/responsive.dart';
 
 /// Chat page - Individual chat conversation screen
 class ChatPage extends ConsumerStatefulWidget {
@@ -909,15 +910,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             itemBuilder: (context, index) {
               final msg = pinned[index];
               return ListTile(
-                title: Text(
+                title: AppText(
                   msg.message,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
+                subtitle: AppText(
                   msg.createdAt.toLocal().toString(),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               );
             },

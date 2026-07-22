@@ -16,6 +16,7 @@ import '../../widgets/modals/alert_dialog_custom.dart';
 import '../../core/utils/app_icons.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/data/models/models.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Password reset flow screen - Multi-step password reset with OTP
 class PasswordResetFlowScreen extends ConsumerStatefulWidget {
@@ -526,12 +527,11 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          Text(
+          AppText(
             'We\'ve sent a 6-digit code to ${_emailController.text}',
             style: AppTypography.body.copyWith(color: secondaryTextColor),
             textAlign: TextAlign.center,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingXXL),
           LayoutBuilder(

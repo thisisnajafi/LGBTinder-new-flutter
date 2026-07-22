@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../badges/verification_badge.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Safety verification section widget
 /// Displays safety and verification status
@@ -54,11 +55,10 @@ class SafetyVerificationSection extends ConsumerWidget {
               ),
               SizedBox(width: AppSpacing.spacingMD),
               Expanded(
-                child: Text(
+                child: AppText(
                   'Safety & Verification',
                   style: AppTypography.h3.copyWith(color: textColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -125,11 +125,10 @@ class SafetyVerificationSection extends ConsumerWidget {
         ),
         SizedBox(width: AppSpacing.spacingMD),
         Expanded(
-          child: Text(
+          child: AppText(
             label,
             style: AppTypography.body.copyWith(color: textColor),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ),
         if (isVerified)

@@ -7,6 +7,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../core/responsive/responsive.dart';
 
 /// Skeleton loader settings screen - Manage skeleton loader preferences
 class SkeletonLoaderSettingsScreen extends ConsumerStatefulWidget {
@@ -364,13 +365,12 @@ class _SettingOption extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)

@@ -10,6 +10,7 @@ import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/utils/country_phone_utils.dart';
 import '../../../../core/widgets/inputs/national_phone_input_formatter.dart';
 import '../../../../features/reference_data/data/models/reference_item.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Auth text field widget - reusable text input for authentication forms
 class AuthTextField extends ConsumerStatefulWidget {
@@ -214,13 +215,12 @@ class _AuthTextFieldState extends ConsumerState<AuthTextField> {
                 ),
                 SizedBox(width: AppSpacing.spacingXS),
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     _errorText!,
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.feedbackError,
                     ),
                     maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

@@ -8,6 +8,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/constants/animation_constants.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Animated button widget
 /// Button with scale animation and ripple effect
@@ -135,11 +136,10 @@ class _AnimatedButtonState extends ConsumerState<AnimatedButton>
                       SizedBox(width: AppSpacing.spacingSM),
                     ],
                     Flexible(
-                      child: Text(
+                      child: AppText(
                         widget.text,
                         style: AppTypography.button.copyWith(color: textColor),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

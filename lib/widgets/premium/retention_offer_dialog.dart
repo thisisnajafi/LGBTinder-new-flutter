@@ -9,6 +9,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../buttons/gradient_button.dart';
 import '../badges/premium_badge.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Retention offer dialog widget
 /// Dialog offering discount to retain subscription
@@ -83,7 +84,7 @@ class RetentionOfferDialog extends ConsumerWidget {
           children: [
             PremiumBadge(isPremium: true, fontSize: 14),
             SizedBox(height: AppSpacing.spacingLG),
-            Text(
+            AppText(
               'Wait! Special Offer',
               style: AppTypography.h1.copyWith(
                 color: Colors.white,
@@ -91,7 +92,6 @@ class RetentionOfferDialog extends ConsumerWidget {
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingMD),
             Container(
@@ -114,27 +114,25 @@ class RetentionOfferDialog extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Flexible(
-                        child: Text(
+                        child: AppText(
                           originalPrice,
                           style: AppTypography.body.copyWith(
                             color: Colors.white70,
                             decoration: TextDecoration.lineThrough,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                         ),
                       ),
                       SizedBox(width: AppSpacing.spacingSM),
                       Flexible(
-                        child: Text(
+                        child: AppText(
                           discountedPrice,
                           style: AppTypography.h2.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -144,14 +142,13 @@ class RetentionOfferDialog extends ConsumerWidget {
               ),
             ),
             SizedBox(height: AppSpacing.spacingLG),
-            Text(
+            AppText(
               'Stay with us and save!',
               style: AppTypography.body.copyWith(
                 color: Colors.white70,
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: AppSpacing.spacingXXL),
             LayoutBuilder(

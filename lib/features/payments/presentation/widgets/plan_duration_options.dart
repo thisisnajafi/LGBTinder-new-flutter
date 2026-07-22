@@ -6,6 +6,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../data/models/sub_plan_bundle_pricing.dart';
 import '../../data/models/subscription_plan.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Duration pricing rows for a single plan tier (1 month → yearly).
 class PlanDurationOptions extends StatelessWidget {
@@ -247,10 +248,9 @@ class _Badge extends StatelessWidget {
         color: background,
         borderRadius: BorderRadius.circular(AppRadius.radiusSM),
       ),
-      child: Text(
+      child: AppText(
         label,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         style: AppTypography.caption.copyWith(
           color: Colors.white,
           fontWeight: FontWeight.w700,

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Analytics chart widget - displays data visualizations
 class AnalyticsChart extends ConsumerWidget {
@@ -125,12 +126,11 @@ class AnalyticsChart extends ConsumerWidget {
                         SizedBox(height: AppSpacing.spacingXS),
 
                         // Label
-                        Text(
+                        AppText(
                           _formatLabel(entry.key),
                           style: AppTypography.labelSmall.copyWith(color: subtitleColor),
                           textAlign: TextAlign.center,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

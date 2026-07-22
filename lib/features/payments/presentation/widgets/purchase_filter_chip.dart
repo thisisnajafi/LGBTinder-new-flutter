@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Filter chip for purchase history filters
 class PurchaseFilterChip extends StatelessWidget {
@@ -23,10 +24,9 @@ class PurchaseFilterChip extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return FilterChip(
-      label: Text(
+      label: AppText(
         label,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
       selected: isSelected,
       onSelected: (_) => onSelected(),

@@ -7,6 +7,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../features/profile/widgets/profile_info_pill.dart';
 import '../../features/profile/widgets/interest_chip_list.dart';
+import '../../core/responsive/responsive.dart';
 
 class ProfileInfoSections extends ConsumerWidget {
   final List<String>? interests;
@@ -210,11 +211,10 @@ class _Section extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             title,
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           child,

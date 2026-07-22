@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/banner_model.dart';
 import '../../providers/marketing_providers.dart';
+import '../../../../core/responsive/responsive.dart';
 
 /// Promotional banner widget
 /// Supports hero, interstitial, sticky, and popup banner types
@@ -326,13 +327,12 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
                     ),
                   ),
                   if (widget.banner.subtitle != null)
-                    Text(
+                    AppText(
                       widget.banner.subtitle!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                 ],
               ),

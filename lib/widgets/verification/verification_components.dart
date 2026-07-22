@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../features/profile/data/models/profile_verification.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Reusable verification UI components.
 class VerificationScoreRing extends StatelessWidget {
@@ -152,7 +153,7 @@ class VerificationBadgeChip extends StatelessWidget {
             color: color,
           ),
           SizedBox(width: AppSpacing.spacingXS),
-          Text(
+          AppText(
             badge,
             style: (compact
                     ? theme.textTheme.labelSmall
@@ -162,7 +163,6 @@ class VerificationBadgeChip extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -275,29 +275,26 @@ class VerificationHistoryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   '${item.typeLabel} — ${item.statusLabel}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (item.submittedAt != null)
-                  Text(
+                  AppText(
                     'Submitted ${formatVerificationTimeAgo(item.submittedAt!)}',
                     style: theme.textTheme.labelSmall?.copyWith(color: muted),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 if (item.adminNotes != null && item.status == 'rejected')
-                  Text(
+                  AppText(
                     'Reason: ${item.adminNotes}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.error,
                     ),
                     maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),

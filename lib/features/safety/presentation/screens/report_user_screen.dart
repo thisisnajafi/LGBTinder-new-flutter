@@ -146,20 +146,18 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
           child: ListView(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
             children: [
-              Text(
+              AppText(
                 'Why are you reporting this user?',
                 style: AppTypography.h3.copyWith(color: textColor),
                 maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingMD),
-              Text(
+              AppText(
                 'Your report helps us keep the community safe. All reports are reviewed by our team.',
                 style: AppTypography.body.copyWith(
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
                 maxLines: 4,
-                overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSpacing.spacingXXL),
 
@@ -189,11 +187,10 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
                     ),
                   ),
                   child: RadioListTile<String>(
-                    title: Text(
+                    title: AppText(
                       _reasonLabels[reason] ?? reason,
                       style: AppTypography.body.copyWith(color: textColor),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     value: reason,
                     groupValue: _selectedReason,

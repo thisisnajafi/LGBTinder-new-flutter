@@ -22,6 +22,7 @@ import '../core/location/location_required_exception.dart';
 import '../core/location/widgets/emergency_alert_countdown_dialog.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import '../widgets/common/reference_bottom_sheet_field.dart';
+import '../core/responsive/responsive.dart';
 
 /// Emergency contacts screen - Manage emergency contacts
 class EmergencyContactsScreen extends ConsumerStatefulWidget {
@@ -294,33 +295,30 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  AppText(
                                     contact['name']?.toString() ?? 'Contact',
                                     style: theme.textTheme.titleSmall?.copyWith(
                                       fontWeight: FontWeight.w700,
                                     ),
                                     maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   if (contact['phone'] != null)
-                                    Text(
+                                    AppText(
                                       contact['phone'].toString(),
                                       style: theme.textTheme.bodySmall?.copyWith(
                                         color: theme.colorScheme.onSurface
                                             .withValues(alpha: 0.55),
                                       ),
                                       maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   if (contact['relationship'] != null)
-                                    Text(
+                                    AppText(
                                       contact['relationship'].toString(),
                                       style: theme.textTheme.labelSmall?.copyWith(
                                         color: theme.colorScheme.onSurface
                                             .withValues(alpha: 0.45),
                                       ),
                                       maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                 ],
                               ),

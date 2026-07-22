@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/avatar_widget.dart';
-import '../../../../shared/widgets/common/app_svg_icon.dart';
-import '../../../../core/utils/app_icons.dart';
-import '../models/match.dart';
+import '../../data/models/match.dart';
 
 /// Match celebration widget
 /// Shows animated celebration when users match
@@ -121,24 +121,26 @@ class _MatchCelebrationState extends ConsumerState<MatchCelebration>
           Center(
             child: ScaleTransition(
               scale: _scaleAnimation,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 32),
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      spreadRadius: 5,
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+              child: ResponsiveGrid.constrainedTo(
+                context,
+                Container(
+                  margin: ResponsivePadding.horizontal(context),
+                  padding: ResponsivePadding.page(context),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        spreadRadius: 5,
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     // Celebration icon
                     AnimatedBuilder(
                       animation: _bounceAnimation,
@@ -177,24 +179,26 @@ class _MatchCelebrationState extends ConsumerState<MatchCelebration>
                     const SizedBox(height: 24),
 
                     // Title
-                    Text(
+                    AppText(
                       widget.isSuperMatch ? 'Super Match!' : 'It\'s a Match!',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
+                      maxLines: 2,
                     ),
 
                     const SizedBox(height: 8),
 
                     // Subtitle
-                    Text(
+                    AppText(
                       'You and ${widget.match.firstName} liked each other!',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                       ),
                       textAlign: TextAlign.center,
+                      maxLines: 3,
                     ),
 
                     const SizedBox(height: 32),
@@ -258,62 +262,136 @@ class _MatchCelebrationState extends ConsumerState<MatchCelebration>
 
                     const SizedBox(height: 32),
 
-                    // Action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: widget.onKeepSwiping ?? () => Navigator.of(context).pop(),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              side: BorderSide(
-                                color: theme.colorScheme.outline,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Keep Swiping',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                        ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final stackVertically = constraints.maxWidth < 320;
 
-                        const SizedBox(width: 16),
+                        if (stackVertically) {
+                          return Column(
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: widget.onKeepSwiping ??
+                                      () => Navigator.of(context).pop(),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    side: BorderSide(
+                                      color: theme.colorScheme.outline,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: AppText(
+                                    'Keep Swiping',
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: widget.onSendMessage ?? () {
+                                    Navigator.of(context).pop();
+                                    context.go(
+                                      '/chat/${widget.match.matchedUser.id}',
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    backgroundColor: AppColors.primaryLight,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: AppText(
+                                    'Send Message',
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
 
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: widget.onSendMessage ?? () {
-                              Navigator.of(context).pop();
-                              // Navigate to chat screen with the matched user
-                              context.go('/chat/${widget.match.matchedUser.id}');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor: AppColors.primaryLight,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: widget.onKeepSwiping ??
+                                    () => Navigator.of(context).pop(),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  side: BorderSide(
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: AppText(
+                                  'Keep Swiping',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              'Send Message',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: widget.onSendMessage ?? () {
+                                  Navigator.of(context).pop();
+                                  context.go(
+                                    '/chat/${widget.match.matchedUser.id}',
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  backgroundColor: AppColors.primaryLight,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: AppText(
+                                  'Send Message',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
+              tablet: 480,
             ),
           ),
+        ),
 
           // Close button
           Positioned(

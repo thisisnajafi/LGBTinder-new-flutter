@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../avatar/avatar_with_status.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Greeting header widget
 /// Displays personalized greeting with user avatar
@@ -59,19 +60,17 @@ class GreetingHeader extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AppText(
                   '${_getGreeting()}, $userName',
                   style: AppTypography.h2.copyWith(color: textColor),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null) ...[
                   SizedBox(height: AppSpacing.spacingXS),
-                  Text(
+                  AppText(
                     subtitle!,
                     style: AppTypography.body.copyWith(color: secondaryTextColor),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],

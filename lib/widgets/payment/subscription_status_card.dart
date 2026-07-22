@@ -9,6 +9,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../badges/premium_badge.dart';
 import '../buttons/gradient_button.dart';
+import '../../core/responsive/responsive.dart';
 
 /// Subscription status card widget
 /// Displays current subscription status and details
@@ -70,13 +71,12 @@ class SubscriptionStatusCard extends ConsumerWidget {
                 PremiumBadge(isPremium: true, fontSize: 12),
               if (isPremium) SizedBox(width: AppSpacing.spacingSM),
               Expanded(
-                child: Text(
+                child: AppText(
                   planName,
                   style: AppTypography.h2.copyWith(
                     color: isPremium ? Colors.white : textColor,
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (status != null)
@@ -90,14 +90,13 @@ class SubscriptionStatusCard extends ConsumerWidget {
                       color: getStatusColor().withOpacity(0.2),
                       borderRadius: BorderRadius.circular(AppRadius.radiusRound),
                     ),
-                    child: Text(
+                    child: AppText(
                       status!.toUpperCase(),
                       style: AppTypography.caption.copyWith(
                         color: getStatusColor(),
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
                   ),
@@ -117,7 +116,7 @@ class SubscriptionStatusCard extends ConsumerWidget {
                 ),
                 SizedBox(width: AppSpacing.spacingSM),
                 Expanded(
-                  child: Text(
+                  child: AppText(
                     status?.toLowerCase() == 'active'
                         ? 'Renews ${_formatDate(expiresAt!)}'
                         : 'Expires ${_formatDate(expiresAt!)}',
@@ -127,7 +126,6 @@ class SubscriptionStatusCard extends ConsumerWidget {
                           : secondaryTextColor,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
