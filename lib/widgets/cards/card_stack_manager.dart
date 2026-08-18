@@ -18,6 +18,23 @@ import '../../widgets/loading/skeleton_loader.dart';
 import '../../core/widgets/loading_indicator.dart';
 import '../../core/responsive/responsive.dart';
 
+/// True when [cardId] was already painted in the visible deck, so promoting
+/// it to the front must not rebuild the photo as a fresh network load.
+bool discoverCardWasVisibleInStack(
+  Object? cardId,
+  List<Map<String, dynamic>> previousCards, {
+  int visibleCount = 3,
+}) {
+  if (cardId == null) return false;
+  final limit = previousCards.length < visibleCount
+      ? previousCards.length
+      : visibleCount;
+  for (var i = 0; i < limit; i++) {
+    if (previousCards[i]['id'] == cardId) return true;
+  }
+  return false;
+}
+
 /// Card stack manager widget
 /// Manages a stack of swipeable cards for discovery screen
 class CardStackManager extends ConsumerStatefulWidget {
@@ -83,6 +100,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   Object? _lastTopCardId;
   int _prefetchGeneration = 0;
   bool _frontImagesReady = true;
+  final Map<int, GlobalKey> _cardKeys = <int, GlobalKey>{};
 
   @override
   void initState() {
@@ -122,16 +140,33 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       _frontImagesReady = false;
       _revealController.value = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_prepareFrontCards());
+        if (mounted) {
+          unawaited(_prepareFrontCards(blockUntilReady: true));
+        }
       });
     }
   }
 
-  Future<void> _prepareFrontCards() async {
+  Key _keyForCard(int userId) {
+    return _cardKeys.putIfAbsent(userId, GlobalKey.new);
+  }
+
+  void _pruneCardKeys() {
+    final live = <int>{};
+    for (final card in widget.cards.take(4)) {
+      final id = card['id'];
+      if (id is int) live.add(id);
+    }
+    final exitingId = _exitingCardSnapshot?['id'];
+    if (exitingId is int) live.add(exitingId);
+    _cardKeys.removeWhere((id, _) => !live.contains(id));
+  }
+
+  Future<void> _prepareFrontCards({required bool blockUntilReady}) async {
     if (widget.cards.isEmpty || widget.isLoading) return;
 
     final generation = ++_prefetchGeneration;
-    if (mounted) {
+    if (blockUntilReady && mounted) {
       setState(() {
         _frontImagesReady = false;
       });
@@ -142,8 +177,10 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     if (!mounted || generation != _prefetchGeneration) return;
 
-    setState(() => _frontImagesReady = true);
-    _playRevealAnimation();
+    if (blockUntilReady || !_frontImagesReady) {
+      setState(() => _frontImagesReady = true);
+      _playRevealAnimation();
+    }
   }
 
   void _playRevealAnimation() {
@@ -166,12 +203,16 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     }
     if (oldWidget.cards.isEmpty && widget.cards.isNotEmpty) {
       _lastTopCardId = widget.cards.first['id'];
-      unawaited(_prepareFrontCards());
-    }
-    if (newTopId != null && newTopId != _lastTopCardId) {
+      unawaited(_prepareFrontCards(blockUntilReady: true));
+    } else if (newTopId != null && newTopId != _lastTopCardId) {
+      final alreadyVisible = discoverCardWasVisibleInStack(
+        newTopId,
+        oldWidget.cards,
+      );
       _lastTopCardId = newTopId;
-      unawaited(_prepareFrontCards());
+      unawaited(_prepareFrontCards(blockUntilReady: !alreadyVisible));
     }
+    _pruneCardKeys();
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
       _dragOffset = Offset.zero;
       _lastTopCardId = null;
@@ -264,22 +305,36 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
             minimumVerticalMargin: AppSpacing.spacingLG * 2,
           );
 
+          final exitingId = _exitingCardSnapshot?['id'];
+          final remainingCards = [
+            for (final card in widget.cards)
+              if (card['id'] != exitingId) card,
+          ];
+
           return Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
-              if (widget.cards.length > 2)
-                _buildStackCard(widget.cards[2], depth: 2, cardSize: cardSize),
-              if (widget.cards.length > 1)
-                _buildStackCard(widget.cards[1], depth: 1, cardSize: cardSize),
-              if (widget.cards.isNotEmpty)
+              if (remainingCards.length > 2)
+                _buildStackCard(
+                  remainingCards[2],
+                  depth: 2,
+                  cardSize: cardSize,
+                ),
+              if (remainingCards.length > 1)
+                _buildStackCard(
+                  remainingCards[1],
+                  depth: 1,
+                  cardSize: cardSize,
+                ),
+              if (remainingCards.isNotEmpty)
                 _exitingCardSnapshot == null
                     ? _buildInteractiveTopCard(
-                        widget.cards[0],
+                        remainingCards[0],
                         cardSize: cardSize,
                       )
                     : _buildStackCard(
-                        widget.cards[0],
+                        remainingCards[0],
                         depth: 0,
                         cardSize: cardSize,
                       ),
@@ -328,6 +383,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     required Size cardSize,
   }) {
     return Positioned.fill(
+      key: ValueKey<int>(cardData['id'] as int? ?? 0),
       child: _applyStackDepth(
         depth: depth,
         child: Align(
@@ -405,6 +461,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     final isDragging = !widget.isSheetOpen && _dragOffset != Offset.zero;
 
     return Positioned.fill(
+      key: ValueKey<int>(cardData['id'] as int? ?? 0),
       child: FadeTransition(
         opacity: _revealOpacity,
         child: SlideTransition(
@@ -468,6 +525,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     required Size cardSize,
   }) {
     return Positioned.fill(
+      key: ValueKey<String>('exiting_${cardData['id']}'),
       child: SlideTransition(
         position: _exitSlide,
         child: FadeTransition(
@@ -610,7 +668,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         const <MatchReason>[];
 
     return SwipeableCard(
-      key: ValueKey('discover_card_$userId'),
+      key: _keyForCard(userId),
       userId: userId,
       name: cardData['name']?.toString() ?? 'User',
       age: cardData['age'] as int?,

@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/cache/session_cache_providers.dart';
+import '../../../../../core/providers/own_presence_provider.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
-import '../../../../payments/data/models/subscription_plan.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/profile_verification.dart';
 import '../../../providers/profile_page_cache_provider.dart';
@@ -63,6 +63,9 @@ class OwnProfileView extends ConsumerWidget {
 
     final UserTier tier = ref.watch(userTierProvider);
     final superlikes = ref.watch(superlikesRemainingProvider);
+    // Live presence from lifecycle/API markOnline — not stale profile cache alone.
+    final liveOnline = ref.watch(ownPresenceProvider);
+    final isOnline = liveOnline || profile.isOnline == true;
 
     final cacheData = ref.watch(profilePageCacheProvider).valueOrNull;
     final subscription = cacheData?.subscription;
@@ -129,7 +132,7 @@ class OwnProfileView extends ConsumerWidget {
                 isVerified: isVerified,
                 tier: tier,
                 locationLabel: locationLabel,
-                isOnline: profile.isOnline != false,
+                isOnline: isOnline,
                 viewsCount: profile.viewsCount ?? 0,
                 superlikesRemaining: superlikes,
                 onEditProfile: () => _openEdit(context, ref),

@@ -47,7 +47,10 @@ UserTier userTierFromPlan({int? planId, String? planName}) {
       name.contains(' gold')) {
     return UserTier.golden;
   }
-  if (planId == 2 || name.contains('silver') || name.contains('premium')) {
+  if (planId == 2 ||
+      name.contains('silver') ||
+      name.contains('silder') ||
+      name.contains('premium')) {
     return UserTier.silder;
   }
   return UserTier.basid;
@@ -58,10 +61,15 @@ UserTier userTierFromApiKey(String? raw) {
   switch (raw?.toLowerCase().trim()) {
     case 'basic':
     case 'basid':
+    case 'bronze':
+    case 'free':
       return UserTier.basid;
     case 'silder':
+    case 'silver':
+    case 'premium':
       return UserTier.silder;
     case 'golden':
+    case 'gold':
       return UserTier.golden;
     default:
       return UserTier.basid;

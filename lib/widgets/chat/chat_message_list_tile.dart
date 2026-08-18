@@ -38,7 +38,9 @@ class ChatMessageListTile extends StatelessWidget {
         deliveryStatus: deliveryStatus ?? MessageDeliveryStatus.sent,
         onRetry: onRetry,
         messageType: message['type'] ?? 'text',
-        remainingSeconds: message['remaining_seconds'],
+        remainingSeconds: message['remaining_seconds'] is int
+            ? message['remaining_seconds'] as int
+            : int.tryParse(message['remaining_seconds']?.toString() ?? ''),
         mediaUrl: message['attachment_url']?.toString(),
         mediaDuration: message['media_duration'] is int
             ? message['media_duration'] as int
@@ -51,9 +53,7 @@ class ChatMessageListTile extends StatelessWidget {
         heroTag: message['hero_tag']?.toString(),
         messageId: message['id'] is int ? message['id'] as int : 0,
         isExpired: message['is_expired'] == true,
-        viewedAt: message['viewed_at'] is DateTime
-            ? message['viewed_at'] as DateTime
-            : null,
+        viewedAt: AppDateTime.parseApi(message['viewed_at']),
         onSelfDestructTap: onSelfDestructTap,
       ),
     );

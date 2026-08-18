@@ -8,6 +8,7 @@ import '../../features/profile/data/models/user_profile.dart';
 import '../../features/profile/data/services/profile_service.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../providers/api_providers.dart';
+import '../providers/own_presence_provider.dart';
 import 'cache_config.dart';
 import 'cache_providers.dart';
 import '../providers/subscription_provider.dart';
@@ -80,6 +81,9 @@ class AppCacheManager {
 
     try {
       final fresh = await _profileService.getMyProfile();
+      if (fresh.isOnline == true) {
+        _ref.read(ownPresenceProvider.notifier).markOnline();
+      }
       if (cached == null || !_profilesEqual(cached.data, fresh)) {
         await _userCache.saveProfile(
           userId,

@@ -294,7 +294,9 @@ class PlanLimitsNotifier extends StateNotifier<AsyncValue<PlanLimits>> {
       }
     }
 
-    state = const AsyncValue.loading();
+    if (!state.hasValue) {
+      state = const AsyncValue.loading();
+    }
     try {
       final limits = await _service.getPlanLimits(forceRefresh: forceRefresh);
       state = AsyncValue.data(limits);

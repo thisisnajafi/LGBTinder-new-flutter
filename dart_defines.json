@@ -1,3 +1,5 @@
 {
-  "GOOGLE_WEB_CLIENT_ID": "904491806534-vdhds1qkgv3ijf857d67mtg41hg0elvd.apps.googleusercontent.com"
+  "GOOGLE_WEB_CLIENT_ID": "904491806534-vdhds1qkgv3ijf857d67mtg41hg0elvd.apps.googleusercontent.com",
+  "PUSHER_APP_KEY": "bcf8236559a0fc82dcb9",
+  "PUSHER_APP_CLUSTER": "us3"
 }

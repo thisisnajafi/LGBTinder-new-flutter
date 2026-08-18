@@ -51,5 +51,29 @@ void main() {
 
       expect(result.every((e) => e['kind'] == 'message' || e['kind'] == 'call'), isTrue);
     });
+
+    test('same-second messages sort by id, not arrival order', () {
+      final t = DateTime(2026, 8, 19, 1, 18);
+
+      final result = ChatTimelineMerger.sortChronologically([
+        {'id': 5, 'text': '5', 'timestamp': t},
+        {'id': 1, 'text': '1', 'timestamp': t},
+        {'id': 9, 'text': '9', 'timestamp': t},
+        {'id': 2, 'text': '2', 'timestamp': t},
+      ]);
+
+      expect(result.map((item) => item['text']), ['1', '2', '5', '9']);
+    });
+
+    test('optimistic messages stay after persisted ones at the same time', () {
+      final t = DateTime(2026, 8, 19, 1, 18);
+
+      final result = ChatTimelineMerger.sortChronologically([
+        {'id': 0, 'text': 'sending', 'timestamp': t},
+        {'id': 12, 'text': 'sent', 'timestamp': t},
+      ]);
+
+      expect(result.map((item) => item['text']), ['sent', 'sending']);
+    });
   });
 }

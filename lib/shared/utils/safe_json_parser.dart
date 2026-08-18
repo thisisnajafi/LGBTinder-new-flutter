@@ -1,3 +1,5 @@
+import '../../core/utils/app_date_time.dart';
+
 /// CODE QUALITY (Task 8.2.2): Safe JSON Parsing Utilities
 /// 
 /// Provides type-safe parsing functions to prevent crashes from malformed API responses.
@@ -126,12 +128,7 @@ class SafeJsonParser {
 
   /// Parse a nullable DateTime
   static DateTime? parseDateTimeOrNull(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is String) {
-      return DateTime.tryParse(value);
-    }
-    return null;
+    return AppDateTime.parseApi(value);
   }
 
   /// Parse a list with type conversion

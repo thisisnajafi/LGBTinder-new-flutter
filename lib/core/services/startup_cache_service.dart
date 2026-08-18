@@ -10,6 +10,7 @@ import '../cache/session_cache_providers.dart';
 import '../../core/subscription/subscription_access.dart';
 import '../providers/subscription_provider.dart';
 import '../services/app_logger.dart';
+import '../services/presence_service.dart';
 
 /// Coordinates one-time (per session) startup cache priming.
 class StartupCacheService {
@@ -31,6 +32,19 @@ class StartupCacheService {
 
     _isPriming = true;
     try {
+      // Mark online FIRST so GET /profile returns is_online: true.
+      try {
+        await _ref.read(presenceServiceProvider).onForeground();
+        AppLogger.info('Marked online, now priming cache', tag: 'StartupCache');
+      } catch (e, stack) {
+        AppLogger.warning(
+          'Presence markOnline before prime failed — continuing',
+          tag: 'StartupCache',
+          error: e,
+        );
+        AppLogger.debug('Startup presence stack: $stack', tag: 'StartupCache');
+      }
+
       await Future.wait([
         _fetchAndCacheSuperlikePacks(),
         _fetchAndCacheSubscription(),

@@ -6,6 +6,7 @@ import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 
 import '../../core/config/pusher_config.dart';
 import '../../core/services/app_logger.dart';
+import '../../core/utils/app_date_time.dart';
 import '../../features/chat/data/models/message.dart';
 
 /// Real-time chat via Pusher Channels (replaces socket.io for production).
@@ -137,8 +138,23 @@ class PusherWebSocketService {
       return;
     }
 
-    await subscribe('private-user.status.$userId');
-    _statusUserIds.add(userId);
+    AppLogger.info(
+      'Subscribing to presence channel: private-user.status.$userId',
+      tag: 'Pusher',
+    );
+    try {
+      await subscribe('private-user.status.$userId');
+      _statusUserIds.add(userId);
+      AppLogger.info('Presence channel subscribed: $userId', tag: 'Pusher');
+    } catch (e, stack) {
+      AppLogger.error(
+        'Presence channel subscription failed: $userId',
+        tag: 'Pusher',
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 
   Future<void> unsubscribeUserStatus(int userId) async {
@@ -267,7 +283,9 @@ class PusherWebSocketService {
       return;
     }
 
-    switch (event.eventName) {
+    final eventName = event.eventName.replaceFirst(RegExp(r'^\.'), '');
+
+    switch (eventName) {
       case 'MessageSent':
       case 'message.sent':
         _handleMessageSent(payload);
@@ -297,7 +315,7 @@ class PusherWebSocketService {
       case 'call.ended':
       case 'call.busy':
         _callEventController.add(CallSignalingEvent(
-          name: event.eventName,
+          name: eventName,
           payload: payload,
         ));
         break;
@@ -306,24 +324,37 @@ class PusherWebSocketService {
         _handleUserPresence(payload);
         break;
       default:
-        if (event.eventName.contains('Match') ||
-            event.eventName == 'match.created' ||
-            event.eventName == 'new_match') {
+        if (eventName.contains('Match') ||
+            eventName == 'match.created' ||
+            eventName == 'new_match') {
           _handleNewMatch(payload);
+        } else {
+          AppLogger.debug(
+            'Unhandled Pusher event: $eventName',
+            tag: 'Pusher',
+          );
         }
     }
   }
 
   void _handleMessageSent(Map<String, dynamic> data) {
     try {
+      Map<String, dynamic>? messageJson;
       final messageData = data['message'];
       if (messageData is Map) {
-        final message = Message.fromJson(
-          Map<String, dynamic>.from(messageData),
-        );
-        if (message.isValid) {
-          _messageController.add(message);
-        }
+        messageJson = Map<String, dynamic>.from(messageData);
+      } else if (data['id'] != null && data['sender_id'] != null) {
+        messageJson = data;
+      }
+      if (messageJson == null) return;
+
+      if (messageJson['conversation_id'] == null && data['conversation_id'] != null) {
+        messageJson['conversation_id'] = data['conversation_id'];
+      }
+
+      final message = Message.fromJson(messageJson);
+      if (message.isValid) {
+        _messageController.add(message);
       }
     } catch (e) {
       AppLogger.warning(
@@ -418,12 +449,21 @@ class PusherWebSocketService {
       final userId = int.tryParse(data['user_id']?.toString() ?? '') ?? 0;
       if (userId <= 0) return;
 
+      final isOnline = data['is_online'] == true ||
+          data['is_online'] == 1 ||
+          data['is_online']?.toString() == '1' ||
+          data['is_online']?.toString().toLowerCase() == 'true';
+      AppLogger.info(
+        'Presence event received: user=$userId is_online=$isOnline data=$data',
+        tag: 'Pusher',
+      );
+
       final lastSeenRaw = data['last_seen_at'] ?? data['last_seen'];
       _presenceController.add(UserPresenceEvent(
         userId: userId,
-        isOnline: data['is_online'] == true,
+        isOnline: isOnline,
         lastSeenAt: lastSeenRaw != null
-            ? DateTime.tryParse(lastSeenRaw.toString())
+            ? AppDateTime.parseApi(lastSeenRaw.toString())
             : null,
         timestamp: DateTime.tryParse(data['timestamp']?.toString() ?? '') ??
             DateTime.now(),

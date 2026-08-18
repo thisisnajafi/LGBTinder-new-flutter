@@ -54,7 +54,7 @@ class Like {
       lastName: json['last_name']?.toString(),
       primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
       likedAt: json['liked_at'] != null
-          ? (DateTime.tryParse(json['liked_at'].toString()) ?? DateTime.now())
+          ? (AppDateTime.parseApi(json['liked_at']) ?? DateTime.now())
           : DateTime.now(),
       isSuperlike: json['is_superlike'] == true || json['is_superlike'] == 1,
       isMatch: json['is_match'] == true || json['is_match'] == 1,
@@ -69,7 +69,7 @@ class Like {
       'first_name': firstName,
       if (lastName != null) 'last_name': lastName,
       if (primaryImageUrl != null) 'primary_image_url': primaryImageUrl,
-      'liked_at': likedAt.toIso8601String(),
+      'liked_at': AppDateTime.toApi(likedAt),
       'is_superlike': isSuperlike,
       'is_match': isMatch,
       'has_responded': hasResponded,

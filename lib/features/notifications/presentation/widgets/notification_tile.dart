@@ -1,12 +1,12 @@
 // Widget: NotificationTile
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
+import '../../../../core/utils/app_date_time.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/avatar_widget.dart';
 import '../../data/models/notification.dart' as app_models;
@@ -29,24 +29,7 @@ class NotificationTile extends ConsumerWidget {
   });
 
   String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays == 0) {
-      if (difference.inHours == 0) {
-        if (difference.inMinutes == 0) {
-          return 'Just now';
-        }
-        return '${difference.inMinutes}m ago';
-      }
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return DateFormat('MMM d').format(dateTime);
-    }
+    return AppDateTime.formatRelative(dateTime);
   }
 
   String _getDefaultTitle() {

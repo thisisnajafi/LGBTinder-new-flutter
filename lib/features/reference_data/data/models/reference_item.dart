@@ -30,6 +30,30 @@ class ReferenceItem {
       longitude! >= -180 &&
       longitude! <= 180;
 
+  /// Keep one row per city name, preferring coordinates when duplicates exist.
+  static List<ReferenceItem> uniqueByTitle(List<ReferenceItem> items) {
+    final ranked = List<ReferenceItem>.from(items)
+      ..sort((a, b) {
+        final byName = a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        if (byName != 0) return byName;
+        final ac = a.hasCoordinates ? 0 : 1;
+        final bc = b.hasCoordinates ? 0 : 1;
+        if (ac != bc) return ac - bc;
+        return a.id.compareTo(b.id);
+      });
+
+    final seen = <String>{};
+    final unique = <ReferenceItem>[];
+    for (final item in ranked) {
+      final key = item.title.trim().toLowerCase();
+      if (key.isEmpty || !seen.add(key)) {
+        continue;
+      }
+      unique.add(item);
+    }
+    return unique;
+  }
+
   factory ReferenceItem.fromJson(Map<String, dynamic> json) {
     // Get ID - use 0 as fallback if not provided
     int refId = 0;

@@ -12,6 +12,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
+import '../../features/chat/providers/chat_providers.dart';
 import 'voice_waveform_bars.dart';
 
 /// Message input field widget
@@ -26,6 +27,7 @@ class MessageInput extends ConsumerStatefulWidget {
   final Future<void> Function()? onVoiceRecordCancel;
   final String? hintText;
   final bool enabled;
+  final int? peerUserId;
 
   const MessageInput({
     Key? key,
@@ -38,6 +40,7 @@ class MessageInput extends ConsumerStatefulWidget {
     this.onVoiceRecordCancel,
     this.hintText,
     this.enabled = true,
+    this.peerUserId,
   }) : super(key: key);
 
   @override
@@ -69,6 +72,28 @@ class _MessageInputState extends ConsumerState<MessageInput>
     );
     // Rebuild send button when text changes (enabled state + gradient).
     _controller.addListener(_onControllerChanged);
+  }
+
+  void _applyPendingDraft(PendingChatDraft? draft) {
+    if (draft == null) return;
+    final peerId = widget.peerUserId;
+    if (peerId == null || draft.userId != peerId) return;
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    final text = draft.text.trim();
+    if (text.isEmpty) return;
+    if (_controller.text == text) {
+      ref.read(pendingChatDraftProvider.notifier).state = null;
+      return;
+    }
+
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    widget.onTextChanged?.call(text);
+    _focusNode.requestFocus();
+    ref.read(pendingChatDraftProvider.notifier).state = null;
+    if (mounted) setState(() {});
   }
 
   void _onControllerChanged() {
@@ -171,6 +196,14 @@ class _MessageInputState extends ConsumerState<MessageInput>
 
   @override
   Widget build(BuildContext context) {
+    final pendingDraft = ref.watch(pendingChatDraftProvider);
+    final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? true;
+    if (isCurrentRoute && pendingDraft != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _applyPendingDraft(ref.read(pendingChatDraftProvider));
+      });
+    }
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;

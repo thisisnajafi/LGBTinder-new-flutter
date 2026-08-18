@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../core/responsive/responsive.dart';
 import '../../../../../core/theme/spacing_constants.dart';
+import '../../../../../routes/app_router.dart';
 import '../../../../../shared/models/user_tier.dart';
+import '../../../../chat/providers/chat_providers.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
@@ -11,6 +14,7 @@ import '../../../providers/profile_page_cache_provider.dart';
 import '../own_profile/profile_details_sections.dart';
 import '../own_profile/profile_hero_section.dart';
 import '../own_profile/profile_photo_utils.dart';
+import '../profile_photo_gallery_viewer.dart';
 import 'other_user_profile_sections.dart';
 
 class OtherUserProfileView extends ConsumerStatefulWidget {
@@ -104,6 +108,63 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     return base;
   }
 
+  List<String> get _heroPhotoUrls {
+    final photos = widget.profile.images ?? [];
+    return orderedProfilePhotoUrls(photos);
+  }
+
+  List<String> get _galleryPhotoUrls {
+    final photos = widget.profile.images ?? [];
+    final gallery = galleryProfileImages(photos)
+        .map((p) => p.imageUrl)
+        .where((url) => url.isNotEmpty)
+        .toList();
+    if (gallery.isNotEmpty) return gallery;
+    return _heroPhotoUrls;
+  }
+
+  void _openPhotoViewer(List<String> urls, int index) {
+    ProfilePhotoGalleryViewer.open(
+      context,
+      imageUrls: urls,
+      initialIndex: index,
+    );
+  }
+
+  bool _isSameUserChatInStack(BuildContext context) {
+    final userId = widget.profile.id.toString();
+    try {
+      final config =
+          GoRouter.of(context).routerDelegate.currentConfiguration;
+      final uris = <Uri>[config.uri];
+      for (final match in config.matches) {
+        uris.add(Uri.parse(match.matchedLocation));
+      }
+      return uris.any((uri) {
+        if (uri.path != AppRoutes.chat) return false;
+        return uri.queryParameters['userId'] == userId;
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _useConversationStarter(String starter) {
+    final text = starter.trim();
+    if (text.isEmpty) return;
+
+    ref.read(pendingChatDraftProvider.notifier).state = PendingChatDraft(
+      userId: widget.profile.id,
+      text: text,
+    );
+
+    if (_isSameUserChatInStack(context) && context.canPop()) {
+      context.pop();
+      return;
+    }
+    widget.onMessage?.call();
+  }
+
   int? get _apiMatchPercent {
     final profile = widget.profile;
     if (profile.matchPercentage != null && profile.matchPercentage! > 0) {
@@ -174,8 +235,8 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
     final photos = widget.profile.images ?? [];
     final primaryImage = primaryProfileImage(photos);
     final avatarUrl = primaryImage?.imageUrl;
-    final photoUrls = orderedProfilePhotoUrls(photos);
-    final galleryUrls = galleryProfileImages(photos).map((p) => p.imageUrl).toList();
+    final photoUrls = _heroPhotoUrls;
+    final galleryUrls = _galleryPhotoUrls;
 
     final bio = widget.profile.profileBio?.trim();
     final hasAbout = (bio != null && bio.isNotEmpty) ||
@@ -215,20 +276,21 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                   onLike: widget.showInteractionActions ? widget.onLike : null,
                   onMore: widget.onMoreOptions,
                   matchPercent: compatibility.matchPercent,
-                  onPhotoTap: widget.onPhotoTap,
+                  onPhotoTap: (index) => _openPhotoViewer(photoUrls, index),
                 ),
                 const SizedBox(height: _sectionGap),
                 PremiumCompatibilitySection(data: compatibility),
-                if (photoUrls.isNotEmpty) ...[
+                if (galleryUrls.isNotEmpty) ...[
                   const SizedBox(height: _sectionGap),
                   PremiumPhotosSection(
-                    imageUrls: galleryUrls.isNotEmpty ? galleryUrls : photoUrls,
-                    totalCount: photoUrls.length,
+                    imageUrls: galleryUrls,
+                    totalCount: galleryUrls.length,
                     onEdit: () {},
                     onAdd: () {},
                     canAddMore: false,
                     readOnly: true,
-                    onPhotoTap: widget.onPhotoTap ?? (_) {},
+                    onPhotoTap: (index) =>
+                        _openPhotoViewer(galleryUrls, index),
                   ),
                 ],
                 if (hasAbout) ...[
@@ -240,6 +302,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                     sectionSubtitle: 'Get to know them',
                     quoteBio: false,
                     readOnly: true,
+                    onStarterTap: _useConversationStarter,
                   ),
                 ],
                 if (detailChips.isNotEmpty) ...[

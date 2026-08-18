@@ -14,6 +14,7 @@ void main() {
       expect(userTierFromPlan(planId: 2), UserTier.silder);
       expect(userTierFromPlan(planName: 'Silver'), UserTier.silder);
       expect(userTierFromPlan(planName: 'Premium Monthly'), UserTier.silder);
+      expect(userTierFromPlan(planName: 'Silder'), UserTier.silder);
     });
 
     test('maps to golden', () {
@@ -37,6 +38,8 @@ void main() {
       expect(userTierFromApiKey('basic'), UserTier.basid);
       expect(userTierFromApiKey('basid'), UserTier.basid);
       expect(userTierFromApiKey('silder'), UserTier.silder);
+      expect(userTierFromApiKey('premium'), UserTier.silder);
+      expect(userTierFromApiKey('silver'), UserTier.silder);
       expect(userTierFromApiKey('golden'), UserTier.golden);
     });
 

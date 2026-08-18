@@ -87,9 +87,17 @@ class MessageStatusIndicator extends ConsumerWidget {
       case MessageReadState.read:
         return Semantics(
           label: 'Message read',
-          child: _MessageCheckIcon(
-            color: AppColors.accentPurple,
-            doubleCheck: true,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.38),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const _MessageCheckIcon(
+              color: Colors.white,
+              doubleCheck: true,
+              outlined: true,
+            ),
           ),
         );
     }
@@ -101,10 +109,12 @@ class _MessageCheckIcon extends StatelessWidget {
   const _MessageCheckIcon({
     required this.color,
     required this.doubleCheck,
+    this.outlined = false,
   });
 
   final Color color;
   final bool doubleCheck;
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +125,7 @@ class _MessageCheckIcon extends StatelessWidget {
         painter: _CheckMarkPainter(
           color: color,
           doubleCheck: doubleCheck,
+          outlined: outlined,
         ),
       ),
     );
@@ -125,15 +136,30 @@ class _CheckMarkPainter extends CustomPainter {
   _CheckMarkPainter({
     required this.color,
     required this.doubleCheck,
+    this.outlined = false,
   });
 
   final Color color;
   final bool doubleCheck;
+  final bool outlined;
 
-  static const double _strokeWidth = 1.6;
+  static const double _strokeWidth = 1.8;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (outlined) {
+      final halo = Paint()
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..strokeWidth = _strokeWidth + 2.2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      _drawCheck(canvas, halo, Offset.zero, size);
+      if (doubleCheck) {
+        _drawCheck(canvas, halo, const Offset(4, 0), size);
+      }
+    }
+
     final paint = Paint()
       ..color = color
       ..strokeWidth = _strokeWidth
@@ -159,6 +185,7 @@ class _CheckMarkPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CheckMarkPainter oldDelegate) {
     return oldDelegate.color != color ||
-        oldDelegate.doubleCheck != doubleCheck;
+        oldDelegate.doubleCheck != doubleCheck ||
+        oldDelegate.outlined != outlined;
   }
 }

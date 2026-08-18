@@ -143,19 +143,26 @@ class AppSubscriptionStatus {
       return defaultValue;
     }
 
-    final tierRaw = json['tier']?.toString();
-    final tier = userTierFromApiKey(tierRaw);
+    final planName = json['plan_name']?.toString();
+    final tierFromKey = userTierFromApiKey(json['tier']?.toString());
+    final tierFromPlan = userTierFromPlan(planName: planName);
+    final tier =
+        tierFromKey != UserTier.basid ? tierFromKey : tierFromPlan;
 
     final featuresJson = json['features'];
     final features = featuresJson is Map<String, dynamic>
         ? SubscriptionFeatures.fromJson(featuresJson)
         : SubscriptionFeatures.free();
 
+    final isActive = parseBool(json['is_active']);
+    final isPremium = parseBool(json['is_premium']) ||
+        (isActive && tier != UserTier.basid);
+
     return AppSubscriptionStatus(
       tier: tier,
-      isActive: parseBool(json['is_active']),
-      isPremium: parseBool(json['is_premium']),
-      planName: json['plan_name']?.toString(),
+      isActive: isActive,
+      isPremium: isPremium,
+      planName: planName,
       expiresAt: parseDate(json['expires_at'] ?? json['end_date']),
       superlikesRemaining: parseInt(json['superlikes_remaining']),
       superlikesResetAt: parseDate(json['superlikes_reset_at']),

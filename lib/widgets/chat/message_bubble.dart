@@ -301,12 +301,14 @@ class MessageBubble extends ConsumerWidget {
         return _SelfDestructExpiredBubble(isSent: isSent, isDark: isDark);
       }
 
-      final canOpen = !isSent && viewedAt == null && onSelfDestructTap != null;
+      final isOpened = viewedAt != null;
+      final canOpen = !isSent && !isOpened && onSelfDestructTap != null;
       return _SelfDestructPreviewBubble(
         isSent: isSent,
         isDark: isDark,
         canOpen: canOpen,
-        remainingSeconds: remainingSeconds,
+        isOpened: isOpened,
+        remainingSeconds: isOpened ? remainingSeconds : null,
         onTap: onSelfDestructTap,
         timestamp: timestamp,
         isRead: isRead,
@@ -808,6 +810,7 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
   final bool isSent;
   final bool isDark;
   final bool canOpen;
+  final bool isOpened;
   final int? remainingSeconds;
   final VoidCallback? onTap;
   final DateTime? timestamp;
@@ -819,6 +822,7 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
     required this.isSent,
     required this.isDark,
     required this.canOpen,
+    this.isOpened = false,
     this.remainingSeconds,
     this.onTap,
     this.timestamp,
@@ -830,8 +834,11 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = isSent
-        ? 'Self-destruct photo sent'
+        ? (isOpened ? 'Self-destruct photo opened' : 'Waiting to be opened')
         : (canOpen ? 'Tap to view photo' : 'Self-destruct photo');
+    final foreground = isSent
+        ? Colors.white
+        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
 
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
@@ -851,37 +858,43 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppSvgIcon(
-                  assetPath: AppIcons.timer,
-                  size: 22,
-                  color: isSent
-                      ? Colors.white
-                      : (isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight),
-                ),
+                if (!isSent && !isOpened)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        color: AppColors.accentPurple.withValues(alpha: 0.45),
+                        child: Center(
+                          child: AppSvgIcon(
+                            assetPath: AppIcons.timer,
+                            size: 22,
+                            color: foreground,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  AppSvgIcon(
+                    assetPath: AppIcons.timer,
+                    size: 22,
+                    color: foreground,
+                  ),
                 const SizedBox(width: AppSpacing.spacingSM),
                 Flexible(
                   child: Text(
                     label,
-                    style: AppTypography.body.copyWith(
-                      color: isSent
-                          ? Colors.white
-                          : (isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight),
-                    ),
+                    style: AppTypography.body.copyWith(color: foreground),
                   ),
                 ),
-                if (remainingSeconds != null && remainingSeconds! > 0) ...[
+                if (isOpened && remainingSeconds != null && remainingSeconds! > 0) ...[
                   const SizedBox(width: AppSpacing.spacingSM),
                   Text(
                     '${remainingSeconds}s',
-                    style: AppTypography.caption.copyWith(
-                      color: isSent
-                          ? Colors.white70
-                          : AppColors.textSecondaryDark,
-                    ),
+                    style: AppTypography.caption.copyWith(color: foreground),
                   ),
                 ],
               ],

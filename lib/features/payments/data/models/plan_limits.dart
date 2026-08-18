@@ -225,12 +225,17 @@ class PlanInfo {
   });
 
   factory PlanInfo.fromJson(Map<String, dynamic> json) {
+    final planName = json['plan_name']?.toString() ?? 'Free';
+    final planId = _SafeParser.parseInt(json['plan_id']);
+    final tier = json['tier']?.toString();
+    final paidTier = userTierFromApiKey(tier) != UserTier.basid ||
+        userTierFromPlan(planId: planId, planName: planName) != UserTier.basid;
     return PlanInfo(
-      isPremium: _SafeParser.parseBool(json['is_premium']),
-      planName: json['plan_name']?.toString() ?? 'Free',
-      planId: _SafeParser.parseInt(json['plan_id']),
+      isPremium: _SafeParser.parseBool(json['is_premium']) || paidTier,
+      planName: planName,
+      planId: planId,
       expiresAt: _SafeParser.parseDateTime(json['expires_at']),
-      tier: json['tier']?.toString(),
+      tier: tier,
     );
   }
 

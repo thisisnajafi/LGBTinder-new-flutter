@@ -324,6 +324,7 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                           itemCount: urls.length,
                           itemBuilder: (context, index) {
                             return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
                               onTap: widget.onPhotoTap == null
                                   ? null
                                   : () => widget.onPhotoTap!(index),
@@ -336,12 +337,18 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                             );
                           },
                         )
-                      : ProfileImageWidget(
-                          imageUrl:
-                              urls.isNotEmpty ? urls.first : widget.avatarUrl,
-                          width: size,
-                          height: size,
-                          fit: BoxFit.cover,
+                      : GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: widget.onPhotoTap == null || urls.isEmpty
+                              ? null
+                              : () => widget.onPhotoTap!(0),
+                          child: ProfileImageWidget(
+                            imageUrl:
+                                urls.isNotEmpty ? urls.first : widget.avatarUrl,
+                            width: size,
+                            height: size,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                 ),
               ),

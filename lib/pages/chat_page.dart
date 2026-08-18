@@ -98,6 +98,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   StreamSubscription<MessageExpiredEvent>? _messageExpiredSubscription;
   StreamSubscription<CallSignalingEvent>? _callEventSubscription;
   StreamSubscription<UserPresenceEvent>? _presenceSubscription;
+  Timer? _realtimeFallbackTimer;
   bool _isOnline = false;
   DateTime? _lastSeenAt;
   String? _resolvedUserName;
@@ -124,6 +125,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _initializePusherListeners();
       _loadConversationMuteStatus();
       _seedInitialPeerPresence();
+      _startRealtimeFallback();
     } else {
       setState(() {
         _isLoading = false;
@@ -140,6 +142,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _messageExpiredSubscription?.cancel();
     _callEventSubscription?.cancel();
     _presenceSubscription?.cancel();
+    _realtimeFallbackTimer?.cancel();
     _outboundTypingStopTimer?.cancel();
     _voiceRecordingTimer?.cancel();
     unawaited(_voiceRecorder.dispose());
@@ -251,24 +254,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           message.receiverId != widget.userId) {
         return;
       }
-      setState(() {
-        if (message.id > 0 && _messages.any((msg) => msg['id'] == message.id)) {
-          return;
-        }
-        _messages = _messages
-            .where((msg) =>
-                msg['client_id'] == null ||
-                msg['delivery_status'] != MessageDeliveryStatus.sending ||
-                msg['text'] != message.message)
-            .toList();
-        _messages.add(_messageToMap(message));
-      });
-      unawaited(
-        ref
-            .read(chatLocalRepositoryProvider)
-            .upsertMessage(message, widget.userId),
-      );
-      _scrollToBottom();
+      final conversationId = message.conversationId;
+      if (conversationId != null && conversationId > 0) {
+        unawaited(_subscribePusherConversation(conversationId));
+      }
+      _ingestRemoteMessage(message);
     });
 
     _readReceiptSubscription = pusher.readReceiptStream.listen((event) {
@@ -342,15 +332,123 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (cached != null) {
       _isOnline = cached.isOnline;
       _lastSeenAt = cached.lastSeenAt;
-      return;
-    }
-
-    for (final item in ref.read(chatListPreviewProvider).items) {
-      if (item.id == widget.userId) {
-        _isOnline = item.isOnline;
-        break;
+    } else {
+      for (final item in ref.read(chatListPreviewProvider).items) {
+        if (item.id == widget.userId) {
+          _isOnline = item.isOnline;
+          break;
+        }
       }
     }
+    unawaited(_refreshPeerPresenceFromProfile());
+  }
+
+  Future<void> _refreshPeerPresenceFromProfile() async {
+    try {
+      final profile =
+          await ref.read(profileServiceProvider).getUserProfile(widget.userId);
+      if (!mounted) return;
+      setState(() {
+        if (profile.isOnline == true) {
+          _isOnline = true;
+        } else if (profile.isOnline != null) {
+          _isOnline = false;
+        }
+        if (profile.lastSeen != null) {
+          _lastSeenAt = profile.lastSeen;
+        }
+      });
+    } catch (e) {
+      AppLogger.warning(
+        'Could not refresh peer presence',
+        tag: 'ChatPage',
+        error: e,
+      );
+    }
+  }
+
+  void _startRealtimeFallback() {
+    _realtimeFallbackTimer?.cancel();
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (mounted) unawaited(_pollRemoteMessages());
+    });
+    _realtimeFallbackTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted) return;
+      unawaited(_pollRemoteMessages());
+    });
+  }
+
+  Future<void> _pollRemoteMessages() async {
+    try {
+      final history = await ref.read(chatServiceProvider).getChatHistory(
+            receiverId: widget.userId,
+            page: 1,
+            limit: _historyPageSize,
+          );
+      if (!mounted) return;
+      final conversationId = history.conversationId ??
+          history.messages
+              .map((m) => m.conversationId)
+              .whereType<int>()
+              .where((id) => id > 0)
+              .firstOrNull;
+      if (conversationId != null && conversationId > 0) {
+        unawaited(_subscribePusherConversation(conversationId));
+      }
+      var added = false;
+      // History is newest-first; ingest oldest-first then keep chronological order.
+      for (final message in history.messages.reversed) {
+        if (_ingestRemoteMessage(message, scroll: false)) {
+          added = true;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _messages = ChatTimelineMerger.sortChronologically(_messages);
+        });
+      }
+      if (added) _scrollToBottom();
+    } catch (e) {
+      AppLogger.warning(
+        'Chat realtime fallback poll failed',
+        tag: 'ChatPage',
+        error: e,
+      );
+    }
+  }
+
+  bool _ingestRemoteMessage(Message message, {bool scroll = true}) {
+    if (message.id > 0) {
+      final existingIndex =
+          _messages.indexWhere((msg) => msg['id'] == message.id);
+      if (existingIndex >= 0) {
+        final merged = {
+          ..._messages[existingIndex],
+          ..._messageToMap(message),
+        };
+        setState(() {
+          _messages = List<Map<String, dynamic>>.from(_messages);
+          _messages[existingIndex] = merged;
+        });
+        return false;
+      }
+    }
+    setState(() {
+      _messages = ChatTimelineMerger.sortChronologically([
+        ..._messages.where((msg) =>
+            msg['client_id'] == null ||
+            msg['delivery_status'] != MessageDeliveryStatus.sending ||
+            msg['text'] != message.message),
+        _messageToMap(message),
+      ]);
+    });
+    unawaited(
+      ref
+          .read(chatLocalRepositoryProvider)
+          .upsertMessage(message, widget.userId),
+    );
+    if (scroll) _scrollToBottom();
+    return true;
   }
 
   Future<void> _handleCallTimelineEvent(CallSignalingEvent event) async {
@@ -463,7 +561,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (cached.isNotEmpty && mounted) {
         showedCache = true;
         setState(() {
-          _messages = cached.map(_messageToMap).toList();
+          _messages = ChatTimelineMerger.sortChronologically(
+            cached.map(_messageToMap).toList(),
+          );
           _isLoading = false;
           _hasError = false;
           _errorMessage = null;
@@ -538,7 +638,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         );
 
-        final conversationId = history.conversationId;
+        final conversationId = history.conversationId ??
+            history.messages
+                .map((m) => m.conversationId)
+                .whereType<int>()
+                .where((id) => id > 0)
+                .firstOrNull;
         if (conversationId != null && conversationId > 0) {
           await _subscribePusherConversation(conversationId);
         }
@@ -794,6 +899,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'viewed_at': message.viewedAt,
       'secure_media_url': message.secureMediaUrl,
       'media_duration': message.mediaDuration,
+      'conversation_id': message.conversationId,
+      'expires_in_seconds': message.expiresInSeconds,
     };
   }
 
@@ -875,6 +982,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           .read(chatLocalRepositoryProvider)
           .upsertMessage(serverMessage, widget.userId),
     );
+    final conversationId = serverMessage.conversationId;
+    if (conversationId != null && conversationId > 0) {
+      unawaited(_subscribePusherConversation(conversationId));
+    }
   }
 
   Future<void> _markAsRead() async {
@@ -1246,6 +1357,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       context,
       messageId: messageId,
       initialRemainingSeconds: message['remaining_seconds'] as int?,
+      totalSeconds: message['expires_in_seconds'] as int?,
     );
 
     if (!mounted) return;
@@ -1257,7 +1369,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ...msg,
             'viewed_at': DateTime.now(),
             'is_expired': expired == true,
-            'remaining_seconds': expired == true ? 0 : msg['remaining_seconds'],
+            'remaining_seconds': expired == true
+                ? 0
+                : (msg['expires_in_seconds'] ?? msg['remaining_seconds']),
             if (expired == true) 'attachment_url': null,
           };
         }
@@ -1598,6 +1712,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
           // Message input
           MessageInput(
+            peerUserId: widget.userId,
             onSend: _handleSend,
             onMediaTap: _handleMediaTap,
             onMediaLongPress: _handleMediaLongPress,

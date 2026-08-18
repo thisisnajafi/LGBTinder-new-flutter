@@ -1,3 +1,4 @@
+import '../../../../core/utils/app_date_time.dart';
 import 'message.dart';
 
 /// Chat conversation model
@@ -88,14 +89,12 @@ class Chat {
       lastMessage: json['last_message'] != null && json['last_message'] is Map
           ? Message.fromJson(Map<String, dynamic>.from(json['last_message'] as Map))
           : null,
-      lastMessageAt: json['last_message_at'] != null
-          ? DateTime.tryParse(json['last_message_at'].toString())
-          : null,
+      lastMessageAt: AppDateTime.parseApi(json['last_message_at']),
       unreadCount: json['unread_count'] != null ? ((json['unread_count'] is int) ? json['unread_count'] as int : int.tryParse(json['unread_count'].toString()) ?? 0) : 0,
       isOnline: json['is_online'] == true || json['is_online'] == 1,
-      lastSeen: json['last_seen'] != null
-          ? DateTime.tryParse(json['last_seen'].toString())
-          : null,
+      lastSeen: AppDateTime.parseApi(
+        json['last_seen'] ?? json['last_active'] ?? json['last_seen_at'],
+      ),
       isTyping: json['is_typing'] == true || json['is_typing'] == 1,
       isMuted: json['is_muted'] == true || json['is_muted'] == 1,
     );

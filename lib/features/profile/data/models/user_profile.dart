@@ -1,4 +1,5 @@
 import 'models.dart';
+import '../../../../core/utils/app_date_time.dart';
 import '../../../../shared/models/match_reason.dart';
 
 /// User profile model with full details
@@ -297,7 +298,9 @@ class UserProfile {
       isPhoneVerified: json['is_phone_verified'] == true || json['is_phone_verified'] == 1,
       isEmailVerified: json['is_email_verified'] == true || json['is_email_verified'] == 1,
       viewsCount: json['views_count'] != null ? ((json['views_count'] is int) ? json['views_count'] as int : int.tryParse(json['views_count'].toString())) : null,
-      lastSeen: json['last_seen'] != null ? DateTime.tryParse(json['last_seen'].toString()) : null,
+      lastSeen: AppDateTime.parseApi(
+        json['last_seen'] ?? json['last_active'] ?? json['last_seen_at'],
+      ),
       matchPercentage: json['match_percentage'] != null
           ? ((json['match_percentage'] is int)
               ? json['match_percentage'] as int

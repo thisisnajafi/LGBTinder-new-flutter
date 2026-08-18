@@ -74,7 +74,23 @@ final subscriptionProvider =
 );
 
 final isPremiumProvider = Provider<bool>((ref) {
-  return ref.watch(subscriptionProvider)?.isPremium ?? false;
+  final sub = ref.watch(subscriptionProvider);
+  if (sub != null) {
+    if (sub.isPremium) return true;
+    if (sub.isActive && sub.tier != UserTier.basid) return true;
+    if (sub.isActive &&
+        userTierFromPlan(planName: sub.planName) != UserTier.basid) {
+      return true;
+    }
+  }
+
+  final cached = ref.watch(cachedUserTierProvider);
+  if (cached != null &&
+      userTierFromApiKey(cached).atLeast(UserTier.silder)) {
+    return true;
+  }
+
+  return ref.watch(planLimitsProvider).valueOrNull?.planInfo.isPremium ?? false;
 });
 
 final hasUnlimitedLikesProvider = Provider<bool>((ref) {

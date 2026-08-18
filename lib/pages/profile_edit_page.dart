@@ -62,6 +62,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   bool _gym = false;
   int? _countryId;
   int? _cityId;
+  String? _locationMarketNotice;
   DateTime? _locationUpdatedAt;
   String? _locationSource;
   bool _isUpdatingLocation = false;
@@ -815,20 +816,54 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               title: 'Location',
               children: [
                 countriesAsync.when(
-                  data: (countries) => ReferenceBottomSheetField(
-                    label: 'Country',
-                    hint: 'Select your country',
-                    selectedId: _countryId,
-                    items: countries,
-                    groupedStyle: true,
-                    onChanged: (value) {
-                      setState(() {
-                        _countryId = value;
-                        _cityId = null;
+                  data: (countries) {
+                    if (_countryId != null &&
+                        !countries.any((c) => c.id == _countryId)) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() {
+                          _countryId = null;
+                          _cityId = null;
+                          _locationMarketNotice =
+                              'Your previous location is no longer available. Please choose a supported country and city.';
+                        });
                       });
-                    },
-                    searchable: true,
-                  ),
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_locationMarketNotice != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              _locationMarketNotice!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ReferenceBottomSheetField(
+                          label: 'Country',
+                          hint: countries.isEmpty
+                              ? 'No supported countries available'
+                              : 'Select your country',
+                          selectedId: _countryId,
+                          items: countries,
+                          groupedStyle: true,
+                          onChanged: (value) {
+                            setState(() {
+                              _countryId = value;
+                              _cityId = null;
+                              _locationMarketNotice = null;
+                            });
+                          },
+                          searchable: true,
+                          enabled: countries.isNotEmpty,
+                        ),
+                      ],
+                    );
+                  },
                   loading: () => const PremiumInfoRow(
                     label: 'Country',
                     value: 'Loading...',
@@ -840,16 +875,34 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 ),
                 if (_countryId != null)
                   citiesAsync.when(
-                    data: (cities) => ReferenceBottomSheetField(
-                      label: 'City',
-                      hint: 'Select your city',
-                      selectedId: _cityId,
-                      items: cities,
-                      groupedStyle: true,
-                      onChanged: (value) => setState(() => _cityId = value),
-                      enabled: cities.isNotEmpty,
-                      searchable: true,
-                    ),
+                    data: (cities) {
+                      if (_cityId != null &&
+                          !cities.any((c) => c.id == _cityId)) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          setState(() {
+                            _cityId = null;
+                            _locationMarketNotice =
+                                'Your previous city is no longer available. Please choose a supported city.';
+                          });
+                        });
+                      }
+                      return ReferenceBottomSheetField(
+                        label: 'City',
+                        hint: cities.isEmpty
+                            ? 'No supported cities for this country'
+                            : 'Select your city',
+                        selectedId: _cityId,
+                        items: cities,
+                        groupedStyle: true,
+                        onChanged: (value) => setState(() {
+                          _cityId = value;
+                          _locationMarketNotice = null;
+                        }),
+                        enabled: cities.isNotEmpty,
+                        searchable: true,
+                      );
+                    },
                     loading: () => const PremiumInfoRow(
                       label: 'City',
                       value: 'Loading...',

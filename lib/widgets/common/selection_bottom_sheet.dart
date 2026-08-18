@@ -531,29 +531,36 @@ class _MultiSelectBottomSheetState<T>
                     ),
             ),
             const SizedBox(height: AppSpacing.spacingSM),
-            AppBottomSheetCard(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.spacingMD),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context)
-                        .pop(List<T>.from(_selectedItems)),
-                    child: Text('Done (${_selectedItems.length})'),
+            Row(
+              children: [
+                Expanded(
+                  child: AppBottomSheetCard(
+                    child: AppBottomSheetActionTile(
+                      item: AppActionSheetItem(
+                        iconPath: AppIcons.checkCircle,
+                        label: 'Done (${_selectedItems.length})',
+                        iconColor: AppColors.accentPurple,
+                        onTap: () => Navigator.of(context)
+                            .pop(List<T>.from(_selectedItems)),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.spacingSM),
-            AppBottomSheetCard(
-              child: AppBottomSheetActionTile(
-                item: AppActionSheetItem(
-                  iconPath: AppIcons.close,
-                  label: 'Cancel',
-                  iconColor: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                  onTap: () => Navigator.pop(context),
+                const SizedBox(width: AppSpacing.spacingSM),
+                Expanded(
+                  child: AppBottomSheetCard(
+                    child: AppBottomSheetActionTile(
+                      item: AppActionSheetItem(
+                        iconPath: AppIcons.close,
+                        label: 'Cancel',
+                        iconColor: theme.colorScheme.onSurface
+                            .withValues(alpha: 0.65),
+                        onTap: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),

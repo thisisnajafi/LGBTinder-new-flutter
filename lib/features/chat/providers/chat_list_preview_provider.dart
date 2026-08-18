@@ -176,7 +176,7 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
           ? map['last_message_time'] as DateTime
           : DateTime.tryParse(map['last_message_time']?.toString() ?? ''),
       unreadCount: map['unread_count'] as int? ?? 0,
-      isOnline: map['is_online'] == true,
+      isOnline: map['is_online'] == true || map['is_online'] == 1,
       isTyping: map['is_typing'] == true,
       isMuted: map['is_muted'] == true,
     );

@@ -58,6 +58,8 @@ class Message {
   final DateTime? viewedAt;
   final String? secureMediaUrl;
   final int? mediaDuration;
+  final int? conversationId;
+  final int? expiresInSeconds;
 
   Message({
     required this.id,
@@ -83,6 +85,8 @@ class Message {
     this.viewedAt,
     this.secureMediaUrl,
     this.mediaDuration,
+    this.conversationId,
+    this.expiresInSeconds,
   });
 
   bool get isOptimistic => clientId != null && id <= 0;
@@ -134,6 +138,8 @@ class Message {
     DateTime? viewedAt,
     String? secureMediaUrl,
     int? mediaDuration,
+    int? conversationId,
+    int? expiresInSeconds,
   }) {
     return Message(
       id: id ?? this.id,
@@ -159,6 +165,8 @@ class Message {
       viewedAt: viewedAt ?? this.viewedAt,
       secureMediaUrl: secureMediaUrl ?? this.secureMediaUrl,
       mediaDuration: mediaDuration ?? this.mediaDuration,
+      conversationId: conversationId ?? this.conversationId,
+      expiresInSeconds: expiresInSeconds ?? this.expiresInSeconds,
     );
   }
 
@@ -169,8 +177,12 @@ class Message {
       id: _safeParseInt(json['id']),
       senderId: _safeParseInt(json['sender_id']),
       receiverId: _safeParseInt(json['receiver_id']),
-      message: json['message']?.toString() ?? '',
-      messageType: json['message_type']?.toString() ?? 'text',
+      message: json['message']?.toString().isNotEmpty == true
+          ? json['message'].toString()
+          : (json['content']?.toString() ?? ''),
+      messageType: json['message_type']?.toString() ??
+          json['type']?.toString() ??
+          'text',
       createdAt: _safeParseDateTime(json['created_at']) ?? DateTime.now(),
       isRead: _safeParseBool(json['is_read']),
       isDeleted: _safeParseBool(json['is_deleted']),
@@ -203,6 +215,12 @@ class Message {
       secureMediaUrl: json['secure_media_url']?.toString(),
       mediaDuration: json['media_duration'] != null || json['duration_seconds'] != null
           ? _safeParseInt(json['media_duration'] ?? json['duration_seconds'])
+          : null,
+      conversationId: json['conversation_id'] != null
+          ? _safeParseInt(json['conversation_id'])
+          : null,
+      expiresInSeconds: json['expires_in_seconds'] != null
+          ? _safeParseInt(json['expires_in_seconds'])
           : null,
     );
   }

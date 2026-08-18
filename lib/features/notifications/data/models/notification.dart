@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../../core/utils/app_date_time.dart';
+
 /// Notification model
 /// FIXED: Updated to handle backend response structure with nested from_user object
 class Notification {
@@ -114,7 +116,7 @@ class Notification {
       title: json['title']?.toString() ?? '',
       message: json['message']?.toString() ?? json['body']?.toString() ?? '',
       createdAt: json['created_at'] != null
-          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
+          ? (AppDateTime.parseApi(json['created_at']) ?? DateTime.now())
           : DateTime.now(),
       isRead: isRead,
       data: dataMap,
@@ -145,7 +147,7 @@ class Notification {
       'type': type,
       'title': title,
       'message': message,
-      'created_at': createdAt.toIso8601String(),
+      'created_at': AppDateTime.toApi(createdAt),
       'is_read': isRead,
       if (data != null) 'data': data,
       if (userId != null) 'user_id': userId,

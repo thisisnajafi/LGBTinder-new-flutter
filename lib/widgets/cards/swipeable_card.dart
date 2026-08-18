@@ -65,6 +65,15 @@ class SwipeableCard extends ConsumerStatefulWidget {
   });
 
   static const double cardRadius = AppRadius.radiusXL;
+
+  /// Decode width used for both the front card and cards behind it so a swipe
+  /// can reuse the in-memory image instead of fetching a larger copy.
+  static int photoDecodeWidth(BuildContext context) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    return (screenWidth * dpr).round().clamp(560, 1400);
+  }
+
   /// Wider/shorter discover card (width ÷ height).
   static const double cardAspectRatio = 0.76;
   static const Duration imageCarouselInterval = Duration(seconds: 5);
@@ -269,7 +278,6 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                   currentImage: currentImage,
                   images: images,
                   disableAnimations: disableAnimations,
-                  isBackgroundPreview: widget.isBackgroundPreview,
                 ),
                 const Positioned.fill(
                   child: IgnorePointer(
@@ -431,23 +439,17 @@ class _PhotoLayer extends ConsumerWidget {
     required this.currentImage,
     required this.images,
     required this.disableAnimations,
-    required this.isBackgroundPreview,
   });
 
   final String? currentImage;
   final List<String> images;
   final bool disableAnimations;
-  final bool isBackgroundPreview;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cacheManager = ref.watch(imageCacheServiceProvider);
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final memCacheWidth = isBackgroundPreview
-        ? 280
-        : (screenWidth * dpr).round().clamp(560, 1400);
+    final memCacheWidth = SwipeableCard.photoDecodeWidth(context);
 
     return Stack(
       fit: StackFit.expand,
@@ -468,24 +470,15 @@ class _PhotoLayer extends ConsumerWidget {
                   key: ValueKey<String>(currentImage!),
                   imageUrl: currentImage!,
                   cacheManager: cacheManager,
+                  cacheKey: currentImage,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
                   memCacheWidth: memCacheWidth,
-                  fadeInDuration: const Duration(milliseconds: 180),
-                  fadeOutDuration: const Duration(milliseconds: 120),
+                  fadeInDuration: Duration.zero,
+                  fadeOutDuration: Duration.zero,
                   placeholder: (context, url) => ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest,
-                    child: Center(
-                      child: SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: theme.colorScheme.primary.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ),
                   ),
                   errorWidget: (context, url, error) => ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest,

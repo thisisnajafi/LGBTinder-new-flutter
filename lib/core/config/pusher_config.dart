@@ -2,19 +2,23 @@ import '../constants/api_endpoints.dart';
 
 /// Pusher Channels configuration for real-time chat.
 ///
-/// Override at build time:
-/// `flutter run --dart-define=PUSHER_APP_KEY=your_key --dart-define=PUSHER_APP_CLUSTER=mt1`
+/// The app key is public (same value as backend `PUSHER_APP_KEY`).
+/// Override at build time when needed:
+/// `flutter run --dart-define=PUSHER_APP_KEY=... --dart-define=PUSHER_APP_CLUSTER=us3`
 class PusherConfig {
   PusherConfig._();
 
+  static const String _defaultAppKey = 'bcf8236559a0fc82dcb9';
+  static const String _defaultCluster = 'us3';
+
   static const String appKey = String.fromEnvironment(
     'PUSHER_APP_KEY',
-    defaultValue: '',
+    defaultValue: _defaultAppKey,
   );
 
   static const String cluster = String.fromEnvironment(
     'PUSHER_APP_CLUSTER',
-    defaultValue: 'mt1',
+    defaultValue: _defaultCluster,
   );
 
   /// Laravel Sanctum broadcasting auth (no /api prefix).

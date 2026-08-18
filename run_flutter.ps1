@@ -14,10 +14,21 @@ $env:FLUTTER_STORAGE_BASE_URL = "https://storage.flutter-io.cn"
 
 Write-Host "Using China mirrors: pub.flutter-io.cn / storage.flutter-io.cn" -ForegroundColor Cyan
 
+$definesFile = Join-Path $PSScriptRoot "dart_defines.json"
+$flutterArgs = @()
 if ($args.Count -eq 0) {
-    & $flutterBin run
+    $flutterArgs = @("run")
 } else {
-    & $flutterBin @args
+    $flutterArgs = @($args)
 }
+
+$command = $flutterArgs[0]
+$needsDefines = $command -in @("run", "build", "test", "attach")
+$alreadyHasDefines = (($flutterArgs -join " ") -match "dart-define")
+if ($needsDefines -and -not $alreadyHasDefines -and (Test-Path $definesFile)) {
+    $flutterArgs += "--dart-define-from-file=$definesFile"
+}
+
+& $flutterBin @flutterArgs
 
 exit $LASTEXITCODE

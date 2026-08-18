@@ -27,12 +27,14 @@ class ProfileDetailChipData {
   final String label;
   final String value;
   final Color accent;
+  final bool fullWidth;
 
   const ProfileDetailChipData({
     required this.iconPath,
     required this.label,
     required this.value,
     this.accent = AppColors.accentViolet,
+    this.fullWidth = false,
   });
 }
 
@@ -89,7 +91,33 @@ class PremiumPhotosSection extends StatelessWidget {
             onAction: hasPhotos && !readOnly ? onEdit : null,
           ),
           const SizedBox(height: AppSpacing.spacingMD),
-          GridView.builder(
+          if (readOnly && hasPhotos)
+            SizedBox(
+              height: 168,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(right: AppSpacing.spacingSM),
+                itemCount: imageUrls.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppSpacing.spacingSM),
+                itemBuilder: (context, index) {
+                  return PremiumTapScale(
+                    onTap: () => onPhotoTap(index),
+                    semanticLabel: 'View photo ${index + 1}',
+                    child: SizedBox(
+                      width: 108,
+                      child: _PhotoTile(
+                        url: imageUrls[index],
+                        isPrimary: index == 0,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -208,6 +236,7 @@ class PremiumPersonalitySection extends StatelessWidget {
     required this.bio,
     required this.conversationStarters,
     this.onEdit,
+    this.onStarterTap,
     this.sectionTitle = 'Personality',
     this.sectionSubtitle = 'Let your authentic self shine',
     this.quoteBio = true,
@@ -218,6 +247,7 @@ class PremiumPersonalitySection extends StatelessWidget {
   final String? bio;
   final List<String> conversationStarters;
   final VoidCallback? onEdit;
+  final void Function(String starter)? onStarterTap;
   final String sectionTitle;
   final String? sectionSubtitle;
   final bool quoteBio;
@@ -264,7 +294,6 @@ class PremiumPersonalitySection extends StatelessWidget {
                         fontStyle:
                             quoteBio ? FontStyle.italic : FontStyle.normal,
                       ),
-                      maxLines: 8,
                     )
                   : PremiumTapScale(
                       onTap: onEdit ?? () {},
@@ -304,38 +333,52 @@ class PremiumPersonalitySection extends StatelessWidget {
             ...conversationStarters.map(
               (starter) => Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingSM,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.white.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.35),
+                child: PremiumTapScale(
+                  onTap: onStarterTap == null
+                      ? () {}
+                      : () => onStarterTap!(starter),
+                  semanticLabel: 'Use conversation starter',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingMD,
+                      vertical: AppSpacing.spacingSM,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      AppSvgIcon(
-                        assetPath: AppIcons.message,
-                        size: 18,
-                        color: AppColors.feedbackInfo,
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.white.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                      border: Border.all(
+                        color: Colors.white
+                            .withValues(alpha: isDark ? 0.08 : 0.35),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: AppText(
-                          starter,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
+                    ),
+                    child: Row(
+                      children: [
+                        AppSvgIcon(
+                          assetPath: AppIcons.message,
+                          size: 18,
+                          color: AppColors.feedbackInfo,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: AppText(
+                            starter,
+                            overflow: TextOverflow.visible,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        if (onStarterTap != null)
+                          AppSvgIcon(
+                            assetPath: AppIcons.arrowRight,
+                            size: 16,
+                            color: AppColors.accentViolet,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -395,7 +438,12 @@ class PremiumDetailsGridSection extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: chips
-                      .map((c) => SizedBox(width: w, child: _DetailChip(data: c)))
+                      .map(
+                        (c) => SizedBox(
+                          width: c.fullWidth ? constraints.maxWidth : w,
+                          child: _DetailChip(data: c),
+                        ),
+                      )
                       .toList(),
                 );
               },
@@ -428,6 +476,7 @@ class _DetailChip extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 36,
@@ -459,9 +508,10 @@ class _DetailChip extends StatelessWidget {
                 ),
                 AppText(
                   data.value,
-                  maxLines: 2,
+                  overflow: TextOverflow.visible,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -885,12 +935,19 @@ List<ProfileDetailChipData> buildProfileDetailChips({
   bool? gym,
 }) {
   final chips = <ProfileDetailChipData>[];
-  void add(String icon, String label, String value, [Color? accent]) {
+  void add(
+    String icon,
+    String label,
+    String value, [
+    Color? accent,
+    bool fullWidth = false,
+  ]) {
     chips.add(ProfileDetailChipData(
       iconPath: icon,
       label: label,
       value: value,
       accent: accent ?? AppColors.accentViolet,
+      fullWidth: fullWidth || value.length > 28,
     ));
   }
 
@@ -920,6 +977,7 @@ List<ProfileDetailChipData> buildProfileDetailChips({
       'Looking for',
       relationGoals.join(', '),
       AppColors.accentPink,
+      relationGoals.length > 1,
     );
   }
   if (languages.isNotEmpty) {
@@ -928,6 +986,7 @@ List<ProfileDetailChipData> buildProfileDetailChips({
       'Languages',
       languages.join(', '),
       AppColors.feedbackSuccess,
+      languages.length > 1,
     );
   }
   if (smoke != null) {

@@ -13,6 +13,16 @@ import '../domain/use_cases/mark_as_read_use_case.dart';
 import '../domain/use_cases/send_message_use_case.dart';
 import '../domain/use_cases/set_typing_use_case.dart';
 
+/// Draft to drop into a specific chat composer (conversation starters).
+class PendingChatDraft {
+  const PendingChatDraft({required this.userId, required this.text});
+
+  final int userId;
+  final String text;
+}
+
+final pendingChatDraftProvider = StateProvider<PendingChatDraft?>((ref) => null);
+
 /// Chat outbound queue (text messages pending send while offline)
 final chatOutboundQueueServiceProvider = Provider<ChatOutboundQueueService>((ref) {
   return ChatOutboundQueueService(ref.watch(chatLocalRepositoryProvider));

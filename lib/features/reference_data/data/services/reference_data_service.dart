@@ -22,7 +22,7 @@ class ReferenceDataService {
   Future<List<ReferenceItem>> getCities() async {
     try {
       final response = await _apiService.get<dynamic>(ApiEndpoints.cities);
-      return _extractListFromResponse(response.data);
+      return ReferenceItem.uniqueByTitle(_extractListFromResponse(response.data));
     } catch (e) {
       rethrow;
     }
@@ -34,7 +34,7 @@ class ReferenceDataService {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.citiesByCountry(countryId),
       );
-      return _extractListFromResponse(response.data);
+      return ReferenceItem.uniqueByTitle(_extractListFromResponse(response.data));
     } catch (e) {
       rethrow;
     }

@@ -16,17 +16,20 @@ import 'package:photo_view/photo_view.dart';
 class SelfDestructViewer extends ConsumerStatefulWidget {
   final int messageId;
   final int? initialRemainingSeconds;
+  final int? totalSeconds;
 
   const SelfDestructViewer({
     super.key,
     required this.messageId,
     this.initialRemainingSeconds,
+    this.totalSeconds,
   });
 
   static Future<bool?> open(
     BuildContext context, {
     required int messageId,
     int? initialRemainingSeconds,
+    int? totalSeconds,
   }) {
     return Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
@@ -34,6 +37,7 @@ class SelfDestructViewer extends ConsumerStatefulWidget {
         builder: (context) => SelfDestructViewer(
           messageId: messageId,
           initialRemainingSeconds: initialRemainingSeconds,
+          totalSeconds: totalSeconds,
         ),
       ),
     );
@@ -75,8 +79,11 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer> {
 
       setState(() {
         _imageUrl = payload['secure_media_url']?.toString();
-        _remainingSeconds = payload['remaining_seconds'] as int? ??
-            widget.initialRemainingSeconds;
+        _remainingSeconds = int.tryParse(
+              payload['remaining_seconds']?.toString() ?? '',
+            ) ??
+            widget.initialRemainingSeconds ??
+            widget.totalSeconds;
         _isLoading = false;
       });
 
@@ -134,7 +141,9 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer> {
                   height: 36,
                   child: CustomPaint(
                     painter: _CountdownRingPainter(
-                      progress: _remainingSeconds! / 60.0,
+                      progress: _remainingSeconds! /
+                          (widget.totalSeconds ?? _remainingSeconds ?? 1)
+                              .clamp(1, 60),
                       color: AppColors.primaryLight,
                     ),
                     child: Center(

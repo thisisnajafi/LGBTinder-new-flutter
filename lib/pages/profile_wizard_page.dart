@@ -90,6 +90,8 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
   int? _countryId;
   int? _cityId;
   ReferenceItem? _selectedCountry;
+  /// Shown when a previously saved country/city is no longer in supported markets.
+  String? _locationMarketNotice;
   int? _genderId;
   DateTime? _birthDate;
   
@@ -721,6 +723,36 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
     return const [];
   }
 
+  void _syncSupportedCountrySelection(List<ReferenceItem> countries) {
+    if (_countryId == null) return;
+    final stillValid = countries.any((c) => c.id == _countryId);
+    if (stillValid) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _countryId = null;
+        _cityId = null;
+        _selectedCountry = null;
+        _locationMarketNotice =
+            'Your previous location is no longer available. Please choose a supported country and city.';
+      });
+    });
+  }
+
+  void _syncSupportedCitySelection(List<ReferenceItem> cities) {
+    if (_cityId == null) return;
+    final stillValid = cities.any((c) => c.id == _cityId);
+    if (stillValid) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _cityId = null;
+        _locationMarketNotice =
+            'Your previous city is no longer available. Please choose a supported city.';
+      });
+    });
+  }
+
   String? _celebrationLocation() {
     final countries = ref.read(countriesProvider).valueOrNull ?? [];
     final cities = _countryId != null
@@ -1214,9 +1246,28 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
             ),
           ),
           countriesAsync.when(
-            data: (countries) => ReferenceBottomSheetField(
+            data: (countries) {
+              _syncSupportedCountrySelection(countries);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_locationMarketNotice != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        _locationMarketNotice!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                  ReferenceBottomSheetField(
               label: 'Country',
-              hint: 'Select your country',
+              hint: countries.isEmpty
+                  ? 'No supported countries available'
+                  : 'Select your country',
               selectedId: _countryId,
               items: countries,
               groupedStyle: true,
@@ -1224,6 +1275,7 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
                 setState(() {
                   _countryId = value;
                   _cityId = null; // Reset city when country changes
+                  _locationMarketNotice = null;
                   final selectedCountry = countries.firstWhere(
                     (c) => c.id == value,
                     orElse: () => ReferenceItem(id: -1, title: '', phoneCode: _countryCode),
@@ -1236,27 +1288,37 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
               },
               required: true,
               searchable: true,
+              enabled: countries.isNotEmpty,
             ),
+                ],
+              );
+            },
             loading: () => _buildLoadingField('Country', textColor, secondaryTextColor, isDark),
             error: (error, stack) => _buildErrorField('Country', error, textColor, secondaryTextColor, isDark),
           ),
           if (_countryId != null)
             citiesAsync.when(
-              data: (cities) => ReferenceBottomSheetField(
+              data: (cities) {
+                _syncSupportedCitySelection(cities);
+                return ReferenceBottomSheetField(
                 label: 'City',
-                hint: 'Select your city',
+                hint: cities.isEmpty
+                    ? 'No supported cities for this country'
+                    : 'Select your city',
                 selectedId: _cityId,
                 items: cities,
                 groupedStyle: true,
                 onChanged: (value) {
                   setState(() {
                     _cityId = value;
+                    _locationMarketNotice = null;
                   });
                 },
                 required: true,
                 enabled: cities.isNotEmpty,
                 searchable: true,
-              ),
+              );
+              },
               loading: () => _buildLoadingField('City', textColor, secondaryTextColor, isDark),
               error: (error, stack) => _buildErrorField('City', error, textColor, secondaryTextColor, isDark),
             ),

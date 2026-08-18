@@ -34,6 +34,47 @@ abstract final class AppDateTime {
 
   static DateTime toLocal(DateTime value) => value.toLocal();
 
+  /// Serializes an instant as UTC ISO-8601 so cache/API round-trips keep the timezone.
+  static String toApi(DateTime value) => value.toUtc().toIso8601String();
+
+  /// Relative time in the device timezone, e.g. `Just now`, `3m ago`, `2h ago`.
+  static String formatRelative(DateTime dateTime, {DateTime? now}) {
+    final local = dateTime.toLocal();
+    final difference = (now ?? DateTime.now()).difference(local);
+
+    if (difference.isNegative || difference.inMinutes < 1) {
+      return 'Just now';
+    }
+    if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    }
+    if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    }
+    if (difference.inDays == 1) {
+      return 'Yesterday';
+    }
+    if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    }
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[local.month - 1]} ${local.day}';
+  }
+
   /// Chat bubble time, e.g. `3:23 PM`.
   static String formatChatTime(DateTime dateTime) {
     final local = dateTime.toLocal();

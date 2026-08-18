@@ -23,10 +23,7 @@ final hasAdvancedFiltersProvider = Provider<bool>((ref) {
 
 /// Best-effort premium flag for UI gates.
 final isPremiumUserProvider = Provider<bool>((ref) {
-  final sub = ref.watch(subscriptionProvider);
-  if (sub?.isPremium == true) return true;
-  if (ref.watch(userTierProvider).atLeast(UserTier.silder)) return true;
-  return ref.watch(planLimitsProvider).valueOrNull?.planInfo.isPremium ?? false;
+  return ref.watch(isPremiumProvider);
 });
 
 /// Converts legacy payment [SubscriptionStatus] into global [AppSubscriptionStatus].

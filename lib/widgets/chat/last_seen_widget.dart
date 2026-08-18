@@ -47,7 +47,8 @@ class LastSeenWidget extends ConsumerWidget {
       );
     }
 
-    if (lastSeenAt == null) {
+    final lastSeen = lastSeenAt?.toLocal();
+    if (lastSeen == null) {
       return AppText(
         'Offline',
         style: AppTypography.caption.copyWith(color: textColor),
@@ -55,8 +56,7 @@ class LastSeenWidget extends ConsumerWidget {
       );
     }
 
-    final now = DateTime.now();
-    final difference = now.difference(lastSeenAt!);
+    final difference = DateTime.now().difference(lastSeen);
 
     String text;
     if (difference.inMinutes < 1) {
@@ -68,7 +68,7 @@ class LastSeenWidget extends ConsumerWidget {
     } else if (difference.inDays < 7) {
       text = '${difference.inDays}d ago';
     } else {
-      text = 'Last seen ${lastSeenAt!.day}/${lastSeenAt!.month}';
+      text = '${lastSeen.day}/${lastSeen.month}';
     }
 
     return AppText(
