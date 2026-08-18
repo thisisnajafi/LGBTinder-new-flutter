@@ -146,11 +146,20 @@ class _ChatConversationInfoPageState
     }
   }
 
-  _SharedMediaItem? _mediaFromMessage(Message message) {
-    if (message.isExpired) return null;
+  bool _isSelfDestructMedia(Message message) {
     final type = message.messageType.toLowerCase();
-    final isImage = type.contains('image');
-    final isVideo = type.contains('video');
+    return message.isExpired ||
+        message.expiresInSeconds != null ||
+        message.remainingSeconds != null ||
+        type == 'self_destruct' ||
+        type.startsWith('disappearing_');
+  }
+
+  _SharedMediaItem? _mediaFromMessage(Message message) {
+    if (_isSelfDestructMedia(message)) return null;
+    final type = message.messageType.toLowerCase();
+    final isImage = type == 'image';
+    final isVideo = type == 'video';
     if (!isImage && !isVideo) return null;
 
     final url = message.attachmentUrl ??
