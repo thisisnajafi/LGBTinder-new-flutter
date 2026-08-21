@@ -170,9 +170,9 @@ class SettingsService {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.changePassword,
         data: {
-          'current_password': currentPassword,
-          'password': newPassword,
-          'password_confirmation': newPassword,
+          'old_password': currentPassword,
+          'new_password': newPassword,
+          'new_password_confirmation': newPassword,
         },
         fromJson: (json) => json as Map<String, dynamic>,
       );

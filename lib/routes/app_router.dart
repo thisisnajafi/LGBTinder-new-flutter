@@ -21,6 +21,8 @@ import '../pages/profile_edit_page.dart';
 import '../screens/profile/profile_verification_screen.dart';
 import '../screens/discovery/profile_detail_screen.dart';
 import '../screens/blocked_users_screen.dart';
+import '../screens/safety_center_screen.dart';
+import '../screens/discovery/likes_received_screen.dart';
 import '../features/matching/presentation/screens/matches_screen.dart';
 import '../features/payments/presentation/screens/google_play_billing_test_screen.dart';
 import '../features/payments/presentation/screens/subscription_plans_screen.dart' as payments;
@@ -68,6 +70,8 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String notifications = '/notifications';
   static const String blockedUsers = '/blocked-users';
+  static const String safetyCenter = '/safety-center';
+  static const String likesReceived = '/likes-received';
   static const String matches = '/matches';
   static const String googlePlayBillingTest = '/google-play-billing-test';
   static const String subscriptionPlans = '/subscription-plans';
@@ -185,7 +189,13 @@ class _GuardDecision {
   });
 }
 
-Future<AuthStage> _getAuthStage(TokenStorageService tokenStorage) async {
+/// Resolves auth routing from persisted tokens/session.
+///
+/// A leftover `profile_completion_token` only matters when there is no
+/// full auth token. If the auth token survived a cache wipe but the
+/// session JSON did not, defaulting to "incomplete" trapped completed
+/// users back in the profile wizard.
+Future<AuthStage> resolveAuthStage(TokenStorageService tokenStorage) async {
   final profileToken = await tokenStorage.getProfileCompletionToken();
   final hasProfileCompletionToken =
       profileToken != null && profileToken.isNotEmpty;
@@ -199,12 +209,13 @@ Future<AuthStage> _getAuthStage(TokenStorageService tokenStorage) async {
   }
 
   final session = await tokenStorage.getUserSession();
-  final profileCompleted = session?.profileCompleted ?? false;
-  final userState = session?.userState;
-  final needsProfileCompletion = !profileCompleted ||
-      userState == 'profile_completion_required';
+  if (session == null) {
+    return AuthStage.authenticated;
+  }
 
-  if (needsProfileCompletion || hasProfileCompletionToken) {
+  final needsProfileCompletion = !session.profileCompleted ||
+      session.userState == 'profile_completion_required';
+  if (needsProfileCompletion) {
     return AuthStage.profileCompletion;
   }
 
@@ -280,7 +291,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return legacyResolved;
       }
 
-      final authStage = await _getAuthStage(tokenStorage);
+      final authStage = await resolveAuthStage(tokenStorage);
       final pending = _redirector.pendingProtectedRoute;
       final decision = evaluateGuardDecision(
         location: loc,
@@ -462,6 +473,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'blocked-users',
             name: 'blocked-users',
             pageBuilder: (context, state) => slideFadePage(state, const BlockedUsersScreen()),
+          ),
+
+          GoRoute(
+            path: 'safety-center',
+            name: 'safety-center',
+            pageBuilder: (context, state) =>
+                slideFadePage(state, const SafetyCenterScreen()),
+          ),
+
+          GoRoute(
+            path: 'likes-received',
+            name: 'likes-received',
+            pageBuilder: (context, state) =>
+                slideFadePage(state, const LikesReceivedScreen()),
           ),
           
           // Matches (inherits auth from parent)

@@ -66,10 +66,10 @@ class DioClient {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        validateStatus: (status) {
-          // Accept status codes 200-299 and 400-499 as valid
-          return status != null && (status < 500 || status >= 600);
-        },
+        // 4xx must be errors so RetryInterceptor (429) and the 401/403
+        // onError branch (banned redirect, session expiry) actually run.
+        validateStatus: (status) =>
+            status != null && status >= 200 && status < 300,
       ),
     );
 
@@ -128,23 +128,14 @@ class DioClient {
             body: errorBody,
           );
 
-          // Treat 401 as unauthenticated — except login/register and plan/feature denials.
-          if (response.statusCode == 401) {
-            final body = response.data is Map<String, dynamic>
-                ? response.data as Map<String, dynamic>
-                : null;
-            final hadAuthToken =
-                response.requestOptions.extra['had_auth_token'] == true;
-            if (ApiError.shouldForceLogout(
-              statusCode: response.statusCode,
-              body: body,
-              requestPath: response.requestOptions.path,
-              hadAuthTokenOnRequest: hadAuthToken,
-            )) {
-              clearAuthToken();
-              _notifyUnauthorized();
-            }
-          }
+          // Belt-and-suspenders: a per-request validateStatus override can
+          // still deliver 4xx here. Default options now reject 4xx, so the
+          // live path is onError.
+          _handleClientErrorStatus(
+            statusCode: response.statusCode,
+            data: response.data,
+            requestOptions: response.requestOptions,
+          );
 
           return handler.next(response);
         },
@@ -166,29 +157,18 @@ class DioClient {
             error: error.message,
           );
 
-          // Handle 403 banned account
-          if (error.response?.statusCode == 403) {
-            final body = error.response?.data is Map<String, dynamic>
-                ? error.response!.data as Map<String, dynamic>
-                : null;
-            final nested = body?['data'];
-            final userState = nested is Map<String, dynamic>
-                ? nested['user_state']?.toString()
-                : body?['user_state']?.toString();
-            if (userState == 'banned' || body?['data'] is Map && (body!['data'] as Map)['banned'] == true) {
-              clearAuthToken();
-              BannedHandler.invoke();
-              return handler.next(error);
-            }
+          final statusCode = error.response?.statusCode;
+          if (statusCode == 403 && _isBannedAccount(_asStringKeyMap(error.response?.data))) {
+            clearAuthToken();
+            BannedHandler.invoke();
+            return handler.next(error);
           }
 
           // Handle 401 Unauthorized - Token expired or invalid
-          if (error.response?.statusCode == 401) {
+          if (statusCode == 401) {
             final requestOptions = error.requestOptions;
             final path = requestOptions.path;
-            final body = error.response?.data is Map<String, dynamic>
-                ? error.response!.data as Map<String, dynamic>
-                : null;
+            final body = _asStringKeyMap(error.response?.data);
 
             // Login/register: wrong credentials — do NOT redirect to welcome
             final isLoginOrRegisterRequest = path.contains('/auth/login') ||
@@ -248,6 +228,56 @@ class DioClient {
     );
 
     _dio.interceptors.add(SubscriptionMetaInterceptor());
+  }
+
+  /// Shared 401/403 handling for both onResponse (validateStatus override)
+  /// and onError (normal 4xx). Does not attempt token refresh — that stays
+  /// on the onError 401 path so a successful refresh can [handler.resolve].
+  void _handleClientErrorStatus({
+    required int? statusCode,
+    required dynamic data,
+    required RequestOptions requestOptions,
+  }) {
+    final body = _asStringKeyMap(data);
+
+    if (statusCode == 403 && _isBannedAccount(body)) {
+      clearAuthToken();
+      BannedHandler.invoke();
+      return;
+    }
+
+    if (statusCode == 401) {
+      final hadAuthToken = requestOptions.extra['had_auth_token'] == true;
+      if (ApiError.shouldForceLogout(
+        statusCode: statusCode,
+        body: body,
+        requestPath: requestOptions.path,
+        hadAuthTokenOnRequest: hadAuthToken,
+      )) {
+        clearAuthToken();
+        _notifyUnauthorized();
+      }
+    }
+  }
+
+  static Map<String, dynamic>? _asStringKeyMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) {
+      return data.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  }
+
+  /// Matches [EnsureUserNotBanned] and AuthController check-token payloads.
+  static bool _isBannedAccount(Map<String, dynamic>? body) {
+    if (body == null) return false;
+    final nested = _asStringKeyMap(body['data']);
+    final userState =
+        nested?['user_state']?.toString() ?? body['user_state']?.toString();
+    if (userState == 'banned') return true;
+    if (nested?['banned'] == true) return true;
+    if (body['banned'] == true) return true;
+    return false;
   }
 
   /// Get Dio instance

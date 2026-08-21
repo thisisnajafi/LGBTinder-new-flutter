@@ -220,10 +220,15 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
     }
   }
 
-  Future<void> _copyToClipboard() async {
-    // TODO: Copy to clipboard functionality
+  Future<void> _copyAllBackupCodes() async {
+    if (_backupCodes.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: _backupCodes.join('\n')));
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copy to clipboard functionality will be implemented')),
+      const SnackBar(
+        content: Text('All backup codes copied to clipboard'),
+        duration: Duration(seconds: 2),
+      ),
     );
   }
 
@@ -264,7 +269,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                       : 'Enable 2FA to add an extra layer of security to your account.',
                 ),
 
-                if (!_isEnabled) ...[
+                if (!_isEnabled && !_showVerificationStep) ...[
                   const SizedBox(height: AppSpacing.spacingXL),
                   PremiumSettingsGroup(
                     title: 'How it works',
@@ -376,7 +381,23 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                             color: secondaryTextColor,
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.spacingMD),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: _copyAllBackupCodes,
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              tapTargetSize: MaterialTapTargetSize.padded,
+                            ),
+                            icon: AppSvgIcon(
+                              assetPath: AppIcons.copy,
+                              size: 20,
+                              color: AppColors.accentViolet,
+                            ),
+                            label: const Text('Copy all'),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.spacingSM),
                         for (final code in _backupCodes)
                           Container(
                             margin: const EdgeInsets.only(
@@ -429,6 +450,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                       ],
                     ),
                   ],
+                  if (_isEnabled)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSettingsLayout.horizontalPadding,

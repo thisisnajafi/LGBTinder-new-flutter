@@ -7,6 +7,7 @@ import 'package:lgbtindernew/features/auth/data/models/verify_email_response.dar
 import 'package:lgbtindernew/features/auth/data/services/auth_service.dart';
 import 'package:lgbtindernew/features/payments/data/models/plan_limits.dart';
 import 'package:lgbtindernew/features/payments/data/services/plan_limits_service.dart';
+import 'package:lgbtindernew/shared/models/stored_user_session.dart';
 import 'package:lgbtindernew/shared/services/token_storage_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -23,21 +24,66 @@ class InMemoryTokenStorage extends TokenStorageService {
   String? _authToken;
   String? _profileCompletionToken;
   String? _refreshToken;
+  StoredUserSession? _session;
 
   void seedAuthenticated({String token = 'test-auth-token'}) {
     _authToken = token;
     _profileCompletionToken = null;
   }
 
+  void seedCompletedProfile({
+    String token = 'test-auth-token',
+    bool leftoverProfileToken = false,
+  }) {
+    _authToken = token;
+    _profileCompletionToken = leftoverProfileToken ? 'stale-wizard-token' : null;
+    _session = StoredUserSession(
+      user: UserData(
+        id: 1,
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'user@test.com',
+      ),
+      profileCompleted: true,
+      userState: 'ready_for_app',
+    );
+  }
+
+  void seedAuthTokenWithoutSession({
+    String token = 'test-auth-token',
+    bool leftoverProfileToken = false,
+  }) {
+    _authToken = token;
+    _session = null;
+    _profileCompletionToken = leftoverProfileToken ? 'stale-wizard-token' : null;
+  }
+
+  void seedIncompleteProfile({String token = 'test-auth-token'}) {
+    _authToken = token;
+    _profileCompletionToken = token;
+    _session = StoredUserSession(
+      user: UserData(
+        id: 1,
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'user@test.com',
+      ),
+      profileCompleted: false,
+      userState: 'profile_completion_required',
+    );
+  }
+
   void seedProfileCompletion({String token = 'test-profile-token'}) {
     _authToken = null;
     _profileCompletionToken = token;
+    _session = null;
   }
 
   void seedUnauthenticated() {
     _authToken = null;
     _profileCompletionToken = null;
     _refreshToken = null;
+    _session = null;
   }
 
   @override
@@ -68,6 +114,25 @@ class InMemoryTokenStorage extends TokenStorageService {
   @override
   Future<void> clearProfileCompletionToken() async =>
       _profileCompletionToken = null;
+
+  @override
+  Future<void> saveUserSession({
+    required UserData user,
+    bool profileCompleted = false,
+    String? userState,
+  }) async {
+    _session = StoredUserSession(
+      user: user,
+      profileCompleted: profileCompleted,
+      userState: userState,
+    );
+  }
+
+  @override
+  Future<StoredUserSession?> getUserSession() async => _session;
+
+  @override
+  Future<void> clearUserSession() async => _session = null;
 
   @override
   Future<bool> isAuthenticated() async =>

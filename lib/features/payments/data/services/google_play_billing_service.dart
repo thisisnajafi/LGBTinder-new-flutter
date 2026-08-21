@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -102,19 +101,19 @@ class GooglePlayBillingService {
   }
 
   /// Handle purchase updates from the stream
-  void _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) {
+  Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) async {
     debugPrint('Purchase update received: ${purchaseDetailsList.length} purchases');
 
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
-      _handlePurchaseUpdate(purchaseDetails);
+      await _handlePurchaseUpdate(purchaseDetails);
     }
 
-    // Emit the full list to listeners
+    // Emit after backend verify / complete so UI waiters see a finished purchase.
     _purchaseUpdatesController.add(purchaseDetailsList);
   }
 
   /// Handle individual purchase updates
-  void _handlePurchaseUpdate(PurchaseDetails purchaseDetails) async {
+  Future<void> _handlePurchaseUpdate(PurchaseDetails purchaseDetails) async {
     debugPrint('Handling purchase: ${purchaseDetails.productID}, status: ${purchaseDetails.status}');
 
     switch (purchaseDetails.status) {
@@ -164,6 +163,9 @@ class GooglePlayBillingService {
           } else {
             _errorController.add('Subscription activation failed: ${result['message'] ?? 'Unknown error'}');
           }
+          // Subscriptions stay restorable after acknowledge. Completing here
+          // prevents Google's 3-day auto-refund while webhook/restore retries grant.
+          await _completePurchase(purchaseDetails);
         }
         return;
       }
@@ -204,6 +206,7 @@ class GooglePlayBillingService {
         } else {
           debugPrint('Restored subscription failed: ${purchaseDetails.productID}');
           _errorController.add('Restored purchase failed: ${result['message'] ?? 'Unknown error'}');
+          await _completePurchase(purchaseDetails);
         }
         return;
       }
@@ -245,11 +248,53 @@ class GooglePlayBillingService {
     _errorController.add('Purchase failed: $errorMessage');
   }
 
-  /// Complete the purchase with Google Play — always call after backend success.
+  /// Complete the purchase with Google Play.
+  ///
+  /// Call after backend success for all products. For subscriptions, also call
+  /// on backend failure so Google does not auto-refund after 3 days — the token
+  /// remains restorable. Consumables must not be consumed until entitlement is
+  /// granted (Play will redeliver unfinished purchases).
   Future<void> _completePurchase(PurchaseDetails purchaseDetails) async {
     if (purchaseDetails.pendingCompletePurchase) {
       await _inAppPurchase.completePurchase(purchaseDetails);
       debugPrint('completePurchase called for ${purchaseDetails.productID}');
+    }
+  }
+
+  /// Launch a consumable purchase and return whether the Play sheet opened.
+  Future<bool> purchaseConsumableProduct(String productId) async {
+    if (!await isBillingAvailable()) {
+      _errorController.add('Google Play Billing is not available on this device');
+      return false;
+    }
+    final products = await queryProductDetails({productId});
+    if (products.isEmpty) {
+      _errorController.add('Product not available: $productId');
+      return false;
+    }
+    return launchBillingFlowForConsumable(products.first);
+  }
+
+  /// Wait until Play reports a terminal status for [productId].
+  Future<PurchaseStatus?> waitForPurchaseOutcome(
+    String productId, {
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    try {
+      return await purchaseUpdates
+          .expand((list) => list)
+          .where((purchase) => purchase.productID == productId)
+          .map((purchase) => purchase.status)
+          .firstWhere(
+            (status) =>
+                status == PurchaseStatus.purchased ||
+                status == PurchaseStatus.restored ||
+                status == PurchaseStatus.error ||
+                status == PurchaseStatus.canceled,
+          )
+          .timeout(timeout);
+    } on TimeoutException {
+      return null;
     }
   }
 
@@ -384,7 +429,7 @@ class GooglePlayBillingService {
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
-      if (response.isSuccess && response.data != null) {
+      if (response.isSuccess) {
         // Clear attribution after successful purchase
         if (hasAttribution) {
           await _marketingAttributionService.clearAttribution();
@@ -418,36 +463,10 @@ class GooglePlayBillingService {
 
   /// Extract purchase token from purchase details
   String _extractPurchaseToken(PurchaseDetails purchaseDetails) {
-    // For Android (Google Play), the purchase token is in verificationData.source
-    // For iOS (App Store), it's in verificationData.serverVerificationData
-    String purchaseToken;
-    if (Platform.isAndroid) {
-      // Android/Google Play: Extract from verificationData.source
-      final androidVerificationData = purchaseDetails.verificationData.source;
-      if (androidVerificationData != null && androidVerificationData.isNotEmpty) {
-        // Parse the JSON to extract purchaseToken
-        try {
-          final data = jsonDecode(androidVerificationData);
-          purchaseToken = data['purchaseToken'] ?? data['token'] ?? '';
-        } catch (e) {
-          // If parsing fails, try to extract from the raw string
-          purchaseToken = androidVerificationData;
-        }
-      } else {
-        // Fallback to serverVerificationData if source is empty
-        purchaseToken = purchaseDetails.verificationData.serverVerificationData;
-      }
-    } else {
-      // iOS/App Store: Use serverVerificationData
-      purchaseToken = purchaseDetails.verificationData.serverVerificationData;
-    }
-
-    // If still empty, use purchaseID as last resort
-    if (purchaseToken.isEmpty) {
-      purchaseToken = purchaseDetails.purchaseID ?? '';
-    }
-
-    return purchaseToken;
+    // `source` is the constant store identifier ('google_play' / 'app_store'),
+    // not a token. The Play purchase token and the StoreKit receipt are both
+    // carried in `serverVerificationData`.
+    return purchaseDetails.verificationData.serverVerificationData;
   }
 
   /// Acknowledge purchase with backend

@@ -20,6 +20,17 @@ class IncomingCallData {
       callType == 'video' ||
       callType.contains('video');
 
+  static bool isCallPayload(Map<String, dynamic> data) {
+    final type = data['type']?.toString() ?? '';
+    return type == 'call' ||
+        type == 'incoming_call' ||
+        type == 'incoming_call_audio' ||
+        type == 'incoming_call_video' ||
+        type.startsWith('incoming_call') ||
+        data.containsKey('call_id') ||
+        data.containsKey('callId');
+  }
+
   /// Build from Pusher `call.incoming` or FCM/OneSignal data map.
   static IncomingCallData? fromPayload(Map<String, dynamic> raw) {
     final data = _unwrap(raw);

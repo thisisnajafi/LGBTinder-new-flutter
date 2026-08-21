@@ -463,13 +463,6 @@ class ApiEndpoints {
   static const String googlePlayAnalyticsWebhooks = '/google-play/analytics/webhooks';
   static const String googlePlayAnalyticsErrors = '/google-play/analytics/errors';
 
-  // ==================== Community Forums ====================
-  static const String communityForums = '/community-forums';
-  static const String forumCategories = '/community-forums/categories';
-  static String forumPost(int postId) => '/community-forums/$postId';
-  static String forumPostLike(int postId) => '/community-forums/$postId/like';
-  static String forumPostComments(int postId) => '/community-forums/$postId/comments';
-
   // ==================== Marketing System ====================
   static const String marketingPromotions = '/marketing/promotions';
   static const String marketingValidatePromo = '/marketing/validate-promo';

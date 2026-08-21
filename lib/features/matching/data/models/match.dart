@@ -39,10 +39,12 @@ class Match {
       matchId = (json['match_id'] is int) ? json['match_id'] as int : int.tryParse(json['match_id'].toString()) ?? 0;
     }
     
-    // Get user ID
+    // Get user ID — backend match list historically sends the peer as `id`
     int userId = 0;
     if (json['user_id'] != null) {
       userId = (json['user_id'] is int) ? json['user_id'] as int : int.tryParse(json['user_id'].toString()) ?? 0;
+    } else if (json['id'] != null) {
+      userId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
     }
     
     // Get first name - provide default if missing
@@ -56,7 +58,10 @@ class Match {
       firstName: firstName,
       lastName: json['last_name']?.toString(),
       profileBio: json['profile_bio']?.toString(),
-      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString(),
+      primaryImageUrl: json['primary_image_url']?.toString() ??
+          json['image_url']?.toString() ??
+          json['avatar']?.toString() ??
+          json['avatar_url']?.toString(),
       imageUrls: json['images'] != null && json['images'] is List
           ? (json['images'] as List).map((e) => e.toString()).toList()
           : null,

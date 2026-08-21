@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/subscription_plan.dart';
+import '../../data/models/subscription_plan.dart';
 import '../../providers/payment_provider.dart';
 
 /// Plan card widget
@@ -77,7 +77,7 @@ class _PlanCardState extends ConsumerState<PlanCard> with TickerProviderStateMix
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final paymentState = ref.watch(paymentProvider);
 

@@ -55,6 +55,11 @@ class _FakeTokenStorage extends Fake implements TokenStorageService {
   }
 
   @override
+  Future<void> clearProfileCompletionToken() async {
+    profileCompletionToken = null;
+  }
+
+  @override
   Future<void> saveUserSession({
     required UserData user,
     bool profileCompleted = false,
@@ -171,6 +176,24 @@ void main() {
       expect(storage.authToken, 'google-sanctum-token');
       expect(storage.profileCompletionToken, isNull);
       expect(api.lastData, {'id_token': 'google-id-token'});
+    });
+
+    test('clears a leftover profile-completion token for a completed user',
+        () async {
+      storage.profileCompletionToken = 'stale-wizard-token';
+      api.nextResponse = ApiResponse<Map<String, dynamic>>(
+        status: true,
+        data: googleData(
+          isNewUser: false,
+          profileCompleted: true,
+          userState: 'ready_for_app',
+        ),
+        message: 'Successfully logged in with Google',
+      );
+
+      await authService.signInWithGoogle(idToken: 'google-id-token');
+
+      expect(storage.profileCompletionToken, isNull);
     });
 
     test('throws when the backend returns no data', () async {

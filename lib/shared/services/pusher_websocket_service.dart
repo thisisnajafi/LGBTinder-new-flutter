@@ -323,10 +323,14 @@ class PusherWebSocketService {
       case 'presence.updated':
         _handleUserPresence(payload);
         break;
+      case 'new.match':
+      case 'NewMatch':
+      case 'match.created':
+      case 'new_match':
+        _handleNewMatch(payload);
+        break;
       default:
-        if (eventName.contains('Match') ||
-            eventName == 'match.created' ||
-            eventName == 'new_match') {
+        if (eventName.toLowerCase().contains('match')) {
           _handleNewMatch(payload);
         } else {
           AppLogger.debug(
@@ -436,10 +440,15 @@ class PusherWebSocketService {
   }
 
   void _handleNewMatch(Map<String, dynamic> data) {
+    final matchedUser = data['matched_user'];
+    final matchedUserId = matchedUser is Map
+        ? int.tryParse(matchedUser['id']?.toString() ?? '')
+        : null;
     _matchController.add(MatchEvent(
       matchId: int.tryParse(data['match_id']?.toString() ?? '') ??
           int.tryParse(data['id']?.toString() ?? ''),
-      userId: int.tryParse(data['user_id']?.toString() ?? ''),
+      userId: matchedUserId ??
+          int.tryParse(data['user_id']?.toString() ?? ''),
       timestamp: DateTime.now(),
     ));
   }

@@ -1,6 +1,7 @@
-﻿// Screen: SafetyCenterScreen
+// Screen: SafetyCenterScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
@@ -180,11 +181,7 @@ class SafetyCenterScreen extends ConsumerWidget {
                       ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Support contact feature coming soon'),
-                            ),
-                          );
+                          context.pushNamed('help-support');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryLight,

@@ -1,9 +1,11 @@
 // Screen: Superlike Packs — purchase flow aligned with SubscriptionPlansScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../../core/cache/session_cache_providers.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/border_radius_constants.dart';
@@ -19,8 +21,8 @@ import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_subscription_plans.dart';
 import '../../data/models/superlike_pack.dart';
 import '../../data/services/plan_limits_service.dart';
+import '../../providers/google_play_billing_provider.dart';
 import '../../providers/payment_providers.dart';
-import '../../../../core/responsive/responsive.dart';
 
 /// Full-screen superlike pack purchase — mirrors subscription plans UX.
 class SuperlikePacksScreen extends ConsumerStatefulWidget {
@@ -78,10 +80,25 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
     setState(() => _isPurchasing = true);
 
     try {
-      final service = ref.read(superlikePackServiceProvider);
-      await service.purchasePack(
-        PurchaseSuperlikePackRequest(packId: pack.id),
-      );
+      final productId = pack.resolvedGoogleProductId;
+      if (productId == null) {
+        throw Exception('This pack is not available for in-app purchase');
+      }
+
+      final billing = ref.read(googlePlayBillingServiceProvider);
+      final outcome = billing.waitForPurchaseOutcome(productId);
+      final launched = await billing.purchaseConsumableProduct(productId);
+      if (!launched) {
+        throw Exception('Could not start Google Play purchase');
+      }
+
+      final status = await outcome;
+      if (status == PurchaseStatus.canceled) {
+        return;
+      }
+      if (status != PurchaseStatus.purchased && status != PurchaseStatus.restored) {
+        throw Exception('Purchase did not complete');
+      }
 
       ref.invalidate(availableSuperlikePacksProvider);
       ref.invalidate(userSuperlikePacksProvider);

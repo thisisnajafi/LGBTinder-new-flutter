@@ -6,6 +6,11 @@ import 'app_router.dart';
 class RouteRedirector {
   String? _pendingProtectedRoute;
 
+  /// App routes under `/call/...` that must not be treated as legacy call links.
+  static const Set<String> _reservedCallSegments = {
+    'outgoing',
+  };
+
   /// App routes under `/profile/...` that must not be treated as `/profile/:userId`.
   static const Set<String> _reservedProfileSegments = {
     'edit',
@@ -73,6 +78,11 @@ class RouteRedirector {
     }
 
     if (path.startsWith('/call/')) {
+      final segments = uri.pathSegments;
+      if (segments.length >= 2 &&
+          _reservedCallSegments.contains(segments[1])) {
+        return null;
+      }
       return AppRoutes.chat;
     }
 

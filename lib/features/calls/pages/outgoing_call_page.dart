@@ -162,7 +162,10 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       final tokenData =
           await ref.read(callSignalingServiceProvider).fetchAgoraToken(widget.callId);
 
-      await _agoraService.initialize(isVideoCall: isVideo);
+      await _agoraService.initialize(
+        isVideoCall: isVideo,
+        appId: tokenData.appId,
+      );
       await _agoraService.joinChannel(
         channelId: tokenData.channelName,
         token: tokenData.token,

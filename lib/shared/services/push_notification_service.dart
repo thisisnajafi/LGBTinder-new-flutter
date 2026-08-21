@@ -12,6 +12,7 @@ import '../services/api_service.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
 import 'notification_navigation.dart';
+import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/settings/providers/sound_preferences_provider.dart';
 import '../../features/settings/data/models/sound_preferences.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
@@ -46,9 +47,13 @@ class PushNotificationService {
     'subscription_renewed',
   };
 
-  /// Set API service for backend communication
+  /// Set API service for backend communication and push the current token if we have one.
   void setApiService(ApiService apiService) {
     _apiService = apiService;
+    final token = _fcmToken;
+    if (token != null && token.isNotEmpty) {
+      unawaited(_sendTokenToBackend(token));
+    }
   }
 
   /// Set navigation callbacks
@@ -179,6 +184,9 @@ class PushNotificationService {
     try {
       _fcmToken = await _firebaseMessaging.getToken();
       AppLogger.debug('FCM Token: $_fcmToken');
+      if (_fcmToken != null && _fcmToken!.isNotEmpty) {
+        await _sendTokenToBackend(_fcmToken!);
+      }
       return _fcmToken;
     } catch (e) {
       AppLogger.debug('Error getting FCM token: $e');
@@ -398,14 +406,7 @@ class PushNotificationService {
   }
 
   bool _isIncomingCallPayload(Map<String, dynamic> data) {
-    final type = data['type']?.toString() ?? '';
-    return type == 'call' ||
-        type == 'incoming_call' ||
-        type == 'incoming_call_audio' ||
-        type == 'incoming_call_video' ||
-        type.startsWith('incoming_call') ||
-        data.containsKey('call_id') ||
-        data.containsKey('callId');
+    return IncomingCallData.isCallPayload(data);
   }
 
   /// Handle local notification tap (foreground FCM shown as local notification).

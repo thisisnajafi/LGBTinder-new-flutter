@@ -45,6 +45,19 @@ void main() {
       expect(r.resolveLegacyRoute(Uri.parse('/profile/edit')), isNull);
       expect(r.resolveLegacyRoute(Uri.parse('/profile/verification')), isNull);
     });
+
+    test('does not swallow the real outgoing call route', () {
+      final r = RouteRedirector();
+      expect(r.resolveLegacyRoute(Uri.parse(AppRoutes.outgoingCall)), isNull);
+      expect(
+        r.resolveLegacyRoute(
+          Uri.parse('${AppRoutes.outgoingCall}?callId=7&type=video'),
+        ),
+        isNull,
+      );
+      // Genuinely legacy call links still fall back to the chat list.
+      expect(r.resolveLegacyRoute(Uri.parse('/call/42')), AppRoutes.chat);
+    });
   });
 
   group('RouteRedirector pending protected route', () {

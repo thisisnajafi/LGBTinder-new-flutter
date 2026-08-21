@@ -140,6 +140,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: 'Who you want to meet',
                 onTap: () => _push(const MatchingPreferencesScreen()),
               ),
+              PremiumHubActionData(
+                iconPath: AppIcons.heart,
+                title: 'Likes you',
+                subtitle: 'People who liked your profile',
+                onTap: () => context.pushNamed('likes-received'),
+              ),
             ],
           ),
           const SizedBox(height: _sectionGap),
@@ -159,6 +165,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: 'Manage blocked profiles',
                 accent: AppColors.feedbackWarning,
                 onTap: () => context.pushNamed('blocked-users'),
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.shieldTick,
+                title: 'Safety center',
+                subtitle: 'Reports, alerts, and emergency contacts',
+                onTap: () => context.pushNamed('safety-center'),
               ),
               PremiumSettingsTile(
                 iconPath: AppIcons.lockOutline,

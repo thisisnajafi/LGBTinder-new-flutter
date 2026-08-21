@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/typography.dart';
-import '../../core/utils/app_icons.dart';
-import '../../core/widgets/app_settings_detail.dart';
-import '../../core/widgets/premium/premium_design_system.dart';
-import '../../core/location/location_providers.dart';
-import '../../core/location/location_required_exception.dart';
-import '../../core/location/widgets/location_permission_sheet.dart';
-import '../../features/safety/data/models/safe_place.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/theme/typography.dart';
+import '../core/utils/app_icons.dart';
+import '../core/widgets/app_settings_detail.dart';
+import '../core/widgets/premium/premium_design_system.dart';
+import '../core/location/location_providers.dart';
+import '../core/location/location_required_exception.dart';
+import '../core/location/widgets/location_permission_sheet.dart';
+import '../features/safety/data/models/safe_place.dart';
 
 /// Lists hospitals, police, and fire stations near the user's GPS position.
 class NearbySafePlacesScreen extends ConsumerStatefulWidget {

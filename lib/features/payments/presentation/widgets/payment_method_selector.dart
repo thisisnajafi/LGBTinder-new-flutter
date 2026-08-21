@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../models/payment_method.dart';
+import '../../data/models/payment_method.dart';
 
 /// Payment method selector widget
 /// Allows users to choose payment method (credit card, PayPal, etc.)
@@ -27,9 +28,8 @@ class PaymentMethodSelector extends ConsumerStatefulWidget {
 
 class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,14 +87,14 @@ class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _getMethodColor(method.type).withOpacity(0.1),
+                  color: _getMethodColor(method.type, theme).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(
                   child: AppSvgIcon(
                     assetPath: _getMethodIcon(method.type),
                     size: 24,
-                    color: _getMethodColor(method.type),
+                    color: _getMethodColor(method.type, theme),
                   ),
                 ),
               ),
@@ -115,7 +115,7 @@ class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      method.description,
+                      _methodDescription(method),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
@@ -179,7 +179,7 @@ class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
                 ),
                 child: Center(
                   child: AppSvgIcon(
-                    assetPath: AppIcons.plus,
+                    assetPath: AppIcons.add,
                     size: 24,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -222,33 +222,41 @@ class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
     );
   }
 
-  String _getMethodIcon(PaymentMethodType type) {
+  /// Secondary line under the method name, derived from the method's own data.
+  String _methodDescription(PaymentMethod method) {
+    if (method.type == 'card' && method.expiryDateString.isNotEmpty) {
+      return method.isCardExpired || method.isExpired
+          ? 'Expired ${method.expiryDateString}'
+          : 'Expires ${method.expiryDateString}';
+    }
+    return method.provider.isNotEmpty ? method.provider : method.displayName;
+  }
+
+  String _getMethodIcon(String type) {
     switch (type) {
-      case PaymentMethodType.creditCard:
-        return AppIcons.creditCard;
-      case PaymentMethodType.paypal:
-        return AppIcons.paypal;
-      case PaymentMethodType.applePay:
-        return AppIcons.apple;
-      case PaymentMethodType.googlePay:
-        return AppIcons.google;
+      case 'card':
+        return AppIcons.card;
+      case 'google_pay':
+        return AppIcons.googleLogo;
+      case 'paypal':
+      case 'apple_pay':
       default:
-        return AppIcons.payment;
+        return AppIcons.wallet;
     }
   }
 
-  Color _getMethodColor(PaymentMethodType type) {
+  Color _getMethodColor(String type, ThemeData theme) {
     switch (type) {
-      case PaymentMethodType.creditCard:
+      case 'card':
         return AppColors.primaryLight;
-      case PaymentMethodType.paypal:
+      case 'paypal':
         return const Color(0xFF0070BA); // PayPal blue
-      case PaymentMethodType.applePay:
-        return Colors.black;
-      case PaymentMethodType.googlePay:
+      case 'apple_pay':
+        return theme.colorScheme.onSurface;
+      case 'google_pay':
         return Colors.blue;
       default:
-        return AppColors.textSecondary;
+        return theme.colorScheme.onSurfaceVariant;
     }
   }
 }

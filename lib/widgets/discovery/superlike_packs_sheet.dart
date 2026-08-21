@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../core/cache/session_cache_providers.dart';
 import '../../core/services/app_logger.dart';
@@ -15,6 +16,7 @@ import '../../core/utils/app_icons.dart';
 import '../../features/payments/data/models/superlike_pack.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/payments/providers/payment_providers.dart';
+import '../../features/payments/providers/google_play_billing_provider.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import '../../widgets/buttons/gradient_button.dart';
@@ -105,10 +107,34 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
 
     setState(() => _isPurchasing = true);
     try {
-      final superlikeService = ref.read(superlikePackServiceProvider);
-      await superlikeService.purchasePack(
-        PurchaseSuperlikePackRequest(packId: _selectedPackId!),
-      );
+      final packs = _resolvePacks();
+      SuperlikePack? pack;
+      for (final item in packs) {
+        if (item.id == _selectedPackId) {
+          pack = item;
+          break;
+        }
+      }
+      final productId = pack?.resolvedGoogleProductId;
+      if (productId == null) {
+        throw Exception('This pack is not available for in-app purchase');
+      }
+
+      final billing = ref.read(googlePlayBillingServiceProvider);
+      final outcome = billing.waitForPurchaseOutcome(productId);
+      final launched = await billing.purchaseConsumableProduct(productId);
+      if (!launched) {
+        throw Exception('Could not start Google Play purchase');
+      }
+
+      final status = await outcome;
+      if (status == PurchaseStatus.canceled) {
+        return;
+      }
+      if (status != PurchaseStatus.purchased &&
+          status != PurchaseStatus.restored) {
+        throw Exception('Purchase did not complete');
+      }
 
       await ref.read(startupCacheServiceProvider).primeCache();
       ref.invalidate(availableSuperlikePacksProvider);

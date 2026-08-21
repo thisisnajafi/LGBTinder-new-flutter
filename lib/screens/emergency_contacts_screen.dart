@@ -45,19 +45,19 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
   Future<void> _loadContacts() async {
     try {
       final apiService = ref.read(apiServiceProvider);
-      final response = await apiService.get<Map<String, dynamic>>(
+      final response = await apiService.get<dynamic>(
         ApiEndpoints.emergencyContacts,
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) => json,
       );
 
       if (response.isSuccess && response.data != null) {
-        // Canonical API (Task 7): GET /emergency-contacts returns data.contacts; legacy safety returns data (list)
+        // GET /safety/emergency-contacts returns data as a list.
         final raw = response.data!;
         final List<dynamic> list;
-        if (raw is Map && raw['contacts'] != null && raw['contacts'] is List) {
+        if (raw is List) {
+          list = raw;
+        } else if (raw is Map && raw['contacts'] is List) {
           list = List<dynamic>.from(raw['contacts'] as List);
-        } else if (raw is List) {
-          list = List<dynamic>.from(raw as List);
         } else if (raw is Map && raw['data'] is List) {
           list = List<dynamic>.from(raw['data'] as List);
         } else {

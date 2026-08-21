@@ -128,6 +128,9 @@ dependencies:
   # Environment Variables
   flutter_dotenv: ^5.1.0
 
+  # Value equality
+  equatable: ^2.1.0
+
   # UUID
   uuid: ^4.2.1
   drift: ^2.31.0

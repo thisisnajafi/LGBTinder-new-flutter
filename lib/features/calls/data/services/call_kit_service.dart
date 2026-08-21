@@ -55,12 +55,10 @@ class CallKitService {
 
   /// Show native incoming call UI.
   Future<void> showIncoming(IncomingCallData data) async {
-    if (!_initialized) {
-      debugPrint('CallKitService: showIncoming skipped — not initialized');
-      return;
-    }
-
-    final ringtone = SoundService.instance.getCallRingtonePath();
+    String? ringtone;
+    try {
+      ringtone = SoundService.instance.getCallRingtonePath();
+    } catch (_) {}
 
     final params = CallKitParams(
       id: data.callId,
@@ -96,6 +94,11 @@ class CallKitService {
     );
 
     await FlutterCallkitIncoming.showCallkitIncoming(params);
+  }
+
+  /// Show CallKit from an FCM background isolate (no Riverpod / login wiring).
+  static Future<void> showIncomingFromIsolate(IncomingCallData data) async {
+    await instance.showIncoming(data);
   }
 
   Future<void> endCall(String callId) async {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/typography.dart';
-import '../../../core/theme/spacing_constants.dart';
-import '../../../core/theme/border_radius_constants.dart';
-import '../data/models/payment_method.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/theme/border_radius_constants.dart';
+import '../../data/models/payment_method.dart';
 
 /// Payment method tile widget - displays a saved payment method
 class PaymentMethodTile extends ConsumerWidget {

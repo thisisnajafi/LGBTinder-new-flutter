@@ -21,37 +21,32 @@ class LoginResponse {
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
-    // Check profile_completion_status structure
-    final profileCompletionStatus = json['profile_completion_status'] as Map<String, dynamic>?;
-    bool profileCompleted = false;
-    bool needsProfileCompletion = false;
-    
-    if (profileCompletionStatus != null) {
-      // Use profile_completion_status.is_complete if available
-      final isComplete = profileCompletionStatus['is_complete'] as bool?;
-      profileCompleted = isComplete ?? false;
-      needsProfileCompletion = !profileCompleted;
-    } else {
-      // Fallback to direct fields
-      if (json['is_complete'] == true || json['is_complete'] == 1) {
-        profileCompleted = true;
-        needsProfileCompletion = false;
-      } else {
-        final profileCompletedValue = json['profile_completed'];
-        if (profileCompletedValue is bool) {
-          profileCompleted = profileCompletedValue;
-        } else if (profileCompletedValue is int) {
-          profileCompleted = profileCompletedValue == 1;
-        }
-        needsProfileCompletion = json['needs_profile_completion'] as bool? ??
-            json['user_state'] == 'profile_completion_required' ||
-                !profileCompleted;
-      }
-    }
-    
-    // Determine user state
-    final userState = json['user_state'] as String? ??
+    final profileCompletionStatus =
+        json['profile_completion_status'] as Map<String, dynamic>?;
+
+    bool asFlag(dynamic value) =>
+        value == true || value == 1 || value == '1';
+
+    // users.profile_completed is the wizard-done flag. Nested
+    // profile_completion_status.profile_completed still has the real
+    // column when older APIs overwrite top-level profile_completed with
+    // the strict isProfileComplete() checklist.
+    var profileCompleted = asFlag(json['profile_completed']) ||
+        asFlag(profileCompletionStatus?['profile_completed']) ||
+        asFlag(json['is_complete']) ||
+        asFlag(profileCompletionStatus?['is_complete']);
+
+    var userState = json['user_state'] as String? ??
         (profileCompleted ? 'ready_for_app' : 'profile_completion_required');
+
+    if (profileCompleted && userState != 'email_verification_required') {
+      userState = 'ready_for_app';
+    } else if (userState == 'ready_for_app') {
+      profileCompleted = true;
+    }
+
+    final needsProfileCompletion =
+        userState == 'profile_completion_required' || !profileCompleted;
 
     return LoginResponse(
       user: json['user'] != null ? UserData.fromJson(json['user'] as Map<String, dynamic>) : null,

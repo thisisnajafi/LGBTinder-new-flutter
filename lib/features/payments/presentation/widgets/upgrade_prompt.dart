@@ -67,7 +67,7 @@ class _UpgradePromptState extends ConsumerState<UpgradePrompt> with TickerProvid
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return AnimatedBuilder(

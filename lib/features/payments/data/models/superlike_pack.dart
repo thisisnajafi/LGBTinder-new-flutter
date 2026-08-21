@@ -8,6 +8,7 @@ class SuperlikePack {
   final String currency;
   final bool isPopular;
   final String? stripePriceId;
+  final String? googleProductId;
 
   SuperlikePack({
     required this.id,
@@ -18,6 +19,7 @@ class SuperlikePack {
     this.currency = 'usd',
     this.isPopular = false,
     this.stripePriceId,
+    this.googleProductId,
   });
 
   factory SuperlikePack.fromJson(Map<String, dynamic> json) {
@@ -71,7 +73,24 @@ class SuperlikePack {
       currency: json['currency']?.toString() ?? 'usd',
       isPopular: json['is_popular'] == true || json['is_popular'] == 1,
       stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      googleProductId: json['google_product_id']?.toString() ??
+          json['googleProductId']?.toString(),
     );
+  }
+
+  /// Play Console product id for this pack, with catalog fallbacks.
+  String? get resolvedGoogleProductId {
+    final configured = googleProductId?.trim();
+    if (configured != null && configured.isNotEmpty) return configured;
+    return switch (superlikeCount) {
+      5 => 'superlike_small',
+      15 => 'superlike_medium',
+      30 => 'superlike_large',
+      50 => 'superlike_mega',
+      100 => 'superlike_large',
+      200 => 'superlike_medium',
+      _ => null,
+    };
   }
 
   Map<String, dynamic> toJson() {
@@ -82,8 +101,9 @@ class SuperlikePack {
       'superlike_count': superlikeCount,
       'price': price,
       'currency': currency,
-      'is_popular': isPopular,
+      if (isPopular) 'is_popular': isPopular,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
+      if (googleProductId != null) 'google_product_id': googleProductId,
     };
   }
 

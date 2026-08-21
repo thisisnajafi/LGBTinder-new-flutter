@@ -13,12 +13,14 @@ class AgoraTokenData {
   final String channelName;
   final int uid;
   final DateTime expiresAt;
+  final String? appId;
 
   AgoraTokenData({
     required this.token,
     required this.channelName,
     required this.uid,
     required this.expiresAt,
+    this.appId,
   });
 
   factory AgoraTokenData.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class AgoraTokenData {
       channelName: json['channel_name']?.toString() ?? '',
       uid: int.tryParse(json['uid']?.toString() ?? '') ?? 0,
       expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '') ?? DateTime.now(),
+      appId: json['app_id']?.toString(),
     );
   }
 }

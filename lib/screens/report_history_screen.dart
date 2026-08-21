@@ -1,4 +1,4 @@
-﻿// Screen: ReportHistoryScreen
+// Screen: ReportHistoryScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -37,27 +37,16 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
 
     try {
       final apiService = ref.read(apiServiceProvider);
-      final response = await apiService.get<Map<String, dynamic>>(
-        ApiEndpoints.reports,
-        fromJson: (json) => json as Map<String, dynamic>,
+      final response = await apiService.get<dynamic>(
+        ApiEndpoints.safetyReportHistory,
+        fromJson: (json) => json,
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!['data'] as Map<String, dynamic>?;
-        final reportsData = data?['reports'] as Map<String, dynamic>?;
-        final reportsList = reportsData?['data'] as List<dynamic>? ?? [];
+        final reportsList = _extractReportList(response.data);
 
         setState(() {
-          _reports = reportsList.map((report) {
-            final reportable = report['reportable'] as Map<String, dynamic>?;
-            return {
-              'id': report['id'],
-              'user_name': reportable?['name'] ?? 'Unknown User',
-              'reason': report['reason'] ?? 'No reason provided',
-              'status': report['status'] ?? 'Unknown',
-              'reported_at': DateTime.parse(report['created_at']),
-            };
-          }).toList();
+          _reports = reportsList.map(_mapReport).toList();
           _isLoading = false;
         });
       } else {
@@ -72,6 +61,46 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  static List<dynamic> _extractReportList(dynamic payload) {
+    if (payload is List) return payload;
+    if (payload is Map) {
+      final inner = payload['data'];
+      if (inner is List) return inner;
+      final reports = payload['reports'];
+      if (reports is List) return reports;
+      if (reports is Map && reports['data'] is List) {
+        return reports['data'] as List<dynamic>;
+      }
+    }
+    return const [];
+  }
+
+  static Map<String, dynamic> _mapReport(dynamic raw) {
+    final report = raw is Map<String, dynamic>
+        ? raw
+        : Map<String, dynamic>.from(raw as Map);
+    final reportedUser = report['reported_user'] is Map
+        ? Map<String, dynamic>.from(report['reported_user'] as Map)
+        : report['reportedUser'] is Map
+            ? Map<String, dynamic>.from(report['reportedUser'] as Map)
+            : report['reportable'] is Map
+                ? Map<String, dynamic>.from(report['reportable'] as Map)
+                : const <String, dynamic>{};
+    final createdAt = report['created_at']?.toString();
+    return {
+      'id': report['id'],
+      'user_name': reportedUser['name'] ?? 'Unknown User',
+      'reason': report['report_type'] ??
+          report['reason'] ??
+          report['description'] ??
+          'No reason provided',
+      'status': report['status'] ?? 'Unknown',
+      'reported_at': createdAt != null
+          ? DateTime.parse(createdAt)
+          : DateTime.now(),
+    };
   }
 
   Color _getStatusColor(String status) {

@@ -21,8 +21,6 @@ import '../models/otp_request.dart';
 import '../models/otp_response.dart';
 import '../models/social_auth_request.dart';
 import '../models/social_auth_response.dart';
-import '../models/verify_email_response.dart';
-import '../models/complete_registration_response.dart';
 import '../../../../shared/models/api_error.dart';
 
 /// Authentication service for handling all auth-related API calls
@@ -102,6 +100,8 @@ class AuthService {
     await _tokenStorage.saveAuthToken(token);
     if (!profileCompleted || userState == 'profile_completion_required') {
       await _tokenStorage.saveProfileCompletionToken(token);
+    } else {
+      await _tokenStorage.clearProfileCompletionToken();
     }
     await _dioClient.updateAuthToken(token);
   }
@@ -198,8 +198,11 @@ class AuthService {
 
           // Save auth token if provided
           if (loginResponse.token != null) {
-            await _tokenStorage.saveAuthToken(loginResponse.token!);
-            await _dioClient.updateAuthToken(loginResponse.token);
+            await _saveAuthTokensForLogin(
+              token: loginResponse.token!,
+              profileCompleted: loginResponse.profileCompleted,
+              userState: loginResponse.userState,
+            );
           }
 
           // Save refresh token if provided in response
@@ -443,6 +446,8 @@ class AuthService {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.checkToken,
       fromJson: (json) => json as Map<String, dynamic>,
+      useCache: false,
+      forceRefresh: true,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -459,7 +464,13 @@ class AuthService {
 
   /// Persist bootstrap routing state from [checkToken].
   Future<void> syncBootstrapSession(CheckTokenResponse state) async {
-    final user = state.user;
+    var user = state.user;
+    user ??= (await _tokenStorage.getUserSession())?.user;
+
+    if (state.isComplete || state.userState == 'ready_for_app') {
+      await _tokenStorage.clearProfileCompletionToken();
+    }
+
     if (user == null) return;
 
     await _tokenStorage.saveUserSession(
@@ -467,10 +478,6 @@ class AuthService {
       profileCompleted: state.isComplete,
       userState: state.userState,
     );
-
-    if (state.isComplete) {
-      await _tokenStorage.clearProfileCompletionToken();
-    }
   }
 
   /// Complete profile registration. When [primaryImage] or [galleryImages] are
@@ -601,65 +608,54 @@ class AuthService {
 
   /// Send OTP for password reset
   Future<OtpResponse> sendOtp(SendOtpRequest request) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.sendOtp,
-        data: request.toJson(),
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.data != null) {
-        return OtpResponse.fromJson(response.data!);
-      } else {
-        throw Exception(response.message.isNotEmpty
-            ? response.message
-            : 'Failed to send OTP');
-      }
-    } catch (e) {
-      rethrow;
-    }
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.sendOtp,
+      data: request.toJson(),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    return _otpFromEnvelope(response, fallbackMessage: 'Failed to send OTP');
   }
 
   /// Verify OTP for password reset
   Future<OtpResponse> verifyOtp(VerifyOtpRequest request) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.verifyOtp,
-        data: request.toJson(),
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.data != null) {
-        return OtpResponse.fromJson(response.data!);
-      } else {
-        throw Exception(response.message.isNotEmpty
-            ? response.message
-            : 'Failed to verify OTP');
-      }
-    } catch (e) {
-      rethrow;
-    }
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.verifyOtp,
+      data: request.toJson(),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    return _otpFromEnvelope(response, fallbackMessage: 'Failed to verify OTP');
   }
 
   /// Reset password with verified OTP
   Future<OtpResponse> resetPassword(ResetPasswordRequest request) async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.resetPassword,
-        data: request.toJson(),
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.resetPassword,
+      data: request.toJson(),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    return _otpFromEnvelope(
+      response,
+      fallbackMessage: 'Failed to reset password',
+    );
+  }
 
-      if (response.data != null) {
-        return OtpResponse.fromJson(response.data!);
-      } else {
-        throw Exception(response.message.isNotEmpty
-            ? response.message
-            : 'Failed to reset password');
-      }
-    } catch (e) {
-      rethrow;
+  /// Backend OTP endpoints return `{status, message}` with no `data` key.
+  OtpResponse _otpFromEnvelope(
+    ApiResponse<Map<String, dynamic>> response, {
+    required String fallbackMessage,
+  }) {
+    if (!response.isSuccess) {
+      throw Exception(
+        response.message.isNotEmpty ? response.message : fallbackMessage,
+      );
     }
+    return OtpResponse.fromJson(
+      response.data ??
+          {
+            'status': response.status,
+            'message': response.message,
+          },
+    );
   }
 
   /// Sign in with Google ID token (native mobile flow).

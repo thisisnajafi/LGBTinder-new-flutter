@@ -14,6 +14,7 @@ typedef AgoraNetworkQualityCallback = void Function(int uid, int rxQuality);
 class AgoraService {
   RtcEngine? _engine;
   bool _isInitialized = false;
+  String? _initializedAppId;
 
   bool _isInCall = false;
   String? _currentChannelId;
@@ -33,15 +34,21 @@ class AgoraService {
   AgoraService._internal();
 
   /// Initialize Agora RTC Engine.
-  Future<void> initialize({bool isVideoCall = false}) async {
-    if (_isInitialized) return;
+  Future<void> initialize({bool isVideoCall = false, String? appId}) async {
+    final resolvedAppId =
+        (appId != null && appId.isNotEmpty) ? appId : AgoraConfig.appId;
+
+    if (_isInitialized && _initializedAppId == resolvedAppId) return;
+    if (_isInitialized && _initializedAppId != resolvedAppId) {
+      await dispose();
+    }
 
     try {
       await _requestPermissions(isVideoCall: isVideoCall);
 
       _engine = createAgoraRtcEngine();
       await _engine!.initialize(RtcEngineContext(
-        appId: AgoraConfig.appId,
+        appId: resolvedAppId,
         channelProfile: ChannelProfileType.channelProfileCommunication,
       ));
 
@@ -89,6 +96,7 @@ class AgoraService {
       ));
 
       _isInitialized = true;
+      _initializedAppId = resolvedAppId;
     } catch (e) {
       onError?.call('Failed to initialize Agora: $e');
       rethrow;
@@ -254,6 +262,7 @@ class AgoraService {
       _engine = null;
     }
     _isInitialized = false;
+    _initializedAppId = null;
     _isInCall = false;
   }
 

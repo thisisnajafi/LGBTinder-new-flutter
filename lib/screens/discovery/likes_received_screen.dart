@@ -1,4 +1,4 @@
-﻿// Screen: LikesReceivedScreen
+// Screen: LikesReceivedScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -80,23 +80,39 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
       if (!mounted) return;
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!['data'] as Map<String, dynamic>?;
-        final pendingLikes = data?['pending_likes'] as List<dynamic>? ?? [];
+        final raw = response.data!;
+        final nested = raw['data'];
+        final pendingLikes = raw['pending_likes'] as List<dynamic>? ??
+            (nested is Map ? nested['pending_likes'] as List<dynamic>? : null) ??
+            const <dynamic>[];
 
         setState(() {
           _likes = pendingLikes.map((like) {
-            final user = like['user'] as Map<String, dynamic>;
+            final likeMap = like is Map<String, dynamic>
+                ? like
+                : Map<String, dynamic>.from(like as Map);
+            final userRaw = likeMap['user'];
+            final user = userRaw is Map
+                ? Map<String, dynamic>.from(userRaw)
+                : <String, dynamic>{};
+            final createdAt = likeMap['created_at']?.toString();
             return {
-              'id': like['id'],
-              'user_id': user['id'],
-              'name': user['name'],
-              'avatar_url': user['avatar_url'],
+              'id': likeMap['id'],
+              'user_id': user['id'] ?? likeMap['user_id'],
+              'name': user['name'] ??
+                  [user['first_name'], user['last_name']]
+                      .whereType<String>()
+                      .where((s) => s.isNotEmpty)
+                      .join(' '),
+              'avatar_url': user['avatar_url'] ?? user['avatar'],
               'is_verified': user['is_verified'] ?? false,
               'is_premium': user['is_premium'] ?? false,
-              'liked_at': DateTime.parse(like['created_at'] as String),
+              'liked_at': createdAt != null
+                  ? DateTime.parse(createdAt)
+                  : DateTime.now(),
               'age': user['age'],
               'distance': user['distance'],
-              'bio': user['bio'],
+              'bio': user['bio'] ?? user['profile_bio'],
             };
           }).toList();
           _isLoading = false;

@@ -20,6 +20,7 @@ import 'core/services/connectivity_service.dart';
 import 'routes/app_router.dart';
 import 'widgets/error_handling/error_boundary.dart';
 import 'shared/services/push_notification_service.dart';
+import 'shared/services/fcm_background_handler.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'shared/services/deep_linking_service.dart';
 import 'core/providers/feature_flags_provider.dart';
@@ -31,15 +32,6 @@ import 'core/providers/session_services_provider.dart';
 import 'features/payments/providers/payment_providers.dart';
 import 'core/utils/app_logger.dart' show startupLog, authLog;
 import 'core/responsive/responsive.dart';
-
-// Background message handler (must be top-level function)
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  AppLogger.debug(
-    'Handling background message: ${message.messageId}',
-    tag: 'FCM',
-  );
-}
 
 /// Riverpod observer — logs every provider error
 class _AppProviderObserver extends ProviderObserver {

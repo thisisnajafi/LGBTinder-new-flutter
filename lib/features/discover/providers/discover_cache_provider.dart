@@ -355,7 +355,9 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           _markSynced(userId);
           if (response.isMatch) {
             unawaited(_cacheInvalidator.purgeMatchList());
-            if (onMatch != null) onMatch(response.match);
+            if (onMatch != null) {
+              onMatch(response.match ?? _matchFromCachedItem(updated));
+            }
           }
           break;
         }
@@ -416,7 +418,9 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           _deferSubscriptionRefresh();
           if (response.isMatch) {
             unawaited(_cacheInvalidator.purgeMatchList());
-            if (onMatch != null) onMatch(response.match);
+            if (onMatch != null) {
+              onMatch(response.match ?? _matchFromCachedItem(updated));
+            }
           } else {
             await _upsertChatListAfterSuperlike(
               userId: userId,
@@ -574,5 +578,19 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         }
       }
     }
+  }
+
+  match_models.Match _matchFromCachedItem(CachedDiscoverItem item) {
+    final profile = item.profile;
+    return match_models.Match(
+      id: 0,
+      userId: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      profileBio: profile.profileBio,
+      primaryImageUrl: profile.primaryImageUrl,
+      imageUrls: profile.imageUrls,
+      matchedAt: DateTime.now(),
+    );
   }
 }

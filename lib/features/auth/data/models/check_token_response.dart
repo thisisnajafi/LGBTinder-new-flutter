@@ -18,22 +18,33 @@ class CheckTokenResponse {
     final profileStatus =
         json['profile_completion_status'] as Map<String, dynamic>?;
 
-    bool isComplete = json['is_complete'] == true || json['is_complete'] == 1;
-    if (!isComplete && profileStatus != null) {
-      isComplete = profileStatus['is_complete'] == true ||
-          profileStatus['is_complete'] == 1;
-    }
-    if (!isComplete) {
-      isComplete = json['profile_completed'] == true ||
-          json['profile_completed'] == 1;
+    final wizardCompleted = _flag(json['profile_completed']) ||
+        _flag(profileStatus?['profile_completed']);
+
+    var isComplete = _flag(json['is_complete']) ||
+        _flag(profileStatus?['is_complete']) ||
+        wizardCompleted;
+
+    var userState = json['user_state']?.toString();
+    if (userState == null || userState.isEmpty) {
+      userState =
+          isComplete ? 'ready_for_app' : 'profile_completion_required';
     }
 
-    final userState = json['user_state']?.toString() ??
-        (isComplete ? 'ready_for_app' : 'profile_completion_required');
+    // The wizard-done column wins over the strict field checklist. A
+    // completed user must not be sent through onboarding again after a
+    // cache wipe, even if photos/relations fail isProfileComplete().
+    if (wizardCompleted && userState != 'email_verification_required') {
+      isComplete = true;
+      userState = 'ready_for_app';
+    } else if (userState == 'ready_for_app') {
+      isComplete = true;
+    }
 
-    final needsProfileCompletion = json['needs_profile_completion'] == true ||
-        json['needs_profile_completion'] == 1 ||
-        !isComplete;
+    final needsProfileCompletion = userState == 'profile_completion_required' ||
+        (!isComplete &&
+            (_flag(json['needs_profile_completion']) ||
+                _flag(profileStatus?['needs_profile_completion'])));
 
     UserData? user;
     final userJson = json['user'];
@@ -48,4 +59,7 @@ class CheckTokenResponse {
       user: user,
     );
   }
+
+  static bool _flag(dynamic value) =>
+      value == true || value == 1 || value == '1';
 }

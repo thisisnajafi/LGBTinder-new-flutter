@@ -13,8 +13,10 @@ import '../../features/settings/providers/sound_preferences_provider.dart';
 import '../cache/match_realtime_sync.dart';
 import '../providers/startup_flow_provider.dart';
 import '../services/presence_service.dart';
+import '../../shared/services/push_notification_service.dart';
 
 bool _deviceSessionRegistered = false;
+bool _fcmApiWired = false;
 
 /// Registers the current device with the sessions API (IP, location, device name).
 final deviceSessionRegistrationProvider = Provider<void>((ref) {
@@ -44,6 +46,21 @@ final deviceSessionRegistrationProvider = Provider<void>((ref) {
   });
 });
 
+/// Wires FCM token upload once the user is authenticated.
+final fcmDeviceRegistrationProvider = Provider<void>((ref) {
+  final startupComplete = ref.watch(startupFlowCompleteProvider);
+  final auth = ref.watch(authProvider);
+  if (!startupComplete || auth.isLoading || !auth.isAuthenticated) {
+    _fcmApiWired = false;
+    return;
+  }
+
+  if (_fcmApiWired) return;
+  _fcmApiWired = true;
+
+  PushNotificationService().setApiService(ref.read(apiServiceProvider));
+});
+
 /// Starts chat, sound, and realtime services only after auth is confirmed.
 /// Avoids authenticated API calls on splash/welcome for logged-out users.
 final sessionServicesProvider = Provider<void>((ref) {
@@ -52,6 +69,7 @@ final sessionServicesProvider = Provider<void>((ref) {
   if (!startupComplete || auth.isLoading || !auth.isAuthenticated) return;
 
   ref.watch(deviceSessionRegistrationProvider);
+  ref.watch(fcmDeviceRegistrationProvider);
   ref.watch(matchRealtimeSyncProvider);
   ref.watch(chatPusherLifecycleProvider);
   ref.watch(chatTypingSyncProvider);

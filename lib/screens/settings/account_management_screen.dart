@@ -26,10 +26,15 @@ class AccountManagementScreen extends ConsumerStatefulWidget {
 
 class _AccountManagementScreenState extends ConsumerState<AccountManagementScreen> {
   final _emailController = TextEditingController();
+  final _emailPasswordController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+
+  static final _passwordComplexity = RegExp(
+    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$',
+  );
 
   @override
   void initState() {
@@ -51,6 +56,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
   @override
   void dispose() {
     _emailController.dispose();
+    _emailPasswordController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -59,9 +65,16 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
   Future<void> _handleChangeEmail() async {
     final newEmail = _emailController.text.trim();
+    final password = _emailPasswordController.text;
     if (newEmail.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter an email address')),
+      );
+      return;
+    }
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your current password to change email')),
       );
       return;
     }
@@ -72,13 +85,18 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
     try {
       final apiService = ref.read(apiServiceProvider);
-      await apiService.post<Map<String, dynamic>>(
+      final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.changeEmail,
-        data: {'email': newEmail},
+        data: {'new_email': newEmail, 'password': password},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+
       if (mounted) {
+        _emailPasswordController.clear();
         AlertDialogCustom.show(
           context,
           title: 'Verification Code Sent',
@@ -86,7 +104,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
           icon: Icons.email,
           iconColor: Theme.of(context).colorScheme.primary,
         );
-        // Show verification code input dialog
         await _showEmailVerificationDialog(newEmail);
       }
     } catch (e) {
@@ -112,9 +129,14 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       return;
     }
 
-    if (_newPasswordController.text.length < 8) {
+    if (_newPasswordController.text.length < 8 ||
+        !_passwordComplexity.hasMatch(_newPasswordController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 8 characters')),
+        const SnackBar(
+          content: Text(
+            'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol',
+          ),
+        ),
       );
       return;
     }
@@ -128,9 +150,9 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.changePassword,
         data: {
-          'current_password': _currentPasswordController.text,
-          'password': _newPasswordController.text,
-          'password_confirmation': _confirmPasswordController.text,
+          'old_password': _currentPasswordController.text,
+          'new_password': _newPasswordController.text,
+          'new_password_confirmation': _confirmPasswordController.text,
         },
         fromJson: (json) => json as Map<String, dynamic>,
       );
@@ -182,6 +204,38 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                 PremiumSettingsGroup(
                   title: 'Email address',
                   children: [
+                    TextField(
+                      controller: _emailPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Current password',
+                        filled: true,
+                        fillColor: isDark
+                            ? AppColors.surfaceElevatedDark
+                            : AppColors.surfaceElevatedLight,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.radiusMD),
+                          borderSide: const BorderSide(
+                            color: AppColors.accentViolet,
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon:
+                            Icon(Icons.lock, color: secondaryTextColor),
+                      ),
+                      style: AppTypography.body.copyWith(color: textColor),
+                    ),
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
