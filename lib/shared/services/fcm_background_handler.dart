@@ -8,6 +8,9 @@ import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
 
+/// Must match FCM `android.notification.channel_id` from the backend.
+const String kLgbtfinderFcmChannelId = 'lgbtfinder_channel';
+
 /// FCM background isolate entrypoint. Must stay a top-level function.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -49,7 +52,7 @@ Future<void> _showBackgroundLocalNotification(RemoteMessage message) async {
   );
 
   final androidDetails = AndroidNotificationDetails(
-    'lgbtfinder_channel',
+    kLgbtfinderFcmChannelId,
     'LGBTFinder Notifications',
     channelDescription: 'Notifications for LGBTFinder app',
     importance: Importance.high,

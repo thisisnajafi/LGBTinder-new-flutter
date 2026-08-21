@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
+import 'fcm_background_handler.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
 import 'notification_navigation.dart';
@@ -177,6 +178,18 @@ class PushNotificationService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
+
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        kLgbtfinderFcmChannelId,
+        'LGBTFinder Notifications',
+        description: 'Notifications for LGBTFinder app',
+        importance: Importance.high,
+      ),
+    );
   }
 
   /// Get FCM token
@@ -276,7 +289,7 @@ class PushNotificationService {
     final iosSound = androidRaw != null ? '$androidRaw.wav' : null;
 
     final androidDetails = AndroidNotificationDetails(
-      groupChannelId ?? 'lgbtfinder_channel',
+      groupChannelId ?? kLgbtfinderFcmChannelId,
       'LGBTFinder Notifications',
       channelDescription: 'Notifications for LGBTFinder app',
       importance: Importance.high,
