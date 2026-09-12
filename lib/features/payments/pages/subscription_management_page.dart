@@ -12,7 +12,6 @@ import '../../../core/widgets/app_settings_detail.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../shared/models/api_error.dart';
 import '../../../shared/services/error_handler_service.dart';
-import '../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../widgets/error_handling/error_display_widget.dart';
 import '../data/models/subscription_plan.dart';
 import '../presentation/widgets/offline_purchase_queue_indicator.dart';
@@ -42,6 +41,8 @@ class _SubscriptionManagementPageState
   List<Map<String, dynamic>> _history = [];
   bool _historyExpanded = false;
   bool _historyLoading = false;
+  bool _historyHasMore = true;
+  int _historyPage = 1;
   bool _actionInProgress = false;
 
   @override
@@ -96,22 +97,52 @@ class _SubscriptionManagementPageState
     }
   }
 
-  Future<void> _loadHistory() async {
+  Future<void> _loadHistory({bool more = false}) async {
     if (_historyLoading) return;
+    if (more && !_historyHasMore) return;
     setState(() => _historyLoading = true);
 
     try {
       final paymentService = ref.read(paymentServiceProvider);
-      final result = await paymentService.getSubscriptionHistory();
-      if (mounted) {
-        setState(() {
+      final page = more ? _historyPage : 1;
+      final result = await paymentService.getSubscriptionHistory(page: page);
+      if (!mounted) return;
+      final loaded = (more ? _history.length : 0) + result.items.length;
+      final hasMore = _subscriptionHistoryHasMore(
+        result.pagination,
+        page,
+        result.items.length,
+        loaded,
+      );
+      setState(() {
+        if (more) {
+          _history = [..._history, ...result.items];
+        } else {
           _history = result.items;
-          _historyLoading = false;
-        });
-      }
+        }
+        _historyPage = page + 1;
+        _historyHasMore = hasMore;
+        _historyLoading = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _historyLoading = false);
     }
+  }
+
+  bool _subscriptionHistoryHasMore(
+    Map<String, dynamic> pagination,
+    int page,
+    int itemCount,
+    int loadedCount,
+  ) {
+    final hasMore = pagination['has_more'] ?? pagination['hasMore'];
+    if (hasMore is bool) return hasMore;
+    final last = pagination['last_page'] ?? pagination['lastPage'];
+    if (last is int) return page < last;
+    if (last is num) return page < last.toInt();
+    final total = pagination['total'];
+    if (total is int) return loadedCount < total;
+    return itemCount >= 20;
   }
 
   bool get _isPremiumActive =>
@@ -577,7 +608,23 @@ class _SubscriptionManagementPageState
               child: Text('No subscription history yet'),
             )
           else
-            ..._history.map(_buildHistoryRow),
+            ...[
+              ..._history.map(_buildHistoryRow),
+              if (_historyHasMore)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: AppSpacing.spacingMD,
+                  ),
+                  child: Center(
+                    child: TextButton(
+                      onPressed: _historyLoading
+                          ? null
+                          : () => _loadHistory(more: true),
+                      child: const Text('Load more'),
+                    ),
+                  ),
+                ),
+            ],
         ],
       ],
     );

@@ -111,12 +111,6 @@ class OwnProfileView extends ConsumerWidget {
       drink: profile.drink,
       gym: profile.gym,
     );
-    final hubActions = _buildHubActions(
-      context,
-      ref: ref,
-      profile: profile,
-      tier: tier,
-    );
 
     return ResponsiveGrid.constrained(
       context,
@@ -168,15 +162,34 @@ class OwnProfileView extends ConsumerWidget {
                 onEdit: () => _openEdit(context, ref),
               ),
               const SizedBox(height: _sectionGap),
-              PremiumAccountHubSection(actions: hubActions),
-              const SizedBox(height: _sectionGap),
-              PremiumMembershipSection(
-                tier: tier,
-                subscription: subscription,
-                onUpgrade: () => context.pushNamed('subscription-plans'),
-                onManage: () => context.pushNamed('subscription-management'),
+              _DeferredBelowFold(
+                placeholderHeight: 220,
+                builder: (context, foldRef) {
+                  final hubActions = _buildHubActions(
+                    context,
+                    ref: foldRef,
+                    profile: profile,
+                    tier: tier,
+                  );
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PremiumAccountHubSection(actions: hubActions),
+                      const SizedBox(height: _sectionGap),
+                      PremiumMembershipSection(
+                        tier: tier,
+                        subscription: subscription,
+                        onUpgrade: () =>
+                            context.pushNamed('subscription-plans'),
+                        onManage: () =>
+                            context.pushNamed('subscription-management'),
+                      ),
+                      const SizedBox(height: AppSpacing.spacingXXL),
+                    ],
+                  );
+                },
               ),
-              const SizedBox(height: AppSpacing.spacingXXL),            ],
+            ],
           ),
         ),
       ],
@@ -360,5 +373,38 @@ class OwnProfileView extends ConsumerWidget {
       if (item.id == id) return item.title;
     }
     return null;
+  }
+}
+
+class _DeferredBelowFold extends ConsumerStatefulWidget {
+  const _DeferredBelowFold({
+    required this.builder,
+    required this.placeholderHeight,
+  });
+
+  final Widget Function(BuildContext context, WidgetRef ref) builder;
+  final double placeholderHeight;
+
+  @override
+  ConsumerState<_DeferredBelowFold> createState() => _DeferredBelowFoldState();
+}
+
+class _DeferredBelowFoldState extends ConsumerState<_DeferredBelowFold> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _ready = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return SizedBox(height: widget.placeholderHeight);
+    }
+    return widget.builder(context, ref);
   }
 }

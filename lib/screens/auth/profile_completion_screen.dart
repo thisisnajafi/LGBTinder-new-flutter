@@ -1,81 +1,73 @@
-﻿// Screen: ProfileCompletionScreen
+// Screen: ProfileCompletionScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/profile/profile_header.dart';
-import '../../widgets/profile/profile_bio.dart';
-import '../../widgets/profile/photo_gallery.dart';
-import '../../widgets/profile/profile_info_sections.dart';
-import '../../widgets/profile/avatar_upload.dart';
-import '../../widgets/profile/edit/profile_field_editor.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
-import '../../pages/home_page.dart';
+import '../../core/utils/app_device_name.dart';
 import '../../core/utils/app_icons.dart';
-import '../../features/auth/providers/auth_service_provider.dart';
+import '../../core/utils/app_logger.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../core/responsive/responsive.dart';
 import '../../features/auth/data/models/complete_registration_request.dart';
-import '../../features/profile/providers/profile_providers.dart';
+import '../../features/auth/providers/auth_service_provider.dart';
+import '../../features/auth/utils/profile_completion_draft.dart';
 import '../../features/profile/data/models/update_profile_request.dart';
+import '../../features/profile/providers/profile_page_cache_provider.dart';
+import '../../features/profile/providers/profile_providers.dart';
+import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
-import 'dart:developer' as developer;
-import '../../core/responsive/responsive.dart';
+import '../../widgets/buttons/gradient_button.dart';
+import '../../widgets/common/divider_custom.dart';
+import '../../widgets/common/section_header.dart';
+import '../../widgets/profile/avatar_upload.dart';
+import '../../widgets/profile/edit/profile_field_editor.dart';
+import '../../widgets/profile/photo_gallery.dart';
 
-/// Profile completion screen - Complete user profile
+/// Profile completion screen — paints from [profilePageCacheProvider] on open
+/// (PERF-SCR-PCOMP-001). Does not await [getMyProfile] / [refresh] on first frame.
 class ProfileCompletionScreen extends ConsumerStatefulWidget {
-  const ProfileCompletionScreen({Key? key}) : super(key: key);
+  const ProfileCompletionScreen({super.key});
 
   @override
-  ConsumerState<ProfileCompletionScreen> createState() => _ProfileCompletionScreenState();
+  ConsumerState<ProfileCompletionScreen> createState() =>
+      _ProfileCompletionScreenState();
 }
 
-class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScreen> {
-  // Profile data
-  String? _avatarUrl;
-  String _name = '';
-  int? _age;
-  String _location = '';
-  String _bio = '';
-  List<String> _imageUrls = [];
-  List<String> _interests = [];
-  String? _gender;
-  List<String>? _preferredGenders;
-  int _completionPercentage = 0;
+class _ProfileCompletionScreenState
+    extends ConsumerState<ProfileCompletionScreen> {
+  ProfileCompletionDraft _draft = const ProfileCompletionDraft();
+  bool _dirty = false;
+  ProviderSubscription<AsyncValue<ProfilePageData>>? _cacheSub;
 
   @override
   void initState() {
     super.initState();
-    _calculateCompletion();
+    _cacheSub = ref.listenManual(
+      profilePageCacheProvider,
+      (previous, next) {
+        if (!mounted || _dirty) return;
+        final profile = next.valueOrNull?.profile;
+        if (profile == null) return;
+        setState(() {
+          _draft = ProfileCompletionDraft.fromProfile(profile);
+        });
+      },
+      fireImmediately: true,
+    );
   }
 
-  void _calculateCompletion() {
-    int completed = 0;
-    int total = 8;
-
-    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) completed++;
-    if (_name.isNotEmpty) completed++;
-    if (_age != null) completed++;
-    if (_location.isNotEmpty) completed++;
-    if (_bio.isNotEmpty) completed++;
-    if (_imageUrls.length >= 3) completed++;
-    if (_interests.isNotEmpty) completed++;
-    if (_gender != null) completed++;
-
-    setState(() {
-      _completionPercentage = ((completed / total) * 100).round();
-    });
+  @override
+  void dispose() {
+    _cacheSub?.close();
+    super.dispose();
   }
 
   Future<void> _handleSave() async {
-    if (_name.isEmpty) {
+    if (_draft.name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your name')),
       );
@@ -83,22 +75,18 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
     }
 
     try {
-      // First, try to complete registration if we have a profile completion token
       final authService = ref.read(authServiceProvider);
-
-      // Check if we need to complete registration (exchange profile completion token for full token)
       try {
-        // Prepare minimal profile completion data
         final request = CompleteRegistrationRequest(
-          deviceName: 'mobile',
-          phoneNumber: '0000000000', // Placeholder
-          countryId: 1, // Default
-          cityId: 1, // Default
-          gender: 1, // Default
-          birthDate: '1990-01-01', // Default
+          deviceName: await AppDeviceName.resolve(),
+          phoneNumber: '0000000000',
+          countryId: 1,
+          cityId: 1,
+          gender: 1,
+          birthDate: '1990-01-01',
           minAgePreference: 18,
           maxAgePreference: 99,
-          profileBio: _bio.isNotEmpty ? _bio : 'Hi there!',
+          profileBio: _draft.bio.isNotEmpty ? _draft.bio : 'Hi there!',
           height: 170,
           weight: 70,
           smoke: false,
@@ -112,20 +100,17 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
           preferredGenders: [],
           relationGoals: [1],
         );
-
-        // Try to complete registration
         await authService.completeRegistration(request);
       } catch (e) {
-        // If complete registration fails, user might already be fully authenticated
-        // Continue with profile update
-        debugPrint('Complete registration failed or not needed: $e');
+        AppLogger.warning(
+          'Complete registration failed or not needed: $e',
+          tag: 'Auth',
+        );
       }
 
-      // Now update profile with collected data
       final profileService = ref.read(profileServiceProvider);
       final updateRequest = UpdateProfileRequest(
-        profileBio: _bio.isNotEmpty ? _bio : null,
-        // Add other fields as they become available
+        profileBio: _draft.bio.isNotEmpty ? _draft.bio : null,
       );
 
       if (updateRequest.toJson().isNotEmpty) {
@@ -133,16 +118,13 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
       }
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile completed successfully!'),
             backgroundColor: AppColors.onlineGreen,
           ),
         );
-
-        // Navigate to home - user should now be fully authenticated
-        context.go('/home');
+        context.go(AppRoutes.home);
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -167,10 +149,15 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final percent = _draft.percent;
 
     return AppPageScaffold(
       title: 'Complete Profile',
@@ -180,9 +167,8 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Progress indicator
             Container(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: const EdgeInsets.all(AppSpacing.spacingLG),
               color: surfaceColor,
               child: Column(
                 children: [
@@ -197,7 +183,7 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
                         ),
                       ),
                       Text(
-                        '$_completionPercentage%',
+                        '$percent%',
                         style: AppTypography.h2.copyWith(
                           color: AppColors.accentPurple,
                           fontWeight: FontWeight.bold,
@@ -207,143 +193,115 @@ class _ProfileCompletionScreenState extends ConsumerState<ProfileCompletionScree
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
                   LinearProgressIndicator(
-                    value: _completionPercentage / 100,
+                    value: percent / 100,
                     backgroundColor: isDark
                         ? AppColors.surfaceElevatedDark
                         : AppColors.surfaceElevatedLight,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentPurple),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.accentPurple,
+                    ),
                     minHeight: 8,
                   ),
                 ],
               ),
             ),
-            DividerCustom(),
-
-            // Profile photo
+            const DividerCustom(),
             SectionHeader(
               title: 'Profile Photo',
-              icon: Icons.person,
+              iconPath: AppIcons.user,
             ),
             Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: const EdgeInsets.all(AppSpacing.spacingLG),
               child: Center(
                 child: AvatarUpload(
-                  imageUrl: _avatarUrl,
-                  name: _name.isNotEmpty ? _name : 'User',
+                  imageUrl: _draft.avatarUrl,
+                  name: _draft.name.isNotEmpty ? _draft.name : 'User',
                   size: 120.0,
-                  onUpload: () {
-                    // Open image picker - implementation needed
-                    setState(() {
-                      _avatarUrl = 'https://via.placeholder.com/400';
-                      _calculateCompletion();
-                    });
-                  },
-                  onEdit: () {
-                    // Open image picker - implementation needed
-                    setState(() {
-                      _avatarUrl = 'https://via.placeholder.com/400';
-                      _calculateCompletion();
-                    });
-                  },
+                  onUpload: () {},
+                  onEdit: () {},
                 ),
               ),
             ),
-            DividerCustom(),
-
-            // Basic info
+            const DividerCustom(),
             SectionHeader(
               title: 'Basic Information',
               iconPath: AppIcons.info,
             ),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
               child: Column(
                 children: [
                   ProfileFieldEditor(
                     label: 'Name',
-                    initialValue: _name,
+                    initialValue: _draft.name,
                     onSave: (value) {
                       setState(() {
-                        _name = value;
-                        _calculateCompletion();
+                        _dirty = true;
+                        _draft = _draft.copyWith(name: value);
                       });
                     },
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
                   ProfileFieldEditor(
                     label: 'Age',
-                    initialValue: _age?.toString() ?? '',
+                    initialValue: _draft.age?.toString() ?? '',
                     keyboardType: TextInputType.number,
                     onSave: (value) {
                       setState(() {
-                        _age = int.tryParse(value);
-                        _calculateCompletion();
+                        _dirty = true;
+                        _draft = _draft.copyWith(age: int.tryParse(value));
                       });
                     },
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
                   ProfileFieldEditor(
                     label: 'Location',
-                    initialValue: _location,
+                    initialValue: _draft.location,
                     onSave: (value) {
                       setState(() {
-                        _location = value;
-                        _calculateCompletion();
+                        _dirty = true;
+                        _draft = _draft.copyWith(location: value);
                       });
                     },
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
                   ProfileFieldEditor(
                     label: 'Bio',
-                    initialValue: _bio,
+                    initialValue: _draft.bio,
                     maxLines: 5,
                     maxLength: 500,
                     hintText: 'Tell us about yourself...',
                     onSave: (value) {
                       setState(() {
-                        _bio = value;
-                        _calculateCompletion();
+                        _dirty = true;
+                        _draft = _draft.copyWith(bio: value);
                       });
                     },
                   ),
                 ],
               ),
             ),
-            DividerCustom(),
-
-            // Photos
+            const DividerCustom(),
             PhotoGallery(
-              imageUrls: _imageUrls,
+              imageUrls: _draft.imageUrls,
               isEditable: true,
-              onAddPhoto: () {
-                // Open image picker - implementation needed
-                setState(() {
-                  _imageUrls.add('https://via.placeholder.com/400');
-                  _calculateCompletion();
-                });
-              },
-              onImageTap: (index, url) {
-                // Open image viewer - implementation needed
-              },
+              onAddPhoto: () {},
+              onImageTap: (index, url) {},
             ),
-            DividerCustom(),
-
-            // Interests
+            const DividerCustom(),
             SectionHeader(
               title: 'Interests',
               iconPath: AppIcons.favorite,
             ),
             Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: const EdgeInsets.all(AppSpacing.spacingLG),
               child: Text(
                 'Add interests to help others find you',
                 style: AppTypography.body.copyWith(color: secondaryTextColor),
               ),
             ),
-
-            // Save button
             Padding(
-              padding: EdgeInsets.all(AppSpacing.spacingLG),
+              padding: const EdgeInsets.all(AppSpacing.spacingLG),
               child: GradientButton(
                 text: 'Save Profile',
                 onPressed: _handleSave,

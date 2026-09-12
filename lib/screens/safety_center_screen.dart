@@ -27,31 +27,7 @@ class SafetyCenterScreen extends ConsumerWidget {
       body: AppSettingsDetailList(
         children: [
           PremiumShell(
-            child: Column(
-              children: [
-                AppSvgIcon(
-                  assetPath: AppIcons.shieldTick,
-                  size: 48,
-                  color: AppColors.accentViolet,
-                ),
-                const SizedBox(height: AppSpacing.spacingMD),
-                Text(
-                  'Your safety matters',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                Text(
-                  'We\'re here to help you stay safe while connecting',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+            child: const _SafetyHero(),
           ),
           const SizedBox(height: AppSpacing.spacingXL),
           PremiumSettingsGroup(
@@ -116,38 +92,7 @@ class SafetyCenterScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.spacingXL),
-          PremiumSettingsGroup(
-            title: 'Safety tips',
-            children: [
-              for (final tip in const [
-                'Never share personal information like your address or financial details',
-                'Meet in public places for first dates and let someone know where you\'re going',
-                'Trust your instincts — if something feels off, it probably is',
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppSvgIcon(
-                        assetPath: AppIcons.tickCircle,
-                        size: 18,
-                        color: AppColors.feedbackSuccess,
-                      ),
-                      const SizedBox(width: AppSpacing.spacingSM),
-                      Expanded(
-                        child: Text(
-                          tip,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            height: 1.45,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+          const _SafetyTips(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSettingsLayout.horizontalPadding,
@@ -198,6 +143,83 @@ class SafetyCenterScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SafetyTips extends StatelessWidget {
+  const _SafetyTips();
+
+  static const _tips = [
+    'Never share personal information like your address or financial details',
+    'Meet in public places for first dates and let someone know where you\'re going',
+    'Trust your instincts — if something feels off, it probably is',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PremiumSettingsGroup(
+      title: 'Safety tips',
+      children: [
+        for (final tip in _tips)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppSvgIcon(
+                  assetPath: AppIcons.tickCircle,
+                  size: 18,
+                  color: AppColors.feedbackSuccess,
+                ),
+                const SizedBox(width: AppSpacing.spacingSM),
+                Expanded(
+                  child: Text(
+                    tip,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SafetyHero extends StatelessWidget {
+  const _SafetyHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        AppSvgIcon(
+          assetPath: AppIcons.shieldTick,
+          size: 48,
+          color: AppColors.accentViolet,
+        ),
+        const SizedBox(height: AppSpacing.spacingMD),
+        Text(
+          'Your safety matters',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.spacingSM),
+        Text(
+          'We\'re here to help you stay safe while connecting',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

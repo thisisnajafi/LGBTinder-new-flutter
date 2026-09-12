@@ -4,8 +4,6 @@ import '../../../core/providers/api_providers.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/services/offline_payment_service.dart';
-import '../../../shared/services/api_service.dart';
-import '../../../shared/services/connectivity_service.dart';
 import '../data/services/google_play_billing_service.dart';
 import '../data/services/marketing_attribution_service.dart';
 import '../domain/repositories/google_play_repository.dart';
@@ -41,6 +39,7 @@ final googlePlayBillingServiceProvider = Provider<GooglePlayBillingService>((ref
     ref.read(subscriptionRefreshProvider).refresh();
   };
   ref.onDispose(() => service.onSubscriptionChanged = null);
+  // PERF-SCR-PAY-001: constructor starts billing I/O; do not await here.
   return service;
 });
 

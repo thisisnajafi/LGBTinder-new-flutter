@@ -12,6 +12,7 @@ import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_list_view.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../shared/analytics/app_event_tracker.dart';
 import '../../../../shared/models/api_error.dart';
@@ -187,47 +188,67 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
                       onRefresh: () async {
                         ref.invalidate(availableSuperlikePacksProvider);
                       },
-                      child: ListView(
-                        padding: EdgeInsets.fromLTRB(
+                      child: AppListView.builder(
+                        physics: AppScroll.bouncing,
+                        padding: const EdgeInsets.fromLTRB(
                           AppSpacing.spacingLG,
                           AppSpacing.spacingLG,
                           AppSpacing.spacingLG,
                           AppSpacing.spacingSM,
                         ),
-                        children: [
-                          _buildHeader(textColor, secondaryTextColor),
-                          _buildBalanceCard(remaining),
-                          _buildPaymentBadge(borderColor),
-                          SizedBox(height: AppSpacing.spacingXL),
-                          Text(
-                            'Choose a pack',
-                            style: AppTypography.h3.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w700,
+                        itemCount: packs.length + 2,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildHeader(textColor, secondaryTextColor),
+                                _buildBalanceCard(remaining),
+                                _buildPaymentBadge(borderColor),
+                                const SizedBox(height: AppSpacing.spacingXL),
+                                Text(
+                                  'Choose a pack',
+                                  style: AppTypography.h3.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.spacingMD),
+                              ],
+                            );
+                          }
+                          if (index == packs.length + 1) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.spacingMD,
+                              ),
+                              child: Text(
+                                'Superlikes never expire. Use them whenever you find someone special.',
+                                style: AppTypography.caption.copyWith(
+                                  color: secondaryTextColor,
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            );
+                          }
+                          return _SuperlikePackCard(
+                            pack: packs[index - 1],
+                            selectedPackId: _selectedPackId,
+                            surfaceColor: surfaceColor,
+                            borderColor: borderColor,
+                            textColor: textColor,
+                            secondaryTextColor: secondaryTextColor,
+                            isDark: isDark,
+                            isBestValue: _isBestValuePack(
+                              packs[index - 1],
+                              packs,
                             ),
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          ...packs.map(
-                            (pack) => _buildPackCard(
-                              pack,
-                              surfaceColor,
-                              borderColor,
-                              textColor,
-                              secondaryTextColor,
-                              isDark,
-                              isBestValue: _isBestValuePack(pack, packs),
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.spacingMD),
-                          Text(
-                            'Superlikes never expire. Use them whenever you find someone special.',
-                            style: AppTypography.caption.copyWith(
-                              color: secondaryTextColor,
-                              height: 1.4,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                            formatPrice: _formatPrice,
+                            onSelected: (id) =>
+                                setState(() => _selectedPackId = id),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -403,153 +424,6 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
     );
   }
 
-  Widget _buildPackCard(
-    SuperlikePack pack,
-    Color surfaceColor,
-    Color borderColor,
-    Color textColor,
-    Color secondaryTextColor,
-    bool isDark, {
-    bool isBestValue = false,
-  }) {
-    final isSelected = _selectedPackId == pack.id;
-    final showBestValue = isBestValue || pack.isPopular;
-    final accent = pack.isPopular ? AppColors.accentPink : AppColors.accentPurple;
-    final cardBg = isSelected
-        ? (isDark ? accent.withValues(alpha: 0.14) : accent.withValues(alpha: 0.08))
-        : surfaceColor;
-    final border = isSelected ? accent : borderColor;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.spacingLG),
-      child: Material(
-        color: cardBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-          side: BorderSide(color: border, width: isSelected ? 2 : 1),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => setState(() => _selectedPackId = pack.id),
-          child: Padding(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Radio<int>(
-                      value: pack.id,
-                      groupValue: _selectedPackId,
-                      onChanged: (value) =>
-                          setState(() => _selectedPackId = value),
-                      activeColor: accent,
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppText(
-                                  pack.name,
-                                  style: AppTypography.h3.copyWith(
-                                    color: textColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 2,
-                                ),
-                              ),
-                              if (showBestValue)
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.spacingSM,
-                                    vertical: AppSpacing.spacingXS,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    gradient: AppColors.brandGradient,
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.radiusSM,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'BEST VALUE',
-                                    style: AppTypography.caption.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          if (pack.description != null &&
-                              pack.description!.isNotEmpty) ...[
-                            SizedBox(height: AppSpacing.spacingXS),
-                            Text(
-                              pack.description!,
-                              style: AppTypography.body.copyWith(
-                                color: secondaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                Row(
-                  children: [
-                    AppSvgIcon(
-                      assetPath: AppIcons.getIconPath('star', style: 'bold'),
-                      size: 22,
-                      color: accent,
-                    ),
-                    SizedBox(width: AppSpacing.spacingSM),
-                    Text(
-                      '${pack.superlikeCount} Superlikes',
-                      style: AppTypography.body.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingMD,
-                        vertical: AppSpacing.spacingSM,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? AppColors.brandGradient
-                            : LinearGradient(
-                                colors: [
-                                  accent.withValues(alpha: 0.15),
-                                  accent.withValues(alpha: 0.08),
-                                ],
-                              ),
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      ),
-                      child: Text(
-                        _formatPrice(pack.price, pack.currency),
-                        style: AppTypography.body.copyWith(
-                          color: isSelected ? Colors.white : textColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPurchaseBar(
     bool isDark,
     Color textColor,
@@ -606,6 +480,175 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
               isLoading: _isPurchasing,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuperlikePackCard extends StatelessWidget {
+  const _SuperlikePackCard({
+    required this.pack,
+    required this.selectedPackId,
+    required this.surfaceColor,
+    required this.borderColor,
+    required this.textColor,
+    required this.secondaryTextColor,
+    required this.isDark,
+    required this.isBestValue,
+    required this.formatPrice,
+    required this.onSelected,
+  });
+
+  final SuperlikePack pack;
+  final int? selectedPackId;
+  final Color surfaceColor;
+  final Color borderColor;
+  final Color textColor;
+  final Color secondaryTextColor;
+  final bool isDark;
+  final bool isBestValue;
+  final String Function(double price, String currency) formatPrice;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = selectedPackId == pack.id;
+    final showBestValue = isBestValue || pack.isPopular;
+    final accent =
+        pack.isPopular ? AppColors.accentPink : AppColors.accentPurple;
+    final cardBg = isSelected
+        ? (isDark ? accent.withValues(alpha: 0.14) : accent.withValues(alpha: 0.08))
+        : surfaceColor;
+    final border = isSelected ? accent : borderColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingLG),
+      child: Material(
+        color: cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          side: BorderSide(color: border, width: isSelected ? 2 : 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => onSelected(pack.id),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.spacingLG),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Radio<int>(
+                      value: pack.id,
+                      groupValue: selectedPackId,
+                      onChanged: (value) {
+                        if (value != null) onSelected(value);
+                      },
+                      activeColor: accent,
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppText(
+                                  pack.name,
+                                  style: AppTypography.h3.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ),
+                              if (showBestValue)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.spacingSM,
+                                    vertical: AppSpacing.spacingXS,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: AppColors.brandGradient,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.radiusSM,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'BEST VALUE',
+                                    style: AppTypography.caption.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (pack.description != null &&
+                              pack.description!.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.spacingXS),
+                            Text(
+                              pack.description!,
+                              style: AppTypography.body.copyWith(
+                                color: secondaryTextColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.spacingMD),
+                Row(
+                  children: [
+                    AppSvgIcon(
+                      assetPath: AppIcons.getIconPath('star', style: 'bold'),
+                      size: 22,
+                      color: accent,
+                    ),
+                    const SizedBox(width: AppSpacing.spacingSM),
+                    Text(
+                      '${pack.superlikeCount} Superlikes',
+                      style: AppTypography.body.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingMD,
+                        vertical: AppSpacing.spacingSM,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? AppColors.brandGradient
+                            : LinearGradient(
+                                colors: [
+                                  accent.withValues(alpha: 0.15),
+                                  accent.withValues(alpha: 0.08),
+                                ],
+                              ),
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.radiusMD),
+                      ),
+                      child: Text(
+                        formatPrice(pack.price, pack.currency),
+                        style: AppTypography.body.copyWith(
+                          color: isSelected ? Colors.white : textColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

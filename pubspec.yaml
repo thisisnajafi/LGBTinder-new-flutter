@@ -91,6 +91,7 @@ dependencies:
   # Sharing & QR
   share_plus: ^7.2.1
   qr_flutter: ^4.1.0
+  qr: ^3.0.2
 
   # Emoji
   emoji_picker_flutter: ^3.0.0

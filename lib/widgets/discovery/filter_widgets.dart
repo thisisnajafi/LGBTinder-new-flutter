@@ -514,3 +514,179 @@ class FilterMultiSelectDropdown extends StatelessWidget {
     );
   }
 }
+
+/// Age range slider that rebuilds only its labels (PERF-SCR-FILTER-001).
+///
+/// Drag does not `setState` [FilterScreen]. Discovery is not refetched here —
+/// Apply reads [values] (PERF-SCR-FILTER-002).
+class FilterAgeRangeControl extends StatefulWidget {
+  const FilterAgeRangeControl({
+    super.key,
+    required this.values,
+    this.min = 18,
+    this.max = 100,
+  });
+
+  final ValueNotifier<RangeValues> values;
+  final double min;
+  final double max;
+
+  @override
+  State<FilterAgeRangeControl> createState() => _FilterAgeRangeControlState();
+}
+
+class _FilterAgeRangeControlState extends State<FilterAgeRangeControl> {
+  late RangeValues _display;
+
+  @override
+  void initState() {
+    super.initState();
+    _display = widget.values.value;
+    widget.values.addListener(_syncFromNotifier);
+  }
+
+  @override
+  void didUpdateWidget(covariant FilterAgeRangeControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.values != widget.values) {
+      oldWidget.values.removeListener(_syncFromNotifier);
+      widget.values.addListener(_syncFromNotifier);
+      _display = widget.values.value;
+    }
+  }
+
+  void _syncFromNotifier() {
+    if (_display == widget.values.value) return;
+    setState(() => _display = widget.values.value);
+  }
+
+  void _onChanged(RangeValues next) {
+    setState(() => _display = next);
+    widget.values.value = next;
+  }
+
+  @override
+  void dispose() {
+    widget.values.removeListener(_syncFromNotifier);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final divisions = (widget.max - widget.min).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilterSliderTheme(
+          child: RangeSlider(
+            values: _display,
+            min: widget.min,
+            max: widget.max,
+            divisions: divisions,
+            onChanged: _onChanged,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.spacingSM),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${_display.start.round()}',
+              style: AppTypography.body.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              '${_display.end.round()}',
+              style: AppTypography.body.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Distance slider isolated from the rest of [FilterScreen] (PERF-SCR-FILTER-001).
+class FilterDistanceControl extends StatefulWidget {
+  const FilterDistanceControl({
+    super.key,
+    required this.distance,
+    this.min = 1,
+    this.max = 200,
+  });
+
+  final ValueNotifier<double> distance;
+  final double min;
+  final double max;
+
+  @override
+  State<FilterDistanceControl> createState() => _FilterDistanceControlState();
+}
+
+class _FilterDistanceControlState extends State<FilterDistanceControl> {
+  late double _display;
+
+  @override
+  void initState() {
+    super.initState();
+    _display = widget.distance.value;
+    widget.distance.addListener(_syncFromNotifier);
+  }
+
+  @override
+  void didUpdateWidget(covariant FilterDistanceControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.distance != widget.distance) {
+      oldWidget.distance.removeListener(_syncFromNotifier);
+      widget.distance.addListener(_syncFromNotifier);
+      _display = widget.distance.value;
+    }
+  }
+
+  void _syncFromNotifier() {
+    if (_display == widget.distance.value) return;
+    setState(() => _display = widget.distance.value);
+  }
+
+  void _onChanged(double next) {
+    setState(() => _display = next);
+    widget.distance.value = next;
+  }
+
+  @override
+  void dispose() {
+    widget.distance.removeListener(_syncFromNotifier);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final divisions = (widget.max - widget.min).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilterSliderTheme(
+          child: Slider(
+            value: _display,
+            min: widget.min,
+            max: widget.max,
+            divisions: divisions,
+            onChanged: _onChanged,
+          ),
+        ),
+        FilterValuePill(label: '${_display.round()} km'),
+      ],
+    );
+  }
+}

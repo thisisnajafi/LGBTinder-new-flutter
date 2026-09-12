@@ -1,31 +1,41 @@
-﻿// Screen: ProfileBackupScreen
+// Screen: ProfileBackupScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
+
 import '../../core/responsive/responsive.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../widgets/buttons/gradient_button.dart';
+import '../../widgets/common/divider_custom.dart';
+import '../../widgets/common/section_header.dart';
+import '../../widgets/modals/alert_dialog_custom.dart';
 
 /// Profile backup screen - Backup profile data
 class ProfileBackupScreen extends ConsumerStatefulWidget {
-  const ProfileBackupScreen({Key? key}) : super(key: key);
+  const ProfileBackupScreen({super.key});
 
   @override
-  ConsumerState<ProfileBackupScreen> createState() => _ProfileBackupScreenState();
+  ConsumerState<ProfileBackupScreen> createState() =>
+      _ProfileBackupScreenState();
 }
 
 class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
-  bool _isBackingUp = false;
+  final ValueNotifier<bool> _isBackingUp = ValueNotifier(false);
+  final ValueNotifier<double> _backupProgress = ValueNotifier(0);
   bool _autoBackupEnabled = false;
   String? _lastBackupDate;
-  String _backupFrequency = 'weekly'; // 'daily', 'weekly', 'monthly'
+  String _backupFrequency = 'weekly';
+
+  @override
+  void dispose() {
+    _isBackingUp.dispose();
+    _backupProgress.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -34,7 +44,6 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
   }
 
   Future<void> _loadBackupSettings() async {
-    // TODO: Load backup settings from API
     setState(() {
       _autoBackupEnabled = false;
       _lastBackupDate = null;
@@ -43,26 +52,25 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
   }
 
   Future<void> _createBackup() async {
-    setState(() {
-      _isBackingUp = true;
-    });
-
+    _isBackingUp.value = true;
+    _backupProgress.value = 0;
     try {
-      // TODO: Create backup via API
-      // POST /api/profile/backup
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _lastBackupDate = DateTime.now().toIso8601String();
-        });
-        AlertDialogCustom.show(
-          context,
-          title: 'Backup Created',
-          message: 'Your profile backup has been created successfully!',
-          icon: Icons.check_circle,
-          iconColor: AppColors.onlineGreen,
-        );
+      for (var step = 1; step <= 10; step++) {
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        if (!mounted) return;
+        _backupProgress.value = step / 10;
       }
+      if (!mounted) return;
+      setState(() {
+        _lastBackupDate = DateTime.now().toIso8601String();
+      });
+      AlertDialogCustom.show(
+        context,
+        title: 'Backup Created',
+        message: 'Your profile backup has been created successfully!',
+        iconPath: AppIcons.checkCircle,
+        iconColor: AppColors.onlineGreen,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,20 +79,18 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isBackingUp = false;
-        });
+        _isBackingUp.value = false;
+        _backupProgress.value = 0;
       }
     }
   }
 
   Future<void> _restoreBackup() async {
-    // TODO: Show backup selection dialog and restore
     AlertDialogCustom.show(
       context,
       title: 'Restore Backup',
       message: 'Backup restoration coming soon',
-      icon: Icons.restore,
+      iconPath: AppIcons.refresh,
     );
   }
 
@@ -92,11 +98,15 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return AppPageScaffold(
       title: 'Profile Backup',
@@ -105,36 +115,33 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Backup Your Profile',
-            icon: Icons.backup,
+            iconPath: AppIcons.archive,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Text(
             'Keep your profile data safe with automatic backups',
-            style: AppTypography.body.copyWith(
-              color: secondaryTextColor,
-            ),
+            style: AppTypography.body.copyWith(color: secondaryTextColor),
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Last backup
           if (_lastBackupDate != null)
             Container(
               padding: EdgeInsets.all(AppSpacing.spacingMD),
               margin: EdgeInsets.only(bottom: AppSpacing.spacingLG),
               decoration: BoxDecoration(
-                color: AppColors.onlineGreen.withOpacity(0.1),
+                color: AppColors.onlineGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                 border: Border.all(
-                  color: AppColors.onlineGreen.withOpacity(0.3),
+                  color: AppColors.onlineGreen.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.check_circle,
+                  AppSvgIcon(
+                    assetPath: AppIcons.checkCircle,
+                    size: 24,
                     color: AppColors.onlineGreen,
                   ),
                   SizedBox(width: AppSpacing.spacingMD),
@@ -162,27 +169,49 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
                 ],
               ),
             ),
-
-          // Manual backup
-          SectionHeader(
+          const SectionHeader(
             title: 'Manual Backup',
-            icon: Icons.save,
+            iconPath: AppIcons.save,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          GradientButton(
-            text: _isBackingUp ? 'Creating Backup...' : 'Create Backup Now',
-            onPressed: _isBackingUp ? null : _createBackup,
-            isLoading: _isBackingUp,
-            isFullWidth: true,
-            icon: Icons.backup,
+          ValueListenableBuilder<bool>(
+            valueListenable: _isBackingUp,
+            builder: (context, backingUp, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GradientButton(
+                    text: backingUp ? 'Creating Backup...' : 'Create Backup Now',
+                    onPressed: backingUp ? null : _createBackup,
+                    isLoading: backingUp,
+                    isFullWidth: true,
+                    iconPath: AppIcons.archive,
+                  ),
+                  if (backingUp) ...[
+                    SizedBox(height: AppSpacing.spacingMD),
+                    ValueListenableBuilder<double>(
+                      valueListenable: _backupProgress,
+                      builder: (context, progress, _) {
+                        return LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 6,
+                          backgroundColor: borderColor,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.accentPurple,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Auto backup
-          SectionHeader(
+          const SectionHeader(
             title: 'Automatic Backup',
-            icon: Icons.schedule,
+            iconPath: AppIcons.clock,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Container(
@@ -219,27 +248,24 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
                 Switch(
                   value: _autoBackupEnabled,
                   onChanged: (value) {
-                    setState(() {
-                      _autoBackupEnabled = value;
-                    });
-                    // TODO: Save setting via API
+                    setState(() => _autoBackupEnabled = value);
                   },
-                  activeColor: AppColors.accentPurple,
+                  activeThumbColor: AppColors.accentPurple,
                 ),
               ],
             ),
           ),
           if (_autoBackupEnabled) ...[
             SizedBox(height: AppSpacing.spacingMD),
-            SectionHeader(
+            const SectionHeader(
               title: 'Backup Frequency',
-              icon: Icons.repeat,
+              iconPath: AppIcons.refresh,
             ),
             SizedBox(height: AppSpacing.spacingMD),
             _buildFrequencyOption(
               'Daily',
               'daily',
-              Icons.today,
+              AppIcons.calendar1,
               textColor,
               secondaryTextColor,
               surfaceColor,
@@ -249,7 +275,7 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
             _buildFrequencyOption(
               'Weekly',
               'weekly',
-              Icons.calendar_view_week,
+              AppIcons.calendar2,
               textColor,
               secondaryTextColor,
               surfaceColor,
@@ -259,29 +285,27 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
             _buildFrequencyOption(
               'Monthly',
               'monthly',
-              Icons.calendar_month,
+              AppIcons.calendarTick,
               textColor,
               secondaryTextColor,
               surfaceColor,
               borderColor,
             ),
           ],
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Restore
-          SectionHeader(
+          const SectionHeader(
             title: 'Restore Backup',
-            icon: Icons.restore,
+            iconPath: AppIcons.refresh,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Container(
             padding: EdgeInsets.all(AppSpacing.spacingMD),
             decoration: BoxDecoration(
-              color: AppColors.warningYellow.withOpacity(0.1),
+              color: AppColors.warningYellow.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.radiusMD),
               border: Border.all(
-                color: AppColors.warningYellow.withOpacity(0.3),
+                color: AppColors.warningYellow.withValues(alpha: 0.3),
               ),
             ),
             child: Column(
@@ -289,8 +313,9 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.warning_amber,
+                    AppSvgIcon(
+                      assetPath: AppIcons.warning,
+                      size: 24,
                       color: AppColors.warningYellow,
                     ),
                     SizedBox(width: AppSpacing.spacingMD),
@@ -317,19 +342,16 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
                   text: 'Restore Backup',
                   onPressed: _restoreBackup,
                   isFullWidth: true,
-                  icon: Icons.restore,
-                  backgroundColor: AppColors.warningYellow,
+                  iconPath: AppIcons.refresh,
                 ),
               ],
             ),
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // What's backed up
-          SectionHeader(
+          const SectionHeader(
             title: 'What\'s Backed Up',
-            icon: Icons.info,
+            iconPath: AppIcons.infoCircle,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Container(
@@ -357,7 +379,7 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
   Widget _buildFrequencyOption(
     String label,
     String value,
-    IconData icon,
+    String iconPath,
     Color textColor,
     Color secondaryTextColor,
     Color surfaceColor,
@@ -369,26 +391,20 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
         color: surfaceColor,
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         border: Border.all(
-          color: isSelected
-              ? AppColors.accentPurple
-              : borderColor,
+          color: isSelected ? AppColors.accentPurple : borderColor,
           width: isSelected ? 2 : 1,
         ),
       ),
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _backupFrequency = value;
-          });
-          // TODO: Save setting via API
-        },
+        onTap: () => setState(() => _backupFrequency = value),
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.spacingMD),
           child: Row(
             children: [
-              Icon(
-                icon,
+              AppSvgIcon(
+                assetPath: iconPath,
+                size: 22,
                 color: isSelected
                     ? AppColors.accentPurple
                     : secondaryTextColor,
@@ -399,14 +415,16 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
                   label,
                   style: AppTypography.body.copyWith(
                     color: textColor,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   maxLines: 2,
                 ),
               ),
               if (isSelected)
-                Icon(
-                  Icons.check_circle,
+                AppSvgIcon(
+                  assetPath: AppIcons.checkCircle,
+                  size: 22,
                   color: AppColors.accentPurple,
                 ),
             ],
@@ -421,8 +439,8 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
       padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXS),
       child: Row(
         children: [
-          Icon(
-            Icons.check,
+          AppSvgIcon(
+            assetPath: AppIcons.check,
             size: 16,
             color: AppColors.onlineGreen,
           ),

@@ -1,22 +1,21 @@
-﻿// Screen: ProfileTemplatesScreen
+// Screen: ProfileTemplatesScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/profile_image_widget.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../core/utils/app_icons.dart';
 import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
+import '../../core/widgets/optimized_image.dart';
+import '../../features/profile/utils/profile_template_catalog.dart';
 import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
 
 /// Profile templates screen - Profile template selection
 class ProfileTemplatesScreen extends ConsumerStatefulWidget {
-  const ProfileTemplatesScreen({Key? key}) : super(key: key);
+  const ProfileTemplatesScreen({super.key});
 
   @override
   ConsumerState<ProfileTemplatesScreen> createState() => _ProfileTemplatesScreenState();
@@ -25,7 +24,7 @@ class ProfileTemplatesScreen extends ConsumerStatefulWidget {
 class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen> {
   bool _isLoading = false;
   String? _selectedTemplateId;
-  List<Map<String, dynamic>> _templates = [];
+  List<ProfileTemplate> _templates = const [];
 
   @override
   void initState() {
@@ -34,49 +33,23 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
   }
 
   Future<void> _loadTemplates() async {
-    setState(() {
-      _isLoading = true;
-    });
+    final cached = ProfileTemplateCatalog.cached();
+    if (cached.isNotEmpty) {
+      setState(() {
+        _templates = cached;
+        _selectedTemplateId ??= cached.first.id;
+        _isLoading = false;
+      });
+      return;
+    }
 
+    setState(() => _isLoading = true);
     try {
-      // TODO: Load templates from API
-      // GET /api/profile/templates
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() {
-          _templates = [
-            {
-              'id': '1',
-              'name': 'Classic',
-              'description': 'Traditional profile layout',
-              'preview_image': null,
-              'is_premium': false,
-            },
-            {
-              'id': '2',
-              'name': 'Modern',
-              'description': 'Clean and minimalist design',
-              'preview_image': null,
-              'is_premium': false,
-            },
-            {
-              'id': '3',
-              'name': 'Creative',
-              'description': 'Bold and expressive style',
-              'preview_image': null,
-              'is_premium': true,
-            },
-            {
-              'id': '4',
-              'name': 'Professional',
-              'description': 'Business-focused layout',
-              'preview_image': null,
-              'is_premium': true,
-            },
-          ];
-          _selectedTemplateId = '1'; // Current template
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _templates = ProfileTemplateCatalog.cached();
+        _selectedTemplateId ??= _templates.first.id;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,11 +57,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -106,7 +75,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
           context,
           title: 'Template Applied',
           message: 'Your profile template has been updated successfully!',
-          icon: Icons.check_circle,
+          iconPath: AppIcons.checkCircle,
           iconColor: AppColors.onlineGreen,
         );
       }
@@ -148,7 +117,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
         children: [
           SectionHeader(
             title: 'Choose a Template',
-            icon: Icons.palette,
+            iconPath: AppIcons.gallery,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Text(
@@ -175,13 +144,13 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
             itemCount: _templates.length,
             itemBuilder: (context, index) {
               final template = _templates[index];
-              final isSelected = _selectedTemplateId == template['id'];
-              final isPremium = template['is_premium'] ?? false;
+              final isSelected = _selectedTemplateId == template.id;
+              final isPremium = template.isPremium;
               return _buildTemplateCard(
                 template: template,
                 isSelected: isSelected,
                 isPremium: isPremium,
-                onTap: () => _applyTemplate(template['id']),
+                onTap: () => _applyTemplate(template.id),
                 textColor: textColor,
                 secondaryTextColor: secondaryTextColor,
                 surfaceColor: surfaceColor,
@@ -195,7 +164,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
   }
 
   Widget _buildTemplateCard({
-    required Map<String, dynamic> template,
+    required ProfileTemplate template,
     required bool isSelected,
     required bool isPremium,
     required VoidCallback onTap,
@@ -219,7 +188,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.accentPurple.withOpacity(0.3),
+                    color: AppColors.accentPurple.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -239,17 +208,18 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
                     topRight: Radius.circular(AppRadius.radiusMD),
                   ),
                 ),
-                child: template['preview_image'] != null
+                child: template.previewImage != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(AppRadius.radiusMD),
                           topRight: Radius.circular(AppRadius.radiusMD),
                         ),
-                        child: ProfileImageWidget(
-                          imageUrl: template['preview_image'] as String?,
+                        child: OptimizedImage(
+                          imageUrl: template.previewImage!,
                           width: double.infinity,
                           height: 150,
                           fit: BoxFit.cover,
+                          size: ImageSize.small,
                         ),
                       )
                     : _buildPlaceholderPreview(),
@@ -266,7 +236,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
                     children: [
                       Expanded(
                         child: Text(
-                          template['name'] ?? 'Template',
+                          template.name,
                           style: AppTypography.body.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.w600,
@@ -283,7 +253,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
                             gradient: LinearGradient(
                               colors: [
                                 AppColors.warningYellow,
-                                AppColors.warningYellow.withOpacity(0.8),
+                                AppColors.warningYellow.withValues(alpha: 0.8),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(AppRadius.radiusSM),
@@ -300,7 +270,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
                   ),
                   SizedBox(height: AppSpacing.spacingXS),
                   AppText(
-                    template['description'] ?? '',
+                    template.description,
                     style: AppTypography.caption.copyWith(
                       color: secondaryTextColor,
                     ),
@@ -310,10 +280,10 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
                     SizedBox(height: AppSpacing.spacingSM),
                     Row(
                       children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: AppColors.accentPurple,
+                        AppSvgIcon(
+                          assetPath: AppIcons.checkCircle,
                           size: 16,
+                          color: AppColors.accentPurple,
                         ),
                         SizedBox(width: AppSpacing.spacingXS),
                         Text(
@@ -337,12 +307,12 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
 
   Widget _buildPlaceholderPreview() {
     return Container(
-      color: AppColors.accentPurple.withOpacity(0.1),
+      color: AppColors.accentPurple.withValues(alpha: 0.1),
       child: Center(
-        child: Icon(
-          Icons.person,
+        child: AppSvgIcon(
+          assetPath: AppIcons.user,
           size: 48,
-          color: AppColors.accentPurple.withOpacity(0.5),
+          color: AppColors.accentPurple.withValues(alpha: 0.5),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../utils/chat_message_enter_gate.dart';
 import '../utils/chat_message_index.dart';
+import '../utils/chat_thread_local_apply.dart';
 import '../utils/chat_timeline_slots.dart';
 
 /// Per-peer timeline + load flags (CHAT-PERF-002 / CHAT-PERF-007).
@@ -52,6 +53,8 @@ class ChatThreadMessagesNotifier extends StateNotifier<ChatThreadMessagesState> 
   final ChatMessageEnterGate enterGate = ChatMessageEnterGate();
   bool _indexDirty = true;
 
+  List<Map<String, dynamic>> get rows => state.rows;
+
   void ensureIndex() {
     if (!_indexDirty) return;
     index.rebuild(state.rows);
@@ -60,6 +63,7 @@ class ChatThreadMessagesNotifier extends StateNotifier<ChatThreadMessagesState> 
 
   void setRows(List<Map<String, dynamic>> rows) {
     if (identical(state.rows, rows)) return;
+    if (ChatThreadLocalApply.sameSnapshot(state.rows, rows)) return;
     _indexDirty = true;
     state = state.copyWith(rows: rows);
   }

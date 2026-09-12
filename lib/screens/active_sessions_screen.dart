@@ -7,6 +7,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../shared/models/api_error.dart';
@@ -283,7 +284,8 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
 
   Widget _buildBody(ThemeData theme) {
     if (_isLoading) {
-      return ListView.builder(
+      return AppListView.builder(
+        physics: AppScroll.bouncing,
         padding: AppSettingsLayout.firstSectionPadding,
         itemCount: 3,
         itemBuilder: (context, index) => Padding(
@@ -366,15 +368,17 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
                     ),
               children: [
                 for (final session in otherSessions)
-                  _SessionTile(
-                    session: session,
-                    isCurrent: false,
-                    platformIconPath: _platformIconPath(
-                      session['platform']?.toString() ?? '',
+                  RepaintBoundary(
+                    child: _SessionTile(
+                      session: session,
+                      isCurrent: false,
+                      platformIconPath: _platformIconPath(
+                        session['platform']?.toString() ?? '',
+                      ),
+                      formatTime: _formatTime,
+                      isRevoking: _revokingSessionId == _sessionId(session),
+                      onLogOut: () => _handleLogOutSession(session),
                     ),
-                    formatTime: _formatTime,
-                    isRevoking: _revokingSessionId == _sessionId(session),
-                    onLogOut: () => _handleLogOutSession(session),
                   ),
               ],
             ),

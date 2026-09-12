@@ -22,6 +22,7 @@ import 'shared/services/push_notification_service.dart';
 import 'shared/services/fcm_background_handler.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'core/providers/feature_flags_provider.dart';
+import 'core/providers/app_motion_prefs_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
 import 'core/cache/cache_lifecycle_listener.dart';
 import 'core/cache/image_cache_service.dart';
@@ -142,6 +143,7 @@ Future<void> _bootstrap() async {
   SharedPreferences? prefs;
   try {
     prefs = await SharedPreferences.getInstance();
+    AppMotionPreferences.hydrate(prefs);
     startupLog('6. SharedPreferences loaded');
   } catch (e, stack) {
     AppLogger.error(
@@ -232,6 +234,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     startupLog('MyApp.build()');
     final router = ref.watch(appRouterProvider);
+    ref.watch(appMotionPrefsProvider);
 
     return ErrorBoundary(
       child: MaterialApp.router(

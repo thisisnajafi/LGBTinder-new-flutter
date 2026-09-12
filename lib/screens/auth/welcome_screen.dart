@@ -2,7 +2,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/spacing_constants.dart';
@@ -17,14 +16,14 @@ import '../../core/utils/app_logger.dart';
 import '../../routes/app_router.dart';
 
 /// Welcome screen - First screen for authentication flow
-class WelcomeScreen extends ConsumerStatefulWidget {
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
+class _WelcomeScreenState extends State<WelcomeScreen>
     with TickerProviderStateMixin {
   late AnimationController _entranceController;
   late AnimationController _ambientController;
@@ -251,7 +250,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
     final logo = Semantics(
       label: 'LGBTFinder logo',
-      child: _buildLogoBadge(logoSize),
+      child: RepaintBoundary(
+        key: const ValueKey('welcome_hero'),
+        child: _buildLogoBadge(logoSize),
+      ),
     );
 
     if (!animated || _minimalFirstFrame) {
@@ -367,7 +369,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
               ),
             ),
-            if (animationsEnabled)
+            if (!_minimalFirstFrame && animationsEnabled)
               RepaintBoundary(
                 child: AnimatedBuilder(
                   animation: _ambientPulse,
@@ -432,12 +434,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    FadeTransition(
-                                      opacity: animated
-                                          ? _mosaicFade
-                                          : const AlwaysStoppedAnimation(1),
-                                      child: const WelcomeValueProps(),
-                                    ),
+                                    if (!_minimalFirstFrame)
+                                      FadeTransition(
+                                        opacity: animated
+                                            ? _mosaicFade
+                                            : const AlwaysStoppedAnimation(1),
+                                        child: const WelcomeValueProps(),
+                                      ),
                                     SizedBox(height: AppSpacing.spacingXL),
                                     _buildLogo(context, animated: animated),
                                     SizedBox(height: AppSpacing.spacingLG),

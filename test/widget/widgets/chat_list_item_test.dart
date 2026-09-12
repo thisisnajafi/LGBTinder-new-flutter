@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:lgbtindernew/core/providers/subscription_provider.dart';
 import 'package:lgbtindernew/core/theme/app_theme.dart';
 import 'package:lgbtindernew/features/chat/providers/user_presence_cache_provider.dart';
 import 'package:lgbtindernew/features/chat/providers/chat_thread_providers.dart';
@@ -45,11 +44,7 @@ void main() {
 
   testWidgets('presence cache turns the pip on without a list refresh',
       (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        isPremiumProvider.overrideWith((ref) => true),
-      ],
-    );
+    final container = ProviderContainer();
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
@@ -60,6 +55,7 @@ void main() {
             userId: 42,
             name: 'Alex',
             lastMessage: 'hey',
+            hasPlan: true,
           ),
         ),
       ),
@@ -82,15 +78,13 @@ void main() {
   testWidgets('pinned row shows a bookmark', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          isPremiumProvider.overrideWith((ref) => true),
-        ],
         child: _app(
           const ChatListItem(
             userId: 7,
             name: 'Alex',
             lastMessage: 'hey',
             isPinned: true,
+            hasPlan: true,
           ),
         ),
       ),
@@ -100,13 +94,28 @@ void main() {
     expect(find.byKey(ChatListItem.pinIconKey), findsOneWidget);
   });
 
+  testWidgets('locked preview shows a lock without watching premium',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: _app(
+          const ChatListItem(
+            userId: 7,
+            name: 'Alex',
+            lastMessage: 'secret preview',
+            hasPlan: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(ChatListItem.previewLockKey), findsOneWidget);
+  });
+
   testWidgets('typing cache updates the row without a parent refresh',
       (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        isPremiumProvider.overrideWith((ref) => true),
-      ],
-    );
+    final container = ProviderContainer();
     addTearDown(container.dispose);
     var parentBuilds = 0;
 
@@ -121,6 +130,7 @@ void main() {
                 userId: 42,
                 name: 'Alex',
                 lastMessage: 'hey',
+                hasPlan: true,
               );
             },
           ),
@@ -145,9 +155,6 @@ Widget _harness({
   DateTime? lastSeenAt,
 }) {
   return ProviderScope(
-    overrides: [
-      isPremiumProvider.overrideWith((ref) => true),
-    ],
     child: _app(
       ChatListItem(
         userId: 7,
@@ -155,6 +162,7 @@ Widget _harness({
         isOnline: isOnline,
         lastMessage: lastMessage,
         lastSeenAt: lastSeenAt,
+        hasPlan: true,
       ),
     ),
   );

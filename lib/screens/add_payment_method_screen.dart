@@ -1,4 +1,4 @@
-﻿// Screen: AddPaymentMethodScreen
+// Screen: AddPaymentMethodScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/responsive/responsive.dart';
@@ -8,7 +8,6 @@ import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_page_scaffold.dart';
 import '../core/widgets/premium/premium_text_field.dart';
-import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
@@ -17,7 +16,7 @@ import '../core/providers/api_providers.dart';
 
 /// Add payment method screen - Add new payment method
 class AddPaymentMethodScreen extends ConsumerStatefulWidget {
-  const AddPaymentMethodScreen({Key? key}) : super(key: key);
+  const AddPaymentMethodScreen({super.key});
 
   @override
   ConsumerState<AddPaymentMethodScreen> createState() => _AddPaymentMethodScreenState();
@@ -29,8 +28,8 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
   final _nameController = TextEditingController();
-  bool _isLoading = false;
-  bool _setAsDefault = false;
+  final ValueNotifier<bool> _isLoading = ValueNotifier(false);
+  final ValueNotifier<bool> _setAsDefault = ValueNotifier(false);
 
   @override
   void dispose() {
@@ -38,6 +37,8 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
     _expiryController.dispose();
     _cvvController.dispose();
     _nameController.dispose();
+    _isLoading.dispose();
+    _setAsDefault.dispose();
     super.dispose();
   }
 
@@ -46,9 +47,7 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    _isLoading.value = true;
 
     try {
       // TODO: Integrate with Stripe Elements to collect card details and get payment_method_id
@@ -67,7 +66,7 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
           context,
           title: 'Success!',
           message: 'Payment method added successfully',
-          icon: Icons.check_circle,
+          iconPath: AppIcons.tickCircle,
           iconColor: AppColors.onlineGreen,
         );
         Navigator.of(context).pop();
@@ -80,9 +79,7 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        _isLoading.value = false;
       }
     }
   }
@@ -110,7 +107,7 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
             children: [
               SectionHeader(
                 title: 'Card Information',
-                icon: Icons.credit_card,
+                iconPath: AppIcons.card,
               ),
               SizedBox(height: AppSpacing.spacingMD),
               // Card number
@@ -185,27 +182,33 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
               ),
               SizedBox(height: AppSpacing.spacingLG),
               // Set as default
-              CheckboxListTile(
-                title: AppText(
-                  'Set as default payment method',
-                  style: AppTypography.body.copyWith(color: textColor),
-                  maxLines: 2,
-                ),
-                value: _setAsDefault,
-                onChanged: (value) {
-                  setState(() {
-                    _setAsDefault = value ?? false;
-                  });
+              ValueListenableBuilder<bool>(
+                valueListenable: _setAsDefault,
+                builder: (context, setAsDefault, _) {
+                  return CheckboxListTile(
+                    title: AppText(
+                      'Set as default payment method',
+                      style: AppTypography.body.copyWith(color: textColor),
+                      maxLines: 2,
+                    ),
+                    value: setAsDefault,
+                    onChanged: (value) =>
+                        _setAsDefault.value = value ?? false,
+                    activeColor: AppColors.accentPurple,
+                  );
                 },
-                activeColor: AppColors.accentPurple,
               ),
-              SizedBox(height: AppSpacing.spacingXXL),
-              // Add button
-              GradientButton(
-                text: 'Add Payment Method',
-                onPressed: _isLoading ? null : _handleAdd,
-                isLoading: _isLoading,
-                isFullWidth: true,
+              const SizedBox(height: AppSpacing.spacingXXL),
+              ValueListenableBuilder<bool>(
+                valueListenable: _isLoading,
+                builder: (context, loading, _) {
+                  return GradientButton(
+                    text: 'Add Payment Method',
+                    onPressed: loading ? null : _handleAdd,
+                    isLoading: loading,
+                    isFullWidth: true,
+                  );
+                },
               ),
               SizedBox(height: AppSpacing.spacingMD),
               AppText(

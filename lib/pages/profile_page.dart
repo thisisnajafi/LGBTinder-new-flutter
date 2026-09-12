@@ -3,13 +3,11 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/spacing_constants.dart';
 import '../core/responsive/responsive.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../features/profile/presentation/widgets/own_profile/own_profile_view.dart';
@@ -18,20 +16,18 @@ import '../features/reference_data/providers/reference_data_providers.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
 import '../widgets/match/match_screen.dart';
+import '../core/utils/app_media_picker.dart';
 import '../core/constants/app_constants.dart';
 import '../core/cache/cache_invalidator.dart';
-import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
+import '../core/cache/cache_manager.dart' show notifyNewMatch;
 import '../core/cache/image_cache_service.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart'
-    show ProfilePageCacheNotifier, ProfilePageData, profilePageCacheProvider;
+    show ProfilePageData, profilePageCacheProvider;
 import '../features/profile/providers/profile_providers.dart';
-import '../features/profile/providers/profile_provider.dart';
-import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../features/matching/providers/likes_providers.dart';
 import '../features/safety/providers/user_actions_providers.dart';
 import '../features/safety/data/models/block.dart';
-import '../features/safety/data/models/report.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../routes/app_router.dart';
@@ -63,17 +59,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    if (_isOwnProfile) {
-      profileLog('ProfilePage: own profile — init cache refresh');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(profilePageCacheProvider.notifier).refresh();
-      });
-    } else {
+    // Own profile is served only by [profilePageCacheProvider] (PERF-PAGE-PROFILE-001).
+    if (!_isOwnProfile) {
       _loadProfile();
     }
   }
 
   Future<void> _loadProfile() async {
+    final otherUserId = widget.userId;
+    if (otherUserId == null) {
+      await ref.read(profilePageCacheProvider.notifier).refresh();
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -81,11 +79,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     });
 
     try {
-      final profileService = ref.read(profileServiceProvider);
-      
-      final profile = widget.userId == null
-          ? await profileService.getMyProfile()
-          : await profileService.getUserProfile(widget.userId!);
+      final profile =
+          await ref.read(profileServiceProvider).getUserProfile(otherUserId);
 
       if (mounted) {
         setState(() {
@@ -94,10 +89,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         });
       }
     } on ApiError catch (e) {
-      if (kDebugMode) {
-        debugPrint('[PROFILE] _loadProfile ApiError: ${e.message}');
-        debugPrint('[PROFILE] ApiError code: ${e.code}');
-      }
+      AppLogger.warning(
+        'Other-user profile load failed',
+        tag: 'Profile',
+        error: e,
+      );
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -106,10 +102,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         });
       }
     } catch (e, stack) {
-      if (kDebugMode) {
-        debugPrint('[PROFILE] _loadProfile exception: $e');
-        debugPrint('[PROFILE] stack: $stack');
-      }
+      AppLogger.error(
+        'Other-user profile load exception',
+        tag: 'Profile',
+        error: e,
+        stackTrace: stack,
+      );
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -599,7 +597,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           : PremiumRefreshIndicator(
               onRefresh: () async {
                 if (isOwn) {
-                  await ref.read(appCacheManagerProvider).revalidateAll();
                   await ref.read(profilePageCacheProvider.notifier).refresh();
                 } else {
                   await _loadProfile();
@@ -615,14 +612,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context,
       title: 'Add photo',
       onSourceSelected: (source) async {
-        final picker = ImagePicker();
         try {
-          final image = await picker.pickImage(
-            source: source,
-            maxWidth: 1920,
-            maxHeight: 1080,
-            imageQuality: 85,
-          );
+          final image = await AppMediaPicker.pickImage(source: source);
           if (image != null) {
             await _handlePickedImage(File(image.path));
           }
@@ -670,7 +661,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final imageService = ref.read(imageServiceProvider);
       await imageService.uploadImage(imageFile, type: 'gallery');
       await ref.read(profilePageCacheProvider.notifier).refresh();
-      await ref.read(appCacheManagerProvider).revalidateAll();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

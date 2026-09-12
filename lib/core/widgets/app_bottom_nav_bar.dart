@@ -76,13 +76,14 @@ class AppBottomNavBar extends ConsumerWidget {
             horizontalMargin,
             floatingBottomMargin,
           ),
-          child: _GradientNavBarShell(
+          child: RepaintBoundary(
+            child: _GradientNavBarShell(
             isDark: isDark,
             borderWidth: _borderWidth,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(innerRadius),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: _NavBarBlur(
+                enabled: AppAnimations.animationsEnabled(context),
                 child: Container(
                   height: barHeight,
                   decoration: BoxDecoration(
@@ -176,6 +177,7 @@ class AppBottomNavBar extends ConsumerWidget {
                 ),
               ),
             ),
+            ),
           ),
         ),
         tablet: 680,
@@ -199,6 +201,22 @@ class AppBottomNavBar extends ConsumerWidget {
       return NotificationBadge(count: notificationCount, size: 16);
     }
     return null;
+  }
+}
+
+class _NavBarBlur extends StatelessWidget {
+  const _NavBarBlur({required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      child: child,
+    );
   }
 }
 

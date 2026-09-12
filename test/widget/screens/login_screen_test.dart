@@ -1,92 +1,113 @@
-/// Widget tests for LoginScreen
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lgbtindernew/features/auth/presentation/widgets/login_form.dart';
+import 'package:lgbtindernew/routes/app_router.dart';
 import 'package:lgbtindernew/screens/auth/login_screen.dart';
-import 'package:lgbtindernew/features/auth/data/services/auth_service.dart';
-import 'package:lgbtindernew/shared/services/token_storage_service.dart';
-import 'package:lgbtindernew/core/providers/api_providers.dart';
+
 import '../../helpers/test_helpers.dart';
 
+Widget _loginApp(ProviderContainer container) {
+  final router = GoRouter(
+    initialLocation: AppRoutes.login,
+    routes: [
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (_, __) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (_, __) => const Scaffold(body: Text('Register')),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (_, __) => const Scaffold(body: Text('Forgot')),
+      ),
+      GoRoute(
+        path: AppRoutes.welcome,
+        builder: (_, __) => const Scaffold(body: Text('Welcome')),
+      ),
+    ],
+  );
+
+  return UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
 void main() {
-  group('LoginScreen', () {
-    testWidgets('should display email and password fields', (WidgetTester tester) async {
-      // Arrange
-      final container = createTestContainer();
+  testWidgets('shows extracted form widgets and Sign In', (tester) async {
+    final container = createTestContainer();
+    addTearDown(container.dispose);
 
-      // Act
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-      await waitForAsync(tester);
+    await tester.pumpWidget(_loginApp(container));
+    await waitForAsync(tester);
 
-      // Assert
-      expect(find.byType(TextField), findsNWidgets(2)); // Email and password fields
-      expect(find.text('Email'), findsOneWidget);
-      expect(find.text('Password'), findsOneWidget);
-      expect(find.text('Login'), findsOneWidget);
-    });
+    expect(find.byType(LoginCredentialsFields), findsOneWidget);
+    expect(find.byType(LoginRememberForgotRow), findsOneWidget);
+    expect(find.byType(LoginSignUpFooter), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(2));
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Sign In'), findsWidgets);
+  });
 
-    testWidgets('should show error when email is empty', (WidgetTester tester) async {
-      // Arrange
-      final container = createTestContainer();
+  testWidgets('remember-me toggle stays inside LoginRememberForgotRow',
+      (tester) async {
+    var parentBuilds = 0;
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-      await waitForAsync(tester);
-
-      // Act - Tap login button without entering email
-      final loginButton = find.text('Login');
-      await tester.tap(loginButton);
-      await waitForAsync(tester);
-
-      // Assert - Should show validation error (implementation dependent)
-      // This test may need adjustment based on actual validation implementation
-    });
-
-    testWidgets('should navigate to register screen when register link is tapped',
-        (WidgetTester tester) async {
-      // Arrange
-      final container = createTestContainer();
-      bool navigatedToRegister = false;
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            home: const LoginScreen(),
-            routes: {
-              '/register': (context) {
-                navigatedToRegister = true;
-                return const Scaffold(body: Text('Register Screen'));
-              },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              parentBuilds++;
+              return const LoginRememberForgotRow();
             },
           ),
         ),
-      );
-      await waitForAsync(tester);
+      ),
+    );
 
-      // Act - Find and tap register link (adjust selector based on actual implementation)
-      final registerLink = find.text('Sign up');
-      if (registerLink.evaluate().isNotEmpty) {
-        await tester.tap(registerLink);
-        await waitForAsync(tester);
-      }
+    final buildsAfterFirstFrame = parentBuilds;
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
 
-      // Assert - Navigation should occur (implementation dependent)
-      // This test may need adjustment based on actual navigation implementation
-    });
+    expect(parentBuilds, buildsAfterFirstFrame);
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+  });
+
+  testWidgets('typing in email does not rebuild the credentials parent',
+      (tester) async {
+    var parentBuilds = 0;
+    final email = TextEditingController();
+    final password = TextEditingController();
+    addTearDown(email.dispose);
+    addTearDown(password.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              parentBuilds++;
+              return LoginCredentialsFields(
+                emailController: email,
+                passwordController: password,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    final buildsAfterFirstFrame = parentBuilds;
+    await tester.enterText(find.byType(TextField).first, 'a@b.com');
+    await tester.pump();
+
+    expect(email.text, 'a@b.com');
+    expect(parentBuilds, buildsAfterFirstFrame);
   });
 }
-

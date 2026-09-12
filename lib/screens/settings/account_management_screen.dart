@@ -19,7 +19,7 @@ import '../../features/profile/providers/profile_providers.dart';
 
 /// Account management screen - Manage account settings
 class AccountManagementScreen extends ConsumerStatefulWidget {
-  const AccountManagementScreen({Key? key}) : super(key: key);
+  const AccountManagementScreen({super.key});
 
   @override
   ConsumerState<AccountManagementScreen> createState() => _AccountManagementScreenState();
@@ -102,7 +102,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
           context,
           title: 'Verification Code Sent',
           message: 'A verification code has been sent to $newEmail. Please check your email and enter the code below.',
-          icon: Icons.email,
+          iconPath: AppIcons.email,
           iconColor: Theme.of(context).colorScheme.primary,
         );
         await _showEmailVerificationDialog(newEmail);
@@ -166,7 +166,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
           context,
           title: 'Password Changed',
           message: 'Your password has been successfully updated',
-          icon: Icons.check_circle,
+          iconPath: AppIcons.checkCircle,
           iconColor: AppColors.onlineGreen,
         );
       }
@@ -391,7 +391,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                                   context,
                                   title: 'Email Updated',
                                   message: 'Your email address has been successfully updated to $newEmail.',
-                                  icon: Icons.check_circle,
+                                  iconPath: AppIcons.checkCircle,
                                   iconColor: AppColors.onlineGreen,
                                 );
                               }

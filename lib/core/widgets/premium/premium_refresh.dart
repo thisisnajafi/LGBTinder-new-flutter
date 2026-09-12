@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
+import '../../utils/app_haptics.dart';
 
 /// Pull-to-refresh chrome from the other-user profile:
 /// light circular badge, violet indicator, bounce physics.
+///
+/// Default for list hubs (PERF-SCR-PTR-001): `onEdge` trigger, no elevation,
+/// haptic via [AppHaptics] (respects the global haptic gate).
 class PremiumRefreshIndicator extends StatelessWidget {
   const PremiumRefreshIndicator({
     super.key,
@@ -28,7 +31,7 @@ class PremiumRefreshIndicator extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await HapticFeedback.selectionClick();
+        AppHaptics.selection();
         await onRefresh();
       },
       color: AppColors.accentViolet,

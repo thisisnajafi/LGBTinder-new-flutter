@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/animation_constants.dart';
@@ -19,8 +19,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final alerts = ref.watch(notificationPreferencesProvider);
-    final soundAsync = ref.watch(soundPreferencesProvider);
+    final showSkeleton = ref.watch(
+      notificationPreferencesProvider
+          .select((s) => s.isLoading && s.preferences == null),
+    );
 
     ref.listen<NotificationPreferencesUiState>(
       notificationPreferencesProvider,
@@ -35,9 +37,6 @@ class NotificationSettingsScreen extends ConsumerWidget {
       },
     );
 
-    final prefs = alerts.preferences;
-    final showSkeleton = alerts.isLoading && prefs == null;
-
     return AppSettingsDetailScaffold(
       title: 'Notifications',
       subtitle: 'Choose what reaches you and how',
@@ -47,12 +46,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
       },
       body: showSkeleton
           ? const _AlertsSkeleton()
-          : AppSettingsDetailList(
-              children: [
-                if (prefs != null)
-                  ..._buildGroups(context, ref, prefs, soundAsync.value),
-              ],
-            ),
+          : const _NotificationGroups(),
     );
   }
 
@@ -349,23 +343,44 @@ class NotificationSettingsScreen extends ConsumerWidget {
   }
 }
 
+class _NotificationGroups extends ConsumerWidget {
+  const _NotificationGroups();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(
+      notificationPreferencesProvider.select((s) => s.preferences),
+    );
+    final sound = ref.watch(soundPreferencesProvider).valueOrNull;
+    if (prefs == null) return const SizedBox.shrink();
+    return AppSettingsDetailList(
+      children: const NotificationSettingsScreen()._buildGroups(
+        context,
+        ref,
+        prefs,
+        sound,
+      ),
+    );
+  }
+}
+
 class _AlertsSkeleton extends StatelessWidget {
   const _AlertsSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-      children: [
-        for (var i = 0; i < 8; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
-            child: SkeletonLoader(
-              height: AppSpacing.spacingXXXL + AppSpacing.spacingSM,
-              borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-            ),
+      itemCount: 8,
+      itemBuilder: (context, i) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+          child: SkeletonLoader(
+            height: AppSpacing.spacingXXXL + AppSpacing.spacingSM,
+            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
           ),
-      ],
+        );
+      },
     );
   }
 }

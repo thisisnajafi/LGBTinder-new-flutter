@@ -5,6 +5,7 @@ import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/utils/app_media_picker.dart';
 
 /// Profile image picker widget
 /// Allows users to pick images from camera or gallery

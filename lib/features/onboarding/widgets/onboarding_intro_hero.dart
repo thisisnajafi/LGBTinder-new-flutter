@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/constants/animation_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
+
+/// Decode the first intro SVG on a background isolate (PERF-PAGE-ONBOARD-002).
+Future<void> precacheOnboardingIllustration(String assetPath) async {
+  try {
+    final loader = SvgAssetLoader(assetPath);
+    await svg.cache.putIfAbsent(
+      loader.cacheKey(null),
+      () => loader.loadBytes(null),
+    );
+  } catch (_) {}
+}
 
 /// SVG hero illustration for intro onboarding slides.
 class OnboardingIntroHero extends StatefulWidget {
@@ -83,7 +94,9 @@ class _OnboardingIntroHeroState extends State<OnboardingIntroHero>
 
 /// Typing dots for chat intro slide.
 class OnboardingTypingDots extends StatefulWidget {
-  const OnboardingTypingDots({super.key});
+  const OnboardingTypingDots({super.key, this.animate = true});
+
+  final bool animate;
 
   @override
   State<OnboardingTypingDots> createState() => _OnboardingTypingDotsState();
@@ -105,8 +118,23 @@ class _OnboardingTypingDotsState extends State<OnboardingTypingDots>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!AppAnimations.animationsEnabled(context)) {
+    _syncMotion();
+  }
+
+  @override
+  void didUpdateWidget(covariant OnboardingTypingDots oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate != widget.animate) {
+      _syncMotion();
+    }
+  }
+
+  void _syncMotion() {
+    final motion =
+        widget.animate && AppAnimations.animationsEnabled(context);
+    if (!motion) {
       _controller.stop();
+      _controller.value = 0;
     } else if (!_controller.isAnimating) {
       _controller.repeat();
     }
@@ -120,9 +148,21 @@ class _OnboardingTypingDotsState extends State<OnboardingTypingDots>
 
   @override
   Widget build(BuildContext context) {
+    final motion =
+        widget.animate && AppAnimations.animationsEnabled(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(3, (i) {
+        final dot = Container(
+          width: 10,
+          height: 10,
+          margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXS),
+          decoration: const BoxDecoration(
+            color: AppColors.textPrimaryDark,
+            shape: BoxShape.circle,
+          ),
+        );
+        if (!motion) return Opacity(opacity: 0.7, child: dot);
         return AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
@@ -133,15 +173,7 @@ class _OnboardingTypingDotsState extends State<OnboardingTypingDots>
               child: child,
             );
           },
-          child: Container(
-            width: 10,
-            height: 10,
-            margin: EdgeInsets.symmetric(horizontal: AppSpacing.spacingXS),
-            decoration: BoxDecoration(
-              color: AppColors.textPrimaryDark,
-              shape: BoxShape.circle,
-            ),
-          ),
+          child: dot,
         );
       }),
     );

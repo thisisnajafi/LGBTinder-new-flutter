@@ -13,7 +13,9 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
 import '../core/utils/app_icons.dart';
+import '../core/utils/app_media_picker.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../shared/models/api_error.dart';
@@ -27,6 +29,32 @@ const _situationOptions = <String, String>{
   'payment_issue': 'Payment issue',
   'other': 'Other',
 };
+
+/// Whether another ticket page exists after [page] (1-based).
+bool ticketPageHasMore(
+  Map<String, dynamic> data,
+  int page,
+  int itemCount, {
+  int pageSize = 15,
+}) {
+  Map<String, dynamic>? pagination;
+  final tickets = data['tickets'];
+  if (tickets is Map<String, dynamic>) {
+    pagination = tickets;
+  } else if (data['pagination'] is Map<String, dynamic>) {
+    pagination = data['pagination'] as Map<String, dynamic>;
+  } else if (data['meta'] is Map<String, dynamic>) {
+    pagination = data['meta'] as Map<String, dynamic>;
+  }
+  if (pagination != null) {
+    final hasMore = pagination['has_more'] ?? pagination['hasMore'];
+    if (hasMore is bool) return hasMore;
+    final last = pagination['last_page'] ?? pagination['lastPage'];
+    if (last is int) return page < last;
+    if (last is num) return page < last.toInt();
+  }
+  return itemCount >= pageSize;
+}
 
 /// Parsed ticket item from GET tickets list or GET tickets/:id.
 class SupportTicketItem {
@@ -114,7 +142,7 @@ class SupportTicketItem {
 
 /// Support tickets screen: list (GET tickets), create (POST tickets), detail (GET tickets/:id).
 class SupportTicketsScreen extends ConsumerStatefulWidget {
-  const SupportTicketsScreen({Key? key}) : super(key: key);
+  const SupportTicketsScreen({super.key});
 
   @override
   ConsumerState<SupportTicketsScreen> createState() => _SupportTicketsScreenState();
@@ -123,6 +151,9 @@ class SupportTicketsScreen extends ConsumerStatefulWidget {
 class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
   List<SupportTicketItem> _tickets = [];
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  int _page = 1;
   String? _error;
 
   @override
@@ -131,28 +162,44 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     _loadTickets();
   }
 
-  Future<void> _loadTickets() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _loadTickets({bool refresh = true}) async {
+    if (refresh) {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _page = 1;
+        _hasMore = true;
+      });
+    } else {
+      if (_loadingMore || !_hasMore) return;
+      setState(() => _loadingMore = true);
+    }
     try {
       final service = ref.read(ticketApiServiceProvider);
-      final data = await service.getTickets(page: 1);
+      final page = refresh ? 1 : _page;
+      final data = await service.getTickets(page: page);
       final list = SupportTicketItem.extractList(data)
           .map((e) => SupportTicketItem.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-      if (mounted) {
-        setState(() {
+      if (!mounted) return;
+      setState(() {
+        if (refresh) {
           _tickets = list;
-          _loading = false;
-        });
-      }
+          _page = 2;
+        } else {
+          _tickets = [..._tickets, ...list];
+          _page += 1;
+        }
+        _hasMore = ticketPageHasMore(data, page, list.length);
+        _loading = false;
+        _loadingMore = false;
+      });
     } on ApiError catch (e) {
       if (mounted) {
         setState(() {
           _error = e.message;
           _loading = false;
+          _loadingMore = false;
         });
       }
     } catch (e) {
@@ -160,6 +207,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
         setState(() {
           _error = e.toString();
           _loading = false;
+          _loadingMore = false;
         });
       }
     }
@@ -273,12 +321,8 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   SizedBox(height: AppSpacing.spacingMD),
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final picker = ImagePicker();
-                      final image = await picker.pickImage(
+                      final image = await AppMediaPicker.pickImage(
                         source: ImageSource.gallery,
-                        maxWidth: 1920,
-                        maxHeight: 1920,
-                        imageQuality: 85,
                       );
                       if (image != null) {
                         setSheetState(() {
@@ -455,31 +499,50 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                     )
                   : PremiumRefreshIndicator(
                       onRefresh: _loadTickets,
-                      child: AppSettingsDetailList(
-                        children: [
-                          PremiumSettingsGroup(
-                            title: 'Your tickets',
-                            children: [
-                              for (final ticket in _tickets)
-                                PremiumSettingsTile(
-                                  iconPath: AppIcons.document,
-                                  title: ticket.displayTitle,
-                                  subtitle: [
-                                    ticket.displayStatusLabel,
-                                    if (ticket.createdAt != null) ticket.createdAt,
-                                  ].join(' · '),
-                                  onTap: () => _showTicketDetail(
-                                    context,
-                                    ticket,
-                                    isDark,
-                                    textColor,
-                                    secondaryTextColor,
-                                    borderColor,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                      child: AppListView.builder(
+                        physics: AppScroll.bouncing,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.spacingLG,
+                          AppSpacing.spacingSM,
+                          AppSpacing.spacingLG,
+                          AppSpacing.spacingXXL,
+                        ),
+                        itemCount: _tickets.length + (_hasMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index >= _tickets.length) {
+                            return Center(
+                              child: _loadingMore
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(
+                                        AppSpacing.spacingLG,
+                                      ),
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  : TextButton(
+                                      onPressed: () =>
+                                          _loadTickets(refresh: false),
+                                      child: const Text('Load more'),
+                                    ),
+                            );
+                          }
+                          final ticket = _tickets[index];
+                          return PremiumSettingsTile(
+                            iconPath: AppIcons.document,
+                            title: ticket.displayTitle,
+                            subtitle: [
+                              ticket.displayStatusLabel,
+                              if (ticket.createdAt != null) ticket.createdAt,
+                            ].join(' · '),
+                            onTap: () => _showTicketDetail(
+                              context,
+                              ticket,
+                              isDark,
+                              textColor,
+                              secondaryTextColor,
+                              borderColor,
+                            ),
+                          );
+                        },
                       ),
                     ),
     );

@@ -1,4 +1,4 @@
-﻿// Screen: PaymentMethodsScreen
+// Screen: PaymentMethodsScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +7,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
@@ -32,7 +33,9 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPaymentMethods();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadPaymentMethods();
+    });
   }
 
   Future<void> _loadPaymentMethods() async {
@@ -164,7 +167,8 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
                   actionLabel: 'Add Payment Method',
                   onAction: _openAddMethod,
                 )
-              : ListView.builder(
+              : AppListView.builder(
+                  physics: AppScroll.bouncing,
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.spacingLG,
                     vertical: AppSpacing.spacingSM,

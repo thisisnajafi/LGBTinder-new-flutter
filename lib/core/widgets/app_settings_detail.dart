@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
-import 'app_grouped_list_card.dart';
+import 'app_list_view.dart';
 import 'premium/premium_design_system.dart';
 import '../responsive/responsive.dart';
 
@@ -78,7 +78,7 @@ class AppSettingsDetailScaffold extends StatelessWidget {
   }
 }
 
-/// Scrollable body for settings detail pages.
+/// Scrollable body for settings detail pages (virtualized, PERF-SCR-SETTINGS-001).
 class AppSettingsDetailList extends StatelessWidget {
   final List<Widget> children;
   final RefreshCallback? onRefresh;
@@ -91,10 +91,11 @@ class AppSettingsDetailList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final list = ListView(
+    final list = AppListView.builder(
       physics: AppScroll.bouncing,
       padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
-      children: children,
+      itemCount: children.length,
+      itemBuilder: (context, index) => children[index],
     );
 
     if (onRefresh == null) return list;

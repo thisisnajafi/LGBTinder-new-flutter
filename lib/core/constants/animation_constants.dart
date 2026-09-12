@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../providers/app_motion_prefs_provider.dart';
+
 /// Centralized animation durations and curves.
 /// Use for taps, page transitions, modals, list stagger, and feedback.
 class AppAnimations {
@@ -321,13 +323,20 @@ class AppAnimations {
   static const double buttonPressScale = 0.97;
 
   /// Optional: respect reduce-motion. Pass from build(context).
+  /// OS accessibility AND the persisted in-app flag (PERF-SCR-A11Y-001).
   static bool animationsEnabled(BuildContext context) {
-    return !MediaQuery.of(context).disableAnimations;
+    if (AppMotionPreferences.reduceMotion) return false;
+    return !MediaQuery.disableAnimationsOf(context);
   }
 
   /// Returns [tapDuration] if animations are enabled, otherwise [Duration.zero].
   static Duration effectiveTapDuration(BuildContext context) {
     return animationsEnabled(context) ? tapDuration : Duration.zero;
+  }
+
+  /// Push / onboarding page slide; [Duration.zero] when Reduce Motion is on.
+  static Duration pageTransitionDuration(BuildContext context) {
+    return animationsEnabled(context) ? transitionPage : Duration.zero;
   }
 
   /// Full-image fade-in; [Duration.zero] when Reduce Motion is on.

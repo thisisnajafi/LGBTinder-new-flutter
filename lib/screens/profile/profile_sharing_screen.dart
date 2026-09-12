@@ -1,53 +1,60 @@
 // Screen: ProfileSharingScreen
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
+
 import '../../core/responsive/responsive.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../features/profile/utils/profile_qr.dart';
+import '../../widgets/buttons/gradient_button.dart';
+import '../../widgets/common/divider_custom.dart';
+import '../../widgets/common/section_header.dart';
 
 /// Profile sharing screen - Share profile functionality
 class ProfileSharingScreen extends ConsumerStatefulWidget {
-  const ProfileSharingScreen({Key? key}) : super(key: key);
+  const ProfileSharingScreen({super.key});
 
   @override
-  ConsumerState<ProfileSharingScreen> createState() => _ProfileSharingScreenState();
+  ConsumerState<ProfileSharingScreen> createState() =>
+      _ProfileSharingScreenState();
 }
 
 class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
+  static const _fallbackShareUrl = 'https://lgbtfinder.com/profile/12345';
+
   String? _profileShareUrl;
-  String? _profileQrCode;
-  bool _isGenerating = false;
+  EncodedProfileQr? _qr;
+  bool _isGenerating = true;
 
   @override
   void initState() {
     super.initState();
-    _generateShareUrl();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _generateShareUrl();
+    });
   }
 
   Future<void> _generateShareUrl() async {
-    setState(() {
-      _isGenerating = true;
-    });
-
+    setState(() => _isGenerating = true);
     try {
-      // TODO: Generate share URL from API
-      // GET /api/profile/share-url
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() {
-          _profileShareUrl = 'https://lgbtfinder.com/profile/12345';
-          _profileQrCode = null; // TODO: Generate QR code
-        });
+      const url = _fallbackShareUrl;
+      EncodedProfileQr? qr;
+      try {
+        qr = await encodeProfileQr(url);
+      } catch (_) {
+        qr = null;
       }
+      if (!mounted) return;
+      setState(() {
+        _profileShareUrl = url;
+        _qr = qr;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -55,17 +62,12 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isGenerating = false;
-        });
-      }
+      if (mounted) setState(() => _isGenerating = false);
     }
   }
 
   Future<void> _shareProfile() async {
     if (_profileShareUrl == null) return;
-
     try {
       await Share.share(
         'Check out my LGBTFinder profile!\n$_profileShareUrl',
@@ -82,9 +84,7 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
 
   Future<void> _copyLink() async {
     if (_profileShareUrl == null) return;
-
-    // TODO: Copy to clipboard
-    // await Clipboard.setData(ClipboardData(text: _profileShareUrl));
+    await Clipboard.setData(ClipboardData(text: _profileShareUrl!));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Link copied to clipboard!')),
@@ -96,11 +96,15 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return AppPageScaffold(
       title: 'Share Profile',
@@ -109,24 +113,20 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Share Your Profile',
-            icon: Icons.share,
+            iconPath: AppIcons.share,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Text(
             'Share your profile link with friends or on social media',
-            style: AppTypography.body.copyWith(
-              color: secondaryTextColor,
-            ),
+            style: AppTypography.body.copyWith(color: secondaryTextColor),
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Share URL
           SectionHeader(
             title: 'Profile Link',
-            icon: Icons.link,
+            iconPath: AppIcons.link,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Container(
@@ -152,15 +152,14 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                       Expanded(
                         child: AppText(
                           _profileShareUrl ?? 'Generating...',
-                          style: AppTypography.body.copyWith(
-                            color: textColor,
-                          ),
+                          style: AppTypography.body.copyWith(color: textColor),
                           maxLines: 2,
                         ),
                       ),
                       IconButton(
-                        icon: Icon(
-                          Icons.copy,
+                        icon: AppSvgIcon(
+                          assetPath: AppIcons.copy,
+                          size: 22,
                           color: AppColors.accentPurple,
                         ),
                         onPressed: _copyLink,
@@ -172,23 +171,34 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                     text: 'Share Link',
                     onPressed: _shareProfile,
                     isFullWidth: true,
-                    icon: Icons.share,
+                    iconPath: AppIcons.share,
                   ),
                 ],
               ],
             ),
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Share options
-          SectionHeader(
+          const SectionHeader(
+            title: 'QR Code',
+            iconPath: AppIcons.share1,
+          ),
+          SizedBox(height: AppSpacing.spacingMD),
+          _buildQrCard(
+            surfaceColor: surfaceColor,
+            borderColor: borderColor,
+            textColor: textColor,
+            secondaryTextColor: secondaryTextColor,
+          ),
+          const DividerCustom(),
+          SizedBox(height: AppSpacing.spacingLG),
+          const SectionHeader(
             title: 'Share Options',
-            icon: Icons.more_horiz,
+            iconPath: AppIcons.more,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           _buildShareOption(
-            icon: Icons.message,
+            iconPath: AppIcons.message,
             title: 'Share via Message',
             description: 'Send via SMS or messaging apps',
             onTap: _shareProfile,
@@ -199,7 +209,7 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
           ),
           SizedBox(height: AppSpacing.spacingSM),
           _buildShareOption(
-            icon: Icons.email,
+            iconPath: AppIcons.email,
             title: 'Share via Email',
             description: 'Send via email',
             onTap: _shareProfile,
@@ -208,53 +218,30 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
             surfaceColor: surfaceColor,
             borderColor: borderColor,
           ),
-          SizedBox(height: AppSpacing.spacingSM),
-          _buildShareOption(
-            icon: Icons.qr_code,
-            title: 'QR Code',
-            description: 'Generate QR code for easy sharing',
-            onTap: () {
-              // TODO: Show QR code dialog
-              AlertDialogCustom.show(
-                context,
-                title: 'QR Code',
-                message: 'QR code generation coming soon',
-                icon: Icons.qr_code,
-              );
-            },
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-            surfaceColor: surfaceColor,
-            borderColor: borderColor,
-          ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Privacy note
           Container(
             padding: EdgeInsets.all(AppSpacing.spacingMD),
             decoration: BoxDecoration(
-              color: AppColors.accentPurple.withOpacity(0.1),
+              color: AppColors.accentPurple.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.radiusMD),
               border: Border.all(
-                color: AppColors.accentPurple.withOpacity(0.3),
+                color: AppColors.accentPurple.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: AppColors.accentPurple,
+                AppSvgIcon(
+                  assetPath: AppIcons.infoCircle,
                   size: 20,
+                  color: AppColors.accentPurple,
                 ),
                 SizedBox(width: AppSpacing.spacingMD),
                 Expanded(
                   child: AppText(
                     'Anyone with this link can view your profile. Make sure you trust the person you\'re sharing with.',
-                    style: AppTypography.caption.copyWith(
-                      color: textColor,
-                    ),
+                    style: AppTypography.caption.copyWith(color: textColor),
                     maxLines: 4,
                   ),
                 ),
@@ -266,8 +253,61 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
     );
   }
 
+  Widget _buildQrCard({
+    required Color surfaceColor,
+    required Color borderColor,
+    required Color textColor,
+    required Color secondaryTextColor,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(AppSpacing.spacingLG),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        children: [
+          if (_qr == null)
+            SizedBox(
+              height: 180,
+              child: Center(
+                child: Text(
+                  _isGenerating
+                      ? 'Generating QR code…'
+                      : 'QR code unavailable',
+                  style: AppTypography.caption.copyWith(
+                    color: secondaryTextColor,
+                  ),
+                ),
+              ),
+            )
+          else
+            RepaintBoundary(
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: CustomPaint(
+                  painter: EncodedProfileQrPainter(
+                    qr: _qr!,
+                    foreground: textColor,
+                    background: surfaceColor,
+                  ),
+                ),
+              ),
+            ),
+          SizedBox(height: AppSpacing.spacingMD),
+          Text(
+            'Scan to open this profile',
+            style: AppTypography.caption.copyWith(color: secondaryTextColor),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildShareOption({
-    required IconData icon,
+    required String iconPath,
     required String title,
     required String description,
     required VoidCallback onTap,
@@ -293,13 +333,15 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.accentPurple.withOpacity(0.2),
+                  color: AppColors.accentPurple.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 ),
-                child: Icon(
-                  icon,
-                  color: AppColors.accentPurple,
-                  size: 24,
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: iconPath,
+                    size: 24,
+                    color: AppColors.accentPurple,
+                  ),
                 ),
               ),
               SizedBox(width: AppSpacing.spacingMD),
@@ -326,8 +368,9 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
+              AppSvgIcon(
+                assetPath: AppIcons.chevronRight,
+                size: 20,
                 color: secondaryTextColor,
               ),
             ],

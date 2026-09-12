@@ -1,4 +1,4 @@
-﻿// Widget: ChatHeader — premium conversation header
+// Widget: ChatHeader — premium conversation header
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
+import '../../features/chat/providers/user_presence_cache_provider.dart';
 import 'last_seen_widget.dart';
 
 /// Chat screen header with profile-aware premium styling.
@@ -40,11 +41,16 @@ class ChatHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final presence = ref.watch(
+      userPresenceCacheProvider.select((map) => map[userId]),
+    );
+    final liveOnline = presence?.isOnline ?? isOnline;
+    final liveLastSeen = presence?.lastSeenAt ?? lastSeenAt;
     final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final actionSize =
-        MediaQuery.sizeOf(context).width < 400 ? 36.0 : 40.0;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final actionSize = MediaQuery.sizeOf(context).width < 400 ? 36.0 : 40.0;
 
     return PremiumHeroHeader(
       onBack: onBack,
@@ -69,10 +75,7 @@ class ChatHeader extends ConsumerWidget {
               PremiumTapScale(
                 onTap: onHeaderTap ?? onInfo ?? () {},
                 semanticLabel: 'Open $name profile',
-                child: _HeaderAvatar(
-                  imageUrl: avatarUrl,
-                  isOnline: isOnline,
-                ),
+                child: _HeaderAvatar(imageUrl: avatarUrl, isOnline: liveOnline),
               ),
               const SizedBox(width: AppSpacing.spacingMD),
               Expanded(
@@ -97,8 +100,8 @@ class ChatHeader extends ConsumerWidget {
                           maxLines: 1,
                         ),
                         LastSeenWidget(
-                          isOnline: isOnline,
-                          lastSeenAt: lastSeenAt,
+                          isOnline: liveOnline,
+                          lastSeenAt: liveLastSeen,
                         ),
                       ],
                     ),
@@ -138,10 +141,7 @@ class ChatHeader extends ConsumerWidget {
 }
 
 class _HeaderAvatar extends ConsumerWidget {
-  const _HeaderAvatar({
-    required this.imageUrl,
-    required this.isOnline,
-  });
+  const _HeaderAvatar({required this.imageUrl, required this.isOnline});
 
   final String? imageUrl;
   final bool isOnline;

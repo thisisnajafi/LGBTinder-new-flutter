@@ -1,27 +1,20 @@
 ﻿// Screen: ProfileEditPage
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import '../core/responsive/responsive.dart';
-import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/app_settings_detail.dart';
-import '../core/widgets/metric_slider_tile.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/utils/app_icons.dart';
-import '../widgets/profile/edit/profile_image_editor.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/buttons/gradient_button.dart';
-import '../widgets/profile/avatar_upload.dart';
-import '../widgets/profile/profile_photo_source_sheet.dart';
+import '../widgets/profile/edit/profile_edit_about_me_section.dart';
+import '../widgets/profile/edit/profile_edit_bio_field.dart';
+import '../widgets/profile/edit/profile_edit_photos_section.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart';
-import '../core/cache/cache_manager.dart';
-import '../features/profile/data/models/user_image.dart';
 import '../features/profile/data/models/update_profile_request.dart';
 import '../features/profile/data/models/user_profile.dart';
-import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
+import '../features/profile/data/models/user_image.dart';
 import '../shared/models/api_error.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../features/reference_data/data/models/reference_item.dart';
@@ -34,7 +27,7 @@ import 'package:intl/intl.dart';
 
 /// Profile edit page - Edit user's own profile
 class ProfileEditPage extends ConsumerStatefulWidget {
-  const ProfileEditPage({Key? key}) : super(key: key);
+  const ProfileEditPage({super.key});
 
   @override
   ConsumerState<ProfileEditPage> createState() => _ProfileEditPageState();
@@ -42,32 +35,23 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   final _formKey = GlobalKey<FormState>();
-  final ImagePicker _imagePicker = ImagePicker();
   final TextEditingController _bioController = TextEditingController();
-  
+  final ProfileEditAboutMeValues _aboutMe = ProfileEditAboutMeValues();
+
   bool _isLoading = false;
-  bool _isUploadingAvatar = false;
   bool _isSaving = false;
-  
-  // Profile data
+
   UserProfile? _profile;
   String _name = '';
-  String _bio = '';
-  String? _avatarUrl;
-  List<UserImage> _images = [];
+  List<UserImage> _initialImages = const [];
   List<int> _interestsIds = [];
-  int? _height;
-  int? _weight;
-  bool _smoke = false;
-  bool _drink = false;
-  bool _gym = false;
   int? _countryId;
   int? _cityId;
   String? _locationMarketNotice;
   DateTime? _locationUpdatedAt;
   String? _locationSource;
   bool _isUpdatingLocation = false;
-  
+
   @override
   void dispose() {
     _bioController.dispose();
@@ -79,32 +63,28 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     super.initState();
     _loadProfile();
   }
-  
+
   Future<void> _loadProfile() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final profileService = ref.read(profileServiceProvider);
       final profile = await profileService.getMyProfile();
-      
+
       if (mounted) {
         setState(() {
           _profile = profile;
           _name = '${profile.firstName} ${profile.lastName}'.trim();
           _bioController.text = profile.profileBio ?? '';
-          _bio = _bioController.text;
-          UserImage? primaryImage = primaryProfileImage(profile.images);
-          _avatarUrl = primaryImage?.avatarDisplayUrl;
-          _images = List<UserImage>.from(profile.images ?? [])
-            ..sort((a, b) => a.order.compareTo(b.order));
+          _initialImages = List<UserImage>.from(profile.images ?? []);
           _interestsIds = profile.interests ?? [];
-          _height = profile.height;
-          _weight = profile.weight;
-          _smoke = profile.smoke ?? false;
-          _drink = profile.drink ?? false;
-          _gym = profile.gym ?? false;
+          _aboutMe.height = profile.height;
+          _aboutMe.weight = profile.weight;
+          _aboutMe.smoke = profile.smoke ?? false;
+          _aboutMe.drink = profile.drink ?? false;
+          _aboutMe.gym = profile.gym ?? false;
           _countryId = profile.countryId;
           _cityId = profile.cityId;
           _locationUpdatedAt = profile.locationUpdatedAt;
@@ -113,7 +93,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       }
 
       try {
-        final location = await ref.read(locationApiServiceProvider).getLocation();
+        final location = await ref
+            .read(locationApiServiceProvider)
+            .getLocation();
         if (mounted) {
           setState(() {
             _countryId ??= location.countryId;
@@ -141,377 +123,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     }
   }
 
-  int get _primaryImageIndex {
-    final idx = _images.indexWhere((img) => img.isPrimary);
-    return idx >= 0 ? idx : 0;
-  }
-
-  bool get _canPromoteAvatarToPrimary {
-    if (_avatarUrl == null || _avatarUrl!.isEmpty || _images.isEmpty) {
-      return false;
-    }
-    final idx = _images.indexWhere((img) => img.imageUrl == _avatarUrl);
-    if (idx < 0) return false;
-    return !_images[idx].isPrimary;
-  }
-
-  List<UserImage> get _galleryImages => galleryProfileImages(_images);
-
-  int? _imageIndexForGalleryIndex(int galleryIndex) {
-    if (galleryIndex < 0 || galleryIndex >= _galleryImages.length) {
-      return null;
-    }
-    final targetId = _galleryImages[galleryIndex].id;
-    return _images.indexWhere((img) => img.id == targetId);
-  }
-
   Future<void> _syncProfileCache() async {
     await ref.read(profilePageCacheProvider.notifier).refresh();
-    await ref.read(appCacheManagerProvider).revalidateAll();
-  }
-
-  Future<void> _pickImage(ImageSource source, {required bool setAsPrimary}) async {
-    if (setAsPrimary) {
-      final profileCount =
-          _images.where((image) => image.type == 'profile').length;
-      if (profileCount >= AppConstants.maxPrimaryPhotos) {
-        // Primary upload replaces the existing profile photo on the server.
-      }
-    } else {
-      final galleryCount =
-          _images.where((image) => image.type == 'gallery').length;
-      if (galleryCount >= AppConstants.maxGalleryPhotos) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Maximum ${AppConstants.maxGalleryPhotos} images allowed.',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-    }
-    try {
-      final XFile? image = await _imagePicker.pickImage(source: source);
-      if (image != null) {
-        final file = File(image.path);
-        if (setAsPrimary) {
-          setState(() {
-            _avatarUrl = file.path;
-            _isUploadingAvatar = true;
-          });
-          try {
-            await _uploadImageAsPrimary(file);
-          } finally {
-            if (mounted) {
-              setState(() => _isUploadingAvatar = false);
-            }
-          }
-        } else {
-          await _uploadImage(file);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to pick image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _uploadImage(File imageFile) async {
-    try {
-      final imageService = ref.read(imageServiceProvider);
-      final uploadedImage =
-          await imageService.uploadImage(imageFile, type: 'gallery');
-      
-      if (mounted) {
-        setState(() {
-          _images.add(uploadedImage);
-        });
-        await _syncProfileCache();
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gallery photo added successfully'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload image: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _uploadImageAsPrimary(File imageFile) async {
-    try {
-      final imageService = ref.read(imageServiceProvider);
-      final uploadedImage =
-          await imageService.uploadImage(imageFile, type: 'primary');
-      await imageService.setPrimaryImage(
-        uploadedImage.id,
-        isProfilePicture: true,
-      );
-
-      if (mounted) {
-        setState(() {
-          _images = [
-            ..._images.map((img) => img.copyWith(isPrimary: false)),
-            uploadedImage.copyWith(isPrimary: true),
-          ]..sort((a, b) {
-              if (a.isPrimary != b.isPrimary) {
-                return a.isPrimary ? -1 : 1;
-              }
-              return a.order.compareTo(b.order);
-            });
-          _avatarUrl = uploadedImage.avatarDisplayUrl;
-        });
-        await _syncProfileCache();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Primary photo updated'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload primary photo: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload primary photo: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _deleteImage(int imageId, int index) async {
-    try {
-      final imageService = ref.read(imageServiceProvider);
-      await imageService.deleteImage(imageId);
-      
-      if (mounted) {
-        setState(() {
-          final removed = _images.removeAt(index);
-          if (_images.isEmpty) {
-            _avatarUrl = null;
-          } else if (removed.isPrimary) {
-            final nextPrimary = _images.firstWhere(
-              (img) => img.isPrimary,
-              orElse: () => _images.first,
-            );
-            _avatarUrl = nextPrimary.imageUrl;
-          }
-        });
-        await _syncProfileCache();
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image deleted successfully'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete image: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _setPrimaryImage(int imageId, int index) async {
-    try {
-      final imageService = ref.read(imageServiceProvider);
-      final image = _images[index];
-      await imageService.setPrimaryImage(
-        imageId,
-        isProfilePicture: image.type == 'profile',
-      );
-      
-      if (mounted) {
-        setState(() {
-          final image = _images.removeAt(index);
-          _images.insert(0, image);
-          _images = [
-            for (var i = 0; i < _images.length; i++)
-              _images[i].copyWith(isPrimary: i == 0, order: i + 1),
-          ];
-          _avatarUrl = _images.first.imageUrl;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Primary image updated'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
-      }
-    } on ApiError catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to set primary image: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to set primary image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _reorderGalleryImages(int oldIndex, int newIndex) async {
-    if (oldIndex == newIndex) return;
-
-    final previous = List<UserImage>.from(_images);
-    final gallery = List<UserImage>.from(_galleryImages);
-    final item = gallery.removeAt(oldIndex);
-    gallery.insert(newIndex, item);
-
-    final orderSlots = _galleryImages.map((img) => img.order).toList()..sort();
-    final reorderedGallery = [
-      for (var i = 0; i < gallery.length; i++)
-        gallery[i].copyWith(order: orderSlots[i]),
-    ];
-
-    final nonGallery =
-        _images.where((img) => img.type != 'gallery').toList();
-
-    setState(() {
-      _images = [
-        ...nonGallery,
-        ...reorderedGallery,
-      ];
-    });
-
-    try {
-      final imageService = ref.read(imageServiceProvider);
-      await imageService.reorderImages(_images.map((img) => img.id).toList());
-      await _syncProfileCache();
-    } on ApiError catch (e) {
-      if (mounted) {
-        setState(() => _images = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to reorder images: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _images = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to reorder images: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _reorderImages(int oldIndex, int newIndex) async {
-    if (oldIndex == newIndex) return;
-
-    final previous = List<UserImage>.from(_images);
-    final updated = List<UserImage>.from(_images);
-    final item = updated.removeAt(oldIndex);
-    updated.insert(newIndex, item);
-
-    setState(() {
-      _images = [
-        for (var i = 0; i < updated.length; i++)
-          updated[i].copyWith(order: i + 1),
-      ];
-    });
-
-    try {
-      final imageService = ref.read(imageServiceProvider);
-      await imageService.reorderImages(_images.map((img) => img.id).toList());
-    } on ApiError catch (e) {
-      if (mounted) {
-        setState(() => _images = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to reorder photos: ${e.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _images = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to reorder photos: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _setPrimaryFromAvatar() {
-    final idx = _images.indexWhere((img) => img.imageUrl == _avatarUrl);
-    if (idx >= 0) {
-      _setPrimaryImage(_images[idx].id, idx);
-    }
   }
 
   Future<void> _saveProfile() async {
@@ -525,15 +138,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     try {
       final profileService = ref.read(profileServiceProvider);
-      
+
       final bio = _bioController.text.trim();
       final request = UpdateProfileRequest(
         profileBio: bio.isNotEmpty ? bio : null,
-        height: _height,
-        weight: _weight,
-        smoke: _smoke,
-        drink: _drink,
-        gym: _gym,
+        height: _aboutMe.height,
+        weight: _aboutMe.weight,
+        smoke: _aboutMe.smoke,
+        drink: _aboutMe.drink,
+        gym: _aboutMe.gym,
         interests: _interestsIds.isNotEmpty ? _interestsIds : null,
       );
 
@@ -551,12 +164,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       }
     } on ApiError catch (e) {
       if (mounted) {
-        final errorMessage = e.errors != null && e.errors!.isNotEmpty
-            ? e.getAllErrors()
-            : e.message;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update profile: $errorMessage'),
+            content: Text('Failed to update profile: ${e.message}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -579,24 +189,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     }
   }
 
-  void _showImageSourceDialog({required bool setAsPrimary}) {
-    ProfilePhotoSourceSheet.show(
-      context,
-      title: setAsPrimary ? 'Profile photo' : 'Add photo',
-      onSourceSelected: (source) =>
-          _pickImage(source, setAsPrimary: setAsPrimary),
-    );
-  }
-
-  void _showAvatarImageSourceDialog() =>
-      _showImageSourceDialog(setAsPrimary: true);
-
-  void _showGalleryImageSourceDialog() =>
-      _showImageSourceDialog(setAsPrimary: false);
-
   String _displayLocationUpdated() {
     if (_locationUpdatedAt == null) return 'Never updated';
-    final formatted = DateFormat.yMMMd().add_jm().format(_locationUpdatedAt!.toLocal());
+    final formatted = DateFormat.yMMMd().add_jm().format(
+      _locationUpdatedAt!.toLocal(),
+    );
     final source = _locationSource == 'gps' ? 'GPS' : 'City';
     return '$formatted ($source)';
   }
@@ -611,10 +208,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     setState(() => _isUpdatingLocation = true);
     try {
-      final updated = await ref.read(locationApiServiceProvider).updateAdministrativeLocation(
-            countryId: _countryId,
-            cityId: _cityId,
-          );
+      final updated = await ref
+          .read(locationApiServiceProvider)
+          .updateAdministrativeLocation(countryId: _countryId, cityId: _cityId);
       ref.invalidate(userLocationProvider);
       if (mounted) {
         setState(() {
@@ -622,9 +218,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           _locationSource = updated.locationSource ?? 'city';
           _isUpdatingLocation = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Location updated')));
       }
     } catch (e) {
       if (mounted) {
@@ -654,15 +250,19 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         if (!mounted) return;
         if (result == LocationSyncResult.success) {
           try {
-            final location = await ref.read(locationApiServiceProvider).getLocation();
+            final location = await ref
+                .read(locationApiServiceProvider)
+                .getLocation();
+            if (!mounted) return;
             setState(() {
               _locationUpdatedAt = location.locationUpdatedAt;
               _locationSource = location.locationSource ?? 'gps';
             });
           } catch (_) {}
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('GPS location updated')),
-          );
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('GPS location updated')));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Could not get GPS location')),
@@ -724,104 +324,19 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         key: _formKey,
         child: AppSettingsDetailList(
           children: [
-            PremiumSettingsGroup(
-              title: 'Profile photo',
-              children: [
-                Center(
-                    child: AvatarUpload(
-                      imageUrl: _avatarUrl,
-                      name: _name,
-                      size: 120.0,
-                      isLoading: _isUploadingAvatar,
-                      showPrimaryBadge: _avatarUrl != null && _avatarUrl!.isNotEmpty,
-                      onUpload: _showAvatarImageSourceDialog,
-                      onEdit: _showAvatarImageSourceDialog,
-                      onSetPrimary:
-                          _canPromoteAvatarToPrimary ? _setPrimaryFromAvatar : null,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.spacingXL),
-            PremiumSettingsGroup(
-              title: 'Gallery',
-              subtitle: 'Profiles with 3+ photos get 5× more matches',
-              children: [
-                ProfileImageEditor(
-                  imageUrls:
-                      _galleryImages.map((img) => img.imageUrl).toList(),
-                  galleryOnly: true,
-                  maxImages: AppConstants.maxGalleryPhotos,
-                  onImageAdd: (_) => _showGalleryImageSourceDialog(),
-                  onImageDelete: (galleryIndex) {
-                    final imageIndex = _imageIndexForGalleryIndex(galleryIndex);
-                    if (imageIndex != null) {
-                      _deleteImage(_images[imageIndex].id, imageIndex);
-                    }
-                  },
-                  onImageReorder: _reorderGalleryImages,
-                ),
-              ],
+            ProfileEditPhotosSection(
+              key: ValueKey(_profile?.id ?? 'photos'),
+              initialImages: _initialImages,
+              name: _name,
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
               title: 'Personality',
               subtitle: 'Let your authentic self shine',
-              children: [
-                PremiumTextField(
-                  controller: _bioController,
-                  label: 'Bio',
-                  hintText: 'Tell others about yourself',
-                  maxLines: 5,
-                  minLines: 4,
-                  maxLength: 500,
-                  onChanged: (value) => _bio = value,
-                ),
-              ],
+              children: [ProfileEditBioField(controller: _bioController)],
             ),
             const SizedBox(height: AppSpacing.spacingXL),
-            PremiumSettingsGroup(
-              title: 'About me',
-              subtitle: 'The details that help you match better',
-              children: [
-                PremiumInsetCard(
-                  child: HeightSliderTile(
-                    value: _height ?? 170,
-                    onChanged: (value) => setState(() => _height = value),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                PremiumInsetCard(
-                  child: WeightSliderTile(
-                    value: _weight ?? 70,
-                    onChanged: (value) => setState(() => _weight = value),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                PremiumToggleRow(
-                  title: 'Smoking',
-                  subtitle: _smoke ? 'Yes' : 'No',
-                  iconPath: AppIcons.getIconPath('cloud'),
-                  value: _smoke,
-                  onChanged: (value) => setState(() => _smoke = value),
-                ),
-                PremiumToggleRow(
-                  title: 'Drinking',
-                  subtitle: _drink ? 'Yes' : 'No',
-                  iconPath: AppIcons.getIconPath('glass'),
-                  value: _drink,
-                  onChanged: (value) => setState(() => _drink = value),
-                ),
-                PremiumToggleRow(
-                  title: 'Gym',
-                  subtitle: _gym ? 'Active' : 'Sometimes',
-                  iconPath: AppIcons.getIconPath('weight'),
-                  accent: AppColors.warningYellow,
-                  value: _gym,
-                  onChanged: (value) => setState(() => _gym = value),
-                ),
-              ],
-            ),
+            ProfileEditAboutMeSection(values: _aboutMe),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
               title: 'Location',
@@ -928,11 +443,10 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   value: _displayLocationUpdated(),
                 ),
                 OutlinedButton(
-                  onPressed: _isUpdatingLocation ? null : _saveAdministrativeLocation,
-                  child: const AppText(
-                    'Save country & city',
-                    maxLines: 1,
-                  ),
+                  onPressed: _isUpdatingLocation
+                      ? null
+                      : _saveAdministrativeLocation,
+                  child: const AppText('Save country & city', maxLines: 1),
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
                 FilledButton(
@@ -943,10 +457,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const AppText(
-                          'Update my GPS location',
-                          maxLines: 1,
-                        ),
+                      : const AppText('Update my GPS location', maxLines: 1),
                 ),
               ],
             ),
@@ -954,10 +465,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             PremiumSettingsGroup(
               title: 'Profile info',
               children: [
-                PremiumInfoRow(
-                  label: 'Name',
-                  value: _displayName(),
-                ),
+                PremiumInfoRow(label: 'Name', value: _displayName()),
                 PremiumInfoRow(
                   label: 'Email',
                   value: _profile?.email.isNotEmpty == true
@@ -971,14 +479,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       ? _profile!.gender!
                       : 'Not set',
                 ),
-                PremiumInfoRow(
-                  label: 'Age',
-                  value: _displayAge(),
-                ),
+                PremiumInfoRow(label: 'Age', value: _displayAge()),
               ],
             ),
             const AppSettingsSectionFootnote(
-              text: 'Name, email, gender, and age are managed in account settings.',
+              text:
+                  'Name, email, gender, and age are managed in account settings.',
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
@@ -1003,10 +509,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               children: [
                 PremiumInfoRow(
                   label: 'Interests',
-                  value: _displayList(
-                    _profile?.interestTitles,
-                    _interestsIds,
-                  ),
+                  value: _displayList(_profile?.interestTitles, _interestsIds),
                 ),
                 PremiumInfoRow(
                   label: 'Languages',
@@ -1019,9 +522,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   'Update interests and matching preferences from discovery settings.',
             ),
             Padding(
-              padding: ResponsivePadding.horizontal(context).copyWith(
-                top: AppSpacing.spacingXL,
-              ),
+              padding: ResponsivePadding.horizontal(
+                context,
+              ).copyWith(top: AppSpacing.spacingXL),
               child: GradientButton(
                 text: 'Save changes',
                 onPressed: _isSaving ? null : _saveProfile,

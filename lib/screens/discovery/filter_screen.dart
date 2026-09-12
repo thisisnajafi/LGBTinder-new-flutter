@@ -1,4 +1,4 @@
-﻿// Screen: FilterScreen
+// Screen: FilterScreen
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -34,8 +34,8 @@ class FilterScreen extends ConsumerStatefulWidget {
 }
 
 class _FilterScreenState extends ConsumerState<FilterScreen> {
-  late RangeValues _ageRange;
-  late double _maxDistance;
+  late final ValueNotifier<RangeValues> _ageRange;
+  late final ValueNotifier<double> _maxDistance;
   late List<int> _selectedGenderIds;
   late bool _showVerifiedOnly;
   late bool _showOnlineOnly;
@@ -51,7 +51,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   bool? _matchGym;
 
   static final String _iconCake = AppIcons.getIconOutline('cake');
-  static final String _iconLocation = AppIcons.getIconOutline('location');
   static final String _iconPeople = AppIcons.getIconOutline('people');
   static final String _iconFilter = AppIcons.getIconOutline('filter');
   static final String _iconHeart = AppIcons.getIconOutline('heart');
@@ -63,13 +62,23 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   @override
   void initState() {
     super.initState();
-    _applySeed(DiscoveryFilterMapper.toUiSeed(widget.initialFilters));
+    final seed = DiscoveryFilterMapper.toUiSeed(widget.initialFilters);
+    _ageRange = ValueNotifier(seed['ageRange'] as RangeValues);
+    _maxDistance = ValueNotifier(seed['maxDistance'] as double);
+    _applySeed(seed);
     unawaited(_loadPreferredDefaultDistance());
   }
 
+  @override
+  void dispose() {
+    _ageRange.dispose();
+    _maxDistance.dispose();
+    super.dispose();
+  }
+
   void _applySeed(Map<String, dynamic> seed) {
-    _ageRange = seed['ageRange'] as RangeValues;
-    _maxDistance = seed['maxDistance'] as double;
+    _ageRange.value = seed['ageRange'] as RangeValues;
+    _maxDistance.value = seed['maxDistance'] as double;
     _selectedGenderIds = List<int>.from(seed['genderIds'] as List<int>);
     _showVerifiedOnly = seed['verifiedOnly'] as bool;
     _showOnlineOnly = seed['onlineOnly'] as bool;
@@ -110,15 +119,17 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
         .catchError((_) => null);
 
     if (!mounted || defaultDistance == null) return;
-    setState(() => _maxDistance = defaultDistance!);
+    _maxDistance.value = defaultDistance;
   }
 
   bool get _isPremium => ref.watch(hasAdvancedFiltersProvider);
 
   void _applyFilters() {
+    // Pop only — DiscoveryPage reloads the stack after this result
+    // (PERF-SCR-FILTER-002).
     final uiResult = <String, dynamic>{
-      'ageRange': _ageRange,
-      'maxDistance': _maxDistance,
+      'ageRange': _ageRange.value,
+      'maxDistance': _maxDistance.value,
       'genderIds': _selectedGenderIds,
       'verifiedOnly': _showVerifiedOnly,
       'onlineOnly': _showOnlineOnly,
@@ -143,10 +154,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   }
 
   void _resetFilters() {
+    final defaults = DiscoveryFilterMapper.toUiSeed(null);
+    _ageRange.value = defaults['ageRange'] as RangeValues;
+    _maxDistance.value = defaults['maxDistance'] as double;
     setState(() {
-      final defaults = DiscoveryFilterMapper.toUiSeed(null);
-      _ageRange = defaults['ageRange'] as RangeValues;
-      _maxDistance = defaults['maxDistance'] as double;
       _selectedGenderIds = [];
       _showVerifiedOnly = false;
       _showOnlineOnly = false;
@@ -295,10 +306,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor =
-        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
@@ -358,48 +365,11 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                     children: [
                       FilterSubsectionTitle(title: 'Age range'),
                       SizedBox(height: AppSpacing.spacingLG),
-                      FilterSliderTheme(
-                        child: RangeSlider(
-                          values: _ageRange,
-                          min: 18,
-                          max: 100,
-                          divisions: 82,
-                          onChanged: (values) => setState(() => _ageRange = values),
-                        ),
-                      ),
-                      SizedBox(height: AppSpacing.spacingSM),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${_ageRange.start.round()}',
-                            style: AppTypography.body.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '${_ageRange.end.round()}',
-                            style: AppTypography.body.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+                      FilterAgeRangeControl(values: _ageRange),
                       const SizedBox(height: AppSpacing.spacingLG),
                       FilterSubsectionTitle(title: 'Maximum distance'),
                       SizedBox(height: AppSpacing.spacingLG),
-                      FilterSliderTheme(
-                        child: Slider(
-                          value: _maxDistance,
-                          min: 1,
-                          max: 200,
-                          divisions: 199,
-                          onChanged: (value) => setState(() => _maxDistance = value),
-                        ),
-                      ),
-                      FilterValuePill(label: '${_maxDistance.round()} km'),
+                      FilterDistanceControl(distance: _maxDistance),
                     ],
                   ),
                 ),

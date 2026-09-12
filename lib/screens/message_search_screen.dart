@@ -10,8 +10,10 @@ import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/providers/api_providers.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/debounced_search_field.dart';
+import '../core/providers/subscription_provider.dart';
 import '../widgets/chat/chat_list_item.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
@@ -286,6 +288,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     final textColor = theme.colorScheme.onSurface;
     final secondaryTextColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.55);
+    final hasPlan = ref.watch(isPremiumProvider);
 
     return PremiumDetailScaffold(
       title: 'Search Messages',
@@ -360,7 +363,8 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? ListView.builder(
+                ? AppListView.builder(
+                    physics: AppScroll.bouncing,
                     itemCount: 5,
                     padding: const EdgeInsets.all(AppSpacing.spacingLG),
                     itemBuilder: (context, index) {
@@ -421,7 +425,8 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                                 ),
                               ),
                               Expanded(
-                                child: ListView.builder(
+                                child: AppListView.builder(
+                                  physics: AppScroll.bouncing,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal:
                                         PremiumPageHeader.horizontalPadding,
@@ -429,7 +434,8 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                                   itemCount: _recentSearches.length,
                                   itemBuilder: (context, index) {
                                     final search = _recentSearches[index];
-                                    return Padding(
+                                    return RepaintBoundary(
+                                      child: Padding(
                                       padding: const EdgeInsets.only(
                                         bottom: AppSpacing.spacingSM,
                                       ),
@@ -486,6 +492,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                                           ),
                                         ),
                                       ),
+                                    ),
                                     );
                                   },
                                 ),
@@ -498,26 +505,30 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                             message: 'Try a different search term',
                             iconPath: AppIcons.searchZoomOut,
                           )
-                        : ListView.builder(
+                        : AppListView.builder(
+                            physics: AppScroll.bouncing,
                             padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.spacingSM,
                             ),
                             itemCount: _searchResults.length,
                             itemBuilder: (context, index) {
                               final result = _searchResults[index];
-                              return ChatListItem(
-                                userId: (result['id'] as num).toInt(),
-                                name: result['name'] as String? ?? 'User',
-                                avatarUrl: result['avatar_url'] as String?,
-                                lastMessage: result['last_message'] as String?,
-                                lastMessageTime:
-                                    result['last_message_time'] as DateTime?,
-                                unreadCount:
-                                    (result['unread_count'] as num?)?.toInt() ??
-                                        0,
-                                isOnline: result['is_online'] == true,
-                                onTap: () => _handleChatTap(
-                                  (result['id'] as num).toInt(),
+                              return RepaintBoundary(
+                                child: ChatListItem(
+                                  userId: (result['id'] as num).toInt(),
+                                  name: result['name'] as String? ?? 'User',
+                                  avatarUrl: result['avatar_url'] as String?,
+                                  lastMessage: result['last_message'] as String?,
+                                  lastMessageTime:
+                                      result['last_message_time'] as DateTime?,
+                                  unreadCount:
+                                      (result['unread_count'] as num?)?.toInt() ??
+                                          0,
+                                  isOnline: result['is_online'] == true,
+                                  hasPlan: hasPlan,
+                                  onTap: () => _handleChatTap(
+                                    (result['id'] as num).toInt(),
+                                  ),
                                 ),
                               );
                             },

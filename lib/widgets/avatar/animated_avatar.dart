@@ -1,33 +1,34 @@
-﻿// Widget: AnimatedAvatar
+// Widget: AnimatedAvatar
 // Animated avatar widget
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
 import '../../core/widgets/optimized_image.dart';
 
 /// Animated avatar widget
 /// Avatar with fade-in animation and pulse effect
-class AnimatedAvatar extends ConsumerStatefulWidget {
+class AnimatedAvatar extends StatefulWidget {
   final String? imageUrl;
   final String? name;
   final double size;
   final bool showPulse;
+  /// When false, skip enter/pulse and paint at rest (PERF-SCR-PCWEL-001).
+  final bool animate;
 
   const AnimatedAvatar({
-    Key? key,
+    super.key,
     this.imageUrl,
     this.name,
     this.size = 64.0,
     this.showPulse = false,
-  }) : super(key: key);
+    this.animate = true,
+  });
 
   @override
-  ConsumerState<AnimatedAvatar> createState() => _AnimatedAvatarState();
+  State<AnimatedAvatar> createState() => _AnimatedAvatarState();
 }
 
-class _AnimatedAvatarState extends ConsumerState<AnimatedAvatar>
+class _AnimatedAvatarState extends State<AnimatedAvatar>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -46,10 +47,41 @@ class _AnimatedAvatarState extends ConsumerState<AnimatedAvatar>
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
-    _controller.forward();
+    if (!widget.animate) {
+      _controller.value = 1;
+    }
+  }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncMotion();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animate != widget.animate ||
+        oldWidget.showPulse != widget.showPulse) {
+      _syncMotion();
+    }
+  }
+
+  void _syncMotion() {
+    final reduceMotion = !AppAnimations.animationsEnabled(context);
+    if (!widget.animate || reduceMotion) {
+      _controller.stop();
+      _controller.value = 1;
+      return;
+    }
     if (widget.showPulse) {
-      _controller.repeat(reverse: true);
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+      return;
+    }
+    if (_controller.value < 1 && !_controller.isAnimating) {
+      _controller.forward();
     }
   }
 

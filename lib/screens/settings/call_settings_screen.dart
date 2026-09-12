@@ -8,8 +8,9 @@ import '../../core/widgets/app_settings_detail.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/common/call_quota_display.dart';
-import '../../features/calls/providers/call_provider.dart';
-import '../../features/calls/data/models/call_settings.dart';
+import '../../features/calls/providers/call_providers.dart';
+import '../../features/calls/data/models/call.dart';
+import '../../features/calls/utils/call_settings_draft.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 
@@ -22,14 +23,14 @@ class CallSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
-  bool _isLoading = false;
+  final CallSettingsDraft _draft = CallSettingsDraft();
   CallSettings? _settings;
 
-  bool _videoEnabled = true;
-  bool _audioEnabled = true;
-  bool _speakerEnabled = false;
-  String? _ringtone;
-  bool _autoAcceptCalls = false;
+  @override
+  void dispose() {
+    _draft.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -38,27 +39,21 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    setState(() {
-      _isLoading = true;
-    });
+    _draft.setBusy(true);
 
     try {
-      final callProviderInstance = ref.read(callProvider);
-      final settings = await callProviderInstance.getCallSettings();
+      final settings = await ref.read(callRepositoryProvider).getCallSettings();
 
-      setState(() {
-        _settings = settings;
-        _videoEnabled = settings.videoEnabled;
-        _audioEnabled = settings.audioEnabled;
-        _speakerEnabled = settings.speakerEnabled;
-        _ringtone = settings.ringtone;
-        _autoAcceptCalls = settings.autoAcceptCalls;
-        _isLoading = false;
-      });
+      _draft.hydrate(
+        videoEnabled: settings.enableVideo,
+        audioEnabled: settings.enableAudio,
+        callWaiting: settings.enableCallWaiting,
+        autoAcceptCalls: settings.autoAcceptFromMatches,
+      );
+      if (mounted) {
+        setState(() => _settings = settings);
+      }
     } on ApiError catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ErrorHandlerService.showErrorSnackBar(
           context,
@@ -67,9 +62,6 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
         );
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -78,32 +70,28 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) _draft.setBusy(false);
     }
   }
 
   Future<void> _saveSettings() async {
-    setState(() {
-      _isLoading = true;
-    });
+    _draft.setBusy(true);
 
     try {
-      final callProviderInstance = ref.read(callProvider);
-      final updatedSettings = CallSettings(
-        videoEnabled: _videoEnabled,
-        audioEnabled: _audioEnabled,
-        speakerEnabled: _speakerEnabled,
-        ringtone: _ringtone,
-        autoAcceptCalls: _autoAcceptCalls,
+      final updatedSettings = (_settings ?? CallSettings()).copyWith(
+        enableVideo: _draft.videoEnabled,
+        enableAudio: _draft.audioEnabled,
+        enableCallWaiting: _draft.callWaiting,
+        autoAcceptFromMatches: _draft.autoAcceptCalls,
       );
 
-      await callProviderInstance.updateCallSettings(updatedSettings);
-
-      setState(() {
-        _settings = updatedSettings;
-        _isLoading = false;
-      });
+      await ref.read(callRepositoryProvider).updateCallSettings(
+            UpdateCallSettingsRequest(settings: updatedSettings),
+          );
 
       if (mounted) {
+        setState(() => _settings = updatedSettings);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Call settings saved successfully'),
@@ -112,9 +100,6 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
         );
       }
     } on ApiError catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ErrorHandlerService.showErrorSnackBar(
           context,
@@ -123,9 +108,6 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
         );
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -134,6 +116,8 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) _draft.setBusy(false);
     }
   }
 
@@ -142,78 +126,82 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
     return AppSettingsDetailScaffold(
       title: 'Call settings',
       subtitle: 'Video, audio, and incoming call preferences',
-      body: _isLoading && _settings == null
-          ? const Center(child: CircularProgressIndicator())
-          : AppSettingsDetailList(
-              children: [
-                PremiumSettingsGroup(
-                  title: 'Video & audio',
-                  children: [
-                    PremiumToggleRow(
-                      title: 'Enable video',
-                      subtitle: 'Allow video during calls',
-                      value: _videoEnabled,
-                      iconPath: AppIcons.video,
-                      onChanged: (value) => setState(() => _videoEnabled = value),
-                      enabled: !_isLoading,
-                    ),
-                    PremiumToggleRow(
-                      title: 'Enable audio',
-                      subtitle: 'Allow voice during calls',
-                      value: _audioEnabled,
-                      iconPath: AppIcons.microphone,
-                      onChanged: (value) => setState(() => _audioEnabled = value),
-                      enabled: !_isLoading,
-                    ),
-                    PremiumToggleRow(
-                      title: 'Speaker mode',
-                      subtitle: 'Route audio through the speaker by default',
-                      value: _speakerEnabled,
-                      iconPath: AppIcons.getIconPath('volume-high'),
-                      onChanged: (value) =>
-                          setState(() => _speakerEnabled = value),
-                      enabled: !_isLoading,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.spacingXL),
-                PremiumSettingsGroup(
-                  title: 'Call behavior',
-                  children: [
-                    PremiumToggleRow(
-                      title: 'Auto accept calls',
-                      subtitle: 'Automatically accept incoming calls',
-                      value: _autoAcceptCalls,
-                      iconPath: AppIcons.callIncoming,
-                      onChanged: (value) =>
-                          setState(() => _autoAcceptCalls = value),
-                      enabled: !_isLoading,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.spacingXL),
-                PremiumSettingsGroup(
-                  title: 'Usage & limits',
-                  children: const [
-                    CallQuotaDisplay(),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSettingsLayout.horizontalPadding,
-                    AppSpacing.spacingXL,
-                    AppSettingsLayout.horizontalPadding,
-                    0,
+      body: ListenableBuilder(
+        listenable: _draft,
+        builder: (context, _) {
+          if (_draft.isBusy && _settings == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return AppSettingsDetailList(
+            children: [
+              PremiumSettingsGroup(
+                title: 'Video & audio',
+                children: [
+                  PremiumToggleRow(
+                    title: 'Enable video',
+                    subtitle: 'Allow video during calls',
+                    value: _draft.videoEnabled,
+                    iconPath: AppIcons.video,
+                    onChanged: _draft.setVideoEnabled,
+                    enabled: !_draft.isBusy,
                   ),
-                  child: GradientButton(
-                    text: 'Save settings',
-                    onPressed: _isLoading ? null : _saveSettings,
-                    isFullWidth: true,
-                    iconPath: AppIcons.tickCircle,
+                  PremiumToggleRow(
+                    title: 'Enable audio',
+                    subtitle: 'Allow voice during calls',
+                    value: _draft.audioEnabled,
+                    iconPath: AppIcons.microphone,
+                    onChanged: _draft.setAudioEnabled,
+                    enabled: !_draft.isBusy,
                   ),
+                  PremiumToggleRow(
+                    title: 'Call waiting',
+                    subtitle: 'Alert you when another call comes in',
+                    value: _draft.callWaiting,
+                    iconPath: AppIcons.getIconPath('volume-high'),
+                    onChanged: _draft.setCallWaiting,
+                    enabled: !_draft.isBusy,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.spacingXL),
+              PremiumSettingsGroup(
+                title: 'Call behavior',
+                children: [
+                  PremiumToggleRow(
+                    title: 'Auto accept from matches',
+                    subtitle: 'Automatically accept calls from matches',
+                    value: _draft.autoAcceptCalls,
+                    iconPath: AppIcons.callIncoming,
+                    onChanged: _draft.setAutoAcceptCalls,
+                    enabled: !_draft.isBusy,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.spacingXL),
+              const PremiumSettingsGroup(
+                title: 'Usage & limits',
+                children: [
+                  CallQuotaDisplay(),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSettingsLayout.horizontalPadding,
+                  AppSpacing.spacingXL,
+                  AppSettingsLayout.horizontalPadding,
+                  0,
                 ),
-              ],
-            ),
+                child: GradientButton(
+                  text: 'Save settings',
+                  onPressed: _draft.isBusy ? null : _saveSettings,
+                  isFullWidth: true,
+                  iconPath: AppIcons.tickCircle,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

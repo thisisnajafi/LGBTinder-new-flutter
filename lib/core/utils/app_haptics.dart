@@ -1,12 +1,31 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Lightweight haptic helpers for onboarding micro-interactions.
+import '../providers/app_motion_prefs_provider.dart';
+
+/// Lightweight haptic helpers. No-ops when the user disabled haptics
+/// (PERF-SCR-HAPTIC-001).
 class AppHaptics {
   AppHaptics._();
 
-  static void selection() => HapticFeedback.selectionClick();
-  static void light() => HapticFeedback.lightImpact();
-  static void medium() => HapticFeedback.mediumImpact();
-  static void heavy() => HapticFeedback.heavyImpact();
+  static bool get enabled => AppMotionPreferences.hapticsEnabled;
+
+  static void selection() {
+    if (!enabled) return;
+    HapticFeedback.selectionClick();
+  }
+
+  static void light() {
+    if (!enabled) return;
+    HapticFeedback.lightImpact();
+  }
+
+  static void medium() {
+    if (!enabled) return;
+    HapticFeedback.mediumImpact();
+  }
+
+  static void heavy() {
+    if (!enabled) return;
+    HapticFeedback.heavyImpact();
+  }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 /// Shared scroll physics and cache extents (PERF-INFRA-020 / 023).
+///
+/// Default pull-to-refresh (PERF-SCR-PTR-001): pair these physics with
+/// [PremiumRefreshIndicator] (`triggerMode: onEdge`, violet spinner, haptic
+/// click). Do not use nested scroll views for settings/list hubs.
 abstract final class AppScroll {
   static const ScrollPhysics bouncing = AlwaysScrollableScrollPhysics(
     parent: BouncingScrollPhysics(),

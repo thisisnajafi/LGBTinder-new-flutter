@@ -5,6 +5,9 @@ import 'package:path_provider/path_provider.dart';
 
 /// Prepares local image files for profile/gallery upload.
 ///
+/// App-wide compression preset (PERF-SCR-IMG-001): quality 85, max side 1920,
+/// 4MB cap. Call [prepareForUpload] / [prepareForPreview] after [AppMediaPicker].
+///
 /// Backend allows 5MB (`max:5120` KB); nginx may return 413 before Laravel.
 /// We target 4MB and downscale high-res camera photos from modern devices.
 class ImageUploadCompressor {
@@ -18,6 +21,35 @@ class ImageUploadCompressor {
 
   static const int defaultMaxSide = 1920;
   static const int defaultQuality = 85;
+
+  /// Downscale a camera/gallery pick before local preview.
+  ///
+  /// [FlutterImageCompress] encodes on a native background thread so the UI
+  /// isolate is not blocked on JPEG work (PERF-PAGE-PROFILEEDIT-003).
+  static Future<File> prepareForPreview(File source) async {
+    if (!await source.exists()) return source;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final targetPath =
+          '${tempDir.path}/preview_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final result = await FlutterImageCompress.compressAndGetFile(
+        source.absolute.path,
+        targetPath,
+        quality: 80,
+        minWidth: 1280,
+        minHeight: 1280,
+        format: CompressFormat.jpeg,
+        keepExif: false,
+      );
+      if (result == null) return source;
+      final compressed = File(result.path);
+      if (!await compressed.exists()) return source;
+      return compressed;
+    } catch (_) {
+      return source;
+    }
+  }
 
   static Future<File> prepareForUpload(File source) async {
     if (!await source.exists()) return source;

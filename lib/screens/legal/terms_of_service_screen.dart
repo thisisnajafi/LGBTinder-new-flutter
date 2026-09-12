@@ -1,126 +1,60 @@
 // Screen: TermsOfServiceScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
+
 import '../../core/widgets/app_settings_detail.dart';
+import 'legal_document_view.dart';
+
+const _termsSections = [
+  LegalDocumentSection(
+    title: '1. Acceptance of Terms',
+    body:
+        'By accessing and using LGBTFinder, you accept and agree to be bound by the terms and provision of this agreement.',
+  ),
+  LegalDocumentSection(
+    title: '2. User Accounts',
+    body:
+        'You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.',
+  ),
+  LegalDocumentSection(
+    title: '3. User Conduct',
+    body:
+        'You agree not to use the service to: harass, abuse, or harm other users; post false or misleading information; violate any applicable laws or regulations.',
+  ),
+  LegalDocumentSection(
+    title: '4. Privacy',
+    body:
+        'Your use of LGBTFinder is also governed by our Privacy Policy. Please review our Privacy Policy to understand our practices.',
+  ),
+  LegalDocumentSection(
+    title: '5. Premium Features',
+    body:
+        'Premium features are available through subscription. Subscriptions will automatically renew unless cancelled. You can cancel your subscription at any time.',
+  ),
+  LegalDocumentSection(
+    title: '6. Termination',
+    body:
+        'We reserve the right to terminate or suspend your account and access to the service immediately, without prior notice, for conduct that we believe violates these Terms of Service.',
+  ),
+  LegalDocumentSection(
+    title: '7. Contact Information',
+    body:
+        'If you have any questions about these Terms of Service, please contact us at legal@lgbtfinder.com.',
+  ),
+];
 
 /// Terms of service screen - Display terms of service
 class TermsOfServiceScreen extends ConsumerWidget {
-  const TermsOfServiceScreen({Key? key}) : super(key: key);
+  const TermsOfServiceScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final textColor = theme.colorScheme.onSurface;
-    final secondaryTextColor =
-        theme.colorScheme.onSurface.withValues(alpha: 0.55);
-
-    return AppSettingsDetailScaffold(
+    return const AppSettingsDetailScaffold(
       title: 'Terms of service',
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSettingsLayout.horizontalPadding,
-          0,
-          AppSettingsLayout.horizontalPadding,
-          AppSpacing.spacingXXL,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Last Updated: December 2024',
-              style: AppTypography.caption.copyWith(color: secondaryTextColor),
-            ),
-            SizedBox(height: AppSpacing.spacingXXL),
-            _buildSection(
-              title: '1. Acceptance of Terms',
-              content:
-                  'By accessing and using LGBTFinder, you accept and agree to be bound by the terms and provision of this agreement.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXL),
-            _buildSection(
-              title: '2. User Accounts',
-              content:
-                  'You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXL),
-            _buildSection(
-              title: '3. User Conduct',
-              content:
-                  'You agree not to use the service to: harass, abuse, or harm other users; post false or misleading information; violate any applicable laws or regulations.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXL),
-            _buildSection(
-              title: '4. Privacy',
-              content:
-                  'Your use of LGBTFinder is also governed by our Privacy Policy. Please review our Privacy Policy to understand our practices.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXL),
-            _buildSection(
-              title: '5. Premium Features',
-              content:
-                  'Premium features are available through subscription. Subscriptions will automatically renew unless cancelled. You can cancel your subscription at any time.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXL),
-            _buildSection(
-              title: '6. Termination',
-              content:
-                  'We reserve the right to terminate or suspend your account and access to the service immediately, without prior notice, for conduct that we believe violates these Terms of Service.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXL),
-            _buildSection(
-              title: '7. Contact Information',
-              content:
-                  'If you have any questions about these Terms of Service, please contact us at legal@lgbtfinder.com.',
-              textColor: textColor,
-              secondaryTextColor: secondaryTextColor,
-            ),
-            SizedBox(height: AppSpacing.spacingXXL),
-          ],
-        ),
+      body: LegalDocumentView(
+        lastUpdated: 'December 2024',
+        sections: _termsSections,
       ),
-    );
-  }
-
-  Widget _buildSection({
-    required String title,
-    required String content,
-    required Color textColor,
-    required Color secondaryTextColor,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: AppTypography.h2.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: AppSpacing.spacingMD),
-        Text(
-          content,
-          style: AppTypography.body.copyWith(
-            color: secondaryTextColor,
-            height: 1.6,
-          ),
-        ),
-      ],
     );
   }
 }

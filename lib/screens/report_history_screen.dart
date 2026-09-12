@@ -5,6 +5,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/empty_state.dart';
@@ -31,9 +32,10 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
   }
 
   Future<void> _loadReports() async {
-    setState(() {
-      _isLoading = true;
-    });
+    final showSpinner = _reports.isEmpty;
+    if (showSpinner) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final apiService = ref.read(apiServiceProvider);
@@ -42,24 +44,31 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
         fromJson: (json) => json,
       );
 
+      if (!mounted) return;
       if (response.isSuccess && response.data != null) {
         final reportsList = _extractReportList(response.data);
-
         setState(() {
           _reports = reportsList.map(_mapReport).toList();
           _isLoading = false;
         });
-      } else {
+      } else if (showSpinner) {
         setState(() {
           _reports = [];
           _isLoading = false;
         });
+      } else {
+        setState(() => _isLoading = false);
       }
     } catch (e) {
-      setState(() {
-        _reports = [];
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      if (showSpinner) {
+        setState(() {
+          _reports = [];
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -152,24 +161,27 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
                   message: 'You haven\'t reported any users yet',
                   iconPath: AppIcons.report,
                 )
-              : AppSettingsDetailList(
-                  children: [
-                    PremiumSettingsGroup(
-                      title: 'Your reports',
-                      subtitle: '${_reports.length} ${_reports.length == 1 ? 'report' : 'reports'}',
-                      children: [
-                        for (final report in _reports)
-                          _ReportRow(
-                            userName: report['user_name'] as String,
-                            reason: report['reason'] as String,
-                            status: report['status'] as String,
-                            statusColor: _getStatusColor(report['status'] as String),
-                            reportedLabel:
-                                'Reported ${_formatTime(report['reported_at'] as DateTime)}',
-                          ),
-                      ],
-                    ),
-                  ],
+              : AppListView.builder(
+                  physics: AppScroll.bouncing,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingSM,
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingXXL,
+                  ),
+                  itemCount: _reports.length,
+                  itemBuilder: (context, index) {
+                    final report = _reports[index];
+                    return _ReportRow(
+                      userName: report['user_name'] as String,
+                      reason: report['reason'] as String,
+                      status: report['status'] as String,
+                      statusColor:
+                          _getStatusColor(report['status'] as String),
+                      reportedLabel:
+                          'Reported ${_formatTime(report['reported_at'] as DateTime)}',
+                    );
+                  },
                 ),
     );
   }

@@ -5,6 +5,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/utils/app_icons.dart';
@@ -26,7 +27,7 @@ import '../core/responsive/responsive.dart';
 
 /// Emergency contacts screen - Manage emergency contacts
 class EmergencyContactsScreen extends ConsumerStatefulWidget {
-  const EmergencyContactsScreen({Key? key}) : super(key: key);
+  const EmergencyContactsScreen({super.key});
 
   @override
   ConsumerState<EmergencyContactsScreen> createState() => _EmergencyContactsScreenState();
@@ -238,107 +239,122 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
           ? EmptyState(
               title: 'No emergency contacts',
               message: 'Add emergency contacts for your safety',
-              icon: Icons.emergency,
+              iconPath: AppIcons.danger,
               actionLabel: 'Add contact',
               onAction: _handleAddContact,
             )
-          : AppSettingsDetailList(
-              children: [
-                PremiumSettingsGroup(
-                  title: 'Info',
-                  children: [
-                    Text(
-                      'Emergency contacts can be notified in case of safety concerns.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.spacingXL),
-                PremiumSettingsGroup(
-                  title: 'Your contacts',
-                  children: [
-                    for (final contact in _contacts)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
-                        padding: const EdgeInsets.all(AppSpacing.spacingMD),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.cardBackgroundDark
-                              : AppColors.cardBackgroundLight,
-                          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                          border: Border.all(
-                            color: AppColors.accentViolet.withValues(alpha: 0.1),
+          : AppListView.builder(
+              physics: AppScroll.bouncing,
+              padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
+              itemCount: _contacts.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Padding(
+                    padding: AppSettingsLayout.firstSectionPadding,
+                    child: PremiumSettingsGroup(
+                      title: 'Info',
+                      children: [
+                        Text(
+                          'Emergency contacts can be notified in case of safety concerns.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.65),
+                            height: 1.45,
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.feedbackError.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: AppSvgIcon(
-                                  assetPath: AppIcons.call,
-                                  size: 18,
-                                  color: AppColors.feedbackError,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  AppText(
-                                    contact['name']?.toString() ?? 'Contact',
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    maxLines: 1,
-                                  ),
-                                  if (contact['phone'] != null)
-                                    AppText(
-                                      contact['phone'].toString(),
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.55),
-                                      ),
-                                      maxLines: 1,
-                                    ),
-                                  if (contact['relationship'] != null)
-                                    AppText(
-                                      contact['relationship'].toString(),
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.45),
-                                      ),
-                                      maxLines: 1,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: AppSvgIcon(
-                                assetPath: AppIcons.delete,
-                                size: 20,
-                                color: AppColors.feedbackError,
-                              ),
-                              onPressed: () =>
-                                  _handleDeleteContact(contact['id']),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingSM,
+                    AppSpacing.spacingLG,
+                    0,
+                  ),
+                  child: _contactTile(_contacts[index - 1], theme, isDark),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _contactTile(
+    Map<String, dynamic> contact,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+      padding: const EdgeInsets.all(AppSpacing.spacingMD),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.cardBackgroundDark
+            : AppColors.cardBackgroundLight,
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.feedbackError.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: AppSvgIcon(
+                assetPath: AppIcons.call,
+                size: 18,
+                color: AppColors.feedbackError,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.spacingMD),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  contact['name']?.toString() ?? 'Contact',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
                 ),
+                if (contact['phone'] != null)
+                  AppText(
+                    contact['phone'].toString(),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                    maxLines: 1,
+                  ),
+                if (contact['relationship'] != null)
+                  AppText(
+                    contact['relationship'].toString(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                    ),
+                    maxLines: 1,
+                  ),
               ],
             ),
+          ),
+          IconButton(
+            icon: AppSvgIcon(
+              assetPath: AppIcons.delete,
+              size: 20,
+              color: AppColors.feedbackError,
+            ),
+            onPressed: () => _handleDeleteContact(contact['id']),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -347,7 +363,6 @@ class _AddContactDialog extends ConsumerStatefulWidget {
   @override
   ConsumerState<_AddContactDialog> createState() => _AddContactDialogState();
 }
-
 
 class _AddContactDialogState extends ConsumerState<_AddContactDialog> {
   final _formKey = GlobalKey<FormState>();
@@ -515,7 +530,11 @@ class _AddContactDialogState extends ConsumerState<_AddContactDialog> {
                 decoration: InputDecoration(
                   labelText: 'Notes (Optional)',
                   hintText: 'Additional information about this contact',
-                  prefixIcon: Icon(Icons.note, color: theme.colorScheme.onSurfaceVariant),
+                  prefixIcon: AppSvgIcon(
+                    assetPath: AppIcons.documentText,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 maxLines: 2,
               ),

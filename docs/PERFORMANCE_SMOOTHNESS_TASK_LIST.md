@@ -161,35 +161,35 @@
 
 | Audit | Detail |
 |-------|--------|
-| State | `setState` + partial Riverpod (`.select` on typing) |
-| Pattern | `ListView.builder` + `StaggeredListItem` |
-| Issue | No local cache; network-only load; stagger animates 8 items |
+| State | Riverpod (`chatListPreviewProvider` + local DB first paint) |
+| Pattern | `AppListView` / `ChatListReorderList` |
+| Issue | Search already debounced; stagger limited to first 3 rows |
 
-- [ ] **PERF-PAGE-CHATLIST-001** Migrate to `chatProvider` / local DB — show cached chats instantly
-- [ ] **PERF-PAGE-CHATLIST-002** Remove per-row `planLimitsProvider` watch from `ChatListItem`; pass `hasPlan` from parent
-- [ ] **PERF-PAGE-CHATLIST-003** Limit `StaggeredListItem` to first 3 rows or remove after first session
+- [x] **PERF-PAGE-CHATLIST-001** Migrate to `chatProvider` / local DB — show cached chats instantly — `ChatListPage._loadChats` paints Drift conversations then refreshes; live rows read `chatListPreviewProvider` (not `ChatState.chats`) so thread send/typing does not rebuild the list
+- [x] **PERF-PAGE-CHATLIST-002** Remove per-row `planLimitsProvider` watch from `ChatListItem`; pass `hasPlan` from parent — parent watches `isPremiumProvider` once; rows take `hasPlan`
+- [x] **PERF-PAGE-CHATLIST-003** Limit `StaggeredListItem` to first 3 rows or remove after first session — `StaggeredListItem.shouldAnimate`; later rebuilds skip
 - [x] **PERF-PAGE-CHATLIST-004** Add `cacheExtent: 400` and `RepaintBoundary` per `ChatListItem` — `ChatListReorderList` → `AppListView`; row already has `RepaintBoundary`
-- [ ] **PERF-PAGE-CHATLIST-005** Isolate `AppBarCustom` notification badge in `Consumer`
-- [ ] **PERF-PAGE-CHATLIST-006** Debounce search in `ChatListHeader`
-- [ ] **PERF-PAGE-CHATLIST-007** Prefetch top 20 avatars after list load
+- [x] **PERF-PAGE-CHATLIST-005** Isolate `AppBarCustom` notification badge in `Consumer` — no `AppBarCustom`; premium banner in `Consumer`; search action extracted off page-level plan watch
+- [x] **PERF-PAGE-CHATLIST-006** Debounce search in `ChatListHeader` — live field already 300ms; unused header now uses `DebouncedSearchField` + SVG
+- [x] **PERF-PAGE-CHATLIST-007** Prefetch top 20 avatars after list load — `ChatListAvatarPrefetch.precacheTop`
 
 ### `chat_page.dart` ⚠️ HIGHEST PRIORITY
 
 | Audit | Detail |
 |-------|--------|
 | State | 25+ `setState`, `List<Map<String,dynamic>>` |
-| Pattern | Forward `ListView.builder`, no reverse |
+| Pattern | Reverse `ChatThreadListView`; shell + Riverpod thread |
 | Issues | `FutureBuilder` pinned count in build; full rebuild on typing; Pusher → setState |
 
-- [ ] **PERF-PAGE-CHAT-001** Refactor to `chatProvider` + local DB stream (remove `List<Map>`) — local-first cache wired; `List<Map>` still in `chat_page.dart`
-- [ ] **PERF-PAGE-CHAT-002** Switch to `reverse: true` list; `jumpTo(0)` for new messages at bottom
+- [x] **PERF-PAGE-CHAT-001** Refactor to `chatProvider` + local DB stream (remove `List<Map>`) — Drift `watchAllMessagesForOtherUser` drives `chatThreadMessagesProvider`; in-flight optimistic + not-yet-persisted rows are kept; list tiles still consume row maps
+- [x] **PERF-PAGE-CHAT-002** Switch to `reverse: true` list; `jumpTo(0)` for new messages at bottom — `ChatThreadListView` + `ChatThreadScroll.latestPixels`
 - [x] **PERF-PAGE-CHAT-003** Remove `FutureBuilder<int>` for pinned count → `pinnedCountProvider(userId)`
 - [x] **PERF-PAGE-CHAT-004** Extract `MessageListTile` with `RepaintBoundary` + per-message provider
 - [x] **PERF-PAGE-CHAT-005** Isolate typing indicator — separate `Consumer`, no full-page `setState`
 - [~] **PERF-PAGE-CHAT-006** Paginate history (load older on scroll up) instead of single `_loadMessages` — cursor pagination + `_loadMoreMessages` already present
 - [~] **PERF-PAGE-CHAT-007** Use `scroll_to_index` or maintain scroll anchor when prepending history — jumpTo anchor in `_loadMoreMessages`
-- [ ] **PERF-PAGE-CHAT-008** Move Pusher subscription handlers to repository layer — `chatLocalSyncProvider` persists messages; `chat_page` still handles live UI via `setState`
-- [ ] **PERF-PAGE-CHAT-009** Split file (>1200 lines) into: header, message list, input bar, panels
+- [x] **PERF-PAGE-CHAT-008** Move Pusher subscription handlers to repository layer — `chatLocalSyncProvider` persists; `chatThreadLiveSyncProvider` patches the open thread; ChatPage only keeps reconnect poll + call timeline
+- [x] **PERF-PAGE-CHAT-009** Split file (>1200 lines) into: header, message list, input bar, panels — `ChatThreadPageShell` + existing `ChatHeader` / `ChatMessageList` / `ChatComposerBar`
 
 ### `profile_page.dart`
 
@@ -199,9 +199,9 @@
 | Pattern | `SingleChildScrollView` |
 | Issue | Possible double-fetch in `initState` + post-frame |
 
-- [ ] **PERF-PAGE-PROFILE-001** Use `profilePageCacheProvider` exclusively for own profile (no duplicate API)
-- [ ] **PERF-PAGE-PROFILE-002** `RepaintBoundary` around photo carousel and stats section
-- [ ] **PERF-PAGE-PROFILE-003** Lazy-load analytics/badges section below fold
+- [x] **PERF-PAGE-PROFILE-001** Use `profilePageCacheProvider` exclusively for own profile (no duplicate API) — own tab watches cache only; no extra `refresh()` / `getMyProfile` / `revalidateAll` from `ProfilePage`
+- [x] **PERF-PAGE-PROFILE-002** `RepaintBoundary` around photo carousel and stats section — `ProfileHeroSection` photo card + stats panel
+- [x] **PERF-PAGE-PROFILE-003** Lazy-load analytics/badges section below fold — hub + membership mount after first frame; engagement stats fetch is post-frame
 
 ### `profile_edit_page.dart`
 
@@ -210,9 +210,9 @@
 | State | Heavy `setState` per field |
 | Issue | Image upload mixed with form UI |
 
-- [ ] **PERF-PAGE-PROFILEEDIT-001** Extract image editor to isolated stateful widget
-- [ ] **PERF-PAGE-PROFILEEDIT-002** Use controllers/listeners instead of `setState` for text fields
-- [ ] **PERF-PAGE-PROFILEEDIT-003** Compress images before preview (`flutter_image_compress`) on background isolate
+- [x] **PERF-PAGE-PROFILEEDIT-001** Extract image editor to isolated stateful widget — `ProfileEditPhotosSection` owns picker, upload, gallery (`ProfileImageEditor`)
+- [x] **PERF-PAGE-PROFILEEDIT-002** Use controllers/listeners instead of `setState` for text fields — `ProfileEditBioField` + local `ProfileEditAboutMeSection` values
+- [x] **PERF-PAGE-PROFILEEDIT-003** Compress images before preview (`flutter_image_compress`) on background isolate — `ImageUploadCompressor.prepareForPreview` before avatar/gallery preview
 
 ### `profile_wizard_page.dart` ⚠️ LARGE FILE
 
@@ -222,17 +222,17 @@
 | Pattern | `PageController`, nested `shrinkWrap: true` lists |
 | Issue | Entire wizard rebuilds on any field change |
 
-- [ ] **PERF-PAGE-WIZARD-001** Split into step widgets (`wizard_step_photos.dart`, etc.)
-- [ ] **PERF-PAGE-WIZARD-002** Move wizard state to `StateNotifier` / `profileWizardProvider`
-- [ ] **PERF-PAGE-WIZARD-003** Replace inner `shrinkWrap: true` lists with fixed-height `ListView.builder`
-- [ ] **PERF-PAGE-WIZARD-004** Cache reference data providers at wizard level (don't re-watch per step)
-- [ ] **PERF-PAGE-WIZARD-005** `RepaintBoundary` per wizard step page
+- [x] **PERF-PAGE-WIZARD-001** Split into step widgets (`wizard_step_photos.dart`, etc.) — seven step widgets under `lib/widgets/profile/wizard/`
+- [x] **PERF-PAGE-WIZARD-002** Move wizard state to `StateNotifier` / `profileWizardProvider` — `ProfileWizardPage` keeps step index / loading / text controllers; draft lives on `profileWizardProvider`
+- [x] **PERF-PAGE-WIZARD-003** Replace inner `shrinkWrap: true` lists with fixed-height `ListView.builder` — gallery `_FixedHeightPhotoRows`
+- [x] **PERF-PAGE-WIZARD-004** Cache reference data providers at wizard level (don't re-watch per step) — `wizardReferenceCacheProvider` / `wizardCitiesProvider`
+- [x] **PERF-PAGE-WIZARD-005** `RepaintBoundary` per wizard step page — each `PageView` child is wrapped
 
 ### `onboarding_page.dart`
 
-- [ ] **PERF-PAGE-ONBOARD-001** Use `PageView` with lazy building (build only current ±1 page)
-- [ ] **PERF-PAGE-ONBOARD-002** Preload only first onboarding illustration; defer Lottie until visible
-- [ ] **PERF-PAGE-ONBOARD-003** Respect reduce-motion — skip parallax/Lottie when disabled
+- [x] **PERF-PAGE-ONBOARD-001** Use `PageView` with lazy building (build only current ±1 page)
+- [x] **PERF-PAGE-ONBOARD-002** Preload only first onboarding illustration; defer Lottie until visible — first SVG precached; other slides/confetti not mounted until in range
+- [x] **PERF-PAGE-ONBOARD-003** Respect reduce-motion — skip parallax/Lottie when disabled — no confetti, no hero/page/dot motion, no complete delay
 
 ### `search_page.dart`
 
@@ -241,10 +241,10 @@
 | Pattern | `GridView.builder` |
 | Issue | API call on every keystroke |
 
-- [ ] **PERF-PAGE-SEARCH-001** Add 300ms search debounce
-- [ ] **PERF-PAGE-SEARCH-002** Add `cacheExtent` to grid
-- [ ] **PERF-PAGE-SEARCH-003** Use `OptimizedImage` with `ImageSize.thumbnail` in grid cells
-- [ ] **PERF-PAGE-SEARCH-004** Cancel in-flight search requests on new query (Dio cancel token)
+- [~] **PERF-PAGE-SEARCH-001** Add 300ms search debounce — `lib/pages/search_page.dart` and `discovery/search_screen.dart` are not in the tree (no routes); `DebouncedSearchField` / `AppSearchDebounce` (300ms) are ready when they return
+- [~] **PERF-PAGE-SEARCH-002** Add `cacheExtent` to grid — no search grid in tree; `AppListView` / `AppScroll.listCacheExtentPixels` is the shared default
+- [~] **PERF-PAGE-SEARCH-003** Use `OptimizedImage` with `ImageSize.thumbnail` in grid cells — no search grid; `OptimizedImage` thumbnail preset already exists
+- [~] **PERF-PAGE-SEARCH-004** Cancel in-flight search requests on new query (Dio cancel token) — no search page client; apply with the page if it returns
 
 ### `api_test_page.dart`
 
@@ -269,6 +269,19 @@
 | `auth/profile_completion_welcome_screen.dart` | **PERF-SCR-PCWEL-001** Defer non-critical animations post-interaction |
 | `auth/auth_wrapper.dart` | **PERF-SCR-AUTHWRAP-001** Avoid rebuilding child on auth stream noise — use `.select` |
 
+- [x] **PERF-SCR-WELCOME-001** `RepaintBoundary` on logo hero; defer value-prop mosaic + ambient orbs until after first frame; logo precache is post-frame
+- [x] **PERF-SCR-WELCOME-002** `StatefulWidget` (no `ref.watch`); first paint is branding + CTAs only
+- [x] **PERF-SCR-LOGIN-001** Memoize device name — `AppDeviceName.resolve()` caches `DeviceInfoPlugin`; login prefetches in `initState`
+- [x] **PERF-SCR-LOGIN-002** Extract form to const sub-widgets — `LoginCredentialsFields` / `LoginRememberForgotRow` / `LoginSignUpFooter`; loading uses `ValueNotifier`
+- [x] **PERF-SCR-REGISTER-001** Same as login — `RegisterCredentialsFields` / `RegisterTermsBlock` / `RegisterSignInFooter`; terms + loading are `ValueNotifier`s; `AppDeviceName` for Google
+- [x] **PERF-SCR-EMAIL-001** Debounce resend; countdown lives in `EmailResendRow` so ticks do not rebuild OTP fields; verify loading is a `ValueNotifier`
+- [x] **PERF-SCR-RESET-001** Isolate each reset step — `ResetEmailStep` / `ResetOtpStep` / `ResetPasswordStep`; loading + step index are `ValueNotifier`s; OTP reuses `EmailOtpFields` + `EmailResendRow`
+- [~] **PERF-SCR-FORGOT-001** Minimal scope — `forgot_password_screen.dart` is not in the tree; `/forgot-password` is `PasswordResetFlowScreen` (RESET-001)
+- [~] **PERF-SCR-PWIZ-001** Consolidate with `pages/profile_wizard_page.dart` — `profile_wizard_screen.dart` is not in the tree; live wizard is already `ProfileWizardPage`
+- [x] **PERF-SCR-PCOMP-001** Use cached profile; no blocking network on open — hydrates `ProfileCompletionDraft` from `profilePageCacheProvider` in `initState`; no `getMyProfile` / `refresh()`
+- [x] **PERF-SCR-PCWEL-001** Defer non-critical animations post-interaction — first paint is a static avatar (`animate`/`showPulse` false); pulse unlocks on first pointer only when Reduce Motion is off; `RepaintBoundary` around avatar; `StatefulWidget` (no `ref.watch`)
+- [~] **PERF-SCR-AUTHWRAP-001** Avoid rebuilding child on auth stream noise — `auth_wrapper.dart` is an unused stub (no child, no auth stream); live auth gating is `go_router` redirect + `authProvider` in session hosts
+
 ### Onboarding
 
 | File | Tasks |
@@ -276,6 +289,11 @@
 | `onboarding/onboarding_screen.dart` | **PERF-SCR-ONB-001** Lazy page build |
 | `onboarding/enhanced_onboarding_screen.dart` | **PERF-SCR-ONB-002** Reduce simultaneous animations |
 | `onboarding/onboarding_preferences_screen.dart` | **PERF-SCR-ONBPREF-001** Replace static `ListView` with builder; **002** batch preference saves |
+
+- [~] **PERF-SCR-ONB-001** Lazy page build — `onboarding_screen.dart` is not in the tree; live intro carousel is `pages/onboarding_page.dart` (`PERF-PAGE-ONBOARD-001`)
+- [~] **PERF-SCR-ONB-002** Reduce simultaneous animations — `enhanced_onboarding_screen.dart` is not in the tree; live intro is `OnboardingPage` (`PERF-PAGE-ONBOARD-002` / `003`)
+- [x] **PERF-SCR-ONBPREF-001** Replace static `ListView` with builder — `AppListView.builder` + extracted section widgets; chip/slider state is `ValueNotifier` so drags do not rebuild the list
+- [x] **PERF-SCR-ONBPREF-002** Batch preference saves — chip/slider edits stay in `OnboardingPreferencesDraft`; Save issues one `updateProfile` payload
 
 ### Discovery
 
@@ -285,6 +303,14 @@
 | `discovery/filter_screen.dart` | **PERF-SCR-FILTER-001** Debounce slider changes; **002** don't refetch until Apply |
 | `discovery/likes_received_screen.dart` | **PERF-SCR-LIKES-001** `ListView.builder` + `cacheExtent`; **002** avatar thumbnail size |
 | `discovery/search_screen.dart` | **PERF-SCR-DISCSearch-001** Shared debounced search component |
+
+- [x] **PERF-SCR-PROFDET-001** Hero image with `OptimizedImage` — `ProfileHeroSection` carousel/cover photo uses `OptimizedImage` (`ImageSize.small`)
+- [x] **PERF-SCR-PROFDET-002** `RepaintBoundary` on carousel — keyed `profile_photo_carousel` around `PageView`; profile detail wraps hero in `profile_detail_hero`
+- [x] **PERF-SCR-FILTER-001** Debounce slider changes — `FilterAgeRangeControl` / `FilterDistanceControl` isolate slider `setState`; parent filter form does not rebuild while dragging
+- [x] **PERF-SCR-FILTER-002** Don't refetch until Apply — sliders only write local `ValueNotifier`s; `_applyFilters` pops the map and `DiscoveryPage` reloads the stack after the result
+- [x] **PERF-SCR-LIKES-001** `ListView.builder` + `cacheExtent` — `AppListView.builder` for pending likes
+- [x] **PERF-SCR-LIKES-002** Avatar thumbnail size — `OptimizedImage` `ImageSize.thumbnail` at 56×56
+- [~] **PERF-SCR-DISCSearch-001** Shared debounced search component — `discovery/search_screen.dart` is not in the tree; `DebouncedSearchField` is ready (`PERF-INFRA-040`)
 
 ### Profile (screens)
 
@@ -298,6 +324,16 @@
 | `profile/profile_export_screen.dart` | **PERF-SCR-EXPORT-001** Stream export progress |
 | `profile/advanced_profile_customization_screen.dart` | **PERF-SCR-CUSTOM-001** Split sections; 12+ setState → provider |
 | `profile/profile_completion_incentives_screen.dart` | **PERF-SCR-INCENT-001** Static content — use const widgets |
+
+- [x] **PERF-SCR-VERIFY-001** Camera/gallery picker off main thread — shared `AppMediaPicker` (native quality/maxWidth); `File` stats via `compute` (`statPickedMediaFile`); picker starts after the source sheet closes (`Future.delayed(Duration.zero)`)
+- [x] **PERF-SCR-TEMPL-001** Cache template previews — `ProfileTemplateCatalog.cached()`; `OptimizedImage` (`ImageSize.small`) when a preview URL exists
+- [x] **PERF-SCR-SHARE-001** QR generation off UI thread — `encodeProfileQr` uses `package:qr` in `compute`; `QrPainter`/`dart:ui` is not used; paint is a `RepaintBoundary` + `EncodedProfileQrPainter` after the first frame
+- [x] **PERF-SCR-ANALYTICS-001** Lazy load charts — period row paints first; metrics load in a post-frame callback (no blocking delay)
+- [x] **PERF-SCR-ANALYTICS-002** `RepaintBoundary` per chart — keyed `analytics_overview_chart`, `analytics_engagement_chart`, `analytics_interests_chart`
+- [x] **PERF-SCR-BACKUP-001** Progress via `ValueNotifier` — backup busy/progress notifiers rebuild only the CTA/progress; not the full list
+- [x] **PERF-SCR-EXPORT-001** Stream export progress — `profileExportProgressStream` drives a `ValueNotifier`; list does not `setState` per tick
+- [x] **PERF-SCR-CUSTOM-001** Split sections; 12+ setState → provider — `ProfileCustomizationDraft` + isolated section widgets; opacity slider is a `ValueNotifier`
+- [x] **PERF-SCR-INCENT-001** Static content — `StatelessWidget` + const `ProfileIncentiveCatalog`; no `setState` to load hardcoded rows
 
 ### Settings
 
@@ -322,6 +358,26 @@
 | `payment_settings_screen.dart` | **PERF-SCR-PAYSET-001** Lazy load payment methods |
 | `two_factor_auth_screen.dart` | **PERF-SCR-2FA-001** Static `ListView` → builder |
 
+- [x] **PERF-SCR-SETTINGS-001** `ListView.builder` for long settings list — live hub is `SettingsPage` (`/home?tab=4`); `AppListView.builder` over section widgets
+- [x] **PERF-SCR-SETTINGS-002** const tiles — const `SizedBox` chrome; `PremiumSettingsTile` still takes `onTap` closures so tiles cannot be const
+- [~] **PERF-SCR-COMPSET-001** Same as settings — `comprehensive_settings_screen.dart` is unused; live hub is `SettingsPage`
+- [x] **PERF-SCR-ACCT-001** Isolate destructive action dialogs — email-verify dialog uses its own `StatefulBuilder`; success alerts use `iconPath`
+- [x] **PERF-SCR-CALLSET-001** 12+ setState → section providers — `CallSettingsDraft` `ChangeNotifier`; toggles do not `setState` the scaffold
+- [x] **PERF-SCR-A11Y-001** Persist animation/haptic flags — `AppMotionPreferences` + Appearance “Reduce motion”; AND’d into `AppAnimations.animationsEnabled`
+- [x] **PERF-SCR-ANIM-001** Global animation disable short-circuit stagger/Lottie — `ThemeAwareLottie` and stagger already use `AppAnimations.animationsEnabled` (now includes persisted flag)
+- [x] **PERF-SCR-HAPTIC-001** Central haptic service — `AppHaptics` gated by persisted flag; Sounds & haptics toggle; refresh uses `AppHaptics.selection`
+- [x] **PERF-SCR-SKEL-001** Toggle shimmer globally — `SkeletonLoader` skips `ShimmerEffect` when animations are disabled
+- [~] **PERF-SCR-PTR-001** Document/default sensible refresh physics — unused stub screen; defaults documented on `AppScroll` + `PremiumRefreshIndicator` (`onEdge`, bouncing)
+- [x] **PERF-SCR-IMG-001** Apply compression preset before upload — `ImageUploadCompressor` is the app-wide preset; unused settings stub
+- [x] **PERF-SCR-MEDIA-001** Default picker quality caps — leftover `ImagePicker` sites now use `AppMediaPicker` (wizard, profile, edit photos, support tickets)
+- [x] **PERF-SCR-RAIN-001** Gate expensive gradient nav — `RepaintBoundary` on nav shell; skip `BackdropFilter` blur when Reduce Motion is on. Rainbow theme settings screen unused
+- [x] **PERF-SCR-NOTIFSET-001** Batch toggle API calls — debounce PUT already existed; scaffold no longer watches full prefs (groups isolated)
+- [~] **PERF-SCR-GNOTIF-001** 14+ setState → notifier — `group_notification_settings_screen.dart` is unused (no group-chat settings route)
+- [x] **PERF-SCR-PRIV-001** Section-based rebuild isolation — per-section `Consumer` + `.select` so one toggle does not rebuild other groups
+- [~] **PERF-SCR-SAFE-001** Same pattern — unused stub; live safety is `SafetyCenterScreen` + privacy screen
+- [~] **PERF-SCR-PAYSET-001** Lazy load payment methods — unused; live billing is `SubscriptionManagementPage`
+- [x] **PERF-SCR-2FA-001** Static `ListView` → builder — `AppSettingsDetailList` now uses `AppListView.builder`
+
 ### Calls
 
 | File | Tasks |
@@ -329,6 +385,11 @@
 | `video_call_screen.dart` | **PERF-SCR-VIDCALL-001** `RepaintBoundary` on local PiP; **002** timer updates isolated widget (20+ setState) |
 | `voice_call_screen.dart` | **PERF-SCR-VOICECALL-001** Same timer isolation (15+ setState) |
 | `call_history_screen.dart` | **PERF-SCR-CALLHIST-001** `ListView.builder` + avatar thumbnails |
+
+- [~] **PERF-SCR-VIDCALL-001** `RepaintBoundary` on local PiP — `video_call_screen.dart` is dead UI; live call is `outgoing_call_page.dart` (do not enhance the stub)
+- [~] **PERF-SCR-VIDCALL-002** timer updates isolated widget — same; live timer lives in `call_timer.dart` / outgoing page
+- [~] **PERF-SCR-VOICECALL-001** Same timer isolation — `voice_call_screen.dart` is dead UI; live call is `outgoing_call_page.dart`
+- [x] **PERF-SCR-CALLHIST-001** `ListView.builder` + avatar thumbnails — live lists are `MessengerCallsList` (`AppListView.separated`) and `PeerCallHistoryPage` (`AppListView.separated`); rows use `CallHistoryAvatar` (`OptimizedImage` `ImageSize.thumbnail`). Unused `screens/call_history_screen.dart` now uses `AppListView.builder` + the same thumbnail avatar and `callProvider.notifier.loadCallHistory`
 
 ### Payments & premium
 
@@ -347,6 +408,19 @@
 | `payment_methods_screen.dart` | **PERF-SCR-PAYMETH-001** Lazy load |
 | `add_payment_method_screen.dart` | **PERF-SCR-ADDPAY-001** Minimal rebuild form |
 
+- [x] **PERF-SCR-PAY-001** Don't block UI on billing connection — `googlePlayBillingServiceProvider` does not await I/O; unused `PaymentScreen` loads after first frame
+- [x] **PERF-SCR-SUB-001** const plan cards — live `SubscriptionPlansScreen` already uses `_PlanCard`; list is `AppListView.builder`
+- [x] **PERF-SCR-SUBSTAT-001** Cache subscription snapshot — `subscriptionStatusFromAppCache` paints session cache while GET `/subscriptions/status` runs
+- [x] **PERF-SCR-SUBMGMT-001** Pagination for history — `getSubscriptionHistory(page:)` + Load more on `SubscriptionManagementPage`
+- [~] **PERF-SCR-PREM-001** Defer marketing animations — `premium/premium_subscription_screen.dart` does not exist; live paywalls have no Lottie/marketing loop
+- [x] **PERF-SCR-SUPER-001** const pack cards — `_SuperlikePackCard` + `AppListView.builder` on live `SuperlikePacksScreen`
+- [~] **PERF-SCR-PFEAT-001** Static feature list — const — unused stub with Material icons; live copy is `TierComparisonScreen` const bullets
+- [x] **PERF-SCR-TIER-001** Single scroll, no nested scroll views — one `ListView` (header + cards); no `Column`+`Expanded`+inner list
+- [x] **PERF-SCR-LOCK-001** Lightweight — no heavy blur — `FeatureLockedScreen` has no `BackdropFilter`/`ImageFilter`
+- [x] **PERF-SCR-BILL-001** Paginated list — existing page/limit + `AppListView.builder`
+- [x] **PERF-SCR-PAYMETH-001** Lazy load — unused screen; first paint then post-frame fetch + `AppListView.builder`
+- [x] **PERF-SCR-ADDPAY-001** Minimal rebuild form — checkbox/busy are `ValueNotifier`s; SVG `iconPath` on the lines touched
+
 ### Safety & support
 
 | File | Tasks |
@@ -361,12 +435,26 @@
 | `message_search_screen.dart` | **PERF-SCR-MSGSEARCH-001** Debounced search; **002** result list repaint boundaries |
 | `active_sessions_screen.dart` | **PERF-SCR-SESSION-001** Simple list — builder |
 
+- [x] **PERF-SCR-BLOCK-001** `RepaintBoundary` per row — live `BlockedUsersScreen` uses `AppListView.builder` + `RepaintBoundary` around each `_BlockedUserRow`
+- [x] **PERF-SCR-SAFEC-001** Static sections — const — `_SafetyHero` and `_SafetyTips` are const widgets on live `SafetyCenterScreen`
+- [x] **PERF-SCR-EMERG-001** List builder — `EmergencyContactsScreen` uses `AppListView.builder` (info header + contact tiles)
+- [x] **PERF-SCR-HELP-001** Collapsible FAQ without full rebuild — const `_HelpFaqSection` + `PremiumFaqTile` (`ExpansionTile` owns expand state)
+- [x] **PERF-SCR-TICKET-001** Paginated tickets — page/`hasMore` + Load more on live `SupportTicketsScreen` (`AppListView.builder`)
+- [x] **PERF-SCR-REPORT-001** List builder + cache — keep last `_reports` while refresh; `AppListView.builder` of `_ReportRow`
+- [~] **PERF-SCR-FORUM-001** Lazy load posts — `CommunityForumScreen` is unrouted; already pages in `forumPostsProvider` + `AppListView.builder` + `RepaintBoundary` per post
+- [x] **PERF-SCR-MSGSEARCH-001** Debounced search — live `MessageSearchScreen` (from chat list) uses `DebouncedSearchField`
+- [x] **PERF-SCR-MSGSEARCH-002** result list repaint boundaries — `AppListView.builder` + `RepaintBoundary` around `ChatListItem` (and recent-search rows)
+- [x] **PERF-SCR-SESSION-001** Simple list — builder — `AppSettingsDetailList` / `AppListView.builder`; other-session tiles wrapped in `RepaintBoundary`
+
 ### Legal
 
 | File | Tasks |
 |------|-------|
 | `legal/terms_of_service_screen.dart` | **PERF-SCR-LEGAL-001** Use `SelectableText.rich` / lazy markdown |
 | `legal/privacy_policy_screen.dart` | **PERF-SCR-LEGAL-002** Same |
+
+- [x] **PERF-SCR-LEGAL-001** Use `SelectableText.rich` / lazy markdown — `TermsOfServiceScreen` uses `LegalDocumentView` (`AppListView.builder` + `SelectableText.rich` per section)
+- [x] **PERF-SCR-LEGAL-002** Same — `PrivacyPolicyScreen` uses the same `LegalDocumentView`
 
 ---
 

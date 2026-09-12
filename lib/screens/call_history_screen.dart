@@ -1,18 +1,20 @@
-﻿// Screen: CallHistoryScreen
+// Screen: CallHistoryScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
-import '../widgets/avatar/avatar_with_status.dart';
+import '../features/calls/presentation/widgets/call_history_avatar.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../pages/chat_page.dart';
 import '../features/calls/providers/call_provider.dart';
 import '../features/calls/data/models/call.dart';
+import '../features/user/providers/user_providers.dart';
 import '../core/responsive/responsive.dart';
 
 /// Call history screen - View call history
@@ -34,22 +36,17 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
   }
 
   Future<void> _loadCallHistory() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) setState(() => _isLoading = true);
 
     try {
-      final callProviderInstance = ref.read(callProvider);
-      final callHistory = await callProviderInstance.getCallHistory();
-
+      await ref.read(callProvider.notifier).loadCallHistory(limit: 50);
+      if (!mounted) return;
       setState(() {
-        _calls = callHistory.calls;
+        _calls = ref.read(callProvider).callHistory;
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -76,6 +73,10 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final me = ref.watch(
+      cachedCurrentUserProvider.select((a) => a.asData?.value.id ?? 0),
+    );
+
     return AppSettingsDetailScaffold(
       title: 'Call history',
       subtitle: 'Recent voice and video calls',
@@ -89,7 +90,8 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
         onPressed: _loadCallHistory,
       ),
       body: _isLoading
-          ? ListView.builder(
+          ? AppListView.builder(
+              physics: AppScroll.bouncing,
               itemCount: 5,
               padding: const EdgeInsets.all(AppSpacing.spacingLG),
               itemBuilder: (context, index) {
@@ -109,44 +111,46 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
                   message: 'Your call history will appear here',
                   iconPath: AppIcons.call,
                 )
-              : AppSettingsDetailList(
-                  children: [
-                    PremiumSettingsGroup(
-                      title: 'Recent calls',
-                      subtitle:
-                          '${_calls.length} ${_calls.length == 1 ? 'call' : 'calls'}',
-                      children: [
-                        for (final call in _calls)
-                          _CallHistoryRow(
-                            call: call,
-                            formatDuration: _formatDuration,
-                            formatTime: _formatTime,
-                            onOpenChat: () {
-                              final isOutgoing = call.callerId == 0;
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ChatPage(
-                                    userId: isOutgoing
-                                        ? call.receiverId
-                                        : call.callerId,
-                                  ),
-                                ),
-                              );
-                            },
-                            onCallAgain: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Call initiation will be implemented',
-                                  ),
-                                ),
-                              );
-                            },
+              : AppListView.builder(
+                  physics: AppScroll.bouncing,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingSM,
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingXXL,
+                  ),
+                  itemCount: _calls.length,
+                  itemBuilder: (context, index) {
+                    final call = _calls[index];
+                    return _CallHistoryRow(
+                      call: call,
+                      currentUserId: me,
+                      formatDuration: _formatDuration,
+                      formatTime: _formatTime,
+                      onOpenChat: () {
+                        final isOutgoing = call.callerId == me;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatPage(
+                              userId: isOutgoing
+                                  ? call.receiverId
+                                  : call.callerId,
+                            ),
                           ),
-                      ],
-                    ),
-                  ],
+                        );
+                      },
+                      onCallAgain: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Call initiation will be implemented',
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
     );
   }
@@ -155,6 +159,7 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
 class _CallHistoryRow extends StatelessWidget {
   const _CallHistoryRow({
     required this.call,
+    required this.currentUserId,
     required this.formatDuration,
     required this.formatTime,
     required this.onOpenChat,
@@ -162,6 +167,7 @@ class _CallHistoryRow extends StatelessWidget {
   });
 
   final Call call;
+  final int currentUserId;
   final String Function(Call) formatDuration;
   final String Function(DateTime) formatTime;
   final VoidCallback onOpenChat;
@@ -174,7 +180,7 @@ class _CallHistoryRow extends StatelessWidget {
     final secondaryTextColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.55);
     final isMissed = call.status == 'missed';
-    final isOutgoing = call.callerId == 0;
+    final isOutgoing = call.callerId == currentUserId;
     final callIcon =
         call.isVideoCall ? AppIcons.video : AppIcons.call;
     final directionIcon = isOutgoing
@@ -204,13 +210,11 @@ class _CallHistoryRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            AvatarWithStatus(
+            CallHistoryAvatar(
+              size: 52,
               imageUrl: isOutgoing
                   ? call.receiver?.avatarUrl
                   : call.caller?.avatarUrl,
-              name: displayName,
-              isOnline: false,
-              size: 52,
             ),
             const SizedBox(width: AppSpacing.spacingMD),
             Expanded(

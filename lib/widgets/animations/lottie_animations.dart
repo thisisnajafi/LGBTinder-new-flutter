@@ -1,8 +1,9 @@
-﻿// Widget: LottieAnimations
+// Widget: LottieAnimations
 // Lottie wrapper with safe fallback when assets are missing (prevents startup hangs).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Theme-aware Lottie animation with [CircularProgressIndicator] fallback.
@@ -45,7 +46,7 @@ class ThemeAwareLottie extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
+    if (!AppAnimations.animationsEnabled(context)) {
       return _resolvedFallback();
     }
 

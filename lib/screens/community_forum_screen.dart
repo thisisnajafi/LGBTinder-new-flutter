@@ -7,6 +7,7 @@ import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/common/divider_custom.dart';
 import '../widgets/error_handling/empty_state.dart';
@@ -183,7 +184,8 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
                                 refresh: true,
                               );
                         },
-                        child: ListView.builder(
+                        child: AppListView.builder(
+                          physics: AppScroll.bouncing,
                           controller: _scrollController,
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.spacingLG,
@@ -203,7 +205,8 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
                             }
 
                             final post = postsState.posts[index];
-                            return Padding(
+                            return RepaintBoundary(
+                              child: Padding(
                               padding: const EdgeInsets.only(
                                 bottom: AppSpacing.spacingMD,
                               ),
@@ -387,6 +390,7 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
                                   ],
                                 ),
                               ),
+                            ),
                             );
                           },
                         ),

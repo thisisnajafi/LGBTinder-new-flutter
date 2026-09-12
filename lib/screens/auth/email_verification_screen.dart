@@ -1,27 +1,22 @@
 // Screen: EmailVerificationScreen
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/auth_page_scaffold.dart';
-import '../../core/navigation/auth_navigation.dart';
-import '../../widgets/buttons/scale_tap_feedback.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
-import '../../features/auth/providers/auth_service_provider.dart';
+import '../../core/widgets/auth_page_scaffold.dart';
+import '../../core/responsive/responsive.dart';
 import '../../features/auth/data/models/verify_email_request.dart';
-import '../../features/auth/data/models/register_request.dart';
+import '../../features/auth/presentation/widgets/email_verification_form.dart';
+import '../../features/auth/providers/auth_service_provider.dart';
+import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
-import 'package:go_router/go_router.dart';
-import '../../pages/profile_wizard_page.dart';
-import '../../routes/app_router.dart';
-import '../../core/responsive/responsive.dart';
+import '../../widgets/buttons/gradient_button.dart';
 
 /// Email verification screen - Email verification flow with 6-digit code
 class EmailVerificationScreen extends ConsumerStatefulWidget {
@@ -31,34 +26,35 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
   final String? lastName;
 
   const EmailVerificationScreen({
-    Key? key,
+    super.key,
     required this.email,
     this.isNewUser = true,
     this.firstName,
     this.lastName,
-  }) : super(key: key);
+  });
 
   @override
-  ConsumerState<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  ConsumerState<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
-class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScreen> {
-  final List<TextEditingController> _codeControllers = List.generate(6, (_) => TextEditingController());
+class _EmailVerificationScreenState
+    extends ConsumerState<EmailVerificationScreen> {
+  final List<TextEditingController> _codeControllers =
+      List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
-  bool _isVerifying = false;
-  bool _isResending = false;
-  int _resendCountdown = 0;
-  Timer? _countdownTimer;
+  final _isVerifying = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
-    _startResendCountdown(120); // 2 minutes initial countdown
     if (widget.email.trim().isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email is missing. Please restart verification.')),
+          const SnackBar(
+            content: Text('Email is missing. Please restart verification.'),
+          ),
         );
         context.go(AppRoutes.welcome);
       });
@@ -67,44 +63,25 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
 
   @override
   void dispose() {
-    for (var controller in _codeControllers) {
+    for (final controller in _codeControllers) {
       controller.dispose();
     }
-    for (var node in _focusNodes) {
+    for (final node in _focusNodes) {
       node.dispose();
     }
-    _countdownTimer?.cancel();
+    _isVerifying.dispose();
     super.dispose();
-  }
-
-  void _startResendCountdown(int seconds) {
-    setState(() {
-      _resendCountdown = seconds;
-    });
-    _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendCountdown > 0) {
-        setState(() {
-          _resendCountdown--;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
   }
 
   void _onCodeChanged(int index, String value) {
     if (value.length == 1) {
-      // Move to next field
       if (index < 5) {
         _focusNodes[index + 1].requestFocus();
       } else {
-        // Last field filled, verify automatically
         _focusNodes[index].unfocus();
         _verifyCode();
       }
     } else if (value.isEmpty && index > 0) {
-      // Move to previous field on backspace
       _focusNodes[index - 1].requestFocus();
     }
   }
@@ -122,13 +99,11 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
       return;
     }
 
-    setState(() {
-      _isVerifying = true;
-    });
+    _isVerifying.value = true;
 
     try {
       final authService = ref.read(authServiceProvider);
-      
+
       final request = VerifyEmailRequest(
         email: widget.email,
         code: code,
@@ -137,12 +112,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
       final response = await authService.verifyEmail(request);
 
       if (mounted) {
-        // Save token if provided (for profile completion)
-        if (response.token != null) {
-          // Token is already saved in auth service, but we can verify here
-        }
-
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Email verified successfully!'),
@@ -151,30 +120,24 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           ),
         );
 
-        // Navigate based on profile completion status
-        if (mounted) {
-          // Check if profile is completed
-          if (response.profileCompleted) {
-            // Profile is completed, go to home
-            context.go(AppRoutes.home);
-          } else {
-            // Profile not completed, go to profile wizard
-            final params = <String, String>{};
-            final firstName = widget.firstName?.trim();
-            final lastName = widget.lastName?.trim();
-            if (firstName != null && firstName.isNotEmpty) {
-              params['firstName'] = firstName;
-            }
-            if (lastName != null && lastName.isNotEmpty) {
-              params['lastName'] = lastName;
-            }
-            context.go(
-              Uri(
-                path: AppRoutes.profileWizard,
-                queryParameters: params.isEmpty ? null : params,
-              ).toString(),
-            );
+        if (response.profileCompleted) {
+          context.go(AppRoutes.home);
+        } else {
+          final params = <String, String>{};
+          final firstName = widget.firstName?.trim();
+          final lastName = widget.lastName?.trim();
+          if (firstName != null && firstName.isNotEmpty) {
+            params['firstName'] = firstName;
           }
+          if (lastName != null && lastName.isNotEmpty) {
+            params['lastName'] = lastName;
+          }
+          context.go(
+            Uri(
+              path: AppRoutes.profileWizard,
+              queryParameters: params.isEmpty ? null : params,
+            ).toString(),
+          );
         }
       }
     } on ApiError catch (e) {
@@ -184,8 +147,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           e,
           customMessage: 'Verification failed',
         );
-        // Clear code on error
-        for (var controller in _codeControllers) {
+        for (final controller in _codeControllers) {
           controller.clear();
         }
         _focusNodes[0].requestFocus();
@@ -197,51 +159,38 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           e,
           customMessage: 'Verification failed',
         );
-        // Clear code on error
-        for (var controller in _codeControllers) {
+        for (final controller in _codeControllers) {
           controller.clear();
         }
         _focusNodes[0].requestFocus();
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isVerifying = false;
-        });
+        _isVerifying.value = false;
       }
     }
   }
 
-  Future<void> _resendCode() async {
-    if (_resendCountdown > 0) {
-      return;
-    }
-
-    setState(() {
-      _isResending = true;
-    });
-
+  Future<bool> _resendCode() async {
     try {
       final authService = ref.read(authServiceProvider);
-
-      // Use the proper resend verification endpoint
-      if (widget.isNewUser == true) {
-        // For new user registration, use resend-verification
+      if (widget.isNewUser) {
         await authService.resendVerificationCode(widget.email);
       } else {
-        // For existing user verification, use resend-verification-existing
         await authService.requestVerificationCodeForExistingUser(widget.email);
       }
 
       if (mounted) {
-        _startResendCountdown(120); // 2 minutes countdown
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Verification code sent! Please check your email.'),
+            content: const Text(
+              'Verification code sent! Please check your email.',
+            ),
             backgroundColor: AppColors.onlineGreen,
           ),
         );
       }
+      return true;
     } on ApiError catch (e) {
       if (mounted) {
         ErrorHandlerService.showErrorSnackBar(
@@ -250,6 +199,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           customMessage: 'Failed to resend code',
         );
       }
+      return false;
     } catch (e) {
       if (mounted) {
         ErrorHandlerService.handleError(
@@ -258,12 +208,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           customMessage: 'Failed to resend code',
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isResending = false;
-        });
-      }
+      return false;
     }
   }
 
@@ -271,11 +216,10 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return AuthPageScaffold(
       title: 'Verify Email',
@@ -288,208 +232,92 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         context.go(widget.isNewUser ? AppRoutes.register : AppRoutes.login);
       },
       body: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.spacingLG),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(height: AppSpacing.spacingXXL),
-              Center(
-                child: AppSvgIcon(
-                  assetPath: AppIcons.message,
-                  size: 80,
-                  color: AppColors.accentViolet,
+        padding: const EdgeInsets.all(AppSpacing.spacingLG),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: AppSpacing.spacingXXL),
+            Center(
+              child: AppSvgIcon(
+                assetPath: AppIcons.message,
+                size: 80,
+                color: AppColors.accentViolet,
+              ),
+            ),
+            SizedBox(height: AppSpacing.spacingXL),
+            Text(
+              'Verify Your Email',
+              style: AppTypography.h1.copyWith(color: textColor),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppSpacing.spacingMD),
+            Text(
+              "We've sent a 6-digit verification code to",
+              style: AppTypography.body.copyWith(color: secondaryTextColor),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppSpacing.spacingXS),
+            AppText(
+              widget.email,
+              style: AppTypography.body.copyWith(
+                color: AppColors.accentPurple,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+            ),
+            SizedBox(height: AppSpacing.spacingXXL),
+            EmailOtpFields(
+              controllers: _codeControllers,
+              focusNodes: _focusNodes,
+              onChanged: _onCodeChanged,
+            ),
+            SizedBox(height: AppSpacing.spacingXL),
+            ValueListenableBuilder<bool>(
+              valueListenable: _isVerifying,
+              builder: (context, verifying, _) {
+                return GradientButton(
+                  text: verifying ? 'Verifying...' : 'Verify Email',
+                  onPressed: verifying ? null : _verifyCode,
+                  isLoading: verifying,
+                  isFullWidth: true,
+                  iconPath: AppIcons.shieldTick,
+                );
+              },
+            ),
+            SizedBox(height: AppSpacing.spacingLG),
+            EmailResendRow(onResend: _resendCode),
+            SizedBox(height: AppSpacing.spacingXL),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.spacingMD),
+              decoration: BoxDecoration(
+                color: AppColors.accentPurple.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                border: Border.all(
+                  color: AppColors.accentPurple.withValues(alpha: 0.3),
                 ),
               ),
-              SizedBox(height: AppSpacing.spacingXL),
-              // Title
-              Text(
-                'Verify Your Email',
-                style: AppTypography.h1.copyWith(
-                  color: textColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: AppSpacing.spacingMD),
-              // Description
-              Text(
-                'We\'ve sent a 6-digit verification code to',
-                style: AppTypography.body.copyWith(
-                  color: secondaryTextColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: AppSpacing.spacingXS),
-              AppText(
-                widget.email,
-                style: AppTypography.body.copyWith(
-                  color: AppColors.accentPurple,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-              ),
-              SizedBox(height: AppSpacing.spacingXXL),
-              // Code input fields — flexible width for small screens
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  const gap = AppSpacing.spacingSM;
-                  const fieldCount = 6;
-                  final fieldWidth = ((constraints.maxWidth - gap * (fieldCount - 1)) /
-                          fieldCount)
-                      .clamp(40.0, 56.0);
-                  final fieldHeight = (fieldWidth * 1.2).clamp(52.0, 60.0);
-
-                  return Row(
-                    children: [
-                      for (var index = 0; index < fieldCount; index++) ...[
-                        if (index > 0) SizedBox(width: gap),
-                        Expanded(
-                          child: _buildCodeField(
-                            index: index,
-                            controller: _codeControllers[index],
-                            focusNode: _focusNodes[index],
-                            textColor: textColor,
-                            secondaryTextColor: secondaryTextColor,
-                            surfaceColor: surfaceColor,
-                            borderColor: borderColor,
-                            height: fieldHeight,
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                },
-              ),
-              SizedBox(height: AppSpacing.spacingXL),
-              // Verify button
-              GradientButton(
-                text: _isVerifying ? 'Verifying...' : 'Verify Email',
-                onPressed: _isVerifying ? null : _verifyCode,
-                isLoading: _isVerifying,
-                isFullWidth: true,
-                iconPath: AppIcons.shieldTick,
-              ),
-              SizedBox(height: AppSpacing.spacingLG),
-              // Resend code
-              Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Didn\'t receive the code? ',
-                    style: AppTypography.body.copyWith(
-                      color: secondaryTextColor,
+                  AppSvgIcon(
+                    assetPath: AppIcons.info,
+                    color: AppColors.accentViolet,
+                    size: 20,
+                  ),
+                  SizedBox(width: AppSpacing.spacingMD),
+                  Expanded(
+                    child: Text(
+                      "The code will expire in 5 minutes. Check your spam folder if you don't see the email.",
+                      style: AppTypography.caption.copyWith(color: textColor),
                     ),
                   ),
-                  if (_resendCountdown > 0)
-                    Text(
-                      'Resend in ${_formatCountdown(_resendCountdown)}',
-                      style: AppTypography.body.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    )
-                  else
-                    TextButton(
-                      onPressed: _isResending ? null : _resendCode,
-                      child: Text(
-                        _isResending ? 'Sending...' : 'Resend Code',
-                        style: AppTypography.button.copyWith(
-                          color: AppColors.accentPurple,
-                        ),
-                      ),
-                    ),
                 ],
               ),
-              SizedBox(height: AppSpacing.spacingXL),
-              // Help text
-              Container(
-                padding: EdgeInsets.all(AppSpacing.spacingMD),
-                decoration: BoxDecoration(
-                  color: AppColors.accentPurple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  border: Border.all(
-                    color: AppColors.accentPurple.withOpacity(0.3),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppSvgIcon(
-                      assetPath: AppIcons.info,
-                      color: AppColors.accentViolet,
-                      size: 20,
-                    ),
-                    SizedBox(width: AppSpacing.spacingMD),
-                    Expanded(
-                      child: Text(
-                        'The code will expire in 5 minutes. Check your spam folder if you don\'t see the email.',
-                        style: AppTypography.caption.copyWith(
-                          color: textColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-    );
-  }
-
-  Widget _buildCodeField({
-    required int index,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-    required double height,
-  }) {
-    return AnimatedBuilder(
-      animation: focusNode,
-      builder: (context, child) {
-        return Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            border: Border.all(
-              color: focusNode.hasFocus
-                  ? AppColors.accentPurple
-                  : borderColor,
-              width: focusNode.hasFocus ? 2 : 1,
             ),
-          ),
-          child: child,
-        );
-      },
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: AppTypography.h1.copyWith(
-          color: textColor,
+          ],
         ),
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-        ],
-        decoration: const InputDecoration(
-          counterText: '',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-        ),
-        onChanged: (value) => _onCodeChanged(index, value),
       ),
     );
-  }
-
-  String _formatCountdown(int seconds) {
-    final minutes = seconds ~/ 60;
-    final secs = seconds % 60;
-    return '${minutes}:${secs.toString().padLeft(2, '0')}';
   }
 }

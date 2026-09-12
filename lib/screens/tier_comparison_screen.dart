@@ -63,85 +63,71 @@ class TierComparisonScreen extends StatelessWidget {
           title: 'Compare tiers',
           subtitle: 'Choose the plan that fits you',
           onBack: () => context.pop(),
-          body: Column(
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.spacingLG,
+              0,
+              AppSpacing.spacingLG,
+              AppSpacing.spacingMD,
+            ),
             children: [
-              Material(
-                color: theme.colorScheme.surface,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.spacingLG,
-                    0,
-                    AppSpacing.spacingLG,
-                    AppSpacing.spacingMD,
-                  ),
-                  child: AppText(
-                    'Current plan: ${currentTier.displayLabel}',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                  ),
+              AppText(
+                'Current plan: ${currentTier.displayLabel}',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+              ),
+              const SizedBox(height: AppSpacing.spacingMD),
+              Text(
+                'Upgrade anytime. Your benefits update instantly.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: secondaryTextColor,
                 ),
               ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingLG,
-                  ),
-                  children: [
-                    Text(
-                      'Upgrade anytime. Your benefits update instantly.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.spacingXL),
-                    _TierCard(
-                      title: 'Basic',
-                      subtitle: _priceFor(plans, UserTier.basid).isEmpty
-                          ? 'Great to start'
-                          : _priceFor(plans, UserTier.basid),
-                      accent: AppColors.accentViolet,
-                      isCurrent: currentTier == UserTier.basid,
-                      bullets: const [
-                        'Discovery + swiping',
-                        'Basic messaging limits',
-                        'Standard filters',
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.spacingLG),
-                    _TierCard(
-                      title: 'Silver',
-                      subtitle: _priceFor(plans, UserTier.silder).isEmpty
-                          ? 'Best for faster matches'
-                          : _priceFor(plans, UserTier.silder),
-                      accent: AppColors.accentPink,
-                      highlight: true,
-                      isCurrent: currentTier == UserTier.silder,
-                      bullets: const [
-                        'See who liked you',
-                        'Advanced filters',
-                        'More superlikes/boosts',
-                        'More messaging freedom',
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.spacingLG),
-                    _TierCard(
-                      title: 'Golden',
-                      subtitle: _priceFor(plans, UserTier.golden).isEmpty
-                          ? 'Everything unlocked'
-                          : _priceFor(plans, UserTier.golden),
-                      accent: AppColors.feedbackWarning,
-                      isCurrent: currentTier == UserTier.golden,
-                      bullets: const [
-                        'All Silver benefits',
-                        'Highest limits + priority perks',
-                        'Exclusive badges/visibility boosts',
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.spacingXXL),
-                  ],
-                ),
+              const SizedBox(height: AppSpacing.spacingXL),
+              _TierCard(
+                title: 'Basic',
+                subtitle: _priceFor(plans, UserTier.basid).isEmpty
+                    ? 'Great to start'
+                    : _priceFor(plans, UserTier.basid),
+                accent: AppColors.accentViolet,
+                isCurrent: currentTier == UserTier.basid,
+                bullets: const [
+                  'Discovery + swiping',
+                  'Basic messaging limits',
+                  'Standard filters',
+                ],
+              ),
+              const SizedBox(height: AppSpacing.spacingLG),
+              _TierCard(
+                title: 'Silver',
+                subtitle: _priceFor(plans, UserTier.silder).isEmpty
+                    ? 'Best for faster matches'
+                    : _priceFor(plans, UserTier.silder),
+                accent: AppColors.accentPink,
+                highlight: true,
+                isCurrent: currentTier == UserTier.silder,
+                bullets: const [
+                  'See who liked you',
+                  'Advanced filters',
+                  'More superlikes/boosts',
+                  'More messaging freedom',
+                ],
+              ),
+              const SizedBox(height: AppSpacing.spacingLG),
+              _TierCard(
+                title: 'Golden',
+                subtitle: _priceFor(plans, UserTier.golden).isEmpty
+                    ? 'Everything unlocked'
+                    : _priceFor(plans, UserTier.golden),
+                accent: AppColors.feedbackWarning,
+                isCurrent: currentTier == UserTier.golden,
+                bullets: const [
+                  'All Silver benefits',
+                  'Highest limits + priority perks',
+                  'Exclusive badges/visibility boosts',
+                ],
               ),
             ],
           ),

@@ -12,9 +12,10 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_list_view.dart';
 import '../../core/widgets/app_settings_detail.dart';
+import '../../core/widgets/optimized_image.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
-import '../../core/widgets/profile_image_widget.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/matching/providers/likes_providers.dart';
 import '../../features/profile/widgets/tier_badge.dart';
@@ -275,20 +276,20 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
 
   Widget _buildBody(BuildContext context) {
     if (_isLoading) {
-      return ListView(
+      return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-        children: [
-          for (var i = 0; i < 3; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
-              child: SkeletonLoader(
-                width: double.infinity,
-                height: 168,
-                borderRadius: BorderRadius.circular(AppRadius.radiusXL),
-              ),
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+            child: SkeletonLoader(
+              width: double.infinity,
+              height: 168,
+              borderRadius: BorderRadius.circular(AppRadius.radiusXL),
             ),
-        ],
+          );
+        },
       );
     }
 
@@ -304,33 +305,46 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
 
     return PremiumRefreshIndicator(
       onRefresh: _loadLikes,
-      child: AppSettingsDetailList(
-        children: [
-          PremiumSettingsGroup(
-            title: 'Pending likes',
-            subtitle:
-                '${_likes.length} ${_likes.length == 1 ? 'person' : 'people'}',
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-            children: [
-              for (final like in _likes)
-                _LikeCard(
-                  like: like,
-                  formatTime: _formatTime,
-                  onProfileTap: () =>
-                      _handleProfileTap(like['user_id'] as int),
-                  onPass: () => _handleDislike(like['id'] as int),
-                  onAccept: () => _handleLike(like['id'] as int),
-                ),
-            ],
-          ),
-        ],
+      child: AppListView.builder(
+        key: const ValueKey('likes_received_list'),
+        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
+        itemCount: _likes.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.spacingLG,
+                AppSpacing.spacingMD,
+                AppSpacing.spacingLG,
+                AppSpacing.spacingSM,
+              ),
+              child: PremiumSectionHeader(
+                title: 'Pending likes',
+                subtitle:
+                    '${_likes.length} ${_likes.length == 1 ? 'person' : 'people'}',
+              ),
+            );
+          }
+          final like = _likes[index - 1];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+            child: LikesReceivedCard(
+              like: like,
+              formatTime: _formatTime,
+              onProfileTap: () => _handleProfileTap(like['user_id'] as int),
+              onPass: () => _handleDislike(like['id'] as int),
+              onAccept: () => _handleLike(like['id'] as int),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _LikeCard extends StatelessWidget {
-  const _LikeCard({
+class LikesReceivedCard extends StatelessWidget {
+  const LikesReceivedCard({
+    super.key,
     required this.like,
     required this.formatTime,
     required this.onProfileTap,
@@ -382,11 +396,12 @@ class _LikeCard extends StatelessWidget {
                       clipBehavior: Clip.none,
                       children: [
                         ClipOval(
-                          child: ProfileImageWidget(
-                            imageUrl: like['avatar_url'] as String?,
+                          child: OptimizedImage(
+                            imageUrl: (like['avatar_url'] as String?) ?? '',
                             width: 56,
                             height: 56,
                             fit: BoxFit.cover,
+                            size: ImageSize.thumbnail,
                           ),
                         ),
                         if (like['is_verified'] == true)

@@ -9,6 +9,7 @@ import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/widgets/app_list_view.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/settings/presentation/screens/account_details_screen.dart';
@@ -18,10 +19,6 @@ import '../../../features/settings/presentation/screens/sound_preferences_screen
 import '../../../routes/app_router.dart';
 import '../../../routes/home_tab_routes.dart';
 import '../../../screens/active_sessions_screen.dart';
-import '../../../screens/blocked_users_screen.dart';
-import '../../../screens/help_support_screen.dart';
-import '../../../screens/legal/privacy_policy_screen.dart';
-import '../../../screens/legal/terms_of_service_screen.dart';
 import '../../../screens/notification_settings_screen.dart';
 import '../../../screens/privacy_settings_screen.dart';
 import '../../../screens/two_factor_auth_screen.dart';
@@ -93,19 +90,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-
-    return PremiumTabPageLayout(
-      title: 'Settings',
-      subtitle: 'Your account, privacy, and preferences',
-      onRefresh: () async {
-        await ref.read(appCacheManagerProvider).revalidateAll();
-        await _loadVersion();
-      },
-      body: ListView(
-        physics: AppScroll.bouncing,
-        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
-        children: [
-          PremiumHubGridSection(
+    final sections = <Widget>[
+      PremiumHubGridSection(
             title: 'Quick access',
             subtitle: 'Essential account tools',
             actions: [
@@ -256,7 +242,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ],
           ),
-        ],
+    ];
+
+    return PremiumTabPageLayout(
+      title: 'Settings',
+      subtitle: 'Your account, privacy, and preferences',
+      onRefresh: () async {
+        await ref.read(appCacheManagerProvider).revalidateAll();
+        await _loadVersion();
+      },
+      body: AppListView.builder(
+        physics: AppScroll.bouncing,
+        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
+        itemCount: sections.length,
+        itemBuilder: (context, index) => sections[index],
       ),
     );
   }

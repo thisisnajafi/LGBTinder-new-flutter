@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/app_motion_prefs_provider.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -170,9 +171,34 @@ class _SoundPreferencesScreenState extends ConsumerState<SoundPreferencesScreen>
               iconPath: AppIcons.getIconPath('mobile'),
               enabled: !_isSaving,
             ),
+            _AppHapticsToggle(saving: _isSaving),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _AppHapticsToggle extends ConsumerWidget {
+  const _AppHapticsToggle({required this.saving});
+
+  final bool saving;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(
+      appMotionPrefsProvider.select((s) => s.hapticsEnabled),
+    );
+    return PremiumToggleRow(
+      title: 'Haptic feedback',
+      subtitle: 'Taps, refresh, and UI confirmation',
+      value: enabled,
+      iconPath: AppIcons.getIconPath('mobile'),
+      enabled: !saving,
+      onChanged: saving
+          ? (_) {}
+          : (value) =>
+              ref.read(appMotionPrefsProvider.notifier).setHapticsEnabled(value),
     );
   }
 }

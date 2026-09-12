@@ -56,10 +56,42 @@ final chatLocalSyncProvider = Provider<void>((ref) {
     unawaited(localRepo.upsertMessage(message, otherUserId));
   });
 
+  final expiredSub = pusher.messageExpiredStream.listen((event) {
+    unawaited(localRepo.markServerMessageExpired(event.messageId));
+  });
+
+  final readSub = pusher.readReceiptStream.listen((event) {
+    unawaited(localRepo.markServerMessagesRead(event.messageIds));
+  });
+
+  final deliveredSub = pusher.messageDeliveredStream.listen((event) {
+    unawaited(localRepo.markServerMessagesDelivered(event.messageIds));
+  });
+
+  final reactedSub = pusher.messageReactedStream.listen((event) {
+    if (event.messageId <= 0) return;
+    final currentUserId =
+        ref.read(chatPusherLifecycleProvider).userId ?? pusher.currentUserId;
+    final mineIsCurrentUser =
+        currentUserId != null && currentUserId > 0 && event.userId == currentUserId;
+    unawaited(
+      localRepo.patchMessageReactions(
+        serverId: event.messageId,
+        counts: event.counts,
+        mine: event.reacted ? event.emoji : null,
+        updateMine: mineIsCurrentUser,
+      ),
+    );
+  });
+
   ref.onDispose(() {
     unawaited(messageSub.cancel());
     unawaited(deletedSub.cancel());
     unawaited(editedSub.cancel());
+    unawaited(expiredSub.cancel());
+    unawaited(readSub.cancel());
+    unawaited(deliveredSub.cancel());
+    unawaited(reactedSub.cancel());
   });
 });
 

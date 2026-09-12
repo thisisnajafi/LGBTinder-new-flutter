@@ -1,27 +1,26 @@
 // Screen: RegisterScreen
-import 'package:flutter/gestures.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:email_validator/email_validator.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../../core/utils/app_icons.dart';
+import '../../core/utils/app_device_name.dart';
 import '../../core/widgets/auth_page_scaffold.dart';
-import '../../features/auth/presentation/widgets/terms_agreement_tile.dart';
-import '../../features/auth/presentation/widgets/social_login_button.dart';
-import 'dart:io';
-import 'package:device_info_plus/device_info_plus.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../features/auth/providers/auth_service_provider.dart';
 import '../../features/auth/data/models/register_request.dart';
+import '../../features/auth/presentation/widgets/register_form.dart';
+import '../../features/auth/presentation/widgets/social_login_button.dart';
+import '../../features/auth/providers/auth_service_provider.dart';
+import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
-import 'package:go_router/go_router.dart';
-import '../../routes/app_router.dart';
+import '../../widgets/buttons/gradient_button.dart';
 
 /// Register screen - User registration
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
 
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
@@ -34,27 +33,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
-  bool _agreeToTerms = false;
-  late final TapGestureRecognizer _termsTap;
-  late final TapGestureRecognizer _privacyTap;
+  final _isLoading = ValueNotifier<bool>(false);
+  final _agreeToTerms = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
-    _termsTap = TapGestureRecognizer();
-    _privacyTap = TapGestureRecognizer();
+    unawaited(AppDeviceName.resolve());
   }
 
   @override
   void dispose() {
-    _termsTap.dispose();
-    _privacyTap.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _isLoading.dispose();
+    _agreeToTerms.dispose();
     super.dispose();
   }
 
@@ -63,20 +59,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    if (!_agreeToTerms) {
+    if (!_agreeToTerms.value) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please agree to the terms and conditions')),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    _isLoading.value = true;
 
     try {
       final authService = ref.read(authServiceProvider);
-      
+
       final request = RegisterRequest(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -88,29 +82,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final response = await authService.register(request);
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response.emailSent 
+            content: Text(response.emailSent
                 ? 'Verification code sent to ${response.email}'
                 : 'Registration successful. Please check your email.'),
             backgroundColor: AppColors.onlineGreen,
           ),
         );
 
-        // Navigate to email verification screen
-        if (mounted) {
-          final target = Uri(
-            path: AppRoutes.emailVerification,
-            queryParameters: {
-              'email': response.email,
-              'isNewUser': 'true',
-              'firstName': _firstNameController.text.trim(),
-              'lastName': _lastNameController.text.trim(),
-            },
-          ).toString();
-          context.push(target);
-        }
+        final target = Uri(
+          path: AppRoutes.emailVerification,
+          queryParameters: {
+            'email': response.email,
+            'isNewUser': 'true',
+            'firstName': _firstNameController.text.trim(),
+            'lastName': _lastNameController.text.trim(),
+          },
+        ).toString();
+        context.push(target);
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -130,186 +120,56 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        _isLoading.value = false;
       }
     }
   }
 
-  Future<String> _getDeviceName() async {
-    try {
-      final deviceInfo = DeviceInfoPlugin();
-      if (Platform.isAndroid) {
-        final androidInfo = await deviceInfo.androidInfo;
-        return '${androidInfo.brand} ${androidInfo.model}';
-      } else if (Platform.isIOS) {
-        final iosInfo = await deviceInfo.iosInfo;
-        return '${iosInfo.name} (${iosInfo.model})';
-      }
-    } catch (_) {}
-    return 'Unknown Device';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final secondaryTextColor = theme.brightness == Brightness.dark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
-
-    _termsTap.onTap = () => context.push(AppRoutes.termsOfService);
-    _privacyTap.onTap = () => context.push(AppRoutes.privacyPolicy);
-
     return AuthPageScaffold(
       title: 'Create Account',
       subtitle: 'Join the community',
       body: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.spacingLG),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AuthTextField(
-                  controller: _firstNameController,
-                  labelText: 'First Name',
-                  hintText: 'Enter your first name',
-                  prefixIconPath: AppIcons.user,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your first name';
-                    }
-                    if (value.length < 2) {
-                      return 'First name must be at least 2 characters';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                AuthTextField(
-                  controller: _lastNameController,
-                  labelText: 'Last Name',
-                  hintText: 'Enter your last name',
-                  prefixIconPath: AppIcons.user,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your last name';
-                    }
-                    if (value.length < 2) {
-                      return 'Last name must be at least 2 characters';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                AuthTextField(
-                  controller: _emailController,
-                  labelText: 'Email',
-                  hintText: 'Enter your email',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIconPath: AppIcons.emailOutlined,
-                  autocorrect: false,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!EmailValidator.validate(value.trim())) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                AuthTextField(
-                  controller: _passwordController,
-                  labelText: 'Password',
-                  hintText: 'Enter your password',
-                  obscureText: true,
-                  prefixIconPath: AppIcons.lockOutlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                AuthTextField(
-                  controller: _confirmPasswordController,
-                  labelText: 'Confirm Password',
-                  hintText: 'Confirm your password',
-                  obscureText: true,
-                  prefixIconPath: AppIcons.lockOutlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: AppSpacing.spacingMD),
-                TermsAgreementTile(
-                  value: _agreeToTerms,
-                  onChanged: (value) {
-                    setState(() => _agreeToTerms = value);
-                  },
-                  termsRecognizer: _termsTap,
-                  privacyRecognizer: _privacyTap,
-                ),
-                SizedBox(height: AppSpacing.spacingXXL),
-                // Register button
-                GradientButton(
-                  text: 'Create Account',
-                  onPressed: _isLoading ? null : _handleRegister,
-                  isLoading: _isLoading,
-                  isFullWidth: true,
-                ),
-                SizedBox(height: AppSpacing.spacingLG),
-                const AuthOrDivider(),
-                SizedBox(height: AppSpacing.spacingLG),
-                SocialLoginButton(getDeviceName: _getDeviceName),
-                SizedBox(height: AppSpacing.spacingLG),
-                // Sign in link
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Already have an account? ',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        context.push(AppRoutes.login);
-                      },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'Sign In',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: AppColors.accentViolet,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        padding: const EdgeInsets.all(AppSpacing.spacingLG),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              RegisterCredentialsFields(
+                firstNameController: _firstNameController,
+                lastNameController: _lastNameController,
+                emailController: _emailController,
+                passwordController: _passwordController,
+                confirmPasswordController: _confirmPasswordController,
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+              RegisterTermsBlock(agreed: _agreeToTerms),
+              SizedBox(height: AppSpacing.spacingXXL),
+              ValueListenableBuilder<bool>(
+                valueListenable: _isLoading,
+                builder: (context, loading, _) {
+                  return GradientButton(
+                    text: 'Create Account',
+                    onPressed: loading ? null : _handleRegister,
+                    isLoading: loading,
+                    isFullWidth: true,
+                  );
+                },
+              ),
+              SizedBox(height: AppSpacing.spacingLG),
+              const AuthOrDivider(),
+              SizedBox(height: AppSpacing.spacingLG),
+              const SocialLoginButton(
+                getDeviceName: AppDeviceName.resolve,
+              ),
+              SizedBox(height: AppSpacing.spacingLG),
+              const RegisterSignInFooter(),
+            ],
           ),
         ),
+      ),
     );
   }
 }

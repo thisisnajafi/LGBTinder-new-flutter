@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/providers/subscription_provider.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
@@ -11,6 +12,7 @@ import '../routes/app_router.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loading.dart';
+import '../features/payments/data/models/subscription_plan.dart';
 import '../core/responsive/responsive.dart';
 
 class SubscriptionStatusScreen extends ConsumerWidget {
@@ -21,115 +23,129 @@ class SubscriptionStatusScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
     final statusAsync = ref.watch(subscriptionStatusProvider);
+    final cached = subscriptionStatusFromAppCache(ref.watch(subscriptionProvider));
+    final status = statusAsync.valueOrNull ?? cached;
 
     return PremiumDetailScaffold(
       title: 'Subscription',
       subtitle: 'Your membership status',
-      body: statusAsync.when(
-        loading: () => const SkeletonLoading(),
-        error: (_, __) => EmptyState(
-          title: 'Unable to load subscription',
-          message: 'Please try again.',
-          iconPath: AppIcons.warning,
-          actionLabel: 'Retry',
-          onAction: () => ref.invalidate(subscriptionStatusProvider),
-          secondaryActionLabel: 'Contact support',
-          onSecondaryAction: () => context.push(AppRoutes.helpSupport),
-        ),
-        data: (status) {
-          final isActive = status?.isActive == true;
-          final planName = status?.planName ?? (isActive ? 'Premium' : 'Free');
-          final end = status?.endDate;
-          final statusColor =
-              isActive ? AppColors.feedbackSuccess : AppColors.accentViolet;
-          final statusIcon =
-              isActive ? AppIcons.shieldTick : AppIcons.crown;
+      body: status == null && statusAsync.isLoading
+          ? const SkeletonLoading()
+          : status == null
+              ? EmptyState(
+                  title: 'Unable to load subscription',
+                  message: 'Please try again.',
+                  iconPath: AppIcons.warning,
+                  actionLabel: 'Retry',
+                  onAction: () => ref.invalidate(subscriptionStatusProvider),
+                  secondaryActionLabel: 'Contact support',
+                  onSecondaryAction: () => context.push(AppRoutes.helpSupport),
+                )
+              : _SubscriptionStatusBody(status: status, muted: muted),
+    );
+  }
+}
 
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.spacingLG),
+class _SubscriptionStatusBody extends StatelessWidget {
+  const _SubscriptionStatusBody({
+    required this.status,
+    required this.muted,
+  });
+
+  final SubscriptionStatus status;
+  final Color muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isActive = status.isActive;
+    final planName = status.planName ?? (isActive ? 'Premium' : 'Free');
+    final end = status.endDate;
+    final statusColor =
+        isActive ? AppColors.feedbackSuccess : AppColors.accentViolet;
+    final statusIcon = isActive ? AppIcons.shieldTick : AppIcons.crown;
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.spacingLG),
+      children: [
+        PremiumShell(
+          margin: EdgeInsets.zero,
+          child: Row(
             children: [
-              PremiumShell(
-                margin: EdgeInsets.zero,
-                child: Row(
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: statusIcon,
+                    size: 24,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.spacingMD),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
+                    Text(
+                      isActive ? 'Active' : 'Not active',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w700,
                       ),
-                      child: Center(
-                        child: AppSvgIcon(
-                          assetPath: statusIcon,
-                          size: 24,
-                          color: statusColor,
+                    ),
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    AppText(
+                      planName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 2,
+                    ),
+                    if (end != null) ...[
+                      const SizedBox(height: AppSpacing.spacingSM),
+                      AppText(
+                        'Ends: ${end.toLocal().toString().split('.').first}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
                         ),
+                        maxLines: 2,
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.spacingMD),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isActive ? 'Active' : 'Not active',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: statusColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.spacingXS),
-                          AppText(
-                            planName,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                            maxLines: 2,
-                          ),
-                          if (end != null) ...[
-                            const SizedBox(height: AppSpacing.spacingSM),
-                            AppText(
-                              'Ends: ${end.toLocal().toString().split('.').first}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: muted,
-                              ),
-                              maxLines: 2,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.spacingXL),
-              if (isActive) ...[
-                GradientButton(
-                  text: 'Manage subscription',
-                  onPressed: () =>
-                      context.push(AppRoutes.subscriptionManagement),
-                  isFullWidth: true,
-                ),
-              ] else ...[
-                GradientButton(
-                  text: 'Upgrade',
-                  onPressed: () => context.push(AppRoutes.subscriptionPlans),
-                  isFullWidth: true,
-                ),
-                const SizedBox(height: AppSpacing.spacingMD),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => context.push(AppRoutes.tierComparison),
-                    child: const Text('Compare tiers'),
-                  ),
-                ),
-              ],
             ],
-          );
-        },
-      ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.spacingXL),
+        if (isActive)
+          GradientButton(
+            text: 'Manage subscription',
+            onPressed: () => context.push(AppRoutes.subscriptionManagement),
+            isFullWidth: true,
+          )
+        else ...[
+          GradientButton(
+            text: 'Upgrade',
+            onPressed: () => context.push(AppRoutes.subscriptionPlans),
+            isFullWidth: true,
+          ),
+          const SizedBox(height: AppSpacing.spacingMD),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => context.push(AppRoutes.tierComparison),
+              child: const Text('Compare tiers'),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -9,8 +9,9 @@ import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_date_time.dart';
 import '../../../core/utils/app_icons.dart';
 import '../../../core/utils/media_url.dart';
+import '../../../core/widgets/app_list_view.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
-import '../../../core/widgets/profile_image_widget.dart';
+import '../presentation/widgets/call_history_avatar.dart';
 import '../../../features/user/providers/user_providers.dart';
 import '../../../widgets/error_handling/empty_state.dart';
 import '../data/models/call.dart';
@@ -57,14 +58,9 @@ class PeerCallHistoryPage extends ConsumerWidget {
     return PremiumDetailScaffold(
       title: peerName,
       subtitle: 'Call history',
-      action: ClipOval(
-        child: ProfileImageWidget(
-          imageUrl: avatarUrl,
-          userId: peerUserId,
-          width: 36,
-          height: 36,
-          fit: BoxFit.cover,
-        ),
+      action: CallHistoryAvatar(
+        size: 36,
+        imageUrl: avatarUrl,
       ),
       body: calls.isEmpty
           ? EmptyState(
@@ -72,7 +68,7 @@ class PeerCallHistoryPage extends ConsumerWidget {
               message: 'Voice and video calls with $peerName will show up here.',
               iconPath: AppIcons.call,
             )
-          : ListView.separated(
+          : AppListView.separated(
               physics: AppScroll.bouncing,
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.spacingLG,

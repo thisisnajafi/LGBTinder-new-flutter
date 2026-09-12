@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -11,7 +12,7 @@ import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
 import '../../../../../core/widgets/premium/premium_hero_header.dart';
-import '../../../../../core/widgets/profile_image_widget.dart';
+import '../../../../../core/widgets/optimized_image.dart';
 import '../../../../../core/widgets/profile_camera_badge.dart';
 import '../../../../../core/widgets/premium/profile_locked_overlay.dart';
 import '../../../../../features/matching/providers/likes_providers.dart';
@@ -87,8 +88,10 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   @override
   void initState() {
     super.initState();
-    _loadEngagementStats();
     _initPhotoController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_loadEngagementStats());
+    });
   }
 
   @override
@@ -169,7 +172,9 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildPhotoCard(context, photoSize, isDark),
+          RepaintBoundary(
+            child: _buildPhotoCard(context, photoSize, isDark),
+          ),
           const SizedBox(height: AppSpacing.spacingMD),
           _buildIdentityRow(context, isDark),
           const SizedBox(height: AppSpacing.spacingSM),
@@ -187,7 +192,9 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
           _buildQuickActions(context, isDark),
           if (!widget.viewerMode) ...[
             const SizedBox(height: AppSpacing.spacingMD),
-            _buildStatsPanel(context, isDark),
+            RepaintBoundary(
+              child: _buildStatsPanel(context, isDark),
+            ),
           ] else if (widget.matchPercent != null) ...[
             const SizedBox(height: AppSpacing.spacingMD),
             _buildViewerMatchChip(context),
@@ -253,44 +260,50 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
-                  child: hasMultiple
-                      ? PageView.builder(
-                          controller: _photoController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const PageScrollPhysics(),
-                          onPageChanged: (index) {
-                            if (!mounted) return;
-                            setState(() => _photoIndex = index);
-                          },
-                          itemCount: urls.length,
-                          itemBuilder: (context, index) {
-                            return GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: widget.onPhotoTap == null
-                                  ? null
-                                  : () => widget.onPhotoTap!(index),
-                              child: ProfileImageWidget(
-                                imageUrl: urls[index],
-                                width: size,
-                                height: size,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          },
-                        )
-                      : GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: widget.onPhotoTap == null || urls.isEmpty
-                              ? null
-                              : () => widget.onPhotoTap!(0),
-                          child: ProfileImageWidget(
-                            imageUrl:
-                                urls.isNotEmpty ? urls.first : widget.avatarUrl,
-                            width: size,
-                            height: size,
-                            fit: BoxFit.cover,
+                  child: RepaintBoundary(
+                    key: const ValueKey('profile_photo_carousel'),
+                    child: hasMultiple
+                        ? PageView.builder(
+                            controller: _photoController,
+                            scrollDirection: Axis.horizontal,
+                            physics: const PageScrollPhysics(),
+                            onPageChanged: (index) {
+                              if (!mounted) return;
+                              setState(() => _photoIndex = index);
+                            },
+                            itemCount: urls.length,
+                            itemBuilder: (context, index) {
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: widget.onPhotoTap == null
+                                    ? null
+                                    : () => widget.onPhotoTap!(index),
+                                child: OptimizedImage(
+                                  imageUrl: urls[index],
+                                  width: size,
+                                  height: size,
+                                  fit: BoxFit.cover,
+                                  size: ImageSize.small,
+                                ),
+                              );
+                            },
+                          )
+                        : GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: widget.onPhotoTap == null || urls.isEmpty
+                                ? null
+                                : () => widget.onPhotoTap!(0),
+                            child: OptimizedImage(
+                              imageUrl: urls.isNotEmpty
+                                  ? urls.first
+                                  : (widget.avatarUrl ?? ''),
+                              width: size,
+                              height: size,
+                              fit: BoxFit.cover,
+                              size: ImageSize.small,
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),

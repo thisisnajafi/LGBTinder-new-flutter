@@ -424,14 +424,11 @@ class ChatLocalRepository {
   String _historyMetaKey(int otherUserId) =>
       'chat_local_history_meta_$otherUserId';
 
-  Stream<List<Message>> watchMessagesForOtherUser(
-    int otherUserId, {
-    int limit = 50,
-  }) {
+  /// All cached messages for a peer, oldest first. Emits on every local write.
+  Stream<List<Message>> watchAllMessagesForOtherUser(int otherUserId) {
     final query = _db.select(_db.localMessages)
       ..where((t) => t.otherUserId.equals(otherUserId))
-      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
-      ..limit(limit);
+      ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]);
     return query.watch().map((rows) => rows.map(_messageFromLocal).toList());
   }
 
@@ -521,12 +518,81 @@ class ChatLocalRepository {
   }
 
   /// Merge live reaction counts into the cached payload (CHAT-FEAT-003).
+  ///
+  /// When [updateMine] is false, keep the stored `my_reaction` so another
+  /// user's react/unreact does not wipe the current user's emoji.
   Future<void> patchMessageReactions({
     required int serverId,
     required Map<String, int> counts,
     String? mine,
+    bool updateMine = true,
   }) async {
     if (serverId <= 0) return;
+    await _patchServerMessage(
+      serverId,
+      payloadPatch: (payload) {
+        payload['reactions'] = counts;
+        if (!updateMine) return;
+        if (mine == null || mine.isEmpty) {
+          payload.remove('my_reaction');
+        } else {
+          payload['my_reaction'] = mine;
+        }
+      },
+    );
+  }
+
+  /// Marks cached outgoing rows as read (and delivered) from a Pusher receipt.
+  Future<void> markServerMessagesRead(List<int> serverIds) async {
+    final ids = [for (final id in serverIds) if (id > 0) id];
+    if (ids.isEmpty) return;
+    await _db.transaction(() async {
+      for (final id in ids) {
+        await _patchServerMessage(
+          id,
+          companion: const LocalMessagesCompanion(isRead: Value(true)),
+          payloadPatch: (payload) {
+            payload['is_delivered'] = true;
+          },
+        );
+      }
+    });
+  }
+
+  /// Marks cached outgoing rows as delivered from a Pusher receipt.
+  Future<void> markServerMessagesDelivered(List<int> serverIds) async {
+    final ids = [for (final id in serverIds) if (id > 0) id];
+    if (ids.isEmpty) return;
+    await _db.transaction(() async {
+      for (final id in ids) {
+        await _patchServerMessage(
+          id,
+          payloadPatch: (payload) {
+            payload['is_delivered'] = true;
+          },
+        );
+      }
+    });
+  }
+
+  /// Marks a disappearing message as expired in the local cache.
+  Future<void> markServerMessageExpired(int serverId) async {
+    if (serverId <= 0) return;
+    await _patchServerMessage(
+      serverId,
+      companion: const LocalMessagesCompanion(attachmentUrl: Value(null)),
+      payloadPatch: (payload) {
+        payload['is_expired'] = true;
+        payload['remaining_seconds'] = 0;
+      },
+    );
+  }
+
+  Future<void> _patchServerMessage(
+    int serverId, {
+    LocalMessagesCompanion? companion,
+    void Function(Map<String, dynamic> payload)? payloadPatch,
+  }) async {
     final row = await (_db.select(_db.localMessages)
           ..where((t) => t.serverId.equals(serverId)))
         .getSingleOrNull();
@@ -541,22 +607,21 @@ class ChatLocalRepository {
         }
       } catch (e) {
         AppLogger.warning(
-          'Failed to decode payload while patching reactions',
+          'Failed to decode payload while patching local message $serverId',
           tag: 'Chat',
           error: e,
         );
       }
     }
-    payload['reactions'] = counts;
-    if (mine == null || mine.isEmpty) {
-      payload.remove('my_reaction');
-    } else {
-      payload['my_reaction'] = mine;
-    }
+    payloadPatch?.call(payload);
 
     await (_db.update(_db.localMessages)
           ..where((t) => t.localId.equals(row.localId)))
-        .write(LocalMessagesCompanion(payloadJson: Value(jsonEncode(payload))));
+        .write(
+          (companion ?? const LocalMessagesCompanion()).copyWith(
+            payloadJson: Value(jsonEncode(payload)),
+          ),
+        );
   }
 
   Future<void> upsertMessages(List<Message> messages, int otherUserId) async {

@@ -2,17 +2,14 @@
 // Intro carousel: splash -> this -> welcome (first launch only).
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/animation_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/responsive/responsive.dart';
-import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_haptics.dart';
-import '../core/utils/app_icons.dart';
 import '../features/onboarding/widgets/onboarding_intro_hero.dart';
 import '../features/onboarding/widgets/onboarding_progress_indicator.dart';
 import '../features/onboarding/widgets/onboarding_skip_sheet.dart';
@@ -46,6 +43,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final PageController _pageController = PageController();
   late ConfettiController _confettiController;
   int _currentPage = 0;
+  bool _precacheStarted = false;
 
   static const _slides = [
     _OnboardingSlide(
@@ -74,7 +72,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(milliseconds: 600));
+    _confettiController =
+        ConfettiController(duration: const Duration(milliseconds: 600));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_precacheStarted) return;
+    _precacheStarted = true;
+    precacheOnboardingIllustration(_slides.first.iconPath);
   }
 
   @override
@@ -84,19 +91,22 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     super.dispose();
   }
 
+  bool _shouldBuildSlide(int index) => (index - _currentPage).abs() <= 1;
+
   Future<void> _nextPage() async {
     AppHaptics.light();
     if (_currentPage < _slides.length - 1) {
       await _pageController.nextPage(
-        duration: AppAnimations.transitionPage,
+        duration: AppAnimations.pageTransitionDuration(context),
         curve: Curves.easeOutCubic,
       );
     } else {
       AppHaptics.heavy();
-      if (AppAnimations.animationsEnabled(context)) {
+      final motion = AppAnimations.animationsEnabled(context);
+      if (motion) {
         _confettiController.play();
+        await Future.delayed(const Duration(milliseconds: 400));
       }
-      await Future.delayed(const Duration(milliseconds: 400));
       if (mounted) await _completeOnboarding();
     }
   }
@@ -120,6 +130,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final isLast = _currentPage == _slides.length - 1;
+    final motion = AppAnimations.animationsEnabled(context);
 
     return Scaffold(
       body: Stack(
@@ -128,15 +139,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             decoration: BoxDecoration(gradient: AppColors.prideGradient),
             child: SizedBox.expand(),
           ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              colors: AppColors.lgbtGradient,
+          if (isLast && motion)
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: AppColors.lgbtGradient,
+              ),
             ),
-          ),
           SafeArea(
             child: ResponsiveGrid.constrainedTo(
               context,
@@ -171,16 +183,25 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   SizedBox(height: AppSpacing.spacingMD),
                   Expanded(
                     child: PageView.builder(
+                      key: const ValueKey('onboarding-pageview'),
                       controller: _pageController,
+                      // Cache current ±1 so neighbors exist without building 2–3.
+                      allowImplicitScrolling: true,
                       onPageChanged: (index) {
                         setState(() => _currentPage = index);
                         AppHaptics.selection();
                       },
                       itemCount: _slides.length,
                       itemBuilder: (context, index) {
-                        return _SlideContent(
-                          key: ValueKey('onboarding_slide_$index'),
-                          slide: _slides[index],
+                        if (!_shouldBuildSlide(index)) {
+                          return const SizedBox.expand();
+                        }
+                        return RepaintBoundary(
+                          child: _SlideContent(
+                            key: ValueKey('onboarding_slide_$index'),
+                            slide: _slides[index],
+                            isCurrent: index == _currentPage,
+                          ),
                         );
                       },
                     ),
@@ -215,12 +236,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
 class _SlideContent extends StatelessWidget {
   final _OnboardingSlide slide;
+  final bool isCurrent;
 
-  const _SlideContent({super.key, required this.slide});
+  const _SlideContent({
+    super.key,
+    required this.slide,
+    required this.isCurrent,
+  });
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final motion = AppAnimations.animationsEnabled(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -232,10 +259,13 @@ class _SlideContent extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                OnboardingIntroHero(iconPath: slide.iconPath),
+                OnboardingIntroHero(
+                  iconPath: slide.iconPath,
+                  animate: isCurrent && motion,
+                ),
                 if (slide.showTypingDots) ...[
                   SizedBox(height: AppSpacing.spacingMD),
-                  const OnboardingTypingDots(),
+                  OnboardingTypingDots(animate: isCurrent && motion),
                 ],
                 SizedBox(height: AppSpacing.spacingXL),
                 AppText(

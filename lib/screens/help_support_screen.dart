@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
 import '../core/providers/api_providers.dart';
 import '../core/utils/app_icons.dart';
 import '../shared/services/landing_service.dart';
@@ -40,32 +39,13 @@ final _landingTestimonialsProvider = FutureProvider.autoDispose<List<LandingTest
 
 /// Help and support screen - About (from landing/settings), contact form, FAQ, legal
 class HelpSupportScreen extends ConsumerStatefulWidget {
-  const HelpSupportScreen({Key? key}) : super(key: key);
+  const HelpSupportScreen({super.key});
 
   @override
   ConsumerState<HelpSupportScreen> createState() => _HelpSupportScreenState();
 }
 
 class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
-  final List<Map<String, dynamic>> _faqItems = [
-    {
-      'question': 'How do I create an account?',
-      'answer': 'You can create an account by tapping "Sign Up" on the welcome screen and following the registration process.',
-    },
-    {
-      'question': 'How do I match with someone?',
-      'answer': 'Swipe right on profiles you like. If they also swipe right on you, it\'s a match!',
-    },
-    {
-      'question': 'How do I report a user?',
-      'answer': 'Go to the user\'s profile, tap the menu icon, and select "Report". Our team will review your report.',
-    },
-    {
-      'question': 'How do I cancel my subscription?',
-      'answer': 'Go to Settings > Premium > Manage Subscription to cancel your subscription.',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -331,16 +311,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.spacingXL),
-          PremiumSettingsGroup(
-            title: 'Frequently asked questions',
-            children: [
-              for (final item in _faqItems)
-                PremiumFaqTile(
-                  question: item['question'] as String,
-                  answer: item['answer'] as String,
-                ),
-            ],
-          ),
+          const _HelpFaqSection(),
           const SizedBox(height: AppSpacing.spacingXL),
           PremiumSettingsGroup(
             title: 'Legal',
@@ -670,6 +641,49 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
         ),
       ),
     ),
+    );
+  }
+}
+
+class _HelpFaqItem {
+  const _HelpFaqItem(this.question, this.answer);
+  final String question;
+  final String answer;
+}
+
+const _helpFaqItems = [
+  _HelpFaqItem(
+    'How do I create an account?',
+    'You can create an account by tapping "Sign Up" on the welcome screen and following the registration process.',
+  ),
+  _HelpFaqItem(
+    'How do I match with someone?',
+    'Swipe right on profiles you like. If they also swipe right on you, it\'s a match!',
+  ),
+  _HelpFaqItem(
+    'How do I report a user?',
+    'Go to the user\'s profile, tap the menu icon, and select "Report". Our team will review your report.',
+  ),
+  _HelpFaqItem(
+    'How do I cancel my subscription?',
+    'Go to Settings > Premium > Manage Subscription to cancel your subscription.',
+  ),
+];
+
+class _HelpFaqSection extends StatelessWidget {
+  const _HelpFaqSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumSettingsGroup(
+      title: 'Frequently asked questions',
+      children: [
+        for (final item in _helpFaqItems)
+          PremiumFaqTile(
+            question: item.question,
+            answer: item.answer,
+          ),
+      ],
     );
   }
 }

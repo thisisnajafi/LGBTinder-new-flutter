@@ -1,13 +1,12 @@
 // Screen: BlockedUsersScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/avatar_widget.dart';
-import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/error_display_widget.dart';
@@ -21,7 +20,7 @@ import '../core/responsive/responsive.dart';
 
 /// Blocked users screen - Manage blocked users
 class BlockedUsersScreen extends ConsumerStatefulWidget {
-  const BlockedUsersScreen({Key? key}) : super(key: key);
+  const BlockedUsersScreen({super.key});
 
   @override
   ConsumerState<BlockedUsersScreen> createState() => _BlockedUsersScreenState();
@@ -196,25 +195,27 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                     )
                   : PremiumRefreshIndicator(
                       onRefresh: _loadBlockedUsers,
-                      child: AppSettingsDetailList(
-                        children: [
-                          PremiumSettingsGroup(
-                            title: 'Blocked',
-                            subtitle: '${_blockedUsers.length} ${_blockedUsers.length == 1 ? 'person' : 'people'}',
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.spacingLG,
+                      child: AppListView.builder(
+                        physics: AppScroll.bouncing,
+                        padding: const EdgeInsets.only(
+                          bottom: AppSpacing.spacingXXL,
+                        ),
+                        itemCount: _blockedUsers.length,
+                        itemBuilder: (context, index) {
+                          return RepaintBoundary(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.spacingLG,
+                              ),
+                              child: _BlockedUserRow(
+                                blockedUser: _blockedUsers[index],
+                                formatDate: _formatDate,
+                                onUnblock: () =>
+                                    _unblockUser(_blockedUsers[index]),
+                              ),
                             ),
-                            children: [
-                              for (var i = 0; i < _blockedUsers.length; i++)
-                                _BlockedUserRow(
-                                  blockedUser: _blockedUsers[i],
-                                  formatDate: _formatDate,
-                                  onUnblock: () =>
-                                      _unblockUser(_blockedUsers[i]),
-                                ),
-                            ],
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
     );

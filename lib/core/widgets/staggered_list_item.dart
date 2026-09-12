@@ -9,16 +9,28 @@ import '../constants/animation_constants.dart';
 /// [index] is used for delay: start after index * [AppAnimations.listItemStagger].
 /// Set [animateAppear] to false to show [child] immediately (e.g. after initial load).
 class StaggeredListItem extends StatefulWidget {
+  /// First-session chat list / settings rows that may fade in (PERF-PAGE-CHATLIST-003).
+  static const int firstSessionLimit = 3;
+
   final int index;
   final Widget child;
   final bool animateAppear;
 
   const StaggeredListItem({
-    Key? key,
+    super.key,
     required this.index,
     required this.child,
     this.animateAppear = true,
-  }) : super(key: key);
+  });
+
+  /// Only the first [limit] rows animate, and only on the first paint session.
+  static bool shouldAnimate({
+    required int index,
+    required bool firstSession,
+    int limit = firstSessionLimit,
+  }) {
+    return firstSession && index >= 0 && index < limit;
+  }
 
   @override
   State<StaggeredListItem> createState() => _StaggeredListItemState();
@@ -41,12 +53,13 @@ class _StaggeredListItemState extends State<StaggeredListItem>
     _opacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
     );
-    _offset = Tween<Offset>(
-      begin: const Offset(0, 25),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
-    );
+    _offset = Tween<Offset>(begin: const Offset(0, 25), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: AppAnimations.curveDefault,
+          ),
+        );
 
     if (!widget.animateAppear) return;
     // Schedule timer after first frame so context is valid and we don't block initState
@@ -79,10 +92,7 @@ class _StaggeredListItemState extends State<StaggeredListItem>
       builder: (context, child) {
         return Opacity(
           opacity: _opacity.value,
-          child: Transform.translate(
-            offset: _offset.value,
-            child: child,
-          ),
+          child: Transform.translate(offset: _offset.value, child: child),
         );
       },
       child: widget.child,

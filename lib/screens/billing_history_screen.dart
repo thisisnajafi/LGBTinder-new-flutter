@@ -7,6 +7,7 @@ import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
+import '../core/widgets/app_list_view.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../features/payments/providers/payment_providers.dart';
@@ -145,7 +146,8 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                 )
               : PremiumRefreshIndicator(
                   onRefresh: _loadBillingHistory,
-                  child: ListView.builder(
+                  child: AppListView.builder(
+                    physics: AppScroll.bouncing,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.spacingLG,
                       vertical: AppSpacing.spacingSM,

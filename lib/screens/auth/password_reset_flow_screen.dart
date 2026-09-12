@@ -1,84 +1,60 @@
-﻿// Screen: PasswordResetFlowScreen
-import 'dart:async';
+// Screen: PasswordResetFlowScreen
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/navigation/auth_navigation.dart';
-import '../../core/widgets/auth_page_scaffold.dart';
-import '../../core/widgets/premium/premium_text_field.dart';
-import '../../routes/app_router.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
-import '../../core/utils/app_icons.dart';
-import '../../features/auth/providers/auth_service_provider.dart';
-import '../../features/auth/data/models/models.dart';
-import '../../core/responsive/responsive.dart';
 
-/// Password reset flow screen - Multi-step password reset with OTP
+import '../../core/constants/animation_constants.dart';
+import '../../core/navigation/auth_navigation.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/auth_page_scaffold.dart';
+import '../../features/auth/data/models/models.dart';
+import '../../features/auth/presentation/widgets/password_reset_steps.dart';
+import '../../features/auth/providers/auth_service_provider.dart';
+import '../../routes/app_router.dart';
+import '../../widgets/modals/alert_dialog_custom.dart';
+
+/// Password reset flow — email → OTP → new password.
 class PasswordResetFlowScreen extends ConsumerStatefulWidget {
-  const PasswordResetFlowScreen({Key? key}) : super(key: key);
+  const PasswordResetFlowScreen({super.key});
 
   @override
-  ConsumerState<PasswordResetFlowScreen> createState() => _PasswordResetFlowScreenState();
+  ConsumerState<PasswordResetFlowScreen> createState() =>
+      _PasswordResetFlowScreenState();
 }
 
-class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScreen> {
-  final PageController _pageController = PageController();
-  int _currentStep = 0; // 0: Email, 1: OTP, 2: New Password
-
-  // Step 1: Email
+class _PasswordResetFlowScreenState
+    extends ConsumerState<PasswordResetFlowScreen> {
+  final _pageController = PageController();
+  final _currentStep = ValueNotifier<int>(0);
   final _emailController = TextEditingController();
-  bool _isSendingOtp = false;
-
-  // Step 2: OTP
-  final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
-  bool _isVerifyingOtp = false;
-  bool _isResendingOtp = false;
-  int _resendCountdown = 0;
-  Timer? _countdownTimer;
-  String? _verifiedOtpCode;
-
-  // Step 3: New Password
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isResettingPassword = false;
+  final _otpControllers =
+      List.generate(6, (_) => TextEditingController());
+  final _otpFocusNodes = List.generate(6, (_) => FocusNode());
+  final _isSendingOtp = ValueNotifier<bool>(false);
+  final _isVerifyingOtp = ValueNotifier<bool>(false);
+  final _isResettingPassword = ValueNotifier<bool>(false);
+  String? _verifiedOtpCode;
 
   @override
   void dispose() {
+    _pageController.dispose();
+    _currentStep.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    for (var controller in _otpControllers) {
+    for (final controller in _otpControllers) {
       controller.dispose();
     }
-    for (var node in _otpFocusNodes) {
+    for (final node in _otpFocusNodes) {
       node.dispose();
     }
-    _pageController.dispose();
-    _countdownTimer?.cancel();
+    _isSendingOtp.dispose();
+    _isVerifyingOtp.dispose();
+    _isResettingPassword.dispose();
     super.dispose();
-  }
-
-  void _startResendCountdown(int seconds) {
-    setState(() {
-      _resendCountdown = seconds;
-    });
-    _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendCountdown > 0) {
-        setState(() {
-          _resendCountdown--;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
   }
 
   void _onOtpChanged(int index, String value) {
@@ -98,6 +74,16 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
     return _otpControllers.map((c) => c.text).join();
   }
 
+  Future<void> _goToStep(int step) async {
+    _currentStep.value = step;
+    if (!_pageController.hasClients) return;
+    await _pageController.animateToPage(
+      step,
+      duration: AppAnimations.pageTransitionDuration(context),
+      curve: Curves.easeInOut,
+    );
+  }
+
   Future<void> _sendOtp() async {
     if (_emailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,21 +92,14 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       return;
     }
 
-    setState(() {
-      _isSendingOtp = true;
-    });
-
+    _isSendingOtp.value = true;
     try {
       final authService = ref.read(authServiceProvider);
-      final request = SendOtpRequest(
-        email: _emailController.text.trim(),
+      await authService.sendOtp(
+        SendOtpRequest(email: _emailController.text.trim()),
       );
-
-      await authService.sendOtp(request);
-
       if (mounted) {
-        _startResendCountdown(120); // 2 minutes
-        _nextStep();
+        await _goToStep(1);
       }
     } catch (e) {
       if (mounted) {
@@ -130,9 +109,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSendingOtp = false;
-        });
+        _isSendingOtp.value = false;
       }
     }
   }
@@ -146,77 +123,55 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       return;
     }
 
-    setState(() {
-      _isVerifyingOtp = true;
-    });
-
+    _isVerifyingOtp.value = true;
     try {
       final authService = ref.read(authServiceProvider);
-      final request = VerifyOtpRequest(
-        email: _emailController.text.trim(),
-        code: code,
+      await authService.verifyOtp(
+        VerifyOtpRequest(
+          email: _emailController.text.trim(),
+          code: code,
+        ),
       );
-
-      await authService.verifyOtp(request);
-
       if (mounted) {
-        setState(() {
-          _verifiedOtpCode = code;
-        });
-        _nextStep();
+        _verifiedOtpCode = code;
+        await _goToStep(2);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Invalid or expired code: $e')),
         );
-        for (var controller in _otpControllers) {
+        for (final controller in _otpControllers) {
           controller.clear();
         }
         _otpFocusNodes[0].requestFocus();
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isVerifyingOtp = false;
-        });
+        _isVerifyingOtp.value = false;
       }
     }
   }
 
-  Future<void> _resendOtp() async {
-    if (_resendCountdown > 0) return;
-
-    setState(() {
-      _isResendingOtp = true;
-    });
-
+  Future<bool> _resendOtp() async {
     try {
       final authService = ref.read(authServiceProvider);
-      final request = SendOtpRequest(
-        email: _emailController.text.trim(),
+      await authService.sendOtp(
+        SendOtpRequest(email: _emailController.text.trim()),
       );
-
-      await authService.sendOtp(request);
-
       if (mounted) {
-        _startResendCountdown(120);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('OTP sent successfully!')),
         );
       }
+      return true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to resend OTP: $e')),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isResendingOtp = false;
-        });
-      }
+      return false;
     }
   }
 
@@ -227,14 +182,12 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       );
       return;
     }
-
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Passwords do not match')),
       );
       return;
     }
-
     if (_passwordController.text.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password must be at least 8 characters')),
@@ -242,10 +195,7 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       return;
     }
 
-    setState(() {
-      _isResettingPassword = true;
-    });
-
+    _isResettingPassword.value = true;
     try {
       final code = _verifiedOtpCode ?? _getOtpCode();
       if (code.length != 6) {
@@ -256,29 +206,30 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       }
 
       final authService = ref.read(authServiceProvider);
-      final request = ResetPasswordRequest(
-        email: _emailController.text.trim(),
-        code: code,
-        password: _passwordController.text.trim(),
-        passwordConfirmation: _confirmPasswordController.text.trim(),
+      await authService.resetPassword(
+        ResetPasswordRequest(
+          email: _emailController.text.trim(),
+          code: code,
+          password: _passwordController.text.trim(),
+          passwordConfirmation: _confirmPasswordController.text.trim(),
+        ),
       );
 
-      await authService.resetPassword(request);
-
       if (mounted) {
-        AlertDialogCustom.show(
+        await AlertDialogCustom.show(
           context,
           title: 'Password Reset',
-          message: 'Your password has been reset successfully! You can now login with your new password.',
+          message:
+              'Your password has been reset successfully! You can now login with your new password.',
           iconPath: AppIcons.checkCircle,
           iconColor: AppColors.onlineGreen,
-        ).then((_) {
-          if (context.canPop()) {
-            context.pop(true);
-          } else {
-            context.go(AppRoutes.login);
-          }
-        });
+        );
+        if (!mounted) return;
+        if (context.canPop()) {
+          context.pop(true);
+        } else {
+          context.go(AppRoutes.login);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -288,465 +239,73 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isResettingPassword = false;
-        });
+        _isResettingPassword.value = false;
       }
     }
   }
 
-  void _nextStep() {
-    setState(() {
-      _currentStep++;
-    });
-    _pageController.nextPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  void _previousStep() {
-    setState(() {
-      _currentStep--;
-    });
-    _pageController.previousPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
     return AuthPageScaffold(
       title: 'Reset Password',
       subtitle: 'Recover access to your account',
       onBack: () {
-        if (_currentStep > 0) {
-          _previousStep();
+        final step = _currentStep.value;
+        if (step > 0) {
+          _goToStep(step - 1);
         } else {
           AuthNavigation.popOrWelcome(context);
         }
       },
-      body: Column(
-        children: [
-          // Progress indicator
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Row(
-              children: [
-                _buildProgressStep(0, 'Email', textColor, secondaryTextColor),
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    color: _currentStep > 0
-                        ? AppColors.accentPurple
-                        : borderColor,
-                  ),
-                ),
-                _buildProgressStep(1, 'Verify', textColor, secondaryTextColor),
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    color: _currentStep > 1
-                        ? AppColors.accentPurple
-                        : borderColor,
-                  ),
-                ),
-                _buildProgressStep(2, 'Reset', textColor, secondaryTextColor),
-              ],
-            ),
-          ),
-          // Content
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildEmailStep(
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  surfaceColor: surfaceColor,
-                  borderColor: borderColor,
-                ),
-                _buildOtpStep(
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  surfaceColor: surfaceColor,
-                  borderColor: borderColor,
-                ),
-                _buildPasswordStep(
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  surfaceColor: surfaceColor,
-                  borderColor: borderColor,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressStep(int step, String label, Color textColor, Color secondaryTextColor) {
-    final isActive = _currentStep == step;
-    final isCompleted = _currentStep > step;
-    return Column(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: isCompleted || isActive
-                ? AppColors.accentPurple
-                : secondaryTextColor.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          child: isCompleted
-              ? AppSvgIcon(
-                  assetPath: AppIcons.check,
-                  size: 20,
-                  color: Colors.white,
-                )
-              : Center(
-                  child: Text(
-                    '${step + 1}',
-                    style: AppTypography.body.copyWith(
-                      color: isActive ? Colors.white : secondaryTextColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-        ),
-        SizedBox(height: AppSpacing.spacingXS),
-        Text(
-          label,
-          style: AppTypography.caption.copyWith(
-            color: isActive || isCompleted ? textColor : secondaryTextColor,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmailStep({
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: AppSpacing.spacingXXL),
-          AppSvgIcon(
-            assetPath: AppIcons.lockReset,
-            size: 80,
-            color: AppColors.accentPurple,
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          Text(
-            'Reset Your Password',
-            style: AppTypography.h1.copyWith(color: textColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Text(
-            'Enter your email address and we\'ll send you a verification code',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          PremiumTextField(
-            controller: _emailController,
-            label: 'Email',
-            hintText: 'Enter your email',
-            keyboardType: TextInputType.emailAddress,
-            prefixIconPath: AppIcons.emailOutlined,
-            autocorrect: false,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          GradientButton(
-            text: _isSendingOtp ? 'Sending...' : 'Send Verification Code',
-            onPressed: _isSendingOtp ? null : _sendOtp,
-            isLoading: _isSendingOtp,
-            isFullWidth: true,
-            iconPath: AppIcons.sendIcon,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOtpStep({
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: AppSpacing.spacingXXL),
-          Center(
-            child: AppSvgIcon(
-              assetPath: AppIcons.shieldTick,
-              size: 80,
-              color: AppColors.accentViolet,
-            ),
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          Text(
-            'Enter Verification Code',
-            style: AppTypography.h1.copyWith(color: textColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          AppText(
-            'We\'ve sent a 6-digit code to ${_emailController.text}',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const gap = AppSpacing.spacingSM;
-              const fieldCount = 6;
-              final fieldWidth = ((constraints.maxWidth - gap * (fieldCount - 1)) /
-                      fieldCount)
-                  .clamp(40.0, 56.0);
-              final fieldHeight = (fieldWidth * 1.2).clamp(52.0, 60.0);
-
-              return Row(
-                children: [
-                  for (var index = 0; index < fieldCount; index++) ...[
-                    if (index > 0) SizedBox(width: gap),
-                    Expanded(
-                      child: _buildOtpField(
-                        index: index,
-                        controller: _otpControllers[index],
-                        focusNode: _otpFocusNodes[index],
-                        textColor: textColor,
-                        surfaceColor: surfaceColor,
-                        borderColor: borderColor,
-                        height: fieldHeight,
+      body: ValueListenableBuilder<int>(
+        valueListenable: _currentStep,
+        builder: (context, step, _) {
+          return Column(
+            children: [
+              PasswordResetProgress(currentStep: step),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    RepaintBoundary(
+                      child: ResetEmailStep(
+                        emailController: _emailController,
+                        isSending: _isSendingOtp,
+                        onSend: _sendOtp,
                       ),
                     ),
-                  ],
-                ],
-              );
-            },
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          GradientButton(
-            text: _isVerifyingOtp ? 'Verifying...' : 'Verify Code',
-            onPressed: _isVerifyingOtp ? null : _verifyOtp,
-            isLoading: _isVerifyingOtp,
-            isFullWidth: true,
-            iconPath: AppIcons.shieldTick,
-          ),
-          SizedBox(height: AppSpacing.spacingLG),
-          Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                'Didn\'t receive the code? ',
-                style: AppTypography.body.copyWith(color: secondaryTextColor),
-              ),
-              if (_resendCountdown > 0)
-                Text(
-                  'Resend in ${_formatCountdown(_resendCountdown)}',
-                  style: AppTypography.body.copyWith(color: secondaryTextColor),
-                )
-              else
-                TextButton(
-                  onPressed: _isResendingOtp ? null : _resendOtp,
-                  child: Text(
-                    _isResendingOtp ? 'Sending...' : 'Resend Code',
-                    style: AppTypography.button.copyWith(
-                      color: AppColors.accentPurple,
+                    RepaintBoundary(
+                      child: step >= 1
+                          ? ResetOtpStep(
+                              email: _emailController.text.trim(),
+                              otpControllers: _otpControllers,
+                              otpFocusNodes: _otpFocusNodes,
+                              isVerifying: _isVerifyingOtp,
+                              onChanged: _onOtpChanged,
+                              onVerify: _verifyOtp,
+                              onResend: _resendOtp,
+                            )
+                          : const SizedBox.expand(),
                     ),
-                  ),
+                    RepaintBoundary(
+                      child: step >= 2
+                          ? ResetPasswordStep(
+                              passwordController: _passwordController,
+                              confirmPasswordController:
+                                  _confirmPasswordController,
+                              isResetting: _isResettingPassword,
+                              onReset: _resetPassword,
+                            )
+                          : const SizedBox.expand(),
+                    ),
+                  ],
                 ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPasswordStep({
-    required Color textColor,
-    required Color secondaryTextColor,
-    required Color surfaceColor,
-    required Color borderColor,
-  }) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(height: AppSpacing.spacingXXL),
-          AppSvgIcon(
-            assetPath: AppIcons.lockOutline,
-            size: 80,
-            color: AppColors.accentPurple,
-          ),
-          SizedBox(height: AppSpacing.spacingXL),
-          Text(
-            'Create New Password',
-            style: AppTypography.h1.copyWith(color: textColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Text(
-            'Enter your new password. Make sure it\'s strong and secure.',
-            style: AppTypography.body.copyWith(color: secondaryTextColor),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          PremiumTextField(
-            controller: _passwordController,
-            label: 'New password',
-            hintText: 'Enter a strong password',
-            obscureText: true,
-            prefixIconPath: AppIcons.lock,
-            autocorrect: false,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          PremiumTextField(
-            controller: _confirmPasswordController,
-            label: 'Confirm password',
-            hintText: 'Re-enter the new password',
-            obscureText: true,
-            prefixIconPath: AppIcons.lockOutline,
-            autocorrect: false,
-          ),
-          SizedBox(height: AppSpacing.spacingMD),
-          Container(
-            padding: EdgeInsets.all(AppSpacing.spacingMD),
-            decoration: BoxDecoration(
-              color: AppColors.accentPurple.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              border: Border.all(
-                color: AppColors.accentPurple.withOpacity(0.3),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Password Requirements:',
-                  style: AppTypography.body.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: AppSpacing.spacingXS),
-                _buildRequirement('At least 8 characters', textColor),
-                _buildRequirement('One uppercase letter', textColor),
-                _buildRequirement('One lowercase letter', textColor),
-                _buildRequirement('One number', textColor),
-                _buildRequirement('One special character', textColor),
-              ],
-            ),
-          ),
-          SizedBox(height: AppSpacing.spacingXXL),
-          GradientButton(
-            text: _isResettingPassword ? 'Resetting...' : 'Reset Password',
-            onPressed: _isResettingPassword ? null : _resetPassword,
-            isLoading: _isResettingPassword,
-            isFullWidth: true,
-            iconPath: AppIcons.checkCircle,
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
-  }
-
-  Widget _buildOtpField({
-    required int index,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required Color textColor,
-    required Color surfaceColor,
-    required Color borderColor,
-    required double height,
-  }) {
-    return AnimatedBuilder(
-      animation: focusNode,
-      builder: (context, child) {
-        return Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-            border: Border.all(
-              color: focusNode.hasFocus
-                  ? AppColors.accentPurple
-                  : borderColor,
-              width: focusNode.hasFocus ? 2 : 1,
-            ),
-          ),
-          child: child,
-        );
-      },
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        textAlign: TextAlign.center,
-        keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: AppTypography.h1.copyWith(color: textColor),
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(
-          counterText: '',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-        ),
-        onChanged: (value) => _onOtpChanged(index, value),
-      ),
-    );
-  }
-
-  Widget _buildRequirement(String text, Color textColor) {
-    return Padding(
-      padding: EdgeInsets.only(top: AppSpacing.spacingXS),
-      child: Row(
-        children: [
-          AppSvgIcon(
-            assetPath: AppIcons.check,
-            size: 16,
-            color: AppColors.onlineGreen,
-          ),
-          SizedBox(width: AppSpacing.spacingSM),
-          Text(
-            text,
-            style: AppTypography.caption.copyWith(color: textColor),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatCountdown(int seconds) {
-    final minutes = seconds ~/ 60;
-    final secs = seconds % 60;
-    return '${minutes}:${secs.toString().padLeft(2, '0')}';
   }
 }

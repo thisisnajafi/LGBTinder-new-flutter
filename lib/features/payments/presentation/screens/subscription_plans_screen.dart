@@ -10,6 +10,7 @@ import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_list_view.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
@@ -28,7 +29,7 @@ import '../../../../shared/analytics/app_event_tracker.dart';
 
 /// Subscription plans screen — plan-themed UI (Basic, Premium, Golden)
 class SubscriptionPlansScreen extends ConsumerStatefulWidget {
-  const SubscriptionPlansScreen({Key? key}) : super(key: key);
+  const SubscriptionPlansScreen({super.key});
 
   @override
   ConsumerState<SubscriptionPlansScreen> createState() =>
@@ -330,26 +331,34 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                   ? _buildEmptyState(secondaryTextColor, textColor)
                   : PremiumRefreshIndicator(
                       onRefresh: _loadPlans,
-                      child: ListView(
+                      child: AppListView.builder(
+                        physics: AppScroll.bouncing,
                         padding: ResponsivePadding.horizontal(context).copyWith(
                           top: AppSpacing.spacingSM,
                           bottom: AppSpacing.spacingXXL,
                         ),
-                        children: [
-                          _buildPaymentBadge(borderColor, textColor),
-                          const SizedBox(height: AppSpacing.spacingXL),
-                          ..._plans.map(
-                            (plan) => _buildPlanCard(
-                              plan,
-                              surfaceColor,
-                              borderColor,
-                              textColor,
-                              secondaryTextColor,
-                              isDark,
-                            ),
-                          ),
-                          _buildViewSubscriptionLink(textColor),
-                        ],
+                        itemCount: _plans.length + 2,
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return Column(
+                              children: [
+                                _buildPaymentBadge(borderColor, textColor),
+                                const SizedBox(height: AppSpacing.spacingXL),
+                              ],
+                            );
+                          }
+                          if (index == _plans.length + 1) {
+                            return _buildViewSubscriptionLink(textColor);
+                          }
+                          return _buildPlanCard(
+                            _plans[index - 1],
+                            surfaceColor,
+                            borderColor,
+                            textColor,
+                            secondaryTextColor,
+                            isDark,
+                          );
+                        },
                       ),
                     ),
     );
@@ -488,10 +497,10 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
             vertical: AppSpacing.spacingSM,
           ),
           decoration: BoxDecoration(
-            color: AppColors.accentPurple.withOpacity(0.08),
+            color: AppColors.accentPurple.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppRadius.radiusMD),
             border: Border.all(
-              color: AppColors.accentPurple.withOpacity(0.25),
+              color: AppColors.accentPurple.withValues(alpha: 0.25),
             ),
           ),
           child: Row(
@@ -782,7 +791,7 @@ class _PlanCard extends StatelessWidget {
                           width: 2,
                         ),
                         color: isSelected
-                            ? planTheme.accent.withOpacity(0.2)
+                            ? planTheme.accent.withValues(alpha: 0.2)
                             : Colors.transparent,
                       ),
                       child: isSelected

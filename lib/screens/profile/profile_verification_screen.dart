@@ -1,6 +1,4 @@
-﻿// Screen: ProfileVerificationScreen
-import 'dart:io';
-
+// Screen: ProfileVerificationScreen
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/utils/app_media_picker.dart';
 import '../../core/widgets/app_page_scaffold.dart';
 import '../../features/profile/data/models/profile_verification.dart';
 import '../../features/profile/providers/profile_provider.dart';
@@ -29,7 +28,6 @@ class ProfileVerificationScreen extends ConsumerStatefulWidget {
 class _ProfileVerificationScreenState
     extends ConsumerState<ProfileVerificationScreen> {
   bool _historyVisible = false;
-  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -104,13 +102,14 @@ class _ProfileVerificationScreenState
     }
     if (path == null || !mounted) return;
 
-    final file = File(path);
-    if (!await file.exists()) return;
+    final stats = await statPickedMediaFile(path);
+    if (!mounted) return;
+    if (!stats.exists) return;
 
     final maxBytes = type == VerificationType.video
         ? 50 * 1024 * 1024
         : 10 * 1024 * 1024;
-    if (await file.length() > maxBytes) {
+    if (stats.lengthBytes > maxBytes) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -170,11 +169,8 @@ class _ProfileVerificationScreenState
       ),
     );
     if (source == null) return null;
-    final picked = await _imagePicker.pickImage(
-      source: source,
-      imageQuality: 85,
-      maxWidth: 1920,
-    );
+    await Future<void>.delayed(Duration.zero);
+    final picked = await AppMediaPicker.pickImage(source: source);
     return picked?.path;
   }
 
@@ -205,6 +201,7 @@ class _ProfileVerificationScreenState
       ),
     );
     if (choice == null) return null;
+    await Future<void>.delayed(Duration.zero);
     if (choice == 'pdf') {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -214,16 +211,12 @@ class _ProfileVerificationScreenState
     }
     final source =
         choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
-    final picked = await _imagePicker.pickImage(
-      source: source,
-      imageQuality: 85,
-      maxWidth: 1920,
-    );
+    final picked = await AppMediaPicker.pickImage(source: source);
     return picked?.path;
   }
 
   Future<String?> _pickVideo() async {
-    final picked = await _imagePicker.pickVideo(
+    final picked = await AppMediaPicker.pickVideo(
       source: ImageSource.gallery,
       maxDuration: const Duration(minutes: 2),
     );

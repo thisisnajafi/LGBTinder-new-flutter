@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/cache/session_cache_providers.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/providers/subscription_provider.dart';
+import '../../../shared/models/subscription_status.dart';
 import '../../../shared/models/user_tier.dart';
 import '../../notifications/providers/notifications_cache_provider.dart';
 import '../data/services/payment_service.dart';
@@ -79,16 +80,32 @@ final subscriptionPlansProvider = FutureProvider<List<SubscriptionPlan>>((ref) a
   return await paymentService.getPlans();
 });
 
+/// Map the session-cached snapshot onto the payments [SubscriptionStatus] model
+/// (PERF-SCR-SUBSTAT-001).
+SubscriptionStatus? subscriptionStatusFromAppCache(
+  AppSubscriptionStatus? cached,
+) {
+  if (cached == null) return null;
+  return SubscriptionStatus(
+    isActive: cached.isActive,
+    planName: cached.planName ?? cached.tier.displayLabel,
+    tier: cached.tier.key,
+    endDate: cached.expiresAt,
+    status: cached.isActive ? 'active' : 'inactive',
+  );
+}
+
 /// Subscription Status Provider
-/// 
+///
 /// Task 3.3.2 (Phase 4): Enhanced with auto-refresh capability
 /// Use ref.refresh(subscriptionStatusProvider) to force refresh
 final subscriptionStatusProvider = FutureProvider<SubscriptionStatus?>((ref) async {
+  final cached = subscriptionStatusFromAppCache(ref.read(subscriptionProvider));
   try {
     final paymentService = ref.watch(paymentServiceProvider);
     return await paymentService.getSubscriptionStatus();
   } catch (e) {
-    return null;
+    return cached;
   }
 });
 

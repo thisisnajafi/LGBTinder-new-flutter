@@ -6,8 +6,8 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_date_time.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
-import '../../../../core/widgets/profile_image_widget.dart';
 import '../../../../core/responsive/responsive.dart';
+import 'call_history_avatar.dart';
 import '../../utils/call_log_labels.dart';
 import '../../utils/messenger_call_groups.dart';
 
@@ -68,14 +68,9 @@ class MessengerCallRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ClipOval(
-              child: ProfileImageWidget(
-                imageUrl: group.peerAvatarUrl,
-                userId: group.peerId,
-                width: 52,
-                height: 52,
-                fit: BoxFit.cover,
-              ),
+            CallHistoryAvatar(
+              size: 52,
+              imageUrl: group.peerAvatarUrl,
             ),
             const SizedBox(width: AppSpacing.spacingMD),
             Expanded(

@@ -256,7 +256,9 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ProfileHeroSection(
+                RepaintBoundary(
+                  key: const ValueKey('profile_detail_hero'),
+                  child: ProfileHeroSection(
                   fullName: _fullName,
                   avatarUrl: avatarUrl,
                   photoUrls: photoUrls,
@@ -278,6 +280,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                   onMore: widget.onMoreOptions,
                   matchPercent: compatibility.matchPercent,
                   onPhotoTap: (index) => _openPhotoViewer(photoUrls, index),
+                  ),
                 ),
                 const SizedBox(height: _sectionGap),
                 PremiumCompatibilitySection(data: compatibility),

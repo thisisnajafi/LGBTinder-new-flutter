@@ -1,63 +1,81 @@
-﻿// Screen: ProfileExportScreen
+// Screen: ProfileExportScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
-import '../../core/widgets/app_page_scaffold.dart';
-import '../../core/widgets/app_page_header.dart';
-import '../../widgets/common/section_header.dart';
-import '../../widgets/common/divider_custom.dart';
-import '../../widgets/buttons/gradient_button.dart';
-import '../../widgets/modals/alert_dialog_custom.dart';
+
 import '../../core/responsive/responsive.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/app_page_scaffold.dart';
+import '../../widgets/buttons/gradient_button.dart';
+import '../../widgets/common/divider_custom.dart';
+import '../../widgets/common/section_header.dart';
+import '../../widgets/modals/alert_dialog_custom.dart';
+
+class _ExportFormat {
+  const _ExportFormat({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.iconPath,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String iconPath;
+}
+
+const _exportFormats = [
+  _ExportFormat(
+    id: 'JSON',
+    name: 'JSON',
+    description: 'Machine-readable format',
+    iconPath: AppIcons.documentText,
+  ),
+  _ExportFormat(
+    id: 'PDF',
+    name: 'PDF',
+    description: 'Printable document',
+    iconPath: AppIcons.document,
+  ),
+  _ExportFormat(
+    id: 'CSV',
+    name: 'CSV',
+    description: 'Spreadsheet format',
+    iconPath: AppIcons.document1,
+  ),
+];
+
+Stream<double> profileExportProgressStream() async* {
+  for (var step = 1; step <= 10; step++) {
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    yield step / 10;
+  }
+}
 
 /// Profile export screen - Export profile data
 class ProfileExportScreen extends ConsumerStatefulWidget {
-  const ProfileExportScreen({Key? key}) : super(key: key);
+  const ProfileExportScreen({super.key});
 
   @override
-  ConsumerState<ProfileExportScreen> createState() => _ProfileExportScreenState();
+  ConsumerState<ProfileExportScreen> createState() =>
+      _ProfileExportScreenState();
 }
 
 class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
-  bool _isExporting = false;
+  final ValueNotifier<bool> _isExporting = ValueNotifier(false);
+  final ValueNotifier<double> _exportProgress = ValueNotifier(0);
   String? _lastExportDate;
-  List<String> _selectedFormats = ['JSON'];
-
-  final List<Map<String, dynamic>> _exportFormats = [
-    {
-      'id': 'JSON',
-      'name': 'JSON',
-      'description': 'Machine-readable format',
-      'icon': Icons.code,
-    },
-    {
-      'id': 'PDF',
-      'name': 'PDF',
-      'description': 'Printable document',
-      'icon': Icons.picture_as_pdf,
-    },
-    {
-      'id': 'CSV',
-      'name': 'CSV',
-      'description': 'Spreadsheet format',
-      'icon': Icons.table_chart,
-    },
-  ];
+  final List<String> _selectedFormats = ['JSON'];
 
   @override
-  void initState() {
-    super.initState();
-    _loadLastExport();
-  }
-
-  Future<void> _loadLastExport() async {
-    // TODO: Load last export date from API
-    setState(() {
-      _lastExportDate = null; // No previous export
-    });
+  void dispose() {
+    _isExporting.dispose();
+    _exportProgress.dispose();
+    super.dispose();
   }
 
   Future<void> _exportProfile() async {
@@ -68,26 +86,24 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
       return;
     }
 
-    setState(() {
-      _isExporting = true;
-    });
-
+    _isExporting.value = true;
+    _exportProgress.value = 0;
     try {
-      // TODO: Export profile via API
-      // POST /api/profile/export
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() {
-          _lastExportDate = DateTime.now().toIso8601String();
-        });
-        AlertDialogCustom.show(
-          context,
-          title: 'Export Complete',
-          message: 'Your profile data has been exported successfully!',
-          icon: Icons.check_circle,
-          iconColor: AppColors.onlineGreen,
-        );
+      await for (final progress in profileExportProgressStream()) {
+        if (!mounted) return;
+        _exportProgress.value = progress;
       }
+      if (!mounted) return;
+      setState(() {
+        _lastExportDate = DateTime.now().toIso8601String();
+      });
+      AlertDialogCustom.show(
+        context,
+        title: 'Export Complete',
+        message: 'Your profile data has been exported successfully!',
+        iconPath: AppIcons.checkCircle,
+        iconColor: AppColors.onlineGreen,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,9 +112,8 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isExporting = false;
-        });
+        _isExporting.value = false;
+        _exportProgress.value = 0;
       }
     }
   }
@@ -107,11 +122,15 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return AppPageScaffold(
       title: 'Export Profile',
@@ -120,37 +139,33 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         children: [
-          SectionHeader(
+          const SectionHeader(
             title: 'Export Your Data',
-            icon: Icons.download,
+            iconPath: AppIcons.download,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Text(
             'Download a copy of your profile data in your preferred format',
-            style: AppTypography.body.copyWith(
-              color: secondaryTextColor,
-            ),
+            style: AppTypography.body.copyWith(color: secondaryTextColor),
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Export formats
-          SectionHeader(
+          const SectionHeader(
             title: 'Export Formats',
-            icon: Icons.format_align_left,
+            iconPath: AppIcons.documentText,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           ..._exportFormats.map((format) {
-            final isSelected = _selectedFormats.contains(format['id']);
+            final isSelected = _selectedFormats.contains(format.id);
             return _buildFormatOption(
               format: format,
               isSelected: isSelected,
               onTap: () {
                 setState(() {
                   if (isSelected) {
-                    _selectedFormats.remove(format['id']);
+                    _selectedFormats.remove(format.id);
                   } else {
-                    _selectedFormats.add(format['id']);
+                    _selectedFormats.add(format.id);
                   }
                 });
               },
@@ -160,13 +175,11 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
               borderColor: borderColor,
             );
           }),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Data included
-          SectionHeader(
+          const SectionHeader(
             title: 'Data Included',
-            icon: Icons.info,
+            iconPath: AppIcons.infoCircle,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Container(
@@ -186,24 +199,23 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
               ],
             ),
           ),
-          DividerCustom(),
+          const DividerCustom(),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Last export
           if (_lastExportDate != null)
             Container(
               padding: EdgeInsets.all(AppSpacing.spacingMD),
               decoration: BoxDecoration(
-                color: AppColors.onlineGreen.withOpacity(0.1),
+                color: AppColors.onlineGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                 border: Border.all(
-                  color: AppColors.onlineGreen.withOpacity(0.3),
+                  color: AppColors.onlineGreen.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.check_circle,
+                  AppSvgIcon(
+                    assetPath: AppIcons.checkCircle,
+                    size: 24,
                     color: AppColors.onlineGreen,
                   ),
                   SizedBox(width: AppSpacing.spacingMD),
@@ -232,40 +244,62 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
               ),
             ),
           SizedBox(height: AppSpacing.spacingLG),
-          GradientButton(
-            text: _isExporting ? 'Exporting...' : 'Export Profile Data',
-            onPressed: _isExporting ? null : _exportProfile,
-            isLoading: _isExporting,
-            isFullWidth: true,
-            icon: Icons.download,
+          ValueListenableBuilder<bool>(
+            valueListenable: _isExporting,
+            builder: (context, exporting, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GradientButton(
+                    text: exporting ? 'Exporting...' : 'Export Profile Data',
+                    onPressed: exporting ? null : _exportProfile,
+                    isLoading: exporting,
+                    isFullWidth: true,
+                    iconPath: AppIcons.download,
+                  ),
+                  if (exporting) ...[
+                    SizedBox(height: AppSpacing.spacingMD),
+                    ValueListenableBuilder<double>(
+                      valueListenable: _exportProgress,
+                      builder: (context, progress, _) {
+                        return LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 6,
+                          backgroundColor: borderColor,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.accentPurple,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
           SizedBox(height: AppSpacing.spacingLG),
-
-          // Privacy note
           Container(
             padding: EdgeInsets.all(AppSpacing.spacingMD),
             decoration: BoxDecoration(
-              color: AppColors.accentPurple.withOpacity(0.1),
+              color: AppColors.accentPurple.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.radiusMD),
               border: Border.all(
-                color: AppColors.accentPurple.withOpacity(0.3),
+                color: AppColors.accentPurple.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.lock_outline,
-                  color: AppColors.accentPurple,
+                AppSvgIcon(
+                  assetPath: AppIcons.lock,
                   size: 20,
+                  color: AppColors.accentPurple,
                 ),
                 SizedBox(width: AppSpacing.spacingMD),
                 Expanded(
                   child: Text(
                     'Your exported data is encrypted and will be available for download for 7 days.',
-                    style: AppTypography.caption.copyWith(
-                      color: textColor,
-                    ),
+                    style: AppTypography.caption.copyWith(color: textColor),
                   ),
                 ),
               ],
@@ -277,7 +311,7 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
   }
 
   Widget _buildFormatOption({
-    required Map<String, dynamic> format,
+    required _ExportFormat format,
     required bool isSelected,
     required VoidCallback onTap,
     required Color textColor,
@@ -291,9 +325,7 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
         color: surfaceColor,
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         border: Border.all(
-          color: isSelected
-              ? AppColors.accentPurple
-              : borderColor,
+          color: isSelected ? AppColors.accentPurple : borderColor,
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -309,16 +341,18 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.accentPurple.withOpacity(0.2)
+                      ? AppColors.accentPurple.withValues(alpha: 0.2)
                       : surfaceColor,
                   borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 ),
-                child: Icon(
-                  format['icon'],
-                  color: isSelected
-                      ? AppColors.accentPurple
-                      : secondaryTextColor,
-                  size: 24,
+                child: Center(
+                  child: AppSvgIcon(
+                    assetPath: format.iconPath,
+                    size: 24,
+                    color: isSelected
+                        ? AppColors.accentPurple
+                        : secondaryTextColor,
+                  ),
                 ),
               ),
               SizedBox(width: AppSpacing.spacingMD),
@@ -327,7 +361,7 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      format['name'],
+                      format.name,
                       style: AppTypography.body.copyWith(
                         color: textColor,
                         fontWeight: FontWeight.w600,
@@ -335,7 +369,7 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
                     ),
                     SizedBox(height: AppSpacing.spacingXS),
                     Text(
-                      format['description'],
+                      format.description,
                       style: AppTypography.caption.copyWith(
                         color: secondaryTextColor,
                       ),
@@ -344,8 +378,9 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
                 ),
               ),
               if (isSelected)
-                Icon(
-                  Icons.check_circle,
+                AppSvgIcon(
+                  assetPath: AppIcons.checkCircle,
+                  size: 22,
                   color: AppColors.accentPurple,
                 ),
             ],
@@ -360,8 +395,8 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
       padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingXS),
       child: Row(
         children: [
-          Icon(
-            Icons.check,
+          AppSvgIcon(
+            assetPath: AppIcons.check,
             size: 16,
             color: AppColors.onlineGreen,
           ),

@@ -1,114 +1,92 @@
-﻿// Widget: ChatListHeader
+// Widget: ChatListHeader
 // Header for chat list with search
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/utils/app_icons.dart';
+import '../../core/widgets/debounced_search_field.dart';
 
 /// Chat list header widget
 /// Header with search bar and filter options
-class ChatListHeader extends ConsumerStatefulWidget {
-  final Function(String)? onSearchChanged;
+class ChatListHeader extends StatelessWidget {
+  final ValueChanged<String>? onSearchChanged;
   final VoidCallback? onFilterTap;
   final String? searchHint;
 
   const ChatListHeader({
-    Key? key,
+    super.key,
     this.onSearchChanged,
     this.onFilterTap,
     this.searchHint,
-  }) : super(key: key);
-
-  @override
-  ConsumerState<ChatListHeader> createState() => _ChatListHeaderState();
-}
-
-class _ChatListHeaderState extends ConsumerState<ChatListHeader> {
-  final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final surfaceColor = isDark
+        ? AppColors.surfaceDark
+        : AppColors.surfaceLight;
+    final borderColor = isDark
+        ? AppColors.borderMediumDark
+        : AppColors.borderMediumLight;
+    final fillColor = isDark
+        ? AppColors.surfaceElevatedDark
+        : AppColors.surfaceElevatedLight;
 
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
+      padding: const EdgeInsets.all(AppSpacing.spacingLG),
       decoration: BoxDecoration(
         color: surfaceColor,
-        border: Border(
-          bottom: BorderSide(color: borderColor, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceElevatedDark : AppColors.surfaceElevatedLight,
-                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                border: Border.all(color: borderColor),
-              ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  widget.onSearchChanged?.call(value);
-                  setState(() {
-                    _isSearching = value.isNotEmpty;
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: widget.searchHint ?? 'Search conversations...',
-                  hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: secondaryTextColor,
-                  ),
-                  suffixIcon: _isSearching
-                      ? IconButton(
-                          icon: Icon(
-                            Icons.clear,
-                            color: secondaryTextColor,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            widget.onSearchChanged?.call('');
-                            setState(() {
-                              _isSearching = false;
-                            });
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingMD,
+            child: DebouncedSearchField(
+              hintText: searchHint ?? 'Search conversations...',
+              onChanged: onSearchChanged ?? (_) {},
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: fillColor,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                  borderSide: BorderSide(
+                    color: AppColors.accentViolet.withValues(alpha: 0.45),
+                    width: 1.5,
                   ),
                 ),
-                style: AppTypography.body.copyWith(color: textColor),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spacingMD,
+                  vertical: AppSpacing.spacingMD,
+                ),
               ),
             ),
           ),
-          if (widget.onFilterTap != null) ...[
-            SizedBox(width: AppSpacing.spacingMD),
+          if (onFilterTap != null) ...[
+            const SizedBox(width: AppSpacing.spacingMD),
             IconButton(
-              icon: Icon(
-                Icons.filter_list,
+              tooltip: 'Filter conversations',
+              onPressed: onFilterTap,
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              icon: AppSvgIcon(
+                assetPath: AppIcons.filter,
+                size: 22,
                 color: textColor,
               ),
-              onPressed: widget.onFilterTap,
             ),
           ],
         ],

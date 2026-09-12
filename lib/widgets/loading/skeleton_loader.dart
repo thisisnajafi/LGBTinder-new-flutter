@@ -2,8 +2,8 @@
 // Skeleton loading animation
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import 'shimmer_effect.dart';
 
@@ -21,13 +21,13 @@ class SkeletonLoader extends ConsumerWidget {
   final Color? highlightColorOverride;
 
   const SkeletonLoader({
-    Key? key,
+    super.key,
     this.width,
     this.height,
     this.borderRadius,
     this.child,
     this.highlightColorOverride,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,21 +37,27 @@ class SkeletonLoader extends ConsumerWidget {
     final baseColor = isDark ? _skeletonBaseDark : AppColors.surfaceLight;
     final highlightColor = highlightColorOverride ??
         (isDark
-            ? Colors.white.withOpacity(0.2)
+            ? Colors.white.withValues(alpha: 0.2)
             : AppColors.surfaceElevatedLight);
+
+    final placeholder = Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: baseColor,
+        borderRadius: borderRadius ?? BorderRadius.circular(AppRadius.radiusSM),
+      ),
+      child: child,
+    );
+
+    if (!AppAnimations.animationsEnabled(context)) {
+      return placeholder;
+    }
 
     return ShimmerEffect(
       baseColor: baseColor,
       highlightColor: highlightColor,
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: baseColor,
-          borderRadius: borderRadius ?? BorderRadius.circular(AppRadius.radiusSM),
-        ),
-        child: child,
-      ),
+      child: placeholder,
     );
   }
 }
