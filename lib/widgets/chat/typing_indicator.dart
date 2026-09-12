@@ -1,70 +1,88 @@
 ﻿// Widget: TypingIndicator
 // Animated typing indicator
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/responsive/responsive.dart';
 
-/// Animated typing indicator widget
-/// Shows animated dots when user is typing
-class TypingIndicator extends ConsumerStatefulWidget {
+import '../../core/constants/animation_constants.dart';
+import '../../core/responsive/responsive.dart';
+import '../../core/theme/spacing_constants.dart';
+
+/// Three primary-color dots that bounce while the peer is typing
+/// (CHAT-THREAD-003).
+class TypingIndicator extends StatefulWidget {
   /// Optional peer name, e.g. "Alex is typing…"
   final String? displayName;
 
-  const TypingIndicator({Key? key, this.displayName}) : super(key: key);
+  const TypingIndicator({super.key, this.displayName});
 
   @override
-  ConsumerState<TypingIndicator> createState() => _TypingIndicatorState();
+  State<TypingIndicator> createState() => _TypingIndicatorState();
 }
 
-class _TypingIndicatorState extends ConsumerState<TypingIndicator>
-    with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
-  late List<Animation<double>> _animations;
+class _TypingIndicatorState extends State<TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  static const int _dotCount = 3;
+
+  AnimationController? _controller;
+  List<Animation<double>> _bounces = const [];
+  bool _started = false;
+  bool _reduced = false;
 
   @override
-  void initState() {
-    super.initState();
-    _controllers = List.generate(
-      3,
-      (index) => AnimationController(
-        duration: const Duration(milliseconds: 600),
-        vsync: this,
-      )..repeat(reverse: true),
-    );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _reduced = !AppAnimations.animationsEnabled(context);
+    if (_reduced) return;
+    _startBounce();
+  }
 
-    _animations = _controllers.map((controller) {
-      return Tween<double>(begin: 0.3, end: 1.0).animate(
+  void _startBounce() {
+    final controller = AnimationController(
+      vsync: this,
+      duration: AppAnimations.chatTypingDot,
+    );
+    _controller = controller;
+    final totalMs = AppAnimations.chatTypingDot.inMilliseconds;
+    final staggerMs = AppAnimations.chatTypingStagger.inMilliseconds;
+    _bounces = List.generate(_dotCount, (i) {
+      final start = (staggerMs * i) / totalMs;
+      final end = (start + 0.5).clamp(0.0, 1.0);
+      return TweenSequence<double>([
+        TweenSequenceItem(
+          tween: Tween<double>(
+            begin: 0,
+            end: -AppAnimations.chatTypingDotBounce,
+          ),
+          weight: 50,
+        ),
+        TweenSequenceItem(
+          tween: Tween<double>(
+            begin: -AppAnimations.chatTypingDotBounce,
+            end: 0,
+          ),
+          weight: 50,
+        ),
+      ]).animate(
         CurvedAnimation(
           parent: controller,
-          curve: Curves.easeInOut,
+          curve: Interval(start, end, curve: Curves.easeInOut),
         ),
       );
-    }).toList();
-
-    // Stagger animations
-    for (int i = 0; i < _controllers.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 200), () {
-        if (mounted) _controllers[i].forward();
-      });
-    }
+    });
+    controller.repeat();
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final dotColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-
+    final dotColor = theme.colorScheme.primary;
     final label = widget.displayName?.trim();
     final showLabel = label != null && label.isNotEmpty;
 
@@ -77,7 +95,7 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
             child: AppText(
               '$label is typing',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: dotColor,
+                color: theme.colorScheme.onSurfaceVariant,
                 fontStyle: FontStyle.italic,
               ),
               maxLines: 1,
@@ -85,28 +103,45 @@ class _TypingIndicatorState extends ConsumerState<TypingIndicator>
           ),
           SizedBox(width: AppSpacing.spacingSM),
         ],
-        ...List.generate(3, (index) {
-        return AnimatedBuilder(
-          animation: _animations[index],
-          builder: (context, child) {
-            return Opacity(
-              opacity: _animations[index].value,
-              child: Container(
-                margin: EdgeInsets.only(
-                  right: index < 2 ? AppSpacing.spacingXS : 0,
-                ),
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            );
-          },
-        );
-      }),
+        ...List.generate(_dotCount, (index) => _dot(index, dotColor)),
       ],
+    );
+  }
+
+  Widget _dot(int index, Color color) {
+    final circle = Container(
+      width: AppAnimations.chatTypingDotSize,
+      height: AppAnimations.chatTypingDotSize,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+    );
+    final padded = Padding(
+      padding: EdgeInsets.only(
+        right: index < _dotCount - 1 ? AppSpacing.spacingXS : 0,
+      ),
+      child: circle,
+    );
+
+    if (_reduced || _bounces.isEmpty) {
+      return Transform.translate(
+        key: ValueKey('chat-typing-dot-$index'),
+        offset: Offset.zero,
+        child: padded,
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: _bounces[index],
+      builder: (context, child) {
+        return Transform.translate(
+          key: ValueKey('chat-typing-dot-$index'),
+          offset: Offset(0, _bounces[index].value),
+          child: child,
+        );
+      },
+      child: padded,
     );
   }
 }

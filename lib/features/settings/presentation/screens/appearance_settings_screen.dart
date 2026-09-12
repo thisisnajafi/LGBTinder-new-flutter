@@ -29,45 +29,27 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                 title: 'Light',
                 subtitle: 'Always use light mode',
                 accent: AppColors.warningYellow,
+                selected: selected == ThemeMode.light,
                 onTap: () =>
                     ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light),
-                trailing: selected == ThemeMode.light
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.checkCircle,
-                        size: 20,
-                        color: AppColors.accentPink,
-                      )
-                    : null,
               ),
               PremiumSettingsTile(
                 iconPath: AppIcons.getIconPath('moon'),
                 title: 'Dark',
                 subtitle: 'Always use dark mode',
                 accent: AppColors.accentViolet,
+                selected: selected == ThemeMode.dark,
                 onTap: () =>
                     ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark),
-                trailing: selected == ThemeMode.dark
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.checkCircle,
-                        size: 20,
-                        color: AppColors.accentPink,
-                      )
-                    : null,
               ),
               PremiumSettingsTile(
                 iconPath: AppIcons.setting,
                 title: 'System',
                 subtitle: 'Follow device settings',
+                selected: selected == ThemeMode.system,
                 onTap: () => ref
                     .read(themeModeProvider.notifier)
                     .setThemeMode(ThemeMode.system),
-                trailing: selected == ThemeMode.system
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.checkCircle,
-                        size: 20,
-                        color: AppColors.accentPink,
-                      )
-                    : null,
               ),
             ],
           ),

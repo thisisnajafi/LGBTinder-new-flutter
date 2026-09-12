@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../data/models/payment_method.dart';
@@ -124,23 +125,8 @@ class _PaymentMethodSelectorState extends ConsumerState<PaymentMethodSelector> {
                 ),
               ),
 
-              // Selection indicator
-              if (isSelected) ...[
-                const SizedBox(width: 12),
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+              const SizedBox(width: 12),
+              PremiumCheckbox(selected: isSelected),
             ],
           ),
         ),

@@ -75,13 +75,55 @@ abstract final class AppDateTime {
     return '${months[local.month - 1]} ${local.day}';
   }
 
-  /// Chat bubble time, e.g. `3:23 PM`.
+  /// Chat bubble / list time, Telegram `HH:mm` (24-hour, local).
   static String formatChatTime(DateTime dateTime) {
     final local = dateTime.toLocal();
-    final hour = local.hour;
+    final hour = local.hour.toString().padLeft(2, '0');
     final minute = local.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$displayHour:$minute $period';
+    return '$hour:$minute';
+  }
+
+  /// Telegram-style date pill in the message list: `Today`, `Yesterday`, weekday, or `21 Aug`.
+  static String formatChatDateBadge(DateTime dateTime, {DateTime? now}) {
+    final local = dateTime.toLocal();
+    final current = (now ?? DateTime.now()).toLocal();
+    final today = DateTime(current.year, current.month, current.day);
+    final day = DateTime(local.year, local.month, local.day);
+    final diffDays = today.difference(day).inDays;
+
+    if (diffDays == 0) return 'Today';
+    if (diffDays == 1) return 'Yesterday';
+    if (diffDays > 1 && diffDays < 7) {
+      const weekdays = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+      return weekdays[day.weekday - 1];
+    }
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final month = months[local.month - 1];
+    if (local.year == current.year) {
+      return '${local.day} $month';
+    }
+    return '${local.day} $month ${local.year}';
   }
 }

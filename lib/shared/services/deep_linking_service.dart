@@ -76,7 +76,7 @@ class DeepLinkingService {
     Future.microtask(() => _marketingAttributionService.initialize());
   }
 
-  void _navigateFromPayload(Map<String, dynamic> data, {bool usePush = false}) {
+  void _navigateFromPayload(Map<String, dynamic> data, {bool usePush = true}) {
     final router = _router;
     if (router == null) return;
     NotificationNavigation.navigateWithRouter(
@@ -88,25 +88,7 @@ class DeepLinkingService {
 
   /// Register default deep link handlers
   void _registerDefaultHandlers() {
-    for (final type in [
-      'message',
-      'chat',
-      'match',
-      'superlike',
-      'superlike_sent',
-      'like',
-      'call',
-      'incoming_call',
-      'incoming_call_audio',
-      'incoming_call_video',
-      'profile',
-      'profile_view',
-      'notification',
-      'plan_purchased',
-      'plan_granted',
-      'plan_upgraded',
-      'subscription_renewed',
-    ]) {
+    for (final type in NotificationNavigation.routableTypes) {
       registerHandler(type, (data) async {
         _navigateFromPayload(data);
       });
@@ -134,7 +116,8 @@ class DeepLinkingService {
 
     final handler = _handlers[type];
     if (handler == null) {
-      debugPrint('⚠️ No handler registered for type: $type');
+      debugPrint('⚠️ No dedicated handler for type: $type — using default navigation');
+      _navigateFromPayload(payload);
       return;
     }
 

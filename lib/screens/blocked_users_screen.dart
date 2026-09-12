@@ -194,7 +194,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
                         ],
                       ),
                     )
-                  : RefreshIndicator(
+                  : PremiumRefreshIndicator(
                       onRefresh: _loadBlockedUsers,
                       child: AppSettingsDetailList(
                         children: [

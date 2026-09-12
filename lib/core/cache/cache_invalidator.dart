@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/calls/data/local/call_history_local_cache.dart';
 import '../../features/chat/providers/chat_list_preview_provider.dart';
 import '../../features/chat/providers/chat_provider.dart';
 import '../../features/chat/providers/chat_providers.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
+import '../../features/chat/providers/conversation_pin_cache_provider.dart';
+import '../../features/chat/providers/chat_list_hidden_peers_provider.dart';
 import '../../features/discover/providers/discover_cache_provider.dart';
 import '../../features/notifications/providers/notifications_cache_provider.dart';
 import '../../features/profile/providers/profile_page_cache_provider.dart';
@@ -63,7 +66,17 @@ class CacheInvalidator {
       await LgbtfinderImageCacheManager().emptyCache();
     } catch (e) {
       AppLogger.warning(
-        'Silently caught exception',
+        'Image cache empty failed',
+        tag: 'Chat',
+        error: e,
+      );
+    }
+
+    try {
+      await _ref.read(callHistoryLocalCacheProvider.notifier).clear();
+    } catch (e) {
+      AppLogger.warning(
+        'Call history cache purge failed',
         tag: 'cache_invalidator',
         error: e,
       );
@@ -100,6 +113,26 @@ class CacheInvalidator {
     } catch (e) {
       AppLogger.warning(
         'Conversation mute reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(conversationPinCacheProvider.notifier).clearAll();
+    } catch (e) {
+      AppLogger.warning(
+        'Conversation pin reset failed',
+        tag: 'cache_invalidator',
+        error: e,
+      );
+    }
+
+    try {
+      _ref.read(chatListHiddenPeersProvider.notifier).clear();
+    } catch (e) {
+      AppLogger.warning(
+        'Hidden chats reset failed',
         tag: 'cache_invalidator',
         error: e,
       );
@@ -152,6 +185,7 @@ class CacheInvalidator {
     final numericId = int.tryParse(userId);
     if (numericId != null) {
       await _legacyCache.clearCache(CacheKeys.userProfile(numericId));
+      _ref.read(discoverCacheProvider.notifier).removeUser(numericId);
     }
     final currentId = await _resolveCurrentUserId();
     if (currentId != null && userId == currentId) {
@@ -186,7 +220,12 @@ class CacheInvalidator {
       final session =
           await _ref.read(tokenStorageServiceProvider).getUserSession();
       return session?.user.id.toString();
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning(
+        'Could not resolve current user id for cache purge',
+        tag: 'Chat',
+        error: e,
+      );
       return null;
     }
   }

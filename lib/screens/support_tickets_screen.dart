@@ -236,11 +236,10 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                   SizedBox(height: AppSpacing.spacingMD),
                   DropdownButtonFormField<String>(
                     initialValue: selectedSituation,
-                    decoration: InputDecoration(
-                      labelText: 'Issue type',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                      filled: true,
-                      fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    decoration: premiumInputDecoration(
+                      context,
+                      hintText: 'Issue type',
+                      prefixIconPath: AppIcons.help,
                     ),
                     items: _situationOptions.entries
                         .map(
@@ -257,24 +256,18 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                     },
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
-                  TextField(
+                  PremiumTextField(
                     controller: titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                      filled: true,
-                      fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                    ),
+                    label: 'Title',
+                    hintText: 'Short summary of the issue',
+                    prefixIconPath: AppIcons.documentText,
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
-                  TextField(
+                  PremiumTextField(
                     controller: descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                      filled: true,
-                      fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                    ),
+                    label: 'Description',
+                    hintText: 'Tell us what happened',
+                    prefixIconPath: AppIcons.message,
                     maxLines: 4,
                   ),
                   SizedBox(height: AppSpacing.spacingMD),
@@ -460,7 +453,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                         ),
                       ),
                     )
-                  : RefreshIndicator(
+                  : PremiumRefreshIndicator(
                       onRefresh: _loadTickets,
                       child: AppSettingsDetailList(
                         children: [

@@ -29,6 +29,12 @@ class DiscoveryProfile {
   final bool? isPremium;
   final bool? isOnline;
   final DateTime? lastActive;
+  final String? smoke;
+  final String? drink;
+  final String? gym;
+  final List<String>? languages;
+  final List<String>? musicGenres;
+  final String? relationshipGoal;
 
   DiscoveryProfile({
     required this.id,
@@ -56,6 +62,12 @@ class DiscoveryProfile {
     this.isPremium,
     this.isOnline,
     this.lastActive,
+    this.smoke,
+    this.drink,
+    this.gym,
+    this.languages,
+    this.musicGenres,
+    this.relationshipGoal,
   });
 
   factory DiscoveryProfile.fromJson(Map<String, dynamic> json) {
@@ -104,6 +116,16 @@ class DiscoveryProfile {
       isPremium: json['is_premium'] == true || json['is_premium'] == 1,
       isOnline: json['is_online'] == true || json['is_online'] == 1,
       lastActive: json['last_active'] != null ? DateTime.tryParse(json['last_active'].toString()) : null,
+      smoke: _parseLifestyle(json['smoke'] ?? json['smoking']),
+      drink: _parseLifestyle(json['drink'] ?? json['drinking']),
+      gym: _parseLifestyle(json['gym'] ?? json['fitness']),
+      languages: _parseTitleList(json['languages'] ?? json['language']),
+      musicGenres: _parseTitleList(json['music_genres'] ?? json['music']),
+      relationshipGoal: _parseLifestyle(
+        json['relation_goal'] ??
+            json['relationship_goal'] ??
+            json['relation_goals'],
+      ),
     );
   }
 
@@ -138,6 +160,12 @@ class DiscoveryProfile {
       if (isPremium != null) 'is_premium': isPremium,
       if (isOnline != null) 'is_online': isOnline,
       if (lastActive != null) 'last_active': lastActive!.toIso8601String(),
+      if (smoke != null) 'smoke': smoke,
+      if (drink != null) 'drink': drink,
+      if (gym != null) 'gym': gym,
+      if (languages != null) 'languages': languages,
+      if (musicGenres != null) 'music_genres': musicGenres,
+      if (relationshipGoal != null) 'relation_goal': relationshipGoal,
     };
   }
 
@@ -186,6 +214,17 @@ class DiscoveryProfile {
   static String? _parseFirstTitle(dynamic raw) {
     final titles = _parseTitleList(raw);
     return titles != null && titles.isNotEmpty ? titles.first : null;
+  }
+
+  static String? _parseLifestyle(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is bool) return raw ? 'Yes' : 'No';
+    if (raw is List) {
+      final titles = _parseTitleList(raw);
+      return titles != null && titles.isNotEmpty ? titles.first : null;
+    }
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value;
   }
 
   /// Parse images from API: list of { image_url: string } or list of URL strings.

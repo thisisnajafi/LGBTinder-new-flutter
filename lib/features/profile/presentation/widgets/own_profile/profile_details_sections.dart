@@ -462,19 +462,9 @@ class _DetailChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-        border: Border.all(
-          color: data.accent.withValues(alpha: 0.22),
-        ),
-      ),
+    return PremiumInsetCard(
+      accent: data.accent,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

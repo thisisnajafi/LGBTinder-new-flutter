@@ -11,7 +11,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/responsive/responsive.dart';
-import '../core/widgets/app_page_header.dart';
+import '../core/widgets/premium/premium_design_system.dart';
 import '../features/profile/presentation/widgets/own_profile/own_profile_view.dart';
 import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../features/reference_data/providers/reference_data_providers.dart';
@@ -19,6 +19,7 @@ import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
 import '../widgets/match/match_screen.dart';
 import '../core/constants/app_constants.dart';
+import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
 import '../core/cache/image_cache_service.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart'
@@ -283,6 +284,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         await userActionsService.blockUser(
           BlockUserRequest(blockedUserId: widget.userId!),
         );
+        await ref
+            .read(cacheInvalidatorProvider)
+            .purgeProfile(widget.userId!.toString());
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -439,36 +443,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppPageHeader(
-                  title: 'My Profile',
-                  showBackButton: true,
-                  onBack: () => Navigator.pop(context),
-                  action: IconButton(
-                    icon: AppSvgIcon(
-                      assetPath: AppIcons.edit,
-                      size: 24,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    onPressed: _openProfileEdit,
-                  ),
-                ),
-                Expanded(
-                  child: OwnProfileView(
-                    profile: profile,
-                    onViewProfile: () {},
-                    onEditPhotos: _openProfileEdit,
-                    onAddPhoto: _openImagePicker,
-                    onPhotoTap: _openImageViewer,
-                  ),
-                ),
-              ],
+        builder: (context) => PremiumDetailScaffold(
+          title: 'My Profile',
+          onBack: () => Navigator.pop(context),
+          action: IconButton(
+            icon: AppSvgIcon(
+              assetPath: AppIcons.edit,
+              size: 24,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
+            onPressed: _openProfileEdit,
+          ),
+          body: OwnProfileView(
+            profile: profile,
+            onViewProfile: () {},
+            onEditPhotos: _openProfileEdit,
+            onAddPhoto: _openImagePicker,
+            onPhotoTap: _openImageViewer,
           ),
         ),
       ),
@@ -477,9 +468,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final isOwn = _isOwnProfile;
     final cacheState = isOwn ? ref.watch(profilePageCacheProvider) : null;
 
@@ -602,26 +590,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: ResponsiveGrid.constrained(
-          context,
-          loading || hasError || profile == null
-              ? bodyContent
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    if (isOwn) {
-                      await ref.read(appCacheManagerProvider).revalidateAll();
-                      await ref.read(profilePageCacheProvider.notifier).refresh();
-                    } else {
-                      await _loadProfile();
-                    }
-                  },
-                  child: bodyContent,
-                ),
-        ),
-      ),
+    return PremiumTabPageLayout(
+      title: 'Profile',
+      subtitle: isOwn ? 'Your photos, bio, and membership' : 'Member profile',
+      showTitleHeader: false,
+      body: loading || hasError || profile == null
+          ? bodyContent
+          : PremiumRefreshIndicator(
+              onRefresh: () async {
+                if (isOwn) {
+                  await ref.read(appCacheManagerProvider).revalidateAll();
+                  await ref.read(profilePageCacheProvider.notifier).refresh();
+                } else {
+                  await _loadProfile();
+                }
+              },
+              child: bodyContent,
+            ),
     );
   }
 

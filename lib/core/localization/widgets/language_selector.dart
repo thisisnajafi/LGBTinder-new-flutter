@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_colors.dart';
 import '../../responsive/responsive.dart';
+import '../../widgets/premium/premium_design_system.dart';
 import '../locale_provider.dart';
 
 /// Language selector widget
@@ -181,7 +182,9 @@ class LanguageListTile extends ConsumerWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
+      child: SizedBox(
+        width: double.infinity,
+        child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
           children: [
@@ -233,15 +236,9 @@ class LanguageListTile extends ConsumerWidget {
               ),
             ),
 
-            // Selection indicator
-            if (isSelected) ...[
-              Icon(
-                Icons.check_circle,
-                color: AppColors.primaryLight,
-                size: 20,
-              ),
-            ],
+            PremiumCheckbox(selected: isSelected),
           ],
+        ),
         ),
       ),
     );

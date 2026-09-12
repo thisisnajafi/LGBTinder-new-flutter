@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+
+import '../../core/services/app_logger.dart';
+import 'agora_rtc_types.dart';
 import 'agora_service.dart';
 
 /// Call quality metrics and monitoring
@@ -89,7 +91,7 @@ class CallQualityMonitor {
     // Start quality metrics monitoring
     _startQualityMonitoring();
 
-    debugPrint('Started call quality monitoring for call: $callId');
+    AppLogger.info('Started quality monitoring for call $callId', tag: 'CallQuality');
   }
 
   /// Stop monitoring and finalize metrics
@@ -113,7 +115,10 @@ class CallQualityMonitor {
     // Notify completion
     onCallEnded?.call(_currentCallMetrics!);
 
-    debugPrint('Stopped call quality monitoring. Duration: ${_currentCallMetrics!.durationSeconds}s, Successful: $callSuccessful');
+    AppLogger.info(
+      'Stopped quality monitoring duration=${_currentCallMetrics!.durationSeconds}s success=$callSuccessful',
+      tag: 'CallQuality',
+    );
 
     // Clear current metrics
     _currentCallMetrics = null;
@@ -123,7 +128,10 @@ class CallQualityMonitor {
   void recordConnectionDrop() {
     if (_currentCallMetrics != null) {
       _currentCallMetrics!.connectionDrops++;
-      debugPrint('Connection drop recorded. Total drops: ${_currentCallMetrics!.connectionDrops}');
+      AppLogger.warning(
+        'Connection drop recorded total=${_currentCallMetrics!.connectionDrops}',
+        tag: 'CallQuality',
+      );
     }
   }
 
@@ -131,15 +139,22 @@ class CallQualityMonitor {
   void recordError(String error) {
     if (_currentCallMetrics != null) {
       _currentCallMetrics!.errors.add(error);
-      debugPrint('Error recorded: $error');
+      AppLogger.error('Quality error recorded: $error', tag: 'CallQuality');
     }
   }
 
-  /// Update network quality
+  /// Update network quality from Agora [QualityType] mapping.
   void updateNetworkQuality(String quality) {
     if (_currentCallMetrics != null) {
       _currentCallMetrics!.networkQuality = quality;
     }
+  }
+
+  /// Apply real [RtcStats] bitrate / loss (do not invent zeros).
+  void applyRtcStats({required int bitrateKbps, required int packetLossPercent}) {
+    if (_currentCallMetrics == null) return;
+    _currentCallMetrics!.bitrate = bitrateKbps;
+    _currentCallMetrics!.packetLoss = packetLossPercent;
   }
 
   /// Get current call metrics
@@ -162,10 +177,8 @@ class CallQualityMonitor {
       if (_currentCallMetrics == null) return;
 
       try {
-        // Get Agora stats (this would be enhanced with actual Agora SDK stats)
         final stats = await _agoraService.getCallStats();
 
-        // Update metrics based on Agora data
         if (stats.containsKey('bitrate')) {
           _currentCallMetrics!.bitrate = stats['bitrate'] as int? ?? 0;
         }
@@ -182,7 +195,6 @@ class CallQualityMonitor {
           _currentCallMetrics!.audioLevel = stats['audioLevel'] as int? ?? 0;
         }
 
-        // Determine network quality based on metrics
         _updateNetworkQuality();
 
         // Notify quality update
@@ -196,28 +208,28 @@ class CallQualityMonitor {
         });
 
       } catch (e) {
-        debugPrint('Error updating quality metrics: $e');
+        AppLogger.error(
+          'Error updating quality metrics',
+          tag: 'CallQuality',
+          error: e,
+        );
       }
     });
   }
 
-  /// Update network quality based on current metrics
+  /// Update network quality based on current metrics.
+  /// Never overwrites an Agora [onNetworkQuality] label, and never treats
+  /// missing 0/0 stats as `'bad'`.
   void _updateNetworkQuality() {
     if (_currentCallMetrics == null) return;
 
-    final packetLoss = _currentCallMetrics!.packetLoss;
-    final bitrate = _currentCallMetrics!.bitrate;
-
-    // Simple quality assessment (would be more sophisticated in production)
-    if (packetLoss < 1 && bitrate > 500) {
-      _currentCallMetrics!.networkQuality = 'excellent';
-    } else if (packetLoss < 3 && bitrate > 200) {
-      _currentCallMetrics!.networkQuality = 'good';
-    } else if (packetLoss < 10 && bitrate > 50) {
-      _currentCallMetrics!.networkQuality = 'poor';
-    } else {
-      _currentCallMetrics!.networkQuality = 'bad';
-    }
+    final next = AgoraNetworkQuality.fromRtcStats(
+      bitrateKbps: _currentCallMetrics!.bitrate,
+      packetLossPercent: _currentCallMetrics!.packetLoss,
+      currentQuality: _currentCallMetrics!.networkQuality,
+    );
+    if (next == null) return;
+    _currentCallMetrics!.networkQuality = next;
   }
 
   /// Check if monitoring is active

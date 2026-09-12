@@ -33,6 +33,21 @@ void main() {
       expect(message.isDeleted, false);
     });
 
+    test('fromJson parses reaction counts and my_reaction', () {
+      final message = Message.fromJson({
+        'id': 1,
+        'sender_id': 100,
+        'receiver_id': 200,
+        'message': 'Hi',
+        'created_at': '2025-12-13T10:00:00Z',
+        'reactions': {'❤️': 2, '👍': 1},
+        'my_reaction': '❤️',
+      });
+
+      expect(message.reactions, {'❤️': 2, '👍': 1});
+      expect(message.myReaction, '❤️');
+    });
+
     test('fromJson handles null values gracefully', () {
       final json = {
         'id': null,

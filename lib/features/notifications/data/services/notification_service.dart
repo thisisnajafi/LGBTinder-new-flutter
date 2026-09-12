@@ -1,4 +1,5 @@
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/services/app_logger.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/notification.dart';
 import '../models/notification_preferences.dart';
@@ -40,13 +41,25 @@ class NotificationService {
           if (item is Map<String, dynamic>) {
             try {
               notifications.add(Notification.fromJson(item));
-            } catch (_) {}
+            } catch (e) {
+              AppLogger.warning(
+                'Skipping malformed notification item',
+                tag: 'Notifications',
+                error: e,
+              );
+            }
           } else if (item is Map) {
             try {
               notifications.add(
                 Notification.fromJson(Map<String, dynamic>.from(item)),
               );
-            } catch (_) {}
+            } catch (e) {
+              AppLogger.warning(
+                'Skipping malformed notification map',
+                tag: 'Notifications',
+                error: e,
+              );
+            }
           }
         }
       }
@@ -195,12 +208,12 @@ class NotificationService {
 
   /// Update notification preferences
   Future<NotificationPreferences> updatePreferences(
-    UpdateNotificationPreferencesRequest request,
+    NotificationPreferences preferences,
   ) async {
     try {
       final response = await _apiService.put<Map<String, dynamic>>(
         ApiEndpoints.notificationPreferences,
-        data: request.toJson(),
+        data: preferences.toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
+import '../../core/utils/app_icons.dart';
 import '../../core/widgets/app_settings_detail.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../widgets/buttons/gradient_button.dart';
@@ -186,13 +187,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = theme.colorScheme.onSurface;
-    final secondaryTextColor =
-        theme.colorScheme.onSurface.withValues(alpha: 0.55);
-    final borderColor =
-        theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
+    final textColor = Theme.of(context).colorScheme.onSurface;
 
     return AppSettingsDetailScaffold(
       title: 'Account management',
@@ -204,69 +199,25 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                 PremiumSettingsGroup(
                   title: 'Email address',
                   children: [
-                    TextField(
+                    PremiumTextField(
                       controller: _emailPasswordController,
+                      label: 'Current password',
+                      hintText: 'Enter your current password',
                       obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Current password',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: const BorderSide(
-                            color: AppColors.accentViolet,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon:
-                            Icon(Icons.lock, color: secondaryTextColor),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
+                      prefixIconPath: AppIcons.lock,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
                     ),
-                    TextField(
+                    const SizedBox(height: AppSpacing.spacingMD),
+                    PremiumTextField(
                       controller: _emailController,
+                      label: 'Email',
+                      hintText: 'name@example.com',
                       keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: const BorderSide(
-                            color: AppColors.accentViolet,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon:
-                            Icon(Icons.email, color: secondaryTextColor),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
+                      prefixIconPath: AppIcons.email,
+                      textInputAction: TextInputAction.done,
+                      autocorrect: false,
+                      autofillHints: const [AutofillHints.email],
                     ),
                   ],
                 ),
@@ -281,110 +232,41 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     text: 'Update email',
                     onPressed: _handleChangeEmail,
                     isFullWidth: true,
-                    icon: Icons.save,
+                    iconPath: AppIcons.save,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.spacingXL),
                 PremiumSettingsGroup(
                   title: 'Change password',
                   children: [
-                    TextField(
+                    PremiumTextField(
                       controller: _currentPasswordController,
+                      label: 'Current password',
+                      hintText: 'Enter your current password',
                       obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Current password',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: const BorderSide(
-                            color: AppColors.accentViolet,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon: Icon(Icons.lock_outline,
-                            color: secondaryTextColor),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
+                      prefixIconPath: AppIcons.lockOutline,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
                     ),
                     const SizedBox(height: AppSpacing.spacingMD),
-                    TextField(
+                    PremiumTextField(
                       controller: _newPasswordController,
+                      label: 'New password',
+                      hintText: 'At least 8 characters',
                       obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'New password',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: const BorderSide(
-                            color: AppColors.accentViolet,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon:
-                            Icon(Icons.lock, color: secondaryTextColor),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
+                      prefixIconPath: AppIcons.lock,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
                     ),
                     const SizedBox(height: AppSpacing.spacingMD),
-                    TextField(
+                    PremiumTextField(
                       controller: _confirmPasswordController,
+                      label: 'Confirm new password',
+                      hintText: 'Re-enter the new password',
                       obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Confirm new password',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: const BorderSide(
-                            color: AppColors.accentViolet,
-                            width: 2,
-                          ),
-                        ),
-                        prefixIcon:
-                            Icon(Icons.lock, color: secondaryTextColor),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
+                      prefixIconPath: AppIcons.lock,
+                      textInputAction: TextInputAction.done,
+                      autocorrect: false,
                     ),
                   ],
                 ),
@@ -399,7 +281,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     text: 'Change password',
                     onPressed: _handleChangePassword,
                     isFullWidth: true,
-                    icon: Icons.lock_reset,
+                    iconPath: AppIcons.lockReset,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.spacingXL),
@@ -416,7 +298,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                       text: 'Contact support',
                       onPressed: () => context.push(AppRoutes.supportTickets),
                       isFullWidth: true,
-                      icon: Icons.support_agent,
+                      iconPath: AppIcons.support,
                     ),
                   ],
                 ),
@@ -467,32 +349,15 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: AppSpacing.spacingLG),
-                  TextFormField(
+                  PremiumTextField(
                     controller: verificationCodeController,
-                    decoration: InputDecoration(
-                      labelText: 'Verification Code',
-                      hintText: '000000',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                      ),
-                      counterText: '',
-                    ),
+                    label: 'Verification code',
+                    hintText: '000000',
                     keyboardType: TextInputType.number,
                     maxLength: 6,
                     textAlign: TextAlign.center,
-                    style: AppTypography.h2.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the verification code';
-                      }
-                      if (value.length != 6) {
-                        return 'Code must be 6 digits';
-                      }
-                      return null;
-                    },
+                    prefixIconPath: AppIcons.email,
+                    autocorrect: false,
                   ),
                 ],
               ),

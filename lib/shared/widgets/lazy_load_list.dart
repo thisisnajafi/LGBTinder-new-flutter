@@ -2,7 +2,10 @@
 // Efficient infinite scroll with pagination support
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
+import '../../core/widgets/app_list_view.dart';
 
 /// Callback type for loading more items
 typedef LoadMoreCallback = Future<bool> Function();
@@ -145,18 +148,18 @@ class _LazyLoadListState<T> extends ConsumerState<LazyLoadList<T>> {
     Widget listView;
     
     if (widget.separatorWidget != null) {
-      listView = ListView.separated(
+      listView = AppListView.separated(
         controller: _scrollController,
-        physics: widget.physics ?? const AlwaysScrollableScrollPhysics(),
+        physics: widget.physics ?? AppScroll.forPlatform(context),
         padding: widget.padding,
         itemCount: widget.items.length + (widget.hasMore ? 1 : 0),
         separatorBuilder: (context, index) => widget.separatorWidget!,
         itemBuilder: _buildItem,
       );
     } else {
-      listView = ListView.builder(
+      listView = AppListView.builder(
         controller: _scrollController,
-        physics: widget.physics ?? const AlwaysScrollableScrollPhysics(),
+        physics: widget.physics ?? AppScroll.forPlatform(context),
         padding: widget.padding,
         itemCount: widget.items.length + (widget.hasMore ? 1 : 0),
         itemBuilder: _buildItem,
@@ -164,7 +167,7 @@ class _LazyLoadListState<T> extends ConsumerState<LazyLoadList<T>> {
     }
     
     if (widget.onRefresh != null) {
-      return RefreshIndicator(
+      return PremiumRefreshIndicator(
         onRefresh: widget.onRefresh!,
         child: listView,
       );
@@ -342,7 +345,7 @@ class _LazyLoadGridState<T> extends ConsumerState<LazyLoadGrid<T>> {
     );
 
     if (widget.onRefresh != null) {
-      return RefreshIndicator(
+      return PremiumRefreshIndicator(
         onRefresh: widget.onRefresh!,
         child: gridView,
       );

@@ -826,37 +826,30 @@ class PaymentService {
     }
   }
 
-  /// Get payment history (legacy: GET /payments/history)
+  /// Get payment history (GET /billing-history, alias of user payments).
   Future<List<PaymentHistory>> getPaymentHistory({
     int page = 1,
     int limit = 20,
   }) async {
-    try {
-      final response = await _apiService.get<dynamic>(
-        '${ApiEndpoints.paymentHistory}?page=$page&limit=$limit',
-      );
-
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-
-      if (dataList != null) {
-        return dataList
-            .map((item) => PaymentHistory.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-
-      return [];
-    } catch (e) {
-      // Return empty list on error
-      return [];
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.paymentHistory,
+      queryParameters: {'page': page, 'per_page': limit},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
+
+    final data = response.data ?? const <String, dynamic>{};
+    final rawList = data['transactions'] ??
+        data['payments'] ??
+        data['data'];
+    if (rawList is! List) return const [];
+
+    return rawList
+        .whereType<Map>()
+        .map((item) => PaymentHistory.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   /// Get user payment history (API: GET user/payments/history). Returns data with payments list and pagination.

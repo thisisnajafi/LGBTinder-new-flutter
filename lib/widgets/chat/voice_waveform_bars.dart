@@ -2,7 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Animated waveform bars for voice recording and playback.
+import '../../core/constants/animation_constants.dart';
+import '../../features/chat/utils/voice_waveform_layout.dart';
+
+/// Voice waveform as a single [CustomPainter] (CHAT-ANIM-011).
+///
+/// Playback progress recolors bars (played = [color], remaining = muted).
+/// Idle motion runs only while [active] and Reduce Motion is off.
 class VoiceWaveformBars extends StatefulWidget {
   final bool active;
   final Color color;
@@ -15,7 +21,7 @@ class VoiceWaveformBars extends StatefulWidget {
     required this.active,
     required this.color,
     this.height = 28,
-    this.barCount = 22,
+    this.barCount = AppAnimations.chatVoiceWaveformBars,
     this.progress = 0,
   });
 
@@ -27,32 +33,35 @@ class _VoiceWaveformBarsState extends State<VoiceWaveformBars>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  /// Deterministic idle heights so the waveform looks natural before playback.
-  double _idleHeightFactor(int index) {
-    final phase = (index / widget.barCount) * math.pi * 2.4;
-    final wave = (math.sin(phase) + math.sin(phase * 1.7 + 0.6)) / 2;
-    return (0.28 + (wave + 1) * 0.32).clamp(0.22, 0.92);
-  }
-
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: AppAnimations.chatVoiceWaveformIdle,
     );
-    if (widget.active) {
-      _controller.repeat();
-    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncTicker();
   }
 
   @override
   void didUpdateWidget(covariant VoiceWaveformBars oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.active && _controller.isAnimating) {
+    _syncTicker();
+  }
+
+  void _syncTicker() {
+    final motion =
+        widget.active && AppAnimations.animationsEnabled(context);
+    if (motion) {
+      if (!_controller.isAnimating) _controller.repeat();
+    } else if (_controller.isAnimating) {
       _controller.stop();
+      _controller.value = 0;
     }
   }
 
@@ -64,59 +73,98 @@ class _VoiceWaveformBarsState extends State<VoiceWaveformBars>
 
   @override
   Widget build(BuildContext context) {
-    final progress = widget.progress.clamp(0.0, 1.0);
-    final activeBars = (widget.barCount * progress).round();
-
+    final animate =
+        widget.active && AppAnimations.animationsEnabled(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : 160.0;
-        const gap = 2.4;
-        final barWidth = math.max(
-          2.2,
-          (maxWidth - (widget.barCount - 1) * gap) / widget.barCount,
-        );
-
-        return AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            return SizedBox(
-              height: widget.height,
-              width: maxWidth,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(widget.barCount, (index) {
-                  final phase = (index / widget.barCount) * math.pi * 2;
-                  final idleFactor = _idleHeightFactor(index);
-                  final wave = widget.active
-                      ? (0.32 +
-                          0.68 *
-                              ((math.sin(_controller.value * math.pi * 2 + phase) +
-                                      1) /
-                                  2))
-                      : idleFactor;
-                  final isPlayed = index < activeBars;
-                  final barColor = isPlayed
-                      ? widget.color
-                      : widget.color.withValues(alpha: widget.active ? 0.42 : 0.34);
-
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 120),
-                    curve: Curves.easeOutCubic,
-                    width: barWidth,
-                    height: widget.height * wave,
-                    decoration: BoxDecoration(
-                      color: barColor,
-                      borderRadius: BorderRadius.circular(barWidth),
-                    ),
-                  );
-                }),
-              ),
-            );
-          },
+        final maxWidth =
+            constraints.maxWidth.isFinite ? constraints.maxWidth : 160.0;
+        return RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              return CustomPaint(
+                size: Size(maxWidth, widget.height),
+                painter: VoiceWaveformPainter(
+                  barCount: widget.barCount,
+                  progress: widget.progress,
+                  t: animate ? _controller.value : 0,
+                  active: widget.active,
+                  animate: animate,
+                  color: widget.color,
+                ),
+              );
+            },
+          ),
         );
       },
     );
+  }
+}
+
+/// Paints [barCount] rounded bars; [shouldRepaint] is the only invalidate path.
+class VoiceWaveformPainter extends CustomPainter {
+  final int barCount;
+  final double progress;
+  final double t;
+  final bool active;
+  final bool animate;
+  final Color color;
+
+  const VoiceWaveformPainter({
+    required this.barCount,
+    required this.progress,
+    required this.t,
+    required this.active,
+    required this.animate,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (barCount <= 0 || size.width <= 0 || size.height <= 0) return;
+    final barW = VoiceWaveformLayout.barWidth(size.width, barCount);
+    final muted = color.withValues(
+      alpha: active
+          ? VoiceWaveformLayout.mutedAlphaActive
+          : VoiceWaveformLayout.mutedAlphaIdle,
+    );
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (var i = 0; i < barCount; i++) {
+      final played = VoiceWaveformLayout.playedFraction(
+        index: i,
+        barCount: barCount,
+        progress: progress,
+      );
+      paint.color = Color.lerp(muted, color, played)!;
+      final factor = VoiceWaveformLayout.heightFactor(
+        index: i,
+        barCount: barCount,
+        t: t,
+        active: active,
+        animate: animate,
+      );
+      final h = math.max(2.0, size.height * factor);
+      final x = i * (barW + VoiceWaveformLayout.gap);
+      final y = (size.height - h) / 2;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, y, barW, h),
+          Radius.circular(barW),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant VoiceWaveformPainter oldDelegate) {
+    return oldDelegate.barCount != barCount ||
+        oldDelegate.progress != progress ||
+        oldDelegate.t != t ||
+        oldDelegate.active != active ||
+        oldDelegate.animate != animate ||
+        oldDelegate.color != color;
   }
 }
 
@@ -139,8 +187,19 @@ class _PulsingRecordDotState extends State<PulsingRecordDot>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+      duration: AppAnimations.chatVoiceWaveformIdle,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AppAnimations.animationsEnabled(context)) {
+      if (!_controller.isAnimating) _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+      _controller.value = 1;
+    }
   }
 
   @override
@@ -151,10 +210,11 @@ class _PulsingRecordDotState extends State<PulsingRecordDot>
 
   @override
   Widget build(BuildContext context) {
+    final motion = AppAnimations.animationsEnabled(context);
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final scale = 0.85 + (_controller.value * 0.3);
+        final scale = motion ? 0.85 + (_controller.value * 0.3) : 1.0;
         return Transform.scale(
           scale: scale,
           child: Container(

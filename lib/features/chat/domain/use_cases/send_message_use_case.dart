@@ -15,6 +15,7 @@ class SendMessageUseCase {
   Future<Message> execute(int receiverId, String message, {
     String messageType = 'text',
     MessageAttachment? attachment,
+    String? clientId,
   }) async {
     try {
       return await _chatRepository.sendMessage(
@@ -22,6 +23,7 @@ class SendMessageUseCase {
         message,
         messageType: messageType,
         attachment: attachment,
+        clientId: clientId,
       );
     } catch (e) {
       // Re-throw all exceptions to let UI handle them

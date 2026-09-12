@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../theme/spacing_constants.dart';
-import '../utils/app_icons.dart';
-import '../responsive/responsive.dart';
+import 'premium/premium_page.dart';
 
-/// Flat page header — replaces elevated AppBar on target screens.
+/// Flat page header — aliases [PremiumPageHeader] so leftover screens match.
 class AppPageHeader extends StatelessWidget {
   final String title;
   final Widget? action;
@@ -19,74 +17,15 @@ class AppPageHeader extends StatelessWidget {
     super.key,
   });
 
-  static const double horizontalPadding = 20;
+  static const double horizontalPadding = PremiumPageHeader.horizontalPadding;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (showBackButton) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.spacingXS,
-          AppSpacing.spacingSM,
-          horizontalPadding,
-          0,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: AppSvgIcon(
-                assetPath: AppIcons.arrowLeft,
-                size: 24,
-                color: theme.colorScheme.onSurface,
-              ),
-              onPressed: onBack,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 48,
-                minHeight: 48,
-              ),
-            ),
-            Expanded(
-              child: AppText(
-                title,
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-              ),
-            ),
-            if (action != null) action!,
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        horizontalPadding,
-        AppSpacing.spacingSM,
-        horizontalPadding,
-        0,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: AppText(
-              title,
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 2,
-            ),
-          ),
-          if (action != null) action!,
-        ],
-      ),
+    return PremiumPageHeader(
+      title: title,
+      action: action,
+      showBackButton: showBackButton,
+      onBack: onBack,
     );
   }
 }

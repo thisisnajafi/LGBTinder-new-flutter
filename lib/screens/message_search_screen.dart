@@ -1,4 +1,6 @@
 // Screen: MessageSearchScreen
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,15 +11,24 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../core/providers/api_providers.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../core/widgets/debounced_search_field.dart';
 import '../widgets/chat/chat_list_item.dart';
 import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../core/constants/api_endpoints.dart';
+import '../core/services/app_logger.dart';
 import '../pages/chat_page.dart';
 
 /// Message search screen - Search messages
 class MessageSearchScreen extends ConsumerStatefulWidget {
-  const MessageSearchScreen({super.key});
+  final int? conversationId;
+  final String? initialQuery;
+
+  const MessageSearchScreen({
+    super.key,
+    this.conversationId,
+    this.initialQuery,
+  });
 
   @override
   ConsumerState<MessageSearchScreen> createState() =>
@@ -37,7 +48,15 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   void initState() {
     super.initState();
     _initPrefs();
-    _searchController.addListener(_onSearchChanged);
+    final initial = widget.initialQuery?.trim() ?? '';
+    if (initial.isNotEmpty) {
+      _searchController.text = initial;
+      if (initial.length >= 2) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_performSearch(initial));
+        });
+      }
+    }
   }
 
   Future<void> _initPrefs() async {
@@ -45,7 +64,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       _prefs = await SharedPreferences.getInstance();
       _loadRecentSearches();
     } catch (e) {
-      debugPrint('Failed to initialize SharedPreferences: $e');
+      AppLogger.warning(
+        'Failed to initialize SharedPreferences',
+        tag: 'Chat',
+        error: e,
+      );
       setState(() {
         _recentSearches = [];
       });
@@ -58,17 +81,17 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    setState(() {});
-    final query = _searchController.text.trim();
+  void _onDebouncedQuery(String raw) {
+    final query = raw.trim();
     if (query.isEmpty) {
       setState(() {
         _searchResults = [];
+        _isLoading = false;
       });
       return;
     }
-
-    _performSearch(query);
+    if (query.length < 2) return;
+    unawaited(_performSearch(query));
   }
 
   Future<void> _performSearch(String query) async {
@@ -83,13 +106,18 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         queryParameters: {
           'query': query,
           'limit': 20,
+          if (widget.conversationId != null)
+            'conversation_id': widget.conversationId,
         },
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (response.isSuccess && response.data != null) {
-        final data = response.data!['data'] as Map<String, dynamic>?;
-        final messages = data?['messages'] as List<dynamic>? ?? [];
+        final payload = response.data!;
+        final data = payload['data'] is Map<String, dynamic>
+            ? payload['data'] as Map<String, dynamic>
+            : payload;
+        final messages = data['messages'] as List<dynamic>? ?? [];
 
         final groupedResults = <Map<String, dynamic>>[];
         final chatMap = <int, Map<String, dynamic>>{};
@@ -97,10 +125,12 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         for (final message in messages) {
           final messageData = message as Map<String, dynamic>;
           final otherUser = messageData['other_user'] as Map<String, dynamic>;
-          final chatId = messageData['chat_id'] as int;
+          final threadId = _threadIdFromSearchHit(messageData) ??
+              (otherUser['id'] as num?)?.toInt();
+          if (threadId == null) continue;
 
-          if (!chatMap.containsKey(chatId)) {
-            chatMap[chatId] = {
+          if (!chatMap.containsKey(threadId)) {
+            chatMap[threadId] = {
               'id': otherUser['id'],
               'name': otherUser['name'],
               'avatar_url': otherUser['avatar_url'],
@@ -110,9 +140,9 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
               'is_online': false,
               'is_verified': false,
               'is_premium': false,
-              'chat_id': chatId,
+              'conversation_id': threadId,
             };
-            groupedResults.add(chatMap[chatId]!);
+            groupedResults.add(chatMap[threadId]!);
           }
         }
 
@@ -129,6 +159,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         });
       }
     } catch (e) {
+      AppLogger.warning(
+        'Message search failed',
+        tag: 'Chat',
+        error: e,
+      );
       setState(() {
         _isLoading = false;
       });
@@ -149,7 +184,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         _recentSearches = searches.map((search) => {'query': search}).toList();
       });
     } catch (e) {
-      debugPrint('Failed to load recent searches: $e');
+      AppLogger.warning(
+        'Failed to load recent searches',
+        tag: 'Chat',
+        error: e,
+      );
       setState(() {
         _recentSearches = [];
       });
@@ -171,7 +210,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       await _prefs!.setStringList(_recentSearchesKey, searches);
       _loadRecentSearches();
     } catch (e) {
-      debugPrint('Failed to save recent search: $e');
+      AppLogger.warning(
+        'Failed to save recent search',
+        tag: 'Chat',
+        error: e,
+      );
     }
   }
 
@@ -184,7 +227,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       await _prefs!.setStringList(_recentSearchesKey, searches);
       _loadRecentSearches();
     } catch (e) {
-      debugPrint('Failed to remove recent search: $e');
+      AppLogger.warning(
+        'Failed to remove recent search',
+        tag: 'Chat',
+        error: e,
+      );
     }
   }
 
@@ -200,11 +247,21 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       await _prefs!.remove(_recentSearchesKey);
       _loadRecentSearches();
     } catch (e) {
-      debugPrint('Failed to clear recent searches: $e');
+      AppLogger.warning(
+        'Failed to clear recent searches',
+        tag: 'Chat',
+        error: e,
+      );
       setState(() {
         _recentSearches = [];
       });
     }
+  }
+
+  int? _threadIdFromSearchHit(Map<String, dynamic> messageData) {
+    final raw = messageData['conversation_id'] ?? messageData['chat_id'];
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '');
   }
 
   void _handleChatTap(int userId) {
@@ -257,35 +314,46 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                   ),
                   const SizedBox(width: AppSpacing.spacingSM),
                   Expanded(
-                    child: TextField(
+                    child: DebouncedSearchField(
                       controller: _searchController,
                       autofocus: true,
+                      showDefaultPrefix: false,
+                      showClearButton: false,
+                      hintText: 'Search conversations...',
                       style: AppTypography.body.copyWith(color: textColor),
                       decoration: InputDecoration(
                         hintText: 'Search conversations...',
-                        hintStyle:
-                            AppTypography.body.copyWith(color: secondaryTextColor),
+                        hintStyle: AppTypography.body
+                            .copyWith(color: secondaryTextColor),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: AppSpacing.spacingSM,
                         ),
                       ),
+                      onChanged: _onDebouncedQuery,
                     ),
                   ),
-                  if (_searchController.text.isNotEmpty)
-                    PremiumTapScale(
-                      onTap: _clearSearch,
-                      semanticLabel: 'Clear search',
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.spacingXS),
-                        child: AppSvgIcon(
-                          assetPath: AppIcons.close,
-                          size: 18,
-                          color: secondaryTextColor,
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _searchController,
+                    builder: (context, value, _) {
+                      if (value.text.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return PremiumTapScale(
+                        onTap: _clearSearch,
+                        semanticLabel: 'Clear search',
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.spacingXS),
+                          child: AppSvgIcon(
+                            assetPath: AppIcons.close,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -438,14 +506,19 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                             itemBuilder: (context, index) {
                               final result = _searchResults[index];
                               return ChatListItem(
-                                userId: result['id'],
-                                name: result['name'],
-                                avatarUrl: result['avatar_url'],
-                                lastMessage: result['last_message'],
-                                lastMessageTime: result['last_message_time'],
-                                unreadCount: result['unread_count'],
-                                isOnline: result['is_online'],
-                                onTap: () => _handleChatTap(result['id']),
+                                userId: (result['id'] as num).toInt(),
+                                name: result['name'] as String? ?? 'User',
+                                avatarUrl: result['avatar_url'] as String?,
+                                lastMessage: result['last_message'] as String?,
+                                lastMessageTime:
+                                    result['last_message_time'] as DateTime?,
+                                unreadCount:
+                                    (result['unread_count'] as num?)?.toInt() ??
+                                        0,
+                                isOnline: result['is_online'] == true,
+                                onTap: () => _handleChatTap(
+                                  (result['id'] as num).toInt(),
+                                ),
                               );
                             },
                           ),

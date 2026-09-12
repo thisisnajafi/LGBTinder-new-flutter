@@ -1,3 +1,5 @@
+import 'package:equatable/equatable.dart';
+
 /// Profile verification models
 class ProfileVerification {
   final bool photoVerified;
@@ -93,7 +95,7 @@ class ProfileVerification {
 }
 
 /// Identity verification block on user profile API responses.
-class ProfileIdentityVerification {
+class ProfileIdentityVerification extends Equatable {
   final int score;
   final String badge;
   final bool photoVerified;
@@ -140,6 +142,18 @@ class ProfileIdentityVerification {
   bool get hasAnyVerified => photoVerified || idVerified || videoVerified;
 
   bool get isFullyVerified => badge == 'Fully Verified' || score >= 100;
+
+  @override
+  List<Object?> get props => [
+        score,
+        badge,
+        photoVerified,
+        idVerified,
+        videoVerified,
+        photoVerifiedAt,
+        idVerifiedAt,
+        videoVerifiedAt,
+      ];
 }
 
 /// Pending verification model

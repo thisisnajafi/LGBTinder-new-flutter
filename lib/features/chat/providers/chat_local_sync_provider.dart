@@ -35,8 +35,31 @@ final chatLocalSyncProvider = Provider<void>((ref) {
     );
   });
 
+  final deletedSub = pusher.messageDeletedStream.listen((event) {
+    if (event.forEveryone) {
+      unawaited(localRepo.markMessageDeletedByServerId(event.messageId));
+    } else {
+      unawaited(localRepo.deleteMessageByServerId(event.messageId));
+    }
+  });
+
+  final editedSub = pusher.messageEditedStream.listen((event) {
+    final message = event.message;
+    if (message == null || !message.isValid) return;
+    final lifecycle = ref.read(chatPusherLifecycleProvider);
+    final currentUserId = lifecycle.userId ?? pusher.currentUserId;
+    if (currentUserId == null || currentUserId <= 0) return;
+    final otherUserId = message.senderId == currentUserId
+        ? message.receiverId
+        : message.senderId;
+    if (otherUserId <= 0) return;
+    unawaited(localRepo.upsertMessage(message, otherUserId));
+  });
+
   ref.onDispose(() {
     unawaited(messageSub.cancel());
+    unawaited(deletedSub.cancel());
+    unawaited(editedSub.cancel());
   });
 });
 

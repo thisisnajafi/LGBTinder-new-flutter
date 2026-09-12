@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/app_logger.dart';
 import '../../../shared/models/api_error.dart';
 import '../data/models/chat.dart';
 import '../data/models/message.dart';
 import '../data/models/message_attachment.dart';
 import '../data/models/message_delivery_status.dart';
+import '../utils/chat_client_id.dart';
+import '../utils/chat_message_dedup.dart';
+import '../utils/chat_outbox_ui.dart';
 import '../data/local/chat_local_repository.dart';
 import '../data/services/chat_outbound_queue_service.dart';
 import '../domain/use_cases/get_chat_history_use_case.dart';
@@ -14,7 +18,9 @@ import '../domain/use_cases/mark_as_read_use_case.dart';
 import '../domain/use_cases/delete_message_use_case.dart';
 import '../domain/use_cases/set_typing_use_case.dart';
 import '../domain/use_cases/get_chats_use_case.dart';
+import 'chat_outbox_ui_provider.dart';
 import 'chat_providers.dart';
+import 'chat_thread_providers.dart';
 
 /// Chat provider - manages chat state and operations
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
@@ -28,6 +34,7 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final localRepo = ref.watch(chatLocalRepositoryProvider);
 
   return ChatNotifier(
+    ref: ref,
     getChatHistoryUseCase: getChatHistoryUseCase,
     sendMessageUseCase: sendMessageUseCase,
     markAsReadUseCase: markAsReadUseCase,
@@ -98,6 +105,7 @@ class ChatState {
 
 /// Chat notifier
 class ChatNotifier extends StateNotifier<ChatState> {
+  final Ref _ref;
   final GetChatHistoryUseCase _getChatHistoryUseCase;
   final SendMessageUseCase _sendMessageUseCase;
   final MarkAsReadUseCase _markAsReadUseCase;
@@ -109,6 +117,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   bool _isFlushingQueue = false;
 
   ChatNotifier({
+    required Ref ref,
     required GetChatHistoryUseCase getChatHistoryUseCase,
     required SendMessageUseCase sendMessageUseCase,
     required MarkAsReadUseCase markAsReadUseCase,
@@ -117,7 +126,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required GetChatsUseCase getChatsUseCase,
     required ChatOutboundQueueService outboundQueue,
     required ChatLocalRepository localRepo,
-  }) : _getChatHistoryUseCase = getChatHistoryUseCase,
+  }) : _ref = ref,
+       _getChatHistoryUseCase = getChatHistoryUseCase,
        _sendMessageUseCase = sendMessageUseCase,
        _markAsReadUseCase = markAsReadUseCase,
        _deleteMessageUseCase = deleteMessageUseCase,
@@ -136,7 +146,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
       } else {
         state = state.copyWith(isLoading: true, error: null);
       }
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to load cached conversations',
+        tag: 'Chat',
+        error: e,
+      );
       state = state.copyWith(isLoading: true, error: null);
     }
 
@@ -145,6 +160,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       await _localRepo.replaceAllConversations(chats);
       state = state.copyWith(chats: chats, isLoading: false);
     } catch (e) {
+      AppLogger.warning(
+        'Failed to refresh conversations',
+        tag: 'Chat',
+        error: e,
+      );
       state = state.copyWith(
         isLoading: false,
         error: state.chats.isEmpty ? e.toString() : null,
@@ -174,7 +194,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
             error: null,
           );
         }
-      } catch (_) {
+      } catch (e) {
+        AppLogger.warning(
+          'Failed to load cached chat history',
+          tag: 'Chat',
+          error: e,
+        );
         state = state.copyWith(
           currentChatUserId: userId,
           isLoading: true,
@@ -206,6 +231,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
         await _markAsReadUseCase.execute(userId);
       }
     } catch (e) {
+      AppLogger.warning(
+        'Failed to refresh chat history',
+        tag: 'Chat',
+        error: e,
+      );
       state = state.copyWith(
         isLoading: false,
         error: state.currentMessages.isEmpty ? e.toString() : null,
@@ -221,7 +251,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     String messageType = 'text',
     MessageAttachment? attachment,
   }) async {
-    final clientId = 'local_${DateTime.now().millisecondsSinceEpoch}';
+    final clientId = ChatClientIds.next();
     final optimistic = Message.optimistic(
       clientId: clientId,
       senderId: senderId,
@@ -243,13 +273,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
         message,
         messageType: messageType,
         attachment: attachment,
+        clientId: clientId,
       );
 
       await _outboundQueue.remove(clientId);
 
       final delivered = sentMessage.copyWith(
         deliveryStatus: MessageDeliveryStatus.sent,
-        clearClientId: true,
+        clientId: clientId,
       );
       unawaited(_localRepo.upsertMessage(delivered, receiverId));
 
@@ -261,6 +292,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return sentMessage;
     } catch (e) {
       if (_shouldQueueForOffline(e)) {
+        final queuedAt = DateTime.now();
         await _outboundQueue.enqueue(
           QueuedChatMessage(
             clientId: clientId,
@@ -268,9 +300,25 @@ class ChatNotifier extends StateNotifier<ChatState> {
             senderId: senderId,
             message: message,
             messageType: messageType,
-            createdAt: DateTime.now(),
+            createdAt: queuedAt,
           ),
         );
+        unawaited(
+          _localRepo.upsertMessage(
+            Message(
+              id: 0,
+              senderId: senderId,
+              receiverId: receiverId,
+              message: message,
+              messageType: messageType,
+              createdAt: queuedAt,
+              clientId: clientId,
+              deliveryStatus: MessageDeliveryStatus.queued,
+            ),
+            receiverId,
+          ),
+        );
+        _ref.read(chatOutboxUiProvider.notifier).addReceiver(receiverId);
 
         state = state.copyWith(
           currentMessages: _markQueued(clientId),
@@ -289,14 +337,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
-  /// Send queued messages when back online.
+  /// Send queued messages FIFO when connectivity returns (CHAT-OFFLINE-001).
   Future<void> flushOutboundQueue() async {
     if (_isFlushingQueue) return;
 
     final pending = await _outboundQueue.getPending();
-    if (pending.isEmpty) return;
+    if (pending.isEmpty) {
+      _ref.read(chatOutboxUiProvider.notifier).sync(const [], flushing: false);
+      return;
+    }
 
     _isFlushingQueue = true;
+    _ref.read(chatOutboxUiProvider.notifier).sync(pending, flushing: true);
+    AppLogger.info(
+      'Flushing ${pending.length} queued chat message(s)',
+      tag: ChatOutboundQueueService.logTag,
+    );
     try {
       for (final queued in pending) {
         final index = state.currentMessages.indexWhere(
@@ -312,30 +368,84 @@ class ChatNotifier extends StateNotifier<ChatState> {
             ),
           );
         }
+        _patchThreadStatus(
+          queued.receiverId,
+          queued.clientId,
+          MessageDeliveryStatus.sending,
+        );
 
         try {
           final sentMessage = await _sendMessageUseCase.execute(
             queued.receiverId,
             queued.message,
             messageType: queued.messageType,
+            clientId: queued.clientId,
           );
           await _outboundQueue.remove(queued.clientId);
+          final delivered = sentMessage.copyWith(
+            deliveryStatus: MessageDeliveryStatus.sent,
+            clientId: queued.clientId,
+          );
+          unawaited(
+            _localRepo.upsertMessage(delivered, queued.receiverId),
+          );
           state = state.copyWith(
             currentMessages: _replaceByClientId(queued.clientId, sentMessage),
           );
+          _patchThreadSent(queued.receiverId, queued.clientId, delivered);
         } catch (e) {
+          AppLogger.warning(
+            'Outbound queue flush failed for ${queued.clientId}',
+            tag: 'Chat',
+            error: e,
+          );
           if (_shouldQueueForOffline(e)) {
+            _patchThreadStatus(
+              queued.receiverId,
+              queued.clientId,
+              MessageDeliveryStatus.queued,
+            );
             break;
           }
           state = state.copyWith(
             currentMessages: _markFailed(queued.clientId),
+          );
+          _patchThreadStatus(
+            queued.receiverId,
+            queued.clientId,
+            MessageDeliveryStatus.failed,
           );
           await _outboundQueue.remove(queued.clientId);
         }
       }
     } finally {
       _isFlushingQueue = false;
+      final remaining = await _outboundQueue.getPending();
+      _ref.read(chatOutboxUiProvider.notifier).sync(
+            remaining,
+            flushing: false,
+          );
     }
+  }
+
+  void _patchThreadStatus(
+    int receiverId,
+    String clientId,
+    MessageDeliveryStatus status,
+  ) {
+    final family = chatThreadMessagesProvider(receiverId);
+    if (!_ref.exists(family)) return;
+    _ref.read(family.notifier).mapRows(
+          (row) => ChatOutboxUi.markStatus(row, clientId, status),
+        );
+  }
+
+  void _patchThreadSent(int receiverId, String clientId, Message sent) {
+    final family = chatThreadMessagesProvider(receiverId);
+    if (!_ref.exists(family)) return;
+    _ref.read(family.notifier).mapRows(
+          (row) => ChatOutboxUi.applySent(row, clientId, sent),
+        );
   }
 
   bool _shouldQueueForOffline(Object error) {
@@ -373,6 +483,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         failed.receiverId,
         failed.message,
         messageType: failed.messageType,
+        clientId: clientId,
       );
       await _outboundQueue.remove(clientId);
       state = state.copyWith(
@@ -381,6 +492,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return sentMessage;
     } catch (e) {
       if (_shouldQueueForOffline(e)) {
+        final queuedAt = DateTime.now();
         await _outboundQueue.enqueue(
           QueuedChatMessage(
             clientId: clientId,
@@ -388,9 +500,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
             senderId: failed.senderId,
             message: failed.message,
             messageType: failed.messageType,
-            createdAt: DateTime.now(),
+            createdAt: queuedAt,
           ),
         );
+        _ref.read(chatOutboxUiProvider.notifier).addReceiver(failed.receiverId);
         state = state.copyWith(
           currentMessages: _markQueued(clientId),
           error: null,
@@ -410,7 +523,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         .map((m) => m.clientId == clientId
             ? serverMessage.copyWith(
                 deliveryStatus: MessageDeliveryStatus.sent,
-                clearClientId: true,
+                clientId: clientId,
               )
             : m)
         .toList();
@@ -447,6 +560,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final updatedMessages = state.currentMessages.where((msg) => msg.id != messageId).toList();
       state = state.copyWith(currentMessages: updatedMessages);
     } catch (e) {
+      AppLogger.warning(
+        'Failed to delete message $messageId',
+        tag: 'Chat',
+        error: e,
+      );
       state = state.copyWith(error: e.toString());
     }
   }
@@ -457,6 +575,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       await _setTypingUseCase.execute(userId, isTyping);
       state = state.copyWith(isTyping: isTyping);
     } catch (e) {
+      AppLogger.warning(
+        'Typing status update failed',
+        tag: 'Chat',
+        error: e,
+      );
       // Don't set error for typing status
       state = state.copyWith(error: null);
     }
@@ -473,36 +596,33 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(typingUsers: updatedTypingUsers);
   }
 
-  /// Add received message (skips duplicates; replaces optimistic when ids match).
+  /// Add received message: update in place by id, else replace by `client_id`.
   void addReceivedMessage(Message message) {
-    if (message.id > 0 &&
-        state.currentMessages.any((m) => m.id == message.id)) {
-      return;
-    }
+    final upsert = ChatMessageDedup.upsertMessage(
+      state.currentMessages,
+      message,
+    );
 
     final peerId = state.currentChatUserId;
     if (peerId != null && peerId > 0) {
       unawaited(_localRepo.upsertMessage(message, peerId));
     }
 
-    final withoutOptimisticDup = state.currentMessages
-        .where((m) =>
-            !(m.isOptimistic &&
-                m.senderId == message.senderId &&
-                m.message == message.message))
-        .toList();
-
-    final updatedMessages = [message, ...withoutOptimisticDup];
+    if (!upsert.insertedNew) {
+      state = state.copyWith(currentMessages: upsert.messages);
+      return;
+    }
 
     if (state.currentChatUserId != message.senderId) {
       final updatedUnreadCounts = Map<int, int>.from(state.unreadCounts);
-      updatedUnreadCounts[message.senderId] = (updatedUnreadCounts[message.senderId] ?? 0) + 1;
+      updatedUnreadCounts[message.senderId] =
+          (updatedUnreadCounts[message.senderId] ?? 0) + 1;
       state = state.copyWith(
-        currentMessages: updatedMessages,
+        currentMessages: upsert.messages,
         unreadCounts: updatedUnreadCounts,
       );
     } else {
-      state = state.copyWith(currentMessages: updatedMessages);
+      state = state.copyWith(currentMessages: upsert.messages);
     }
   }
 

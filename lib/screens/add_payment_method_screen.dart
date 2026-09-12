@@ -5,8 +5,9 @@ import '../core/responsive/responsive.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
+import '../core/utils/app_icons.dart';
 import '../core/widgets/app_page_scaffold.dart';
+import '../core/widgets/premium/premium_text_field.dart';
 import '../core/widgets/app_page_header.dart';
 import '../widgets/common/section_header.dart';
 import '../widgets/buttons/gradient_button.dart';
@@ -93,8 +94,6 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return AppPageScaffold(
       title: 'Add Payment Method',
@@ -115,31 +114,12 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
               ),
               SizedBox(height: AppSpacing.spacingMD),
               // Card number
-              TextFormField(
+              PremiumTextField(
                 controller: _cardNumberController,
+                label: 'Card number',
+                hintText: '1234 5678 9012 3456',
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Card Number',
-                  hintText: '1234 5678 9012 3456',
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.surfaceElevatedDark
-                      : AppColors.surfaceElevatedLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                  ),
-                  prefixIcon: Icon(Icons.credit_card, color: secondaryTextColor),
-                ),
-                style: AppTypography.body.copyWith(color: textColor),
+                prefixIconPath: AppIcons.card,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter card number';
@@ -155,30 +135,11 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
+                    child: PremiumTextField(
                       controller: _expiryController,
+                      label: 'MM/YY',
+                      hintText: '12/25',
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'MM/YY',
-                        hintText: '12/25',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                        ),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Required';
@@ -189,31 +150,12 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
                   ),
                   SizedBox(width: AppSpacing.spacingMD),
                   Expanded(
-                    child: TextFormField(
+                    child: PremiumTextField(
                       controller: _cvvController,
+                      label: 'CVV',
+                      hintText: '123',
                       keyboardType: TextInputType.number,
                       obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'CVV',
-                        hintText: '123',
-                        filled: true,
-                        fillColor: isDark
-                            ? AppColors.surfaceElevatedDark
-                            : AppColors.surfaceElevatedLight,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                          borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                        ),
-                      ),
-                      style: AppTypography.body.copyWith(color: textColor),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Required';
@@ -228,31 +170,12 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
                 ],
               ),
               SizedBox(height: AppSpacing.spacingLG),
-              // Cardholder name
-              TextFormField(
+              PremiumTextField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Cardholder Name',
-                  hintText: 'John Doe',
-                  filled: true,
-                  fillColor: isDark
-                      ? AppColors.surfaceElevatedDark
-                      : AppColors.surfaceElevatedLight,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                  ),
-                  prefixIcon: Icon(Icons.person, color: secondaryTextColor),
-                ),
-                style: AppTypography.body.copyWith(color: textColor),
+                label: 'Cardholder name',
+                hintText: 'Name on card',
+                prefixIconPath: AppIcons.user,
+                textCapitalization: TextCapitalization.words,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter cardholder name';

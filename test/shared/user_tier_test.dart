@@ -47,6 +47,11 @@ void main() {
       expect(UserTier.basid.key, 'basic');
       expect(UserTier.basid.displayLabel, 'Basic');
     });
+
+    test('display label for premium and golden', () {
+      expect(UserTier.silder.displayLabel, 'Silver');
+      expect(UserTier.golden.displayLabel, 'Golden');
+    });
   });
 }
 

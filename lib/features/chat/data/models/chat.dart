@@ -1,4 +1,5 @@
 import '../../../../core/utils/app_date_time.dart';
+import '../../../../core/utils/media_url.dart';
 import 'message.dart';
 
 /// Chat conversation model
@@ -15,6 +16,7 @@ class Chat {
   final DateTime? lastSeen;
   final bool isTyping;
   final bool isMuted;
+  final bool isPinned;
 
   Chat({
     required this.id,
@@ -29,6 +31,7 @@ class Chat {
     this.lastSeen,
     this.isTyping = false,
     this.isMuted = false,
+    this.isPinned = false,
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
@@ -85,7 +88,11 @@ class Chat {
       userId: userId,
       firstName: firstName,
       lastName: lastName,
-      primaryImageUrl: json['primary_image_url']?.toString() ?? json['image_url']?.toString() ?? json['avatar_url']?.toString(),
+      primaryImageUrl: MediaUrl.resolve(
+        json['primary_image_url']?.toString() ??
+            json['image_url']?.toString() ??
+            json['avatar_url']?.toString(),
+      ),
       lastMessage: json['last_message'] != null && json['last_message'] is Map
           ? Message.fromJson(Map<String, dynamic>.from(json['last_message'] as Map))
           : null,
@@ -97,6 +104,7 @@ class Chat {
       ),
       isTyping: json['is_typing'] == true || json['is_typing'] == 1,
       isMuted: json['is_muted'] == true || json['is_muted'] == 1,
+      isPinned: json['is_pinned'] == true || json['is_pinned'] == 1,
     );
   }
 
@@ -123,6 +131,7 @@ class Chat {
       if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
       'is_typing': isTyping,
       'is_muted': isMuted,
+      'is_pinned': isPinned,
     };
   }
 }

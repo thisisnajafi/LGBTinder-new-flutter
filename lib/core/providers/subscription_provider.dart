@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../cache/session_cache_providers.dart';
@@ -56,14 +58,23 @@ final subscriptionProvider =
     final cache = ref.watch(sessionDataCacheServiceProvider);
     final notifier = SubscriptionNotifier(_readCachedSubscription(cache));
 
-    SubscriptionMetaSync.instance.onUpdate = notifier.update;
+    void onUpdate(AppSubscriptionStatus status) {
+      notifier.update(status);
+      unawaited(
+        ref.read(superlikesRemainingProvider.notifier).setCount(
+              status.superlikesRemaining,
+            ),
+      );
+    }
+
+    SubscriptionMetaSync.instance.onUpdate = onUpdate;
     SubscriptionMetaSync.instance.onCache = (status) async {
       await cache.saveSubscription(status);
       await ref.read(cachedUserTierProvider.notifier).setTier(status.tier.key);
     };
 
     ref.onDispose(() {
-      if (SubscriptionMetaSync.instance.onUpdate == notifier.update) {
+      if (SubscriptionMetaSync.instance.onUpdate == onUpdate) {
         SubscriptionMetaSync.instance.onUpdate = null;
         SubscriptionMetaSync.instance.onCache = null;
       }

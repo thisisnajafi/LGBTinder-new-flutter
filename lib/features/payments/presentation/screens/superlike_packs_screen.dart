@@ -58,6 +58,20 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
     return null;
   }
 
+  bool _isBestValuePack(SuperlikePack pack, List<SuperlikePack> packs) {
+    SuperlikePack? best;
+    double? bestUnit;
+    for (final item in packs) {
+      if (item.superlikeCount <= 0 || item.price <= 0) continue;
+      final unit = item.price / item.superlikeCount;
+      if (bestUnit == null || unit < bestUnit) {
+        bestUnit = unit;
+        best = item;
+      }
+    }
+    return best?.id == pack.id;
+  }
+
   String _formatPrice(double price, String currency) {
     final symbol =
         currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
@@ -169,7 +183,7 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
             : Column(
                 children: [
                   Expanded(
-                    child: RefreshIndicator(
+                    child: PremiumRefreshIndicator(
                       onRefresh: () async {
                         ref.invalidate(availableSuperlikePacksProvider);
                       },
@@ -201,6 +215,7 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
                               textColor,
                               secondaryTextColor,
                               isDark,
+                              isBestValue: _isBestValuePack(pack, packs),
                             ),
                           ),
                           SizedBox(height: AppSpacing.spacingMD),
@@ -394,9 +409,11 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
     Color borderColor,
     Color textColor,
     Color secondaryTextColor,
-    bool isDark,
-  ) {
+    bool isDark, {
+    bool isBestValue = false,
+  }) {
     final isSelected = _selectedPackId == pack.id;
+    final showBestValue = isBestValue || pack.isPopular;
     final accent = pack.isPopular ? AppColors.accentPink : AppColors.accentPurple;
     final cardBg = isSelected
         ? (isDark ? accent.withValues(alpha: 0.14) : accent.withValues(alpha: 0.08))
@@ -445,7 +462,7 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
                                   maxLines: 2,
                                 ),
                               ),
-                              if (pack.isPopular)
+                              if (showBestValue)
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: AppSpacing.spacingSM,

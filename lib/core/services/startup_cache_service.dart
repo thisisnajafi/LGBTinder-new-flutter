@@ -45,9 +45,11 @@ class StartupCacheService {
         AppLogger.debug('Startup presence stack: $stack', tag: 'StartupCache');
       }
 
+      // Subscription must land before Discover feature gates evaluate.
+      await _fetchAndCacheSubscription();
+
       await Future.wait([
         _fetchAndCacheSuperlikePacks(),
-        _fetchAndCacheSubscription(),
         _fetchAndCacheOwnProfile(),
         _ref.read(subscriptionRefreshProvider).refresh(),
       ]);
@@ -119,7 +121,14 @@ class StartupCacheService {
       PlanLimits? limits;
       try {
         limits = await _ref.read(planLimitsServiceProvider).getPlanLimits();
-      } catch (_) {}
+      } catch (e, stack) {
+        AppLogger.warning(
+          'Plan-limits fetch failed during subscription prime — keeping cached tier',
+          tag: 'StartupCache',
+          error: e,
+        );
+        AppLogger.debug('Startup plan-limits stack: $stack', tag: 'StartupCache');
+      }
 
       final appStatus = appSubscriptionFromLegacy(status, planLimits: limits);
       await sessionCache.saveSubscription(appStatus);

@@ -1,7 +1,4 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
-
+import 'package:lgbtindernew/core/services/app_logger.dart';
 import '../local/chat_local_repository.dart';
 
 /// A text message waiting to be sent when connectivity returns.
@@ -45,39 +42,57 @@ class QueuedChatMessage {
 
 /// Persists outbound chat messages in SQLite until they can be sent.
 class ChatOutboundQueueService {
-  static const int _maxQueueSize = 50;
+  static const String logTag = 'ChatOutbox';
+  static const int defaultMaxQueueSize = 50;
 
-  ChatOutboundQueueService(this._localRepo);
+  ChatOutboundQueueService(
+    this._localRepo, {
+    this.maxQueueSize = defaultMaxQueueSize,
+  });
 
   final ChatLocalRepository _localRepo;
+  final int maxQueueSize;
 
   Future<List<QueuedChatMessage>> getPending() async {
     try {
       return await _localRepo.getOutboxEntries();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Failed to read chat outbound queue: $e');
-      }
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to read chat outbound queue',
+        tag: logTag,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return [];
     }
   }
 
   Future<void> enqueue(QueuedChatMessage message) async {
-    final queue = await getPending();
-    queue.removeWhere((m) => m.clientId == message.clientId);
-    queue.add(message);
+    try {
+      final queue = await getPending();
+      final isNew = queue.every((item) => item.clientId != message.clientId);
+      if (isNew && queue.length >= maxQueueSize) {
+        final oldest = queue.first;
+        await _localRepo.removeOutboxEntry(oldest.clientId);
+        AppLogger.warning(
+          'Chat outbox full; dropped oldest ${oldest.clientId}',
+          tag: logTag,
+        );
+      }
 
-    while (queue.length > _maxQueueSize) {
-      queue.removeAt(0);
-    }
-
-    await _localRepo.clearOutbox();
-    for (final item in queue) {
-      await _localRepo.enqueueOutbox(item);
-    }
-
-    if (kDebugMode) {
-      debugPrint('📦 Queued chat message for user ${message.receiverId}');
+      await _localRepo.enqueueOutbox(message);
+      await _localRepo.trimOutboxToMax(maxQueueSize);
+      AppLogger.info(
+        'Queued chat message for user ${message.receiverId}',
+        tag: logTag,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error(
+        'Failed to enqueue chat outbox',
+        tag: logTag,
+        error: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -92,7 +107,3 @@ class ChatOutboundQueueService {
 
 /// Legacy SharedPreferences key kept for one-time migration only.
 const chatOutboundLegacyStorageKey = 'chat_outbound_message_queue';
-
-String encodeOutboundQueueForMigration(List<QueuedChatMessage> queue) {
-  return jsonEncode(queue.map((m) => m.toJson()).toList());
-}

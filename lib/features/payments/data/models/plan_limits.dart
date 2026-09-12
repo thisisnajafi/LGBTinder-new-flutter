@@ -80,7 +80,7 @@ class PlanLimits {
     }
   }
 
-  /// Golden / Silder must not be capped by a low `daily_profile` value from the API.
+  /// Golden / Silver must not be capped by a low `daily_profile` value from the API.
   PlanLimits correctSwipeLimitsForTier() {
     final tier = _resolveTier();
     if (tier != UserTier.golden && tier != UserTier.silder) {

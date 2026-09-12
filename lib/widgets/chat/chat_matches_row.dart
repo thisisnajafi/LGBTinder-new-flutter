@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../features/matching/data/models/match.dart';
-import '../../routes/app_router.dart';
 import '../../core/responsive/responsive.dart';
 
 /// Horizontal scroll row of match avatar chips (REF-04).
 class ChatMatchesRow extends StatelessWidget {
   final List<Match> matches;
+  final ValueChanged<Match>? onMatchTap;
 
   const ChatMatchesRow({
     super.key,
     required this.matches,
+    this.onMatchTap,
   });
 
   @override
@@ -25,7 +25,7 @@ class ChatMatchesRow extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -55,20 +55,7 @@ class ChatMatchesRow extends StatelessWidget {
                 return _MatchAvatarChip(
                   match: match,
                   isNew: isNew,
-                  onTap: () {
-                    context.push(
-                      Uri(
-                        path: AppRoutes.chat,
-                        queryParameters: {
-                          'userId': match.userId.toString(),
-                          if (match.firstName.isNotEmpty)
-                            'userName': match.firstName,
-                          if (match.primaryImageUrl?.isNotEmpty == true)
-                            'avatarUrl': match.primaryImageUrl!,
-                        },
-                      ).toString(),
-                    );
-                  },
+                  onTap: () => onMatchTap?.call(match),
                 );
               },
             ),
@@ -121,6 +108,7 @@ class _MatchAvatarChip extends StatelessWidget {
               child: ClipOval(
                 child: ProfileImageWidget(
                   imageUrl: match.primaryImageUrl,
+                  userId: match.userId,
                   width: 54,
                   height: 54,
                   fit: BoxFit.cover,

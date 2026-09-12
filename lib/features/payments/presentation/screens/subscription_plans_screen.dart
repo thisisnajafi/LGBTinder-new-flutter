@@ -17,6 +17,7 @@ import '../../../../widgets/loading/skeleton_subscription_plans.dart';
 import '../../providers/payment_providers.dart';
 import '../../providers/google_play_billing_provider.dart';
 import '../../../../core/providers/subscription_provider.dart';
+import '../../../../shared/models/user_tier.dart';
 import '../../data/models/subscription_plan.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../core/providers/feature_flags_provider.dart';
@@ -274,6 +275,24 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     return null;
   }
 
+  bool _isCurrentPlan(SubscriptionPlan plan) {
+    final status = ref.watch(subscriptionProvider);
+    if (status == null || !status.isActive) return false;
+    final name = plan.name.toLowerCase();
+    return switch (status.tier) {
+      UserTier.golden => name.contains('gold'),
+      UserTier.silder =>
+        name.contains('silver') ||
+            name.contains('premium') ||
+            name.contains('silder'),
+      UserTier.basid =>
+        name.contains('basic') ||
+            name.contains('basid') ||
+            name.contains('bronze') ||
+            name.contains('free'),
+    };
+  }
+
   String _formatPrice(double price, String currency) {
     final symbol =
         currency.toUpperCase() == 'USD' ? '\$' : currency.toUpperCase();
@@ -309,7 +328,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
                 )
               : _plans.isEmpty
                   ? _buildEmptyState(secondaryTextColor, textColor)
-                  : RefreshIndicator(
+                  : PremiumRefreshIndicator(
                       onRefresh: _loadPlans,
                       child: ListView(
                         padding: ResponsivePadding.horizontal(context).copyWith(
@@ -378,11 +397,36 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
               ),
             ),
             SizedBox(height: AppSpacing.spacingSM),
-            GradientButton(
-              text: 'Subscribe Now',
-              onPressed: _subscribe,
-              isFullWidth: true,
-            ),
+            if (selectedPlan != null && _isCurrentPlan(selectedPlan))
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.spacingSM,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AppSvgIcon(
+                      assetPath: AppIcons.check,
+                      size: 20,
+                      color: AppColors.feedbackSuccess,
+                    ),
+                    SizedBox(width: AppSpacing.spacingSM),
+                    Text(
+                      'Current plan',
+                      style: AppTypography.button.copyWith(
+                        color: AppColors.feedbackSuccess,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              GradientButton(
+                text: 'Subscribe Now',
+                onPressed: _subscribe,
+                isFullWidth: true,
+              ),
           ],
         ),
       ),
@@ -484,6 +528,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     bool isDark,
   ) {
     final isSelected = _selectedPlanId == plan.id;
+    final isCurrent = _isCurrentPlan(plan);
     final planSubPlans = _subPlansForPlan(plan.id);
     final themeData = getPlanTheme(plan.name);
     final accent = themeData.accent;
@@ -502,6 +547,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         plan: plan,
         planTheme: themeData,
         isSelected: isSelected,
+        isCurrent: isCurrent,
         planSubPlans: planSubPlans,
         selectedSubPlanId: _selectedSubPlanId,
         cardBg: cardBg,
@@ -556,6 +602,7 @@ class _PlanCard extends StatelessWidget {
   final SubscriptionPlan plan;
   final PlanThemeData planTheme;
   final bool isSelected;
+  final bool isCurrent;
   final List<SubPlan> planSubPlans;
   final int? selectedSubPlanId;
   final Color cardBg;
@@ -571,6 +618,7 @@ class _PlanCard extends StatelessWidget {
     required this.plan,
     required this.planTheme,
     required this.isSelected,
+    this.isCurrent = false,
     required this.planSubPlans,
     required this.selectedSubPlanId,
     required this.cardBg,
@@ -657,6 +705,26 @@ class _PlanCard extends StatelessWidget {
                                 ),
                                 maxLines: 1,
                               ),
+                              if (isCurrent)
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.spacingSM,
+                                    vertical: AppSpacing.spacingXS,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.feedbackSuccess
+                                        .withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(
+                                        AppRadius.radiusSM),
+                                  ),
+                                  child: Text(
+                                    'Current',
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.feedbackSuccess,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                               if (planTheme.isPopular)
                                 Container(
                                   padding: EdgeInsets.symmetric(

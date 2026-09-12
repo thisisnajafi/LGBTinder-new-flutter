@@ -138,7 +138,9 @@ Legacy duplicate set also exists at `assets/images/icons/`.
 - Circular arc + checklist bottom sheet.
 
 #### PR-DESIGN-009: Premium Tier Visual Treatment
-- `TierBadge` from `userTierProvider`; locked section overlays for basid.
+- `TierBadge` from `userTierProvider` on own-profile hero (all tiers, including Basic).
+- `ProfileLockedOverlay` frosts gated sections for basid (and below min tier): Likes stat (silder) and Boost hub card (golden).
+- Overlay tap routes to canonical `FeatureLockedScreen` (`minTier` silder vs golden). Reduce Motion skips blur.
 
 #### PR-DESIGN-010: Empty States & Loading States
 - Section skeletons; empty photo CTA; themed errors.
@@ -163,7 +165,7 @@ Legacy duplicate set also exists at `assets/images/icons/`.
 | PR-DESIGN-006 | Action Buttons | ✅ Complete |
 | PR-DESIGN-007 | Edit Mode | ✅ Complete (floating edit FAB) |
 | PR-DESIGN-008 | Completeness Indicator | ✅ Complete (local estimate from profile fields) |
-| PR-DESIGN-009 | Tier Visual Treatment | ⚠️ Partial (TierBadge + overlay header; basid upsell lock overlays not added) |
+| PR-DESIGN-009 | Tier Visual Treatment | ✅ Complete (TierBadge + frosted Likes/Boost lock overlays) |
 | PR-DESIGN-010 | Empty / Loading States | ✅ Complete (carousel skeleton + empty photo state) |
 
 ### Key files created
@@ -172,6 +174,7 @@ Legacy duplicate set also exists at `assets/images/icons/`.
 - `lib/core/utils/app_haptics.dart`
 - `lib/features/onboarding/widgets/` — progress indicator, intro hero, celebration, skip sheet, welcome mosaic/glass card
 - `lib/features/profile/widgets/` — photo carousel, tier badge, info pill, completeness indicator, interest chips
+- `lib/core/widgets/premium/profile_locked_overlay.dart` — frosted lock overlay for tier-gated profile/hub sections
 
 ### Key files modified
 
@@ -179,6 +182,8 @@ Legacy duplicate set also exists at `assets/images/icons/`.
 - `lib/pages/onboarding_page.dart`, `lib/pages/profile_wizard_page.dart`
 - `lib/screens/onboarding/onboarding_preferences_screen.dart`
 - `lib/pages/profile_page.dart`, `lib/screens/discovery/profile_detail_screen.dart`
+- `lib/features/profile/presentation/widgets/own_profile/` — hero Likes lock + Boost hub overlay
+- `lib/core/widgets/premium/premium_hub.dart`, `lib/screens/feature_locked_screen.dart`
 - `lib/widgets/profile/` — bio, info sections, action buttons, skeleton
 - `lib/widgets/badges/` — verification, premium
 

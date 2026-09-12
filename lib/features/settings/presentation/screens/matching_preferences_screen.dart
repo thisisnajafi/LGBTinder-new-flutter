@@ -174,7 +174,7 @@ class _MatchingPreferencesScreenState extends ConsumerState<MatchingPreferencesS
       subtitle: 'Age, distance, and who can see you',
       body: _loading && _error == null
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
+          : PremiumRefreshIndicator(
               onRefresh: _load,
               child: AppSettingsDetailList(
                 children: [

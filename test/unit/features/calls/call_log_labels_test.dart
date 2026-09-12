@@ -28,6 +28,7 @@ void main() {
     test('isTerminalStatus recognizes completed call states', () {
       expect(CallLogLabels.isTerminalStatus('ended'), isTrue);
       expect(CallLogLabels.isTerminalStatus('missed'), isTrue);
+      expect(CallLogLabels.isTerminalStatus('cancelled'), isTrue);
       expect(CallLogLabels.isTerminalStatus('ringing'), isFalse);
     });
 
@@ -46,6 +47,25 @@ void main() {
       );
     });
 
+    test('missed title ignores duration so only connected bubbles show talk time', () {
+      final call = _call(
+        id: 6,
+        callerId: 10,
+        receiverId: 20,
+        status: 'missed',
+        duration: const Duration(seconds: 45),
+      );
+
+      expect(
+        CallLogLabels.title(call: call, currentUserId: 20),
+        'Missed voice call',
+      );
+      expect(
+        CallLogLabels.title(call: call, currentUserId: 20),
+        isNot(contains(':')),
+      );
+    });
+
     test('title for incoming missed video call', () {
       final call = _call(
         id: 2,
@@ -58,6 +78,42 @@ void main() {
       expect(
         CallLogLabels.title(call: call, currentUserId: 20),
         'Missed video call',
+      );
+    });
+
+    test('title for ringing is Connecting…', () {
+      final call = _call(
+        id: 4,
+        callerId: 10,
+        receiverId: 20,
+        status: 'ringing',
+      );
+
+      expect(
+        CallLogLabels.title(call: call, currentUserId: 10),
+        'Connecting…',
+      );
+      expect(CallLogLabels.isLiveStatus('ringing'), isTrue);
+      expect(CallLogLabels.isLiveStatus('active'), isTrue);
+    });
+
+    test('listSubtitle groups missed calls', () {
+      final call = _call(
+        id: 5,
+        callerId: 10,
+        receiverId: 20,
+        status: 'missed',
+        callType: 'video',
+      );
+
+      expect(
+        CallLogLabels.listSubtitle(
+          call: call,
+          currentUserId: 20,
+          count: 3,
+          missedCount: 3,
+        ),
+        '3 missed calls',
       );
     });
 

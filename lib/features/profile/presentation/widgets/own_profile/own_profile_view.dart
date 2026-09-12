@@ -19,6 +19,8 @@ import '../../../../../routes/app_router.dart';
 import '../../../../../screens/active_sessions_screen.dart';
 import '../../../../../screens/privacy_settings_screen.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../../../screens/feature_locked_screen.dart';
+import '../../../../../shared/models/page_tier_rules.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../../shared/providers/user_tier_provider.dart';
 import 'profile_details_sections.dart';
@@ -118,8 +120,9 @@ class OwnProfileView extends ConsumerWidget {
 
     return ResponsiveGrid.constrained(
       context,
-      CustomScrollView(      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
+      CustomScrollView(
+        physics: AppScroll.bouncing,
+        slivers: [
         SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -187,7 +190,7 @@ class OwnProfileView extends ConsumerWidget {
     required UserProfile profile,
     required UserTier tier,
   }) {
-    final isBasid = tier == UserTier.basid;
+    final boostUnlocked = canAccessFeature(tier, TierGatedFeature.boost);
 
     void pushScreen(Widget screen) {
       Navigator.push(
@@ -261,9 +264,22 @@ class OwnProfileView extends ConsumerWidget {
       ProfileHubActionData(
         iconPath: AppIcons.flash,
         title: 'Boost',
-        subtitle: isBasid ? 'Premium feature' : 'Get more views',
-        locked: isBasid,
-        onTap: () => context.pushNamed('subscription-plans'),
+        subtitle: boostUnlocked ? 'Get more views' : 'Golden feature',
+        locked: !boostUnlocked,
+        onTap: () {
+          if (!boostUnlocked) {
+            context.push(
+              FeatureLockedScreen.location(
+                title: 'Boost',
+                description:
+                    'Boost your profile to get more views. Available on Golden.',
+                minTier: minimumTierForFeature(TierGatedFeature.boost),
+              ),
+            );
+            return;
+          }
+          context.pushNamed('subscription-plans');
+        },
       ),
     ];
   }

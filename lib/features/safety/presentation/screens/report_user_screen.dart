@@ -1,6 +1,7 @@
 // Screen: ReportUserScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/cache/cache_invalidator.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
@@ -8,6 +9,7 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/premium/premium_text_field.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import '../../providers/user_actions_providers.dart';
 import '../../data/models/report.dart';
@@ -89,6 +91,9 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
               : null,
         ),
       );
+      await ref
+          .read(cacheInvalidatorProvider)
+          .purgeProfile(widget.userId.toString());
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -214,27 +219,10 @@ class _ReportUserScreenState extends ConsumerState<ReportUserScreen> {
                 ),
               ),
               SizedBox(height: AppSpacing.spacingSM),
-              TextFormField(
+              PremiumTextField(
                 controller: _descriptionController,
+                hintText: 'Provide any additional information...',
                 maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Provide any additional information...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                    borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: surfaceColor,
-                ),
-                style: AppTypography.body.copyWith(color: textColor),
               ),
               SizedBox(height: AppSpacing.spacingXXL),
 

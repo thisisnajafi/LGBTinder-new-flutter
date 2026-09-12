@@ -5,6 +5,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
+import '../../features/chat/utils/chat_voice_bubble_layout.dart';
 import 'voice_waveform_bars.dart';
 
 /// Optimistic voice bubble shown while upload/send is in progress.
@@ -34,13 +35,17 @@ class VoiceSendingPlaceholder extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxWidth = ResponsiveGrid.chatBubbleMaxWidth(
+        final cap = ResponsiveGrid.chatBubbleMaxWidth(
           context,
           fraction: 0.72,
-        ).clamp(200.0, 280.0);
+        );
+        final width = ChatVoiceBubbleLayout.width(
+          durationSeconds: durationSeconds,
+          maxWidth: cap,
+        );
 
-        return ConstrainedBox(
-          constraints: BoxConstraints(minWidth: 200, maxWidth: maxWidth),
+        return SizedBox(
+          width: width,
           child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -68,7 +73,6 @@ class VoiceSendingPlaceholder extends StatelessWidget {
                   active: true,
                   color: color,
                   height: 28,
-                  barCount: 24,
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
                 Row(

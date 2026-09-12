@@ -1,4 +1,6 @@
 ﻿// Screen: VoiceCallScreen
+// DEAD UI (CALL-PERF-006). Canonical live call UI:
+// `lib/features/calls/pages/outgoing_call_page.dart`. Do not enhance this file.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';

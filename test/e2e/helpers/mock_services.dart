@@ -27,6 +27,7 @@ class InMemoryTokenStorage extends TokenStorageService {
   StoredUserSession? _session;
 
   void seedAuthenticated({String token = 'test-auth-token'}) {
+    bumpAuthRevision();
     _authToken = token;
     _profileCompletionToken = null;
   }
@@ -35,6 +36,7 @@ class InMemoryTokenStorage extends TokenStorageService {
     String token = 'test-auth-token',
     bool leftoverProfileToken = false,
   }) {
+    bumpAuthRevision();
     _authToken = token;
     _profileCompletionToken = leftoverProfileToken ? 'stale-wizard-token' : null;
     _session = StoredUserSession(
@@ -53,12 +55,14 @@ class InMemoryTokenStorage extends TokenStorageService {
     String token = 'test-auth-token',
     bool leftoverProfileToken = false,
   }) {
+    bumpAuthRevision();
     _authToken = token;
     _session = null;
     _profileCompletionToken = leftoverProfileToken ? 'stale-wizard-token' : null;
   }
 
   void seedIncompleteProfile({String token = 'test-auth-token'}) {
+    bumpAuthRevision();
     _authToken = token;
     _profileCompletionToken = token;
     _session = StoredUserSession(
@@ -74,12 +78,14 @@ class InMemoryTokenStorage extends TokenStorageService {
   }
 
   void seedProfileCompletion({String token = 'test-profile-token'}) {
+    bumpAuthRevision();
     _authToken = null;
     _profileCompletionToken = token;
     _session = null;
   }
 
   void seedUnauthenticated() {
+    bumpAuthRevision();
     _authToken = null;
     _profileCompletionToken = null;
     _refreshToken = null;
@@ -87,33 +93,52 @@ class InMemoryTokenStorage extends TokenStorageService {
   }
 
   @override
-  Future<void> saveAuthToken(String token) async => _authToken = token;
+  Future<void> saveAuthToken(String token) async {
+    bumpAuthRevision();
+    _authToken = token;
+  }
 
   @override
   Future<String?> getAuthToken() async => _authToken;
 
   @override
-  Future<void> saveProfileCompletionToken(String token) async =>
-      _profileCompletionToken = token;
+  Future<void> saveProfileCompletionToken(String token) async {
+    bumpAuthRevision();
+    _profileCompletionToken = token;
+  }
 
   @override
   Future<String?> getProfileCompletionToken() async => _profileCompletionToken;
 
   @override
-  Future<void> saveRefreshToken(String token) async => _refreshToken = token;
+  Future<void> saveRefreshToken(String token) async {
+    bumpAuthRevision();
+    _refreshToken = token;
+  }
 
   @override
   Future<String?> getRefreshToken() async => _refreshToken;
 
   @override
-  Future<void> clearAllTokens() async => seedUnauthenticated();
+  Future<void> clearAllTokens() async {
+    bumpAuthRevision();
+    _authToken = null;
+    _profileCompletionToken = null;
+    _refreshToken = null;
+    _session = null;
+  }
 
   @override
-  Future<void> clearAuthToken() async => _authToken = null;
+  Future<void> clearAuthToken() async {
+    bumpAuthRevision();
+    _authToken = null;
+  }
 
   @override
-  Future<void> clearProfileCompletionToken() async =>
-      _profileCompletionToken = null;
+  Future<void> clearProfileCompletionToken() async {
+    bumpAuthRevision();
+    _profileCompletionToken = null;
+  }
 
   @override
   Future<void> saveUserSession({
@@ -121,6 +146,7 @@ class InMemoryTokenStorage extends TokenStorageService {
     bool profileCompleted = false,
     String? userState,
   }) async {
+    bumpAuthRevision();
     _session = StoredUserSession(
       user: user,
       profileCompleted: profileCompleted,
@@ -132,7 +158,10 @@ class InMemoryTokenStorage extends TokenStorageService {
   Future<StoredUserSession?> getUserSession() async => _session;
 
   @override
-  Future<void> clearUserSession() async => _session = null;
+  Future<void> clearUserSession() async {
+    bumpAuthRevision();
+    _session = null;
+  }
 
   @override
   Future<bool> isAuthenticated() async =>

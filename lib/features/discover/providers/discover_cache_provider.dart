@@ -34,18 +34,81 @@ class DiscoverCacheState {
   final List<CachedDiscoverItem> items;
   final bool initialLoadComplete;
   final int nextPage;
+  final int? lastSwipedUserId;
 
   const DiscoverCacheState({
     this.items = const [],
     this.initialLoadComplete = false,
     this.nextPage = 1,
+    this.lastSwipedUserId,
   });
+
+  DiscoverCacheState copyWith({
+    List<CachedDiscoverItem>? items,
+    bool? initialLoadComplete,
+    int? nextPage,
+    int? lastSwipedUserId,
+    bool clearLastSwipe = false,
+  }) {
+    return DiscoverCacheState(
+      items: items ?? this.items,
+      initialLoadComplete: initialLoadComplete ?? this.initialLoadComplete,
+      nextPage: nextPage ?? this.nextPage,
+      lastSwipedUserId: clearLastSwipe
+          ? null
+          : (lastSwipedUserId ?? this.lastSwipedUserId),
+    );
+  }
 
   /// Profiles still in the stack (interaction_state == none). Order preserved.
   List<DiscoveryProfile> get stack =>
       items.where((e) => e.interactionState == DiscoverInteractionState.none).map((e) => e.profile).toList();
 
   int get stackLength => items.where((e) => e.interactionState == DiscoverInteractionState.none).length;
+
+  /// Length + current/next ids only (PERF-PAGE-DISCOVERY-001).
+  DiscoverFeedSlice get feedSlice => DiscoverFeedSlice.fromState(this);
+}
+
+/// Rebuild key for Discover: ignores [DiscoverCacheState.lastSwipedUserId].
+@immutable
+class DiscoverFeedSlice {
+  const DiscoverFeedSlice({
+    required this.initialLoadComplete,
+    required this.stackIds,
+    required this.stack,
+  });
+
+  final bool initialLoadComplete;
+  final List<int> stackIds;
+  final List<DiscoveryProfile> stack;
+
+  factory DiscoverFeedSlice.fromState(DiscoverCacheState state) {
+    final stack = state.stack;
+    return DiscoverFeedSlice(
+      initialLoadComplete: state.initialLoadComplete,
+      stack: stack,
+      stackIds: [for (final profile in stack) profile.id],
+    );
+  }
+
+  int get stackLength => stackIds.length;
+  int? get currentUserId => stackIds.isEmpty ? null : stackIds.first;
+  int? get nextUserId => stackIds.length > 1 ? stackIds[1] : null;
+  int? get secondNextUserId => stackIds.length > 2 ? stackIds[2] : null;
+
+  @override
+  bool operator ==(Object other) {
+    return other is DiscoverFeedSlice &&
+        initialLoadComplete == other.initialLoadComplete &&
+        listEquals(stackIds, other.stackIds);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        initialLoadComplete,
+        Object.hashAll(stackIds),
+      );
 }
 
 /// Buffer threshold: fetch more when stack drops below this.
@@ -106,6 +169,23 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     state = const DiscoverCacheState();
   }
 
+  /// Drop a blocked/reported user from the in-memory stack immediately.
+  void removeUser(int userId) {
+    final exists = state.items.any((item) => item.id == userId);
+    if (!exists) return;
+    final items =
+        state.items.where((item) => item.id != userId).toList(growable: false);
+    state = state.copyWith(
+      items: items,
+      clearLastSwipe: state.lastSwipedUserId == userId,
+    );
+    unawaited(_persistState());
+    AppLogger.info(
+      'Removed user $userId from discover stack',
+      tag: 'DiscoverCache',
+    );
+  }
+
   /// Load feed from cache only. No network. UI can render immediately.
   Future<void> loadFromCache() async {
     try {
@@ -132,11 +212,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           }
         }
         if (list.isNotEmpty) {
-          state = DiscoverCacheState(
-            items: list,
-            initialLoadComplete: state.initialLoadComplete,
-            nextPage: state.nextPage,
-          );
+          state = state.copyWith(items: list);
           unawaited(
             DiscoveryImagePrefetch.prefetchProfiles(state.stack),
           );
@@ -167,7 +243,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         existingIds.add(item.id);
       }
     }
-    state = DiscoverCacheState(
+    state = state.copyWith(
       items: merged,
       initialLoadComplete: true,
       nextPage: nextPage ?? state.nextPage,
@@ -209,11 +285,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         error: e,
         stackTrace: stack,
       );
-      state = DiscoverCacheState(
-        items: state.items,
-        initialLoadComplete: true,
-        nextPage: state.nextPage,
-      );
+      state = state.copyWith(initialLoadComplete: true);
     } finally {
       _isRefreshing = false;
     }
@@ -309,10 +381,9 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
       syncStatus: DiscoverSyncStatus.pending,
     );
     final newList = List<CachedDiscoverItem>.from(state.items)..[idx] = updated;
-    state = DiscoverCacheState(
+    state = state.copyWith(
       items: newList,
-      initialLoadComplete: state.initialLoadComplete,
-      nextPage: state.nextPage,
+      lastSwipedUserId: userId,
     );
     unawaited(_persistState());
 
@@ -479,12 +550,51 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     final item = state.items[idx];
     final newList = List<CachedDiscoverItem>.from(state.items)
       ..[idx] = item.copyWith(syncStatus: DiscoverSyncStatus.synced);
-    state = DiscoverCacheState(
-      items: newList,
-      initialLoadComplete: state.initialLoadComplete,
-      nextPage: state.nextPage,
+    state = state.copyWith(items: newList);
+    unawaited(_persistState());
+  }
+
+  /// Undo the last like/dislike/superlike via POST /likes/rewind.
+  Future<void> rewindLastSwipe() async {
+    final userId = state.lastSwipedUserId;
+    if (userId == null) {
+      throw Exception('Nothing to rewind');
+    }
+
+    final result = await _likesService.rewind();
+    final restoredId = int.tryParse(
+          '${result.restoredUser?['id'] ?? result.restoredUser?['user_id'] ?? userId}',
+        ) ??
+        userId;
+
+    final idx = state.items.indexWhere((e) => e.profile.id == restoredId);
+    var items = List<CachedDiscoverItem>.from(state.items);
+    if (idx >= 0) {
+      final restored = items.removeAt(idx).copyWith(
+            interactionState: DiscoverInteractionState.none,
+            syncStatus: DiscoverSyncStatus.synced,
+          );
+      items.insert(0, restored);
+    }
+
+    int? previousSwiped;
+    for (var i = items.length - 1; i >= 0; i--) {
+      if (items[i].interactionState != DiscoverInteractionState.none) {
+        previousSwiped = items[i].profile.id;
+        break;
+      }
+    }
+
+    state = state.copyWith(
+      items: items,
+      lastSwipedUserId: previousSwiped,
+      clearLastSwipe: previousSwiped == null,
     );
     unawaited(_persistState());
+    AppLogger.info(
+      'Rewound swipe for userId=$restoredId action=${result.actionUndone}',
+      tag: 'DiscoverCache',
+    );
   }
 
   void _markSyncFailed(int userId) {
@@ -493,11 +603,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     final item = state.items[idx];
     final newList = List<CachedDiscoverItem>.from(state.items)
       ..[idx] = item.copyWith(syncStatus: DiscoverSyncStatus.failed);
-    state = DiscoverCacheState(
-      items: newList,
-      initialLoadComplete: state.initialLoadComplete,
-      nextPage: state.nextPage,
-    );
+    state = state.copyWith(items: newList);
     unawaited(_persistState());
   }
 

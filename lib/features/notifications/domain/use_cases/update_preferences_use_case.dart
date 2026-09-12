@@ -11,10 +11,10 @@ class UpdatePreferencesUseCase {
   /// Execute update preferences use case
   /// Returns [NotificationPreferences] with updated preferences
   Future<NotificationPreferences> execute(
-    UpdateNotificationPreferencesRequest request,
+    NotificationPreferences preferences,
   ) async {
     try {
-      return await _notificationRepository.updatePreferences(request);
+      return await _notificationRepository.updatePreferences(preferences);
     } catch (e) {
       // Re-throw all exceptions to let UI handle them
       rethrow;

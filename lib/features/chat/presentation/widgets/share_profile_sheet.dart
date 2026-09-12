@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_action_bottom_sheet.dart';
+import '../../../../core/widgets/debounced_search_field.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -62,10 +63,10 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
           AppSpacing.spacingMD,
           AppSpacing.spacingMD,
         ),
-        child: TextField(
+        child: DebouncedSearchField(
           controller: _searchController,
+          hintText: 'Search matches...',
           decoration: InputDecoration(
-            hintText: 'Search matches...',
             prefixIcon: AppSvgIcon(
               assetPath: AppIcons.search,
               size: 20,

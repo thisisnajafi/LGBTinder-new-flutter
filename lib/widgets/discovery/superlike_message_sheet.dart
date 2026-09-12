@@ -19,7 +19,7 @@ class SuperlikeSheetResult {
   });
 }
 
-/// Modal bottom sheet for sending a super like with a required message.
+/// Modal bottom sheet for sending a super like with an optional message.
 Future<SuperlikeSheetResult?> showSuperlikeMessageSheet(
   BuildContext context, {
   required SuperlikeInfo superlikeInfo,
@@ -76,8 +76,7 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
     final textSecondary =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final canSuperlike = widget.superlikeInfo.canSuperlike;
-    final message = _controller.text.trim();
-    final canSend = canSuperlike && message.isNotEmpty;
+    final canSend = canSuperlike;
 
     return AppBottomSheetCard(
       child: Padding(
@@ -240,7 +239,27 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
-                SizedBox(height: AppSpacing.spacingLG),
+                SizedBox(height: AppSpacing.spacingMD),
+                if (canSuperlike)
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(
+                          context,
+                          const SuperlikeSheetResult(message: ''),
+                        );
+                      },
+                      child: Text(
+                        'Skip',
+                        style: AppTypography.button.copyWith(
+                          color: textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                SizedBox(height: AppSpacing.spacingSM),
                 Row(
                   children: [
                     Expanded(
@@ -283,10 +302,11 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                                 padding: EdgeInsets.symmetric(
                                   vertical: AppSpacing.spacingMD,
                                 ),
-                                backgroundColor: AppColors.warningYellow,
-                                foregroundColor: Colors.black87,
-                                disabledBackgroundColor:
-                                    AppColors.warningYellow.withOpacity(0.35),
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                disabledBackgroundColor: theme
+                                    .colorScheme.primary
+                                    .withValues(alpha: 0.35),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
                                     AppRadius.radiusMD,
@@ -297,17 +317,17 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const AppSvgIcon(
+                                  AppSvgIcon(
                                     assetPath: AppIcons.star,
                                     size: 18,
-                                    color: Colors.black87,
+                                    color: theme.colorScheme.onPrimary,
                                   ),
                                   SizedBox(width: AppSpacing.spacingSM),
                                   Text(
                                     'Send',
                                     style: AppTypography.button.copyWith(
                                       fontWeight: FontWeight.w700,
-                                      color: Colors.black87,
+                                      color: theme.colorScheme.onPrimary,
                                     ),
                                   ),
                                 ],

@@ -135,6 +135,7 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
     return AppSettingsDetailScaffold(
       title: 'Report history',
       subtitle: 'Reports you have submitted',
+      onRefresh: _isLoading ? null : _loadReports,
       action: IconButton(
         icon: AppSvgIcon(
           assetPath: AppIcons.getIconPath('refresh'),

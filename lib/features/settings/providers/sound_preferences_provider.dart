@@ -1,17 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/services/app_logger.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/providers/api_providers.dart';
-import '../../../shared/services/token_storage_service.dart';
 import '../../chat/providers/chat_pusher_providers.dart';
 import '../../chat/providers/conversation_mute_cache_provider.dart';
-import '../../../shared/services/pusher_websocket_service.dart';
 import '../data/models/sound_preferences.dart';
 import '../data/services/sound_preferences_service.dart';
 
@@ -21,16 +22,48 @@ const _prefsNotificationKey = 'sound_notification';
 const _prefsVibrationKey = 'sound_vibration_enabled';
 
 /// Singleton that plays in-app sounds and exposes selected ringtone ids.
+///
+/// Uses [audioplayers] (already used for voice messages). Do not use
+/// `just_audio` here — its Android plugin crashes the process with
+/// `NoClassDefFoundError: AudioPlayer$1` on several devices/emulators.
 class SoundService {
-  SoundService._();
-
   static final SoundService instance = SoundService._();
 
-  final AudioPlayer _previewPlayer = AudioPlayer();
+  static const _messageDefaultAsset = 'assets/sounds/message_default.wav';
+  static const _ringbackAsset = 'assets/sounds/call_ringback.wav';
+  static const _busyAsset = 'assets/sounds/call_busy.wav';
+  static const _endAsset = 'assets/sounds/call_end.wav';
+  static const _connectAsset = 'assets/sounds/call_connect.wav';
+
+  AudioPlayer? _previewPlayer;
+  AudioPlayer? _callPlayer;
+  bool _playersUnavailable = false;
+  final Map<String, String> _materializedAssets = {};
   SoundPreferences _preferences = const SoundPreferences();
   SoundCatalog _catalog = const SoundCatalog();
   SharedPreferences? _prefs;
   bool _initialized = false;
+
+  SoundService._();
+
+  AudioPlayer? _playerOrNull({required bool preview}) {
+    if (_playersUnavailable) return null;
+    try {
+      if (preview) {
+        return _previewPlayer ??= AudioPlayer();
+      }
+      return _callPlayer ??= AudioPlayer();
+    } catch (e, st) {
+      _playersUnavailable = true;
+      AppLogger.warning(
+        'AudioPlayer init failed',
+        tag: 'SoundService',
+        error: e,
+      );
+      AppLogger.debug('$st', tag: 'SoundService');
+      return null;
+    }
+  }
 
   SoundPreferences get preferences => _preferences;
   SoundCatalog get catalog => _catalog;
@@ -48,13 +81,13 @@ class SoundService {
       final remote = await service.getPreferences();
       await applyPreferences(remote, persistLocally: true);
     } catch (e) {
-      debugPrint('SoundService.syncFromApi failed: $e');
+      AppLogger.warning('syncFromApi failed', tag: 'SoundService', error: e);
     }
 
     try {
       _catalog = await service.getAvailableSounds();
     } catch (e) {
-      debugPrint('SoundService catalog fetch failed: $e');
+      AppLogger.warning('catalog fetch failed', tag: 'SoundService', error: e);
     }
   }
 
@@ -81,12 +114,42 @@ class SoundService {
   Future<void> previewSound(String soundId, SoundCategory category) async {
     final asset = _assetForSoundId(soundId, category);
     if (asset == null) return;
-    await _playAsset(asset);
+    await _playPreview(asset);
+  }
+
+  /// Loop the user's selected incoming ringtone (in-app / foreground).
+  Future<void> startIncomingRingtone() async {
+    await _startCallLoop(getCallRingtoneAsset());
+    if (_preferences.vibrationEnabled) {
+      await HapticFeedback.mediumImpact();
+    }
+  }
+
+  /// Loop the outgoing ringback tone until the callee answers.
+  Future<void> startOutgoingRingback() => _startCallLoop(_ringbackAsset);
+
+  Future<void> playCallConnect() => _playCallOneShot(_connectAsset);
+
+  Future<void> playCallBusy() => _playCallOneShot(_busyAsset);
+
+  Future<void> playCallEnded() => _playCallOneShot(_endAsset);
+
+  Future<void> stopCallSounds() async {
+    try {
+      await _callPlayer?.stop();
+    } catch (e) {
+      AppLogger.warning('stopCallSounds failed', tag: 'SoundService', error: e);
+    }
   }
 
   String getCallRingtonePath() {
     final option = _catalog.findCallRingtone(_preferences.callRingtone);
     return option?.androidRaw ?? 'ringtone_default';
+  }
+
+  String getCallRingtoneAsset() {
+    return _catalog.findCallRingtone(_preferences.callRingtone)?.asset ??
+        'assets/sounds/${_preferences.callRingtone}.wav';
   }
 
   String? getNotificationAndroidRaw() {
@@ -98,13 +161,13 @@ class SoundService {
   String? getNotificationAssetPath() {
     final option =
         _catalog.findNotificationSound(_preferences.notificationSound);
-    return option?.asset ?? 'assets/sounds/message_default.wav';
+    return option?.asset ?? _messageDefaultAsset;
   }
 
   Future<void> _playSound(String soundId, SoundCategory category) async {
     final asset = _assetForSoundId(soundId, category);
     if (asset == null) return;
-    await _playAsset(asset);
+    await _playPreview(asset);
     if (_preferences.vibrationEnabled) {
       await HapticFeedback.mediumImpact();
     }
@@ -124,13 +187,127 @@ class SoundService {
     }
   }
 
-  Future<void> _playAsset(String assetPath) async {
+  Future<void> _playPreview(String assetPath) async {
+    final player = _playerOrNull(preview: true);
+    if (player == null) {
+      await _playSystemFallback();
+      return;
+    }
+    final ok = await _playAsset(player, assetPath, loop: false);
+    if (!ok) await _playSystemFallback();
+  }
+
+  Future<void> _startCallLoop(String assetPath) async {
+    final player = _playerOrNull(preview: false);
+    if (player == null) {
+      await _playSystemFallback();
+      return;
+    }
+    final ok = await _playAsset(player, assetPath, loop: true);
+    if (!ok) await _playSystemFallback();
+  }
+
+  Future<void> _playCallOneShot(String assetPath) async {
+    final player = _playerOrNull(preview: false);
+    if (player == null) {
+      await _playSystemFallback();
+      return;
+    }
+    final ok = await _playAsset(player, assetPath, loop: false);
+    if (!ok) await _playSystemFallback();
+  }
+
+  Future<bool> _playAsset(
+    AudioPlayer player,
+    String assetPath, {
+    required bool loop,
+  }) async {
     try {
-      await _previewPlayer.stop();
-      await _previewPlayer.setAsset(assetPath);
-      await _previewPlayer.play();
+      await player.stop();
+      await player.setReleaseMode(
+        loop ? ReleaseMode.loop : ReleaseMode.release,
+      );
+      if (kIsWeb) {
+        await player.play(AssetSource(_assetSourcePath(assetPath)));
+      } else {
+        // File source avoids asset sniffing issues with bundled WAVs.
+        final path = await _materializeAsset(assetPath);
+        await player.play(DeviceFileSource(path));
+      }
+      return true;
     } catch (e) {
-      debugPrint('SoundService play failed for $assetPath: $e');
+      AppLogger.warning(
+        'play failed for $assetPath',
+        tag: 'SoundService',
+        error: e,
+      );
+      try {
+        await player.stop();
+      } catch (stopError) {
+        AppLogger.warning(
+          'stop after play failure failed',
+          tag: 'SoundService',
+          error: stopError,
+        );
+      }
+      return false;
+    }
+  }
+
+  /// audioplayers AssetSource paths are relative to the assets/ root.
+  String _assetSourcePath(String assetPath) {
+    const prefix = 'assets/';
+    if (assetPath.startsWith(prefix)) {
+      return assetPath.substring(prefix.length);
+    }
+    return assetPath;
+  }
+
+  Future<String> _materializeAsset(String assetPath) async {
+    final cached = _materializedAssets[assetPath];
+    if (cached != null && File(cached).existsSync()) {
+      return cached;
+    }
+
+    final data = await rootBundle.load(assetPath);
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    if (bytes.length < 12 ||
+        bytes[0] != 0x52 ||
+        bytes[1] != 0x49 ||
+        bytes[2] != 0x46 ||
+        bytes[3] != 0x46) {
+      throw StateError('Sound asset is not a RIFF WAV: $assetPath');
+    }
+
+    final dir = await getTemporaryDirectory();
+    final soundDir = Directory('${dir.path}/lgbtinder_sounds');
+    await soundDir.create(recursive: true);
+    final file = File(
+      '${soundDir.path}/${assetPath.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')}',
+    );
+    await file.writeAsBytes(bytes, flush: true);
+    _materializedAssets[assetPath] = file.path;
+    return file.path;
+  }
+
+  Future<void> _playSystemFallback() async {
+    try {
+      await SystemSound.play(SystemSoundType.click);
+    } catch (e) {
+      AppLogger.warning(
+        'system sound fallback failed',
+        tag: 'SoundService',
+        error: e,
+      );
+    }
+    try {
+      await HapticFeedback.mediumImpact();
+    } catch (e) {
+      AppLogger.warning(
+        'haptic fallback failed',
+        tag: 'SoundService',
+        error: e,
+      );
     }
   }
 
@@ -156,7 +333,26 @@ class SoundService {
   }
 
   Future<void> dispose() async {
-    await _previewPlayer.dispose();
+    try {
+      await _previewPlayer?.dispose();
+    } catch (e) {
+      AppLogger.warning(
+        'preview player dispose failed',
+        tag: 'SoundService',
+        error: e,
+      );
+    }
+    try {
+      await _callPlayer?.dispose();
+    } catch (e) {
+      AppLogger.warning(
+        'call player dispose failed',
+        tag: 'SoundService',
+        error: e,
+      );
+    }
+    _previewPlayer = null;
+    _callPlayer = null;
   }
 }
 
@@ -190,7 +386,12 @@ class SoundPreferencesNotifier extends AsyncNotifier<SoundPreferences> {
     try {
       await SoundService.instance.syncFromApi(service);
       return SoundService.instance.preferences;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning(
+        'sync preferences on build failed',
+        tag: 'SoundService',
+        error: e,
+      );
       return SoundService.instance.preferences;
     }
   }

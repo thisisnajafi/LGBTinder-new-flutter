@@ -12,6 +12,7 @@ import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/chat_providers.dart';
+import '../../utils/chat_client_id.dart';
 import '../../../../core/responsive/responsive.dart';
 
 /// Hold-to-record voice capture overlay for chat.
@@ -126,6 +127,7 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
 
     try {
       final chatService = ref.read(chatServiceProvider);
+      final clientId = ChatClientIds.next();
       if (widget.conversationId != null && widget.conversationId! > 0) {
         final upload = await chatService.uploadChatVoice(
           widget.conversationId!,
@@ -138,6 +140,7 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
           messageType: 'voice',
           mediaPath: upload['media_path']?.toString(),
           mediaDuration: (upload['media_duration'] as num?)?.toInt() ?? duration,
+          clientId: clientId,
         );
       } else {
         await chatService.sendMessage(
@@ -146,6 +149,7 @@ class _VoiceRecorderOverlayState extends ConsumerState<VoiceRecorderOverlay> {
           messageType: 'voice',
           mediaFile: File(filePath),
           mediaDuration: duration,
+          clientId: clientId,
         );
       }
       if (mounted) widget.onClose();

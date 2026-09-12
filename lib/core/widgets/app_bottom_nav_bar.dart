@@ -1,14 +1,17 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/animation_constants.dart';
 import '../theme/app_colors.dart';
 import '../theme/spacing_constants.dart';
 import '../responsive/responsive.dart';
 import '../theme/border_radius_constants.dart';
 import '../utils/app_icons.dart';
+import '../../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../widgets/badges/notification_badge.dart';
-import '../../widgets/buttons/scale_tap_feedback.dart';
 import 'profile_image_widget.dart';
 
 /// Floating bottom navigation bar with icon-only items and active pill highlight.
@@ -46,9 +49,13 @@ class AppBottomNavBar extends ConsumerWidget {
     final inactiveIconColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.40);
     final profileData = ref.watch(profilePageCacheProvider).valueOrNull?.profile;
-    final profileAvatarUrl = profileData?.images?.isNotEmpty == true
-        ? profileData!.images!.first.imageUrl
-        : null;
+    final primaryImage = primaryProfileImage(profileData?.images);
+    final compactAvatar = primaryImage?.avatarDisplayUrl.trim();
+    final fullAvatar = primaryImage?.imageUrl.trim();
+    final profileAvatarUrl = (compactAvatar != null && compactAvatar.isNotEmpty)
+        ? compactAvatar
+        : ((fullAvatar != null && fullAvatar.isNotEmpty) ? fullAvatar : null);
+    final profileUserId = profileData?.id;
     final profileIsOnline = profileData?.isOnline ?? true;
     final innerRadius = 100 - _borderWidth;
 
@@ -72,52 +79,101 @@ class AppBottomNavBar extends ConsumerWidget {
           child: _GradientNavBarShell(
             isDark: isDark,
             borderWidth: _borderWidth,
-            child: Container(
-              height: barHeight,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(innerRadius),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.white.withValues(alpha: 0.72),
-                  width: 0.75,
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingSM),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(itemCount, (index) {
-                  final isActive = currentIndex == index;
-                  final outlinePath = AppIcons.mainNavIconOutline(index);
-                  final activePath = AppIcons.mainNavIconActive(index);
-                  final label = AppIcons.mainNavItems[index].label;
-                  final useProfileAvatar = index == profileTabIndex &&
-                      isActive &&
-                      profileAvatarUrl != null;
-
-                  return Expanded(
-                    child: _NavItem(
-                      label: label,
-                      outlinePath: outlinePath,
-                      activePath: activePath,
-                      isActive: isActive,
-                      inactiveIconColor: inactiveIconColor,
-                      iconOverride: useProfileAvatar
-                          ? _ProfileNavAvatar(
-                              imageUrl: profileAvatarUrl,
-                              isOnline: profileIsOnline,
-                            )
-                          : null,
-                      badge: _badgeForTab(
-                        index: index,
-                        messengerUnreadCount: messengerUnreadCount,
-                        notificationCount: notificationCount,
-                      ),
-                      onTap: () => onTap(index),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(innerRadius),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  height: barHeight,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.surfaceDark.withValues(alpha: 0.82)
+                        : Colors.white.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(innerRadius),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : Colors.white.withValues(alpha: 0.72),
+                      width: 0.75,
                     ),
-                  );
-                }),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      const hPad = AppSpacing.spacingSM;
+                      const pillInset = 4.0;
+                      const pillHeight = 48.0;
+                      final slotWidth =
+                          (constraints.maxWidth - hPad * 2) / itemCount;
+                      final pillLeft =
+                          hPad + currentIndex * slotWidth + pillInset;
+
+                      return Stack(
+                        children: [
+                          AnimatedPositioned(
+                            duration: AppAnimations.animationsEnabled(context)
+                                ? AppAnimations.transitionTab
+                                : Duration.zero,
+                            curve: AppAnimations.curveDefault,
+                            left: pillLeft,
+                            top: (barHeight - pillHeight) / 2,
+                            width: slotWidth - pillInset * 2,
+                            height: pillHeight,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.14),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.radiusLG),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: hPad,
+                            ),
+                            child: Row(
+                              children: List.generate(itemCount, (index) {
+                                final isActive = currentIndex == index;
+                                final outlinePath =
+                                    AppIcons.mainNavIconOutline(index);
+                                final activePath =
+                                    AppIcons.mainNavIconActive(index);
+                                final label = AppIcons.mainNavItems[index].label;
+                                final useProfileAvatar =
+                                    index == profileTabIndex &&
+                                        profileAvatarUrl != null;
+
+                                return Expanded(
+                                  child: _NavItem(
+                                    label: label,
+                                    outlinePath: outlinePath,
+                                    activePath: activePath,
+                                    isActive: isActive,
+                                    inactiveIconColor: inactiveIconColor,
+                                    iconOverride: useProfileAvatar
+                                        ? _ProfileNavAvatar(
+                                            imageUrl: profileAvatarUrl,
+                                            userId: profileUserId,
+                                            isOnline: profileIsOnline,
+                                          )
+                                        : null,
+                                    badge: _badgeForTab(
+                                      index: index,
+                                      messengerUnreadCount:
+                                          messengerUnreadCount,
+                                      notificationCount: notificationCount,
+                                    ),
+                                    onTap: () => onTap(index),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -207,10 +263,12 @@ class _GradientNavBarShell extends StatelessWidget {
 
 class _ProfileNavAvatar extends StatelessWidget {
   final String imageUrl;
+  final int? userId;
   final bool isOnline;
 
   const _ProfileNavAvatar({
     required this.imageUrl,
+    this.userId,
     required this.isOnline,
   });
 
@@ -239,6 +297,7 @@ class _ProfileNavAvatar extends StatelessWidget {
             child: ClipOval(
               child: ProfileImageWidget(
                 imageUrl: imageUrl,
+                userId: userId,
                 width: _size,
                 height: _size,
                 fit: BoxFit.cover,
@@ -294,46 +353,32 @@ class _NavItem extends StatelessWidget {
     final theme = Theme.of(context);
     final activeColor = theme.colorScheme.primary;
 
-    return ScaleTapFeedback(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Semantics(
         button: true,
         selected: isActive,
         label: label,
-        child: SizedBox(
-          height: 48,
+        child: SizedBox.expand(
           child: Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              padding: EdgeInsets.symmetric(
-                horizontal: iconOverride != null ? 12 : 16,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? activeColor.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  iconOverride ??
-                      AppSvgIcon(
-                        assetPath: isActive ? activePath : outlinePath,
-                        size: 24,
-                        color: isActive ? activeColor : inactiveIconColor,
-                      ),
-                  if (badge != null)
-                    Positioned(
-                      top: -2,
-                      right: iconOverride != null ? -4 : -6,
-                      child: badge!,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                iconOverride ??
+                    AppSvgIcon(
+                      assetPath: isActive ? activePath : outlinePath,
+                      size: 24,
+                      color: isActive ? activeColor : inactiveIconColor,
                     ),
-                ],
-              ),
+                if (badge != null)
+                  Positioned(
+                    top: -2,
+                    right: iconOverride != null ? -4 : -6,
+                    child: badge!,
+                  ),
+              ],
             ),
           ),
         ),

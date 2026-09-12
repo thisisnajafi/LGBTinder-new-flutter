@@ -46,9 +46,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
-    // Agora full-sdk ships many optional AI/beauty/AV1 extensions (~50MB+).
+    // Agora full-sdk ships optional AI/beauty/AV1 *extensions* (~50MB+).
+    // Do not exclude libagora-ffmpeg.so — libagora-rtc-sdk.so links it as a
+    // required NEEDED dependency. Stripping it crashes video calls with
+    // UnsatisfiedLinkError on load (emulator x86_64 and devices).
     val agoraOptionalLibs = listOf(
         "libagora_ai_echo_cancellation_extension.so",
         "libagora_ai_noise_suppression_extension.so",
@@ -66,7 +70,6 @@ android {
         "libagora_video_decoder_extension.so",
         "libagora_video_encoder_extension.so",
         "libagora_video_quality_analyzer_extension.so",
-        "libagora-ffmpeg.so",
     )
     val abis = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
     packaging {
@@ -78,11 +81,14 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (hasReleaseKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            if (!hasReleaseKeystore) {
+                throw GradleException(
+                    "Missing android/key.properties (and upload keystore). " +
+                        "Google Play rejects debug-signed bundles. " +
+                        "Copy android/key.properties.example → android/key.properties and set your upload keystore."
+                )
             }
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -101,6 +107,7 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    implementation("androidx.multidex:multidex:2.0.1")
 }
 
 flutter {

@@ -1,5 +1,7 @@
+import 'package:equatable/equatable.dart';
+
 /// Why two users matched — surfaced on discovery cards and profile sheet.
-class MatchReason {
+class MatchReason extends Equatable {
   final String type;
   final String label;
 
@@ -19,4 +21,7 @@ class MatchReason {
         'type': type,
         'label': label,
       };
+
+  @override
+  List<Object?> get props => [type, label];
 }

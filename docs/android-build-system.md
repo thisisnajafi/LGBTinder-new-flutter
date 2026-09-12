@@ -244,7 +244,7 @@ See also `docs/ANDROID_BUILD_WARNINGS.md`.
 
 - **Plugin deprecation warnings** from Pub cache (share_plus, video_compress, etc.) — safe to ignore.
 - **Kotlin Gradle Plugin on plugins** — tracked; migrate to Built-in Kotlin when plugins support it.
-- **Agora optional native libs** — stripped via `packaging.jniLibs.excludes` to reduce APK size.
+- **Agora optional native libs** — AI/beauty/AV1 extensions stripped via `packaging.jniLibs.excludes`. `libagora-ffmpeg.so` is **not** optional (required by `libagora-rtc-sdk.so`).
 
 ---
 

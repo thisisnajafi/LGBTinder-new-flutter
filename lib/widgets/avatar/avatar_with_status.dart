@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../badges/online_badge.dart';
-import '../images/optimized_image.dart';
+import '../../core/widgets/optimized_image.dart';
 
 /// Avatar with online status widget
 /// Displays user avatar with online indicator

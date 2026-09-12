@@ -79,4 +79,10 @@ class CachedMatchesNotifier extends StateNotifier<AsyncValue<List<Match>>> {
   void applyFresh(List<Match> matches) {
     state = AsyncValue.data(matches);
   }
+
+  void applyError(Object error, StackTrace stackTrace) {
+    if (!state.hasValue) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
 }

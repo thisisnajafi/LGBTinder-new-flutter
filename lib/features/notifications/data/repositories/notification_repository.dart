@@ -42,9 +42,9 @@ class NotificationRepository {
 
   /// Update notification preferences
   Future<NotificationPreferences> updatePreferences(
-    UpdateNotificationPreferencesRequest request,
+    NotificationPreferences preferences,
   ) async {
-    return await _notificationService.updatePreferences(request);
+    return await _notificationService.updatePreferences(preferences);
   }
 
   /// Get unread notification count

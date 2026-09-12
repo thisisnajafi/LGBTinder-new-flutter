@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../core/cache/cache_manager.dart' show appCacheManagerProvider;
 import '../../../core/providers/theme_mode_provider.dart';
 import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
@@ -96,8 +97,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return PremiumTabPageLayout(
       title: 'Settings',
       subtitle: 'Your account, privacy, and preferences',
+      onRefresh: () async {
+        await ref.read(appCacheManagerProvider).revalidateAll();
+        await _loadVersion();
+      },
       body: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: AppScroll.bouncing,
         padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
         children: [
           PremiumHubGridSection(
@@ -119,7 +124,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               PremiumHubActionData(
                 iconPath: AppIcons.shieldTick,
                 title: 'Security',
-                subtitle: 'Sessions & 2FA',
+                subtitle: 'Active sessions',
                 onTap: () => _push(const ActiveSessionsScreen()),
               ),
               PremiumHubActionData(

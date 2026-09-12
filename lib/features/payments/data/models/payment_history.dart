@@ -37,7 +37,9 @@ class PaymentHistory {
       description: json['description']?.toString() ?? '',
       createdAt: json['created_at'] != null
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
-          : DateTime.now(),
+          : (json['date'] != null
+              ? (DateTime.tryParse(json['date'].toString()) ?? DateTime.now())
+              : DateTime.now()),
       completedAt: json['completed_at'] != null
           ? DateTime.tryParse(json['completed_at'].toString())
           : null,
@@ -70,7 +72,8 @@ class PaymentHistory {
   }
 
   /// Check if payment was successful
-  bool get isSuccessful => status == 'completed';
+  bool get isSuccessful =>
+      status == 'completed' || status == 'success' || status == 'succeeded';
 
   /// Check if payment is pending
   bool get isPending => status == 'pending';
@@ -85,6 +88,8 @@ class PaymentHistory {
   String get statusColor {
     switch (status) {
       case 'completed':
+      case 'success':
+      case 'succeeded':
         return 'success';
       case 'pending':
         return 'warning';

@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/providers/api_providers.dart';
 import '../../../chat/providers/chat_pusher_providers.dart';
+import '../../../../shared/services/chat_pusher_event_names.dart';
 import '../../../../shared/services/pusher_websocket_service.dart';
+import '../../utils/call_signaling_log.dart';
 
 /// Agora token payload from backend.
 class AgoraTokenData {
@@ -28,10 +30,16 @@ class AgoraTokenData {
       token: json['token']?.toString() ?? '',
       channelName: json['channel_name']?.toString() ?? '',
       uid: int.tryParse(json['uid']?.toString() ?? '') ?? 0,
-      expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '') ?? DateTime.now(),
-      appId: json['app_id']?.toString(),
+      expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? '') ??
+          DateTime.now().add(const Duration(seconds: 3600)),
+      appId: _nonEmptyAppId(json['app_id']?.toString()),
     );
   }
+}
+
+String? _nonEmptyAppId(String? value) {
+  final trimmed = value?.trim() ?? '';
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 typedef CallEventHandler = void Function(Map<String, dynamic> payload);
@@ -55,21 +63,26 @@ class CallSignalingService {
     CallEventHandler? onIncoming,
   }) {
     _listeningCallId = callId;
+    unawaited(_pusher.subscribeCall(callId));
     _subscription?.cancel();
     _subscription = _pusher.callEventStream.listen((event) {
       final payload = event.payload;
-      if (payload['call_id']?.toString() != callId.toString()) return;
+      final eventCallId = payload['call_id'] ??
+          payload['callId'] ??
+          (payload['data'] is Map ? (payload['data'] as Map)['call_id'] : null);
+      if (eventCallId?.toString() != callId.toString()) return;
 
+      CallSignalingLog.logDispatch(event.name, eventCallId);
       switch (event.name) {
-        case 'call.accepted':
+        case ChatPusherEventNames.callAccepted:
           onAccepted?.call(payload);
-        case 'call.rejected':
+        case ChatPusherEventNames.callRejected:
           onRejected?.call(payload);
-        case 'call.ended':
+        case ChatPusherEventNames.callEnded:
           onEnded?.call(payload);
-        case 'call.busy':
+        case ChatPusherEventNames.callBusy:
           onBusy?.call(payload);
-        case 'call.incoming':
+        case ChatPusherEventNames.callIncoming:
           onIncoming?.call(payload);
       }
     });
@@ -91,6 +104,7 @@ class CallSignalingService {
       _subscription?.cancel();
       _subscription = null;
       _listeningCallId = null;
+      unawaited(_pusher.unsubscribeCall(callId));
     }
   }
 }

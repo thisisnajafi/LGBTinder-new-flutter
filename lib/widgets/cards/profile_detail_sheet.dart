@@ -15,9 +15,6 @@ import '../ui/distance_tag.dart';
 import '../verification/verification_components.dart';
 import 'swipeable_card.dart';
 
-/// Reserve space for the floating like / superlike / dislike row.
-const double _kSheetActionBarReserve = 88;
-
 /// Draggable profile detail sheet shown when user swipes up or taps bio "more".
 class ProfileDetailSheet extends StatefulWidget {
   const ProfileDetailSheet({
@@ -55,8 +52,7 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
 
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (notification) {
-        // Dismiss when dragged below the default snap point (0.58).
-        if (notification.extent < 0.55) {
+        if (notification.extent < 0.52) {
           widget.onClose();
         }
         return false;
@@ -71,15 +67,16 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
           ),
           child: DraggableScrollableSheet(
         controller: widget.controller,
-        initialChildSize: 0.58,
+        initialChildSize: 0.60,
         minChildSize: 0.50,
-        maxChildSize: 0.90,
+        maxChildSize: 0.92,
         snap: true,
-        snapSizes: const [0.58, 0.90],
+        snapSizes: const [0.60, 0.92],
         builder: (context, scrollController) {
           final showActions = widget.onDislike != null ||
               widget.onSuperlike != null ||
               widget.onLike != null;
+          final bottomInset = MediaQuery.paddingOf(context).bottom;
 
           return DecoratedBox(
             decoration: BoxDecoration(
@@ -89,64 +86,61 @@ class _ProfileDetailSheetState extends State<ProfileDetailSheet> {
               ),
               border: Border(
                 top: BorderSide(
-                  color: AppColors.accentViolet.withValues(alpha: 0.18),
+                  color: AppColors.accentViolet.withValues(alpha: 0.22),
                 ),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, -8),
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.16),
+                  blurRadius: 28,
+                  offset: const Offset(0, -10),
                 ),
               ],
             ),
-            child: Stack(
-              fit: StackFit.expand,
+            child: Column(
               children: [
-                ListView(
-                  controller: scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.spacingLG,
-                    0,
-                    AppSpacing.spacingLG,
-                    showActions
-                        ? _kSheetActionBarReserve + AppSpacing.spacingXL
-                        : AppSpacing.spacingXXL,
-                  ),
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(
-                          top: AppSpacing.spacingSM,
-                          bottom: AppSpacing.spacingLG,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.20),
-                          borderRadius: BorderRadius.circular(100),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.spacingLG,
+                      0,
+                      AppSpacing.spacingLG,
+                      showActions
+                          ? AppSpacing.spacingXL
+                          : AppSpacing.spacingXXL + bottomInset,
+                    ),
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 5,
+                          margin: const EdgeInsets.only(
+                            top: AppSpacing.spacingMD,
+                            bottom: AppSpacing.spacingLG,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.28),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
                         ),
                       ),
-                    ),
-                    ProfileSheetContent(
-                      profile: widget.profile,
-                      sharedInterests: widget.sharedInterests,
-                    ),
-                  ],
+                      ProfileSheetContent(
+                        profile: widget.profile,
+                        sharedInterests: widget.sharedInterests,
+                      ),
+                    ],
+                  ),
                 ),
                 if (showActions)
-                  Positioned(
-                    left: AppSpacing.spacingXL,
-                    right: AppSpacing.spacingXL,
-                    bottom: AppSpacing.spacingMD +
-                        MediaQuery.paddingOf(context).bottom,
-                    child: DiscoverySheetActionBar(
-                      disabled: widget.actionsDisabled,
-                      onDislike: widget.onDislike,
-                      onSuperlike: widget.onSuperlike,
-                      onLike: widget.onLike,
-                    ),
+                  _SheetActionFooter(
+                    disabled: widget.actionsDisabled,
+                    onDislike: widget.onDislike,
+                    onSuperlike: widget.onSuperlike,
+                    onLike: widget.onLike,
+                    sheetColor: sheetColor,
+                    bottomInset: bottomInset,
                   ),
               ],
             ),
@@ -178,6 +172,12 @@ class DiscoverySheetProfile {
     this.distance,
     this.interests = const [],
     this.imageUrls = const [],
+    this.smoke,
+    this.drink,
+    this.gym,
+    this.languages = const [],
+    this.musicGenres = const [],
+    this.relationshipGoal,
   });
 
   final String firstName;
@@ -196,6 +196,12 @@ class DiscoverySheetProfile {
   final double? distance;
   final List<String> interests;
   final List<String> imageUrls;
+  final String? smoke;
+  final String? drink;
+  final String? gym;
+  final List<String> languages;
+  final List<String> musicGenres;
+  final String? relationshipGoal;
 }
 
 class ProfileSheetContent extends StatelessWidget {
@@ -264,6 +270,11 @@ class ProfileSheetContent extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (profile.matchPercentage != null &&
+                        profile.matchPercentage! > 0) ...[
+                      const SizedBox(height: AppSpacing.spacingSM),
+                      _MatchSheetChip(percentage: profile.matchPercentage!),
+                    ],
                     if (profile.verification != null &&
                         profile.verification!.hasAnyVerified) ...[
                       const SizedBox(height: AppSpacing.spacingXS),
@@ -315,12 +326,12 @@ class ProfileSheetContent extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.spacingLG),
-        Wrap(
-          spacing: AppSpacing.spacingSM,
-          runSpacing: AppSpacing.spacingSM,
-          children: [
-            if (profile.isOnline)
+        if (profile.isOnline) ...[
+          const SizedBox(height: AppSpacing.spacingLG),
+          Wrap(
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
+            children: [
               _StatChip(
                 background: kDiscoveryOnlineGreen.withValues(alpha: 0.12),
                 border: kDiscoveryOnlineGreen.withValues(alpha: 0.40),
@@ -346,11 +357,9 @@ class ProfileSheetContent extends StatelessWidget {
                   ],
                 ),
               ),
-            if (profile.matchPercentage != null &&
-                profile.matchPercentage! > 0)
-              _MatchSheetChip(percentage: profile.matchPercentage!),
-          ],
-        ),
+            ],
+          ),
+        ],
         if (profile.bio != null && profile.bio!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.spacingXL),
           const PremiumSectionHeader(title: 'About'),
@@ -406,6 +415,48 @@ class ProfileSheetContent extends StatelessWidget {
                 ),
               if (profile.distance != null)
                 DistanceTag(distance: profile.distance!),
+              if (profile.smoke != null)
+                _InfoPill(
+                  icon: AppIcons.getIconPath('health'),
+                  label: 'Smokes: ${profile.smoke}',
+                  surfaceVariant: surfaceVariant,
+                  dividerColor: dividerColor,
+                ),
+              if (profile.drink != null)
+                _InfoPill(
+                  icon: AppIcons.getIconPath('coffee'),
+                  label: 'Drinks: ${profile.drink}',
+                  surfaceVariant: surfaceVariant,
+                  dividerColor: dividerColor,
+                ),
+              if (profile.gym != null)
+                _InfoPill(
+                  icon: AppIcons.getIconPath('weight'),
+                  label: 'Gym: ${profile.gym}',
+                  surfaceVariant: surfaceVariant,
+                  dividerColor: dividerColor,
+                ),
+              if (profile.relationshipGoal != null)
+                _InfoPill(
+                  icon: AppIcons.getIconPath('lovely'),
+                  label: profile.relationshipGoal!,
+                  surfaceVariant: surfaceVariant,
+                  dividerColor: dividerColor,
+                ),
+              if (profile.languages.isNotEmpty)
+                _InfoPill(
+                  icon: AppIcons.getIconPath('language-circle'),
+                  label: profile.languages.join(', '),
+                  surfaceVariant: surfaceVariant,
+                  dividerColor: dividerColor,
+                ),
+              if (profile.musicGenres.isNotEmpty)
+                _InfoPill(
+                  icon: AppIcons.getIconPath('music'),
+                  label: profile.musicGenres.join(', '),
+                  surfaceVariant: surfaceVariant,
+                  dividerColor: dividerColor,
+                ),
             ],
           ),
         ],
@@ -483,7 +534,13 @@ class ProfileSheetContent extends StatelessWidget {
     return profile.jobTitle != null ||
         profile.educationTitle != null ||
         profile.height != null ||
-        profile.distance != null;
+        profile.distance != null ||
+        profile.smoke != null ||
+        profile.drink != null ||
+        profile.gym != null ||
+        profile.relationshipGoal != null ||
+        profile.languages.isNotEmpty ||
+        profile.musicGenres.isNotEmpty;
   }
 }
 
@@ -628,6 +685,62 @@ class _InfoPill extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Like / superlike / dislike footer that sits on the sheet and covers the nav bar.
+class _SheetActionFooter extends StatelessWidget {
+  const _SheetActionFooter({
+    required this.disabled,
+    required this.onDislike,
+    required this.onSuperlike,
+    required this.onLike,
+    required this.sheetColor,
+    required this.bottomInset,
+  });
+
+  final bool disabled;
+  final VoidCallback? onDislike;
+  final VoidCallback? onSuperlike;
+  final VoidCallback? onLike;
+  final Color sheetColor;
+  final double bottomInset;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            sheetColor.withValues(alpha: 0),
+            sheetColor,
+          ],
+        ),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.accentViolet.withValues(alpha: isDark ? 0.22 : 0.14),
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.spacingXL,
+          AppSpacing.spacingMD,
+          AppSpacing.spacingXL,
+          AppSpacing.spacingMD + bottomInset,
+        ),
+        child: DiscoverySheetActionBar(
+          disabled: disabled,
+          onDislike: onDislike,
+          onSuperlike: onSuperlike,
+          onLike: onLike,
+        ),
       ),
     );
   }

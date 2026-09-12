@@ -22,14 +22,48 @@ class IncomingCallData {
 
   static bool isCallPayload(Map<String, dynamic> data) {
     final type = data['type']?.toString() ?? '';
-    return type == 'call' ||
+    if (_nonCallTypes.contains(type)) {
+      return false;
+    }
+    if (type == 'call' ||
         type == 'incoming_call' ||
-        type == 'incoming_call_audio' ||
-        type == 'incoming_call_video' ||
-        type.startsWith('incoming_call') ||
-        data.containsKey('call_id') ||
-        data.containsKey('callId');
+        type.startsWith('incoming_call')) {
+      return true;
+    }
+    final status = data['status']?.toString().toLowerCase();
+    if (status == 'ended' ||
+        status == 'missed' ||
+        status == 'rejected' ||
+        status == 'declined' ||
+        status == 'busy') {
+      return false;
+    }
+    final hasCallId =
+        data.containsKey('call_id') || data.containsKey('callId');
+    if (!hasCallId) return false;
+    final hasCaller = data['caller'] != null ||
+        data['caller_id'] != null ||
+        data['callerId'] != null ||
+        data['from_user_id'] != null ||
+        data['user_id'] != null;
+    final hasCallType =
+        data['call_type'] != null || data['callType'] != null;
+    return hasCaller && hasCallType;
   }
+
+  static const Set<String> _nonCallTypes = {
+    'missed_call',
+    'call_declined',
+    'call_ended',
+    'call_busy',
+    'call_not_answered',
+    'like',
+    'match',
+    'message',
+    'chat',
+    'new_message',
+    'superlike',
+  };
 
   /// Build from Pusher `call.incoming` or FCM/OneSignal data map.
   static IncomingCallData? fromPayload(Map<String, dynamic> raw) {
@@ -62,7 +96,9 @@ class IncomingCallData {
             'Unknown')
         .toString();
 
-    final avatar = (data['caller_avatar'] ??
+    final avatar = (data['primary_image_url'] ??
+            callerMap?['primary_image_url'] ??
+            data['caller_avatar'] ??
             data['callerAvatar'] ??
             data['avatar_url'] ??
             callerMap?['avatar_url'])
@@ -79,6 +115,87 @@ class IncomingCallData {
               data['channelName'])
           ?.toString(),
     );
+  }
+
+  /// Native CallKit / flutter_callkit_incoming extras that survive a new process.
+  Map<String, dynamic> toExtras() {
+    return {
+      'callId': callId,
+      'call_id': callId,
+      'callerId': callerId,
+      'caller_id': callerId,
+      'callType': callType,
+      'call_type': callType,
+      'callerName': callerName,
+      'caller_name': callerName,
+      if (callerAvatar != null) 'callerAvatar': callerAvatar,
+      if (callerAvatar != null) 'caller_avatar': callerAvatar,
+      if (callerAvatar != null) 'avatar': callerAvatar,
+      if (channelName != null) 'channelName': channelName,
+      if (channelName != null) 'channel_name': channelName,
+      if (channelName != null) 'agora_channel': channelName,
+    };
+  }
+
+  /// Parse a CallKit event body or [FlutterCallkitIncoming.activeCalls] row.
+  static IncomingCallData? fromCallKitMap(Map<dynamic, dynamic> raw) {
+    final body = <String, dynamic>{};
+    raw.forEach((key, value) {
+      body[key.toString()] = value;
+    });
+
+    final extraRaw = body['extra'];
+    final extra = extraRaw is Map
+        ? Map<String, dynamic>.from(extraRaw)
+        : <String, dynamic>{};
+
+    final type = body['type'];
+    final inferredType = extra['callType'] ??
+        extra['call_type'] ??
+        ((type == 1 || type == '1') ? 'video' : 'audio');
+
+    return fromPayload({
+      ...body,
+      ...extra,
+      'call_id': extra['callId'] ??
+          extra['call_id'] ??
+          body['id'] ??
+          body['uuid'] ??
+          body['handle'] ??
+          body['callId'],
+      'caller_id': extra['callerId'] ??
+          extra['caller_id'] ??
+          extra['user_id'] ??
+          extra['from_user_id'] ??
+          body['callerId'],
+      'caller_name': extra['callerName'] ??
+          extra['caller_name'] ??
+          extra['user_name'] ??
+          body['nameCaller'] ??
+          body['callerName'],
+      'call_type': inferredType,
+      'caller_avatar': extra['callerAvatar'] ??
+          extra['avatar'] ??
+          extra['primary_image_url'] ??
+          extra['caller_avatar'] ??
+          body['avatar'],
+      'channel_name': extra['channel_name'] ??
+          extra['agora_channel'] ??
+          extra['channelName'] ??
+          body['channel_name'],
+      'agora_channel': extra['agora_channel'] ??
+          extra['channelName'] ??
+          extra['channel_name'],
+    });
+  }
+
+  /// Call id from Pusher / push payloads (`call_id`, `callId`, or nested `data`).
+  static String? callIdFromPayload(Map<String, dynamic> raw) {
+    final data = _unwrap(raw);
+    final id = data?['call_id'] ?? data?['callId'];
+    if (id == null) return null;
+    final value = id.toString();
+    return value.isEmpty ? null : value;
   }
 
   static Map<String, dynamic>? _unwrap(Map<String, dynamic> raw) {

@@ -128,8 +128,11 @@ class Call {
     };
   }
 
-  /// Check if call is active
-  bool get isActive => status == 'connected';
+  /// Talk-time / in-progress call (backend uses both `active` and `connected`).
+  bool get isActive {
+    final normalized = status.toLowerCase();
+    return normalized == 'connected' || normalized == 'active';
+  }
 
   /// Check if call is incoming (for current user)
   bool isIncoming(int currentUserId) => receiverId == currentUserId;

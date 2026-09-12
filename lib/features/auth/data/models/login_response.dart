@@ -144,7 +144,30 @@ class UserData {
       drink: json['drink'] == true || json['drink'] == 1 || json['drink'] == '1',
       gym: json['gym'] == true || json['gym'] == 1 || json['gym'] == '1',
       images: json['images'] != null && json['images'] is List ? json['images'] as List<dynamic> : null,
-      avatarUrl: json['avatar_url']?.toString(),
+      avatarUrl: json['primary_image_url']?.toString() ??
+          json['avatar_url']?.toString() ??
+          json['avatar']?.toString(),
+    );
+  }
+
+  UserData copyWith({String? avatarUrl}) {
+    return UserData(
+      id: id,
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      country: country,
+      city: city,
+      gender: gender,
+      birthDate: birthDate,
+      profileBio: profileBio,
+      height: height,
+      weight: weight,
+      smoke: smoke,
+      drink: drink,
+      gym: gym,
+      images: images,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
     );
   }
 

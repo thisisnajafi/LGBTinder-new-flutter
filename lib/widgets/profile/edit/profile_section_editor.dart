@@ -8,6 +8,7 @@ import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../buttons/gradient_button.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/widgets/premium/premium_text_field.dart';
 import 'profile_field_editor.dart';
 import '../../../core/responsive/responsive.dart';
 
@@ -154,31 +155,10 @@ class _ProfileSectionEditorState extends ConsumerState<ProfileSectionEditor> {
           ),
           SizedBox(height: AppSpacing.spacingMD),
           if (widget.showSearch) ...[
-            TextField(
+            PremiumTextField(
               controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search ${widget.sectionTitle.toLowerCase()}',
-                prefixIcon: AppSvgIcon(
-                  assetPath: AppIcons.search,
-                  size: 20,
-                  color: secondaryTextColor,
-                ),
-                filled: true,
-                fillColor: surfaceColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                  borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-                ),
-              ),
-              style: AppTypography.body.copyWith(color: textColor),
+              hintText: 'Search ${widget.sectionTitle.toLowerCase()}',
+              prefixIconPath: AppIcons.search,
             ),
             SizedBox(height: AppSpacing.spacingLG),
           ],

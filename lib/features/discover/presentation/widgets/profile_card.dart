@@ -232,8 +232,8 @@ class ProfileCard extends ConsumerWidget {
                 color: AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.star,
+              child: AppSvgIcon(
+                assetPath: AppIcons.star,
                 size: 16,
                 color: Colors.white,
               ),

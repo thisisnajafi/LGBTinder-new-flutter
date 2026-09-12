@@ -34,8 +34,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _agreeToTerms = false;
   late final TapGestureRecognizer _termsTap;
@@ -227,16 +225,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _passwordController,
                   labelText: 'Password',
                   hintText: 'Enter your password',
-                  obscureText: _obscurePassword,
+                  obscureText: true,
                   prefixIconPath: AppIcons.lockOutlined,
-                  suffixIcon: AuthVisibilityToggle(
-                    obscure: _obscurePassword,
-                    onToggle: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -252,16 +242,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _confirmPasswordController,
                   labelText: 'Confirm Password',
                   hintText: 'Confirm your password',
-                  obscureText: _obscureConfirmPassword,
+                  obscureText: true,
                   prefixIconPath: AppIcons.lockOutlined,
-                  suffixIcon: AuthVisibilityToggle(
-                    obscure: _obscureConfirmPassword,
-                    onToggle: () {
-                      setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                      });
-                    },
-                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please confirm your password';

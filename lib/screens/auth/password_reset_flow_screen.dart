@@ -10,6 +10,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/navigation/auth_navigation.dart';
 import '../../core/widgets/auth_page_scaffold.dart';
+import '../../core/widgets/premium/premium_text_field.dart';
 import '../../routes/app_router.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
@@ -46,8 +47,6 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
   // Step 3: New Password
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
   bool _isResettingPassword = false;
 
   @override
@@ -469,24 +468,13 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppSpacing.spacingXXL),
-          TextField(
+          PremiumTextField(
             controller: _emailController,
+            label: 'Email',
+            hintText: 'Enter your email',
             keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              prefixIcon: AppSvgIcon(
-                assetPath: AppIcons.emailOutlined,
-                size: 20,
-                color: secondaryTextColor,
-              ),
-              filled: true,
-              fillColor: surfaceColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: borderColor),
-              ),
-            ),
-            style: AppTypography.body.copyWith(color: textColor),
+            prefixIconPath: AppIcons.emailOutlined,
+            autocorrect: false,
           ),
           SizedBox(height: AppSpacing.spacingXXL),
           GradientButton(
@@ -632,72 +620,22 @@ class _PasswordResetFlowScreenState extends ConsumerState<PasswordResetFlowScree
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppSpacing.spacingXXL),
-          TextField(
+          PremiumTextField(
             controller: _passwordController,
-            obscureText: !_isPasswordVisible,
-            decoration: InputDecoration(
-              labelText: 'New Password',
-              prefixIcon: AppSvgIcon(
-                assetPath: AppIcons.lock,
-                size: 20,
-                color: secondaryTextColor,
-              ),
-              suffixIcon: IconButton(
-                icon: AppSvgIcon(
-                  assetPath: _isPasswordVisible
-                      ? AppIcons.eye
-                      : AppIcons.eyeSlash,
-                  size: 20,
-                  color: secondaryTextColor,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isPasswordVisible = !_isPasswordVisible;
-                  });
-                },
-              ),
-              filled: true,
-              fillColor: surfaceColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: borderColor),
-              ),
-            ),
-            style: AppTypography.body.copyWith(color: textColor),
+            label: 'New password',
+            hintText: 'Enter a strong password',
+            obscureText: true,
+            prefixIconPath: AppIcons.lock,
+            autocorrect: false,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          TextField(
+          PremiumTextField(
             controller: _confirmPasswordController,
-            obscureText: !_isConfirmPasswordVisible,
-            decoration: InputDecoration(
-              labelText: 'Confirm Password',
-              prefixIcon: AppSvgIcon(
-                assetPath: AppIcons.lockOutline,
-                size: 20,
-                color: secondaryTextColor,
-              ),
-              suffixIcon: IconButton(
-                icon: AppSvgIcon(
-                  assetPath: _isConfirmPasswordVisible
-                      ? AppIcons.eye
-                      : AppIcons.eyeSlash,
-                  size: 20,
-                  color: secondaryTextColor,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                  });
-                },
-              ),
-              filled: true,
-              fillColor: surfaceColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: borderColor),
-              ),
-            ),
-            style: AppTypography.body.copyWith(color: textColor),
+            label: 'Confirm password',
+            hintText: 'Re-enter the new password',
+            obscureText: true,
+            prefixIconPath: AppIcons.lockOutline,
+            autocorrect: false,
           ),
           SizedBox(height: AppSpacing.spacingMD),
           Container(

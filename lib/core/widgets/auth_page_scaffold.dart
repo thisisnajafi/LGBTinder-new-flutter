@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../navigation/auth_navigation.dart';
 import '../theme/app_colors.dart';
-import '../theme/border_radius_constants.dart';
 import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
 import 'premium/premium_page.dart';
+import 'premium/premium_text_field.dart';
 
 /// Premium shell for unauthenticated screens (login, register, forgot password).
 class AuthPageScaffold extends StatelessWidget {
@@ -98,66 +98,19 @@ class AuthTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final borderColor =
-        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
-
-    return TextFormField(
+    return PremiumTextField(
       controller: controller,
+      label: labelText,
+      hintText: hintText,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      autocorrect: autocorrect,
-      textInputAction: textInputAction,
-      onFieldSubmitted: onFieldSubmitted,
-      style: theme.textTheme.bodyMedium?.copyWith(color: textColor),
-      decoration: InputDecoration(
-        labelText: labelText,
-        hintText: hintText,
-        labelStyle:
-            theme.textTheme.bodyMedium?.copyWith(color: secondaryTextColor),
-        hintStyle:
-            theme.textTheme.bodyMedium?.copyWith(color: secondaryTextColor),
-        filled: true,
-        fillColor: isDark
-            ? AppColors.surfaceElevatedDark
-            : AppColors.surfaceElevatedLight,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          borderSide: BorderSide(color: borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          borderSide: BorderSide(color: borderColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.spacingMD,
-          horizontal: AppSpacing.spacingLG,
-        ),
-        prefixIcon: prefixIconPath != null
-            ? Padding(
-                padding: const EdgeInsets.all(12),
-                child: AppSvgIcon(
-                  assetPath: prefixIconPath!,
-                  size: 20,
-                  color: secondaryTextColor,
-                ),
-              )
-            : null,
-        prefixIconConstraints: prefixIconPath != null
-            ? const BoxConstraints(minWidth: 48, minHeight: 48)
-            : null,
-        suffixIcon: suffixIcon,
-      ),
+      prefixIconPath: prefixIconPath,
+      suffixIcon: suffixIcon,
+      enableObscureToggle: suffixIcon == null && obscureText,
       validator: validator,
+      textInputAction: textInputAction,
+      onSubmitted: onFieldSubmitted,
+      autocorrect: autocorrect,
     );
   }
 }

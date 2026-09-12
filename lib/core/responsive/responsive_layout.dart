@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'app_breakpoints.dart';
 
 /// Shows completely different layouts per breakpoint.
+///
+/// Pass [WidgetBuilder]s — not pre-built widgets — so unused breakpoints are
+/// never constructed. Eager `Widget` args used to crash phone screens when the
+/// tablet tree threw during [ChatListPage] build.
 class ResponsiveLayout extends StatelessWidget {
-  final Widget phone;
-  final Widget? tablet;
-  final Widget? desktop;
-
   const ResponsiveLayout({
     required this.phone,
     this.tablet,
@@ -15,14 +15,18 @@ class ResponsiveLayout extends StatelessWidget {
     super.key,
   });
 
+  final WidgetBuilder phone;
+  final WidgetBuilder? tablet;
+  final WidgetBuilder? desktop;
+
   @override
   Widget build(BuildContext context) {
     if (AppBreakpoints.isDesktop(context) && desktop != null) {
-      return desktop!;
+      return desktop!(context);
     }
     if (AppBreakpoints.isTablet(context) && tablet != null) {
-      return tablet!;
+      return tablet!(context);
     }
-    return phone;
+    return phone(context);
   }
 }

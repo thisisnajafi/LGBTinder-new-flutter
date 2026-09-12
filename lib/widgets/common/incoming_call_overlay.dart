@@ -8,6 +8,8 @@ import '../../providers/incoming_call_provider.dart';
 
 export '../../data/models/incoming_call_data.dart';
 
+/// DEAD UI (CALL-PERF-006). Canonical incoming UI:
+/// `lib/features/calls/presentation/widgets/incoming_call_banner.dart`.
 /// @deprecated Use [IncomingCallBridge] + [incomingCallProvider].
 class IncomingCallManager {
   static void showIncomingCall(BuildContext context, IncomingCallData callData) {

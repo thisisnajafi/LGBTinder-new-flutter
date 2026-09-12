@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../providers/notification_provider.dart';
+import '../../providers/notification_providers.dart';
 import '../../../../core/responsive/responsive.dart';
 
 /// Notification badge widget
@@ -55,13 +55,14 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notificationState = ref.watch(notificationProvider);
+    final unreadCount =
+        ref.watch(unreadNotificationCountProvider).asData?.value ?? 0;
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         widget.child,
-        if (notificationState.unreadCount > 0) ...[
+        if (unreadCount > 0) ...[
           Positioned(
             top: widget.position.dy,
             right: widget.position.dx,
@@ -89,7 +90,7 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      _getBadgeText(notificationState.unreadCount),
+                      _getBadgeText(unreadCount),
                       style: TextStyle(
                         color: widget.textColor,
                         fontSize: widget.badgeSize * 0.5,
@@ -120,8 +121,9 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
     super.didUpdateWidget(oldWidget);
 
     // Animate when unread count changes
-    final notificationState = ref.read(notificationProvider);
-    if (notificationState.unreadCount > 0) {
+    final unreadCount =
+        ref.read(unreadNotificationCountProvider).asData?.value ?? 0;
+    if (unreadCount > 0) {
       _animationController.reset();
       _animationController.forward();
     }
@@ -141,9 +143,10 @@ class NotificationDot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notificationState = ref.watch(notificationProvider);
+    final unreadCount =
+        ref.watch(unreadNotificationCountProvider).asData?.value ?? 0;
 
-    return notificationState.unreadCount > 0
+    return unreadCount > 0
         ? Container(
             width: size,
             height: size,
@@ -209,8 +212,9 @@ class _AnimatedNotificationCounterState extends ConsumerState<AnimatedNotificati
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notificationState = ref.watch(notificationProvider);
-    final count = notificationState.unreadCount;
+    final unreadCount =
+        ref.watch(unreadNotificationCountProvider).asData?.value ?? 0;
+    final count = unreadCount;
 
     // Trigger animation when count changes
     if (count != _previousCount && count > 0) {

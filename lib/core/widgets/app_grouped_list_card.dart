@@ -5,6 +5,7 @@ import '../theme/spacing_constants.dart';
 import '../utils/app_icons.dart';
 import 'app_page_header.dart';
 import '../responsive/responsive.dart';
+import 'premium/premium_settings.dart';
 
 /// Muted section label above a grouped settings/menu card (REF profile layout).
 class AppGroupedListSection extends StatelessWidget {
@@ -190,8 +191,6 @@ class AppGroupedSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -203,7 +202,7 @@ class AppGroupedSwitchTile extends StatelessWidget {
           child: Row(
             children: [
               Expanded(child: _GroupedRowLabels(label: label, subtitle: subtitle)),
-              Switch.adaptive(
+              PremiumSwitch(
                 value: value,
                 onChanged: onChanged,
               ),

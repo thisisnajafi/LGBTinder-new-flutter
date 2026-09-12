@@ -6,52 +6,105 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
+import '../core/constants/animation_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/app_date_time.dart';
 import '../core/utils/app_icons.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/chat/chat_header.dart';
 import 'chat_conversation_info_page.dart';
-import '../widgets/chat/message_input.dart';
-import '../widgets/chat/message_reply_widget.dart';
 import '../widgets/chat/pinned_messages_banner.dart';
-import '../widgets/chat/chat_message_list_tile.dart';
-import '../widgets/chat/chat_peer_typing_indicator.dart';
-import '../widgets/error_handling/error_display_widget.dart';
-import '../widgets/loading/skeleton_chat.dart';
+import '../widgets/chat/chat_message_context_menu.dart';
+import '../widgets/chat/chat_forward_sheet.dart';
+import '../widgets/chat/chat_arrival_bounce_layer.dart';
+import '../widgets/chat/chat_message_list.dart';
+import '../widgets/chat/chat_composer_bar.dart';
+import '../widgets/chat/chat_unread_separator_bar.dart';
+import '../widgets/chat/chat_date_badge.dart';
+import '../widgets/chat/chat_video_viewer.dart';
 import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
+import '../features/chat/data/services/chat_outbound_queue_service.dart';
+import '../features/chat/providers/chat_outbox_ui_provider.dart';
+import '../features/chat/utils/chat_outbox_ui.dart';
+import '../features/chat/data/local/chat_info_cache.dart';
 import '../features/chat/data/models/message.dart';
+import '../features/chat/utils/chat_visual_media.dart';
+import '../features/chat/utils/chat_client_id.dart';
+import '../features/chat/utils/chat_optimistic.dart';
+import '../features/chat/utils/chat_message_dedup.dart';
+import '../features/chat/utils/chat_message_enter_gate.dart';
+import '../features/chat/utils/chat_delivery_status_map.dart';
+import '../features/chat/utils/chat_send_retry.dart';
+import '../features/chat/utils/chat_read_receipt_apply.dart';
+import '../features/chat/utils/chat_edited_apply.dart';
+import '../features/chat/utils/self_destruct_send.dart';
 import '../features/chat/data/models/message_delivery_status.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
-import '../features/chat/presentation/widgets/chat_empty_conversation.dart';
 import '../features/chat/presentation/widgets/chat_muted_banner.dart';
+import '../widgets/chat/chat_connection_banner.dart';
 import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
 import '../features/chat/presentation/widgets/self_destruct_viewer.dart';
+import '../features/chat/providers/chat_thread_providers.dart';
 import '../features/chat/providers/chat_pusher_providers.dart';
+import '../features/chat/providers/chat_active_backend_sync_provider.dart';
+import '../features/chat/providers/active_chat_peer_bridge.dart';
 import '../shared/services/pusher_websocket_service.dart';
 import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/user/providers/user_providers.dart';
+import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../shared/utils/plan_guard.dart';
 import '../features/calls/data/models/call.dart';
 import '../features/calls/pages/outgoing_call_page.dart';
-import '../features/calls/presentation/widgets/call_history_bubble.dart';
 import '../features/calls/providers/call_providers.dart';
+import '../features/calls/data/local/call_history_local_cache.dart';
+import '../features/calls/providers/messenger_calls_provider.dart';
 import '../features/calls/utils/call_log_labels.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
+import '../features/chat/providers/chat_image_upload_progress_provider.dart';
 import '../features/chat/providers/user_presence_cache_provider.dart';
 import '../features/chat/utils/chat_message_preview.dart';
+import '../features/chat/utils/chat_image_placeholder.dart';
+import '../features/chat/utils/chat_gallery_items.dart';
 import '../features/chat/providers/pinned_count_provider.dart';
+import '../features/chat/providers/chat_pinned_banner_provider.dart';
 import '../features/chat/data/services/chat_service.dart';
 import '../features/chat/data/local/chat_local_repository.dart';
 import '../features/chat/utils/chat_timeline_merger.dart';
+import '../features/chat/utils/chat_call_timeline.dart';
+import '../features/chat/utils/chat_load_older.dart';
+import '../features/chat/utils/chat_message_sheet_actions.dart';
+import '../features/chat/utils/chat_copy_feedback.dart';
+import '../features/chat/utils/chat_delete_confirm.dart';
+import '../features/chat/utils/chat_reply_jump.dart';
+import '../features/chat/utils/chat_reaction_summary.dart';
+import '../features/chat/utils/chat_video_playback.dart';
+import '../features/chat/utils/chat_unread_separator.dart';
+import '../features/safety/presentation/screens/report_user_screen.dart';
+import '../features/chat/utils/chat_unseen_incoming.dart';
+import '../features/chat/utils/chat_arrival_bounce.dart';
+import '../features/chat/utils/chat_thread_scroll.dart';
+import '../features/chat/utils/chat_timeline_slots.dart';
+import '../features/chat/utils/chat_keyboard_anchor.dart';
+import '../features/chat/utils/chat_typing_outbound.dart';
+import '../widgets/chat/chat_keyboard_inset_pad.dart';
+import '../widgets/chat/chat_attachment_sheet.dart';
+import '../widgets/chat/chat_media_permission_sheet.dart';
+import '../features/chat/utils/chat_media_permissions.dart';
+import '../features/chat/utils/chat_reconnect_catch_up.dart';
+import '../features/chat/presentation/widgets/share_profile_sheet.dart';
+import '../features/chat/utils/chat_attachment_kind.dart';
+import 'package:file_picker/file_picker.dart';
 import '../features/calls/utils/call_navigation.dart';
+import '../features/calls/utils/call_redial_confirm.dart';
 import '../routes/app_router.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../core/cache/peer_avatar_cache.dart';
+import '../core/utils/media_url.dart';
 import '../core/responsive/responsive.dart';
 
 /// Chat page - Individual chat conversation screen
@@ -79,47 +132,96 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   static const int _historyPageSize = 30;
 
   final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
-  bool _isLoadingMore = false;
+  final GlobalKey _threadListKey = GlobalKey();
+  final GlobalKey _unreadSeparatorKey = GlobalKey();
+  int _openUnreadCount = 0;
+  bool _showUnreadSeparator = false;
   bool _hasMoreMessages = true;
   ChatHistoryCursor? _nextCursor;
-  bool _hasError = false;
-  String? _errorMessage;
   int? _currentUserId;
-  List<Map<String, dynamic>> _messages = [];
-  String? _repliedToMessage;
-  String? _repliedToName;
-  String? _repliedToMessageType;
-  
+
+  ChatThreadMessagesNotifier get _thread => _threadNotifier;
+
+  ChatThreadMessagesState get _threadState =>
+      ref.read(chatThreadMessagesProvider(widget.userId));
+
+  List<Map<String, dynamic>> get _messages => _threadState.rows;
+
+  /// Writes through to [chatThreadMessagesProvider] (PERF-INFRA-013).
+  set _messages(List<Map<String, dynamic>> value) => _thread.setRows(value);
+
+  ChatMessageEnterGate get _enterGate => _thread.enterGate;
+
+  bool get _isLoading => _threadState.isLoading;
+
+  bool get _isLoadingMore => _threadState.isLoadingMore;
+
+  bool get _loadMoreFailed => _threadState.loadMoreFailed;
+
+  ChatComposerNotifier get _composer =>
+      ref.read(chatComposerProvider(widget.userId).notifier);
+
+  ChatComposerState get _composerState =>
+      ref.read(chatComposerProvider(widget.userId));
+
+  int? get _editingMessageId => _composerState.editingMessageId;
+
+  int? get _repliedToMessageId => _composerState.replyMessageId;
+
+  String? get _repliedToMessage => _composerState.replyText;
+
+  String? get _repliedToName => _composerState.replyName;
+ 
   // Pusher real-time state
   int? _conversationId;
   StreamSubscription<Message>? _messageSubscription;
   StreamSubscription<ReadReceiptEvent>? _readReceiptSubscription;
   StreamSubscription<MessageExpiredEvent>? _messageExpiredSubscription;
+  StreamSubscription<MessageDeletedEvent>? _messageDeletedSubscription;
+  StreamSubscription<MessageEditedEvent>? _messageEditedSubscription;
+  StreamSubscription<MessageReactedEvent>? _messageReactedSubscription;
+  StreamSubscription<MessageDeliveredEvent>? _messageDeliveredSubscription;
   StreamSubscription<CallSignalingEvent>? _callEventSubscription;
   StreamSubscription<UserPresenceEvent>? _presenceSubscription;
+  StreamSubscription<ConnectionStatus>? _connectionSubscription;
   Timer? _realtimeFallbackTimer;
   bool _isOnline = false;
+  bool _presenceFromPusher = false;
   DateTime? _lastSeenAt;
   String? _resolvedUserName;
   String? _resolvedAvatarUrl;
-  bool _conversationMuted = false;
-  Timer? _outboundTypingStopTimer;
+  String? _resolvedPrimaryPhotoUrl;
+  late final ChatTypingOutbound _typingOutbound;
   final AudioRecorder _voiceRecorder = AudioRecorder();
   String? _voiceRecordingPath;
   int _voiceRecordingDurationSeconds = 0;
   Timer? _voiceRecordingTimer;
   late final ChatPusherLifecycleNotifier _pusherLifecycle;
+  late final ChatThreadMessagesNotifier _threadNotifier;
+  late final ChatService _chatService;
+  Timer? _realtimeFallbackKick;
+  String? _lastSentText;
+  DateTime? _lastSentAt;
+  final ChatKeyboardAnchor _keyboardAnchor = ChatKeyboardAnchor();
+  bool _jumpingToReply = false;
+  Future<bool>? _loadMoreInFlight;
 
   @override
   void initState() {
     super.initState();
+    _threadNotifier =
+        ref.read(chatThreadMessagesProvider(widget.userId).notifier);
+    _chatService = ref.read(chatServiceProvider);
     _pusherLifecycle = ref.read(chatPusherLifecycleProvider.notifier);
+    _typingOutbound = ChatTypingOutbound(send: _sendTypingIndicator);
     _scrollController.addListener(_onScroll);
     _resolvedUserName = widget.userName;
     _resolvedAvatarUrl = widget.avatarUrl;
     _loadCurrentUserId();
     if (widget.userId > 0) {
+      _openUnreadCount = _peekUnreadCount();
+      _showUnreadSeparator = _openUnreadCount > 0;
+      _registerActivePeerImmediately();
       _resolvePeerDisplayIfNeeded();
       _loadMessages();
       _initializePusherListeners();
@@ -127,11 +229,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _seedInitialPeerPresence();
       _startRealtimeFallback();
     } else {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-        _errorMessage = 'Invalid conversation. Please go back and try again.';
-      });
+      _thread.patch(
+        isLoading: false,
+        hasError: true,
+        errorMessage: 'Invalid conversation. Please go back and try again.',
+      );
     }
   }
 
@@ -140,15 +242,43 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _messageSubscription?.cancel();
     _readReceiptSubscription?.cancel();
     _messageExpiredSubscription?.cancel();
+    _messageDeletedSubscription?.cancel();
+    _messageEditedSubscription?.cancel();
+    _messageReactedSubscription?.cancel();
+    _messageDeliveredSubscription?.cancel();
     _callEventSubscription?.cancel();
     _presenceSubscription?.cancel();
+    _connectionSubscription?.cancel();
     _realtimeFallbackTimer?.cancel();
-    _outboundTypingStopTimer?.cancel();
+    _realtimeFallbackKick?.cancel();
+    _typingOutbound.cancelTimers();
     _voiceRecordingTimer?.cancel();
     unawaited(_voiceRecorder.dispose());
-    // Defer until after unmount — Riverpod forbids notifier updates during dispose.
-    Future(_pusherLifecycle.closeConversation);
+    final chatService = _chatService;
+    final conversationId = _conversationId;
+    final peerId = widget.userId;
+    _pusherLifecycle.scheduleCloseConversation(
+      conversationId: conversationId,
+    );
+    Future(() {
+      unawaited(() async {
+        try {
+          if (conversationId != null && conversationId > 0) {
+            await chatService.setConversationTyping(conversationId, false);
+          } else {
+            await chatService.setTypingStatus(peerId, false);
+          }
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to clear typing indicator on dispose',
+            tag: 'Chat',
+            error: e,
+          );
+        }
+      }());
+    });
     _scrollController.dispose();
+    _threadNotifier.clear();
     super.dispose();
   }
 
@@ -162,33 +292,52 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   String? get _peerAvatarUrl => _resolvedAvatarUrl ?? widget.avatarUrl;
 
-  Future<void> _resolvePeerDisplayIfNeeded() async {
-    final hasName = widget.userName != null &&
-        widget.userName!.trim().isNotEmpty &&
-        widget.userName!.trim() != 'User';
-    final hasAvatar =
-        widget.avatarUrl != null && widget.avatarUrl!.trim().isNotEmpty;
-    if (hasName && hasAvatar) return;
+  String? get _peerCallPhotoUrl =>
+      _resolvedPrimaryPhotoUrl ?? _peerAvatarUrl;
 
+  Future<void> _resolvePeerDisplayIfNeeded() async {
     try {
       final profile =
           await ref.read(profileServiceProvider).getUserProfile(widget.userId);
       if (!mounted) return;
+      final first = profile.firstName.trim();
+      final primary = primaryProfileImage(profile.images);
+      final avatar = primary?.avatarDisplayUrl ?? primary?.imageUrl;
+      final photo = primaryProfilePhotoUrl(profile.images);
       setState(() {
-        if (!hasName) {
-          final first = profile.firstName.trim();
-          if (first.isNotEmpty) _resolvedUserName = first;
+        if (first.isNotEmpty) {
+          _resolvedUserName = first;
         }
-        if (!hasAvatar &&
-            profile.images != null &&
-            profile.images!.isNotEmpty) {
-          _resolvedAvatarUrl = profile.images!.first.imageUrl;
+        if (avatar != null && avatar.isNotEmpty) {
+          _resolvedAvatarUrl = avatar;
+        }
+        if (photo != null && photo.isNotEmpty) {
+          _resolvedPrimaryPhotoUrl = photo;
         }
       });
+      final resolvedAvatar = MediaUrl.resolve(avatar);
+      ref.read(chatListPreviewProvider.notifier).updatePeerAppearance(
+            widget.userId,
+            name: first.isNotEmpty ? first : null,
+            avatarUrl: resolvedAvatar,
+          );
+      unawaited(
+        ref.read(peerAvatarCacheProvider.notifier).remember(
+              widget.userId,
+              resolvedAvatar,
+            ),
+      );
+      unawaited(
+        ref.read(chatLocalRepositoryProvider).patchPeerAppearance(
+              otherUserId: widget.userId,
+              name: first.isNotEmpty ? first : null,
+              primaryImageUrl: resolvedAvatar,
+            ),
+      );
     } catch (e) {
       AppLogger.warning(
         'Could not resolve chat peer display',
-        tag: 'ChatPage',
+        tag: 'Chat',
         error: e,
       );
     }
@@ -212,24 +361,25 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final userService = ref.read(userServiceProvider);
       final userInfo = await userService.getUserInfo();
       if (mounted) {
-        setState(() {
-          _currentUserId = userInfo.id;
-          // Recompute send/receive flags once current user is known.
-          _messages = _messages
-              .map((msg) {
-                final senderId = msg['sender_id'] as int?;
-                if (senderId == null) return msg;
-                return {
-                  ...msg,
-                  'is_sent': senderId == userInfo.id,
-                };
-              })
-              .toList();
-        });
+        _currentUserId = userInfo.id;
+        _messages = _messages
+            .map((msg) {
+              final senderId = msg['sender_id'] as int?;
+              if (senderId == null) return msg;
+              return {
+                ...msg,
+                'is_sent': senderId == userInfo.id,
+              };
+            })
+            .toList();
+        setState(() {});
       }
     } catch (e) {
-      // If user info fails, we'll determine sent status from message senderId
-      // Messages where senderId != widget.userId are from current user
+      AppLogger.warning(
+        'Could not resolve current user for sent-status',
+        tag: 'Chat',
+        error: e,
+      );
     }
   }
 
@@ -241,12 +391,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ref
           .read(conversationMuteCacheProvider.notifier)
           .setMuted(widget.userId, muted);
-      setState(() => _conversationMuted = muted);
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+    } catch (e) {
+      AppLogger.warning(
+        'Conversation mute status load failed',
+        tag: 'Chat',
+        error: e,
+      );
+    }
   }
 
   void _initializePusherListeners() {
     final pusher = ref.read(pusherWebSocketServiceProvider);
+
+    _connectionSubscription = pusher.connectionStream.listen((status) {
+      if (!mounted) return;
+      if (status == ConnectionStatus.connected) {
+        unawaited(_pollRemoteMessages());
+      }
+    });
 
     _messageSubscription = pusher.messageStream.listen((message) {
       if (!mounted) return;
@@ -270,19 +432,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       if (event.readerId != widget.userId) return;
 
-      setState(() {
-        _messages = _messages.map((msg) {
-          if (msg['is_sent'] != true) return msg;
-          final id = msg['id'];
-          if (event.messageIds.isEmpty) {
-            return {...msg, 'is_read': true};
-          }
-          if (id is int && event.messageIds.contains(id)) {
-            return {...msg, 'is_read': true};
-          }
-          return msg;
-        }).toList();
-      });
+      _messages = ChatReadReceiptApply.apply(
+        messages: _messages,
+        messageIds: event.messageIds,
+      );
     });
 
     _messageExpiredSubscription = pusher.messageExpiredStream.listen((event) {
@@ -292,10 +445,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           event.conversationId != _conversationId) {
         return;
       }
-      setState(() {
-        _messages = _messages.map((msg) {
-          final id = msg['id'];
-          if (id is int && id == event.messageId) {
+      _thread.mapRows((msg) {
+          final rawId = msg['id'];
+          final id = rawId is int
+              ? rawId
+              : int.tryParse(rawId?.toString() ?? '');
+          if (id != null && id == event.messageId) {
             return {
               ...msg,
               'is_expired': true,
@@ -304,8 +459,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             };
           }
           return msg;
-        }).toList();
-      });
+        });
     });
 
     _callEventSubscription = pusher.callEventStream.listen((event) {
@@ -320,10 +474,89 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     _presenceSubscription = pusher.presenceStream.listen((event) {
       if (!mounted || event.userId != widget.userId) return;
+      _presenceFromPusher = true;
+      ref.read(userPresenceCacheProvider.notifier).apply(event);
       setState(() {
         _isOnline = event.isOnline;
         _lastSeenAt = event.lastSeenAt;
       });
+    });
+
+    _messageDeletedSubscription = pusher.messageDeletedStream.listen((event) {
+      if (!mounted) return;
+      if (_conversationId != null &&
+          event.conversationId != null &&
+          event.conversationId != _conversationId) {
+        return;
+      }
+      if (event.forEveryone) {
+        _applyDeletedTombstone(event.messageId);
+        unawaited(
+          ref
+              .read(chatLocalRepositoryProvider)
+              .markMessageDeletedByServerId(event.messageId),
+        );
+      } else {
+        _messages = _messages
+            .where((msg) => !_sameMessageId(msg['id'], event.messageId))
+            .toList();
+        unawaited(
+          ref
+              .read(chatLocalRepositoryProvider)
+              .deleteMessageByServerId(event.messageId),
+        );
+      }
+    });
+
+    _messageEditedSubscription = pusher.messageEditedStream.listen((event) {
+      if (!mounted) return;
+      if (_conversationId != null &&
+          event.conversationId != null &&
+          event.conversationId != _conversationId) {
+        return;
+      }
+      _thread.mapRows((msg) {
+          if (!_sameMessageId(msg['id'], event.messageId)) return msg;
+          final extra = event.message != null
+              ? _messageToMap(event.message!)
+              : null;
+          return ChatEditedApply.patchRow(
+            msg,
+            content: event.content,
+            editedAt: event.editedAt,
+            extra: extra,
+          );
+        });
+    });
+
+    _messageReactedSubscription = pusher.messageReactedStream.listen((event) {
+      if (!mounted) return;
+      if (_conversationId != null &&
+          event.conversationId != null &&
+          event.conversationId != _conversationId) {
+        return;
+      }
+      _applyReactionEvent(event);
+    });
+
+    _messageDeliveredSubscription = pusher.messageDeliveredStream.listen((event) {
+      if (!mounted) return;
+      if (_conversationId != null &&
+          event.conversationId != null &&
+          event.conversationId != _conversationId) {
+        return;
+      }
+      final me = _currentUserId;
+      if (me != null &&
+          me > 0 &&
+          event.senderId > 0 &&
+          event.senderId != me) {
+        return;
+      }
+      _messages = ChatDeliveryReceiptApply.apply(
+        messages: _messages,
+        messageIds: event.messageIds,
+      );
     });
   }
 
@@ -348,6 +581,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final profile =
           await ref.read(profileServiceProvider).getUserProfile(widget.userId);
       if (!mounted) return;
+      if (_presenceFromPusher) return;
       setState(() {
         if (profile.isOnline == true) {
           _isOnline = true;
@@ -361,7 +595,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (e) {
       AppLogger.warning(
         'Could not refresh peer presence',
-        tag: 'ChatPage',
+        tag: 'Chat',
         error: e,
       );
     }
@@ -369,123 +603,208 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   void _startRealtimeFallback() {
     _realtimeFallbackTimer?.cancel();
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (mounted) unawaited(_pollRemoteMessages());
+    _realtimeFallbackKick?.cancel();
+    _realtimeFallbackKick = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      if (ref.read(pusherWebSocketServiceProvider).isConnected) return;
+      unawaited(_pollRemoteMessages());
     });
     _realtimeFallbackTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (!mounted) return;
+      if (ref.read(pusherWebSocketServiceProvider).isConnected) return;
       unawaited(_pollRemoteMessages());
     });
   }
 
   Future<void> _pollRemoteMessages() async {
     try {
-      final history = await ref.read(chatServiceProvider).getChatHistory(
-            receiverId: widget.userId,
-            page: 1,
-            limit: _historyPageSize,
-          );
-      if (!mounted) return;
-      final conversationId = history.conversationId ??
-          history.messages
-              .map((m) => m.conversationId)
-              .whereType<int>()
-              .where((id) => id > 0)
-              .firstOrNull;
-      if (conversationId != null && conversationId > 0) {
-        unawaited(_subscribePusherConversation(conversationId));
+      final lastId = ChatReconnectCatchUp.lastServerId(_messages);
+      if (lastId == null) {
+        final history = await ref.read(chatServiceProvider).getChatHistory(
+              receiverId: widget.userId,
+              page: 1,
+              limit: _historyPageSize,
+            );
+        if (!mounted) return;
+        final added = _mergePolledHistory(history);
+        if (added && _isNearBottom()) _scrollToBottom();
+        return;
       }
+
+      var afterId = lastId;
       var added = false;
-      // History is newest-first; ingest oldest-first then keep chronological order.
-      for (final message in history.messages.reversed) {
-        if (_ingestRemoteMessage(message, scroll: false)) {
-          added = true;
-        }
+      for (var page = 0; page < ChatReconnectCatchUp.maxPages; page++) {
+        final history = await ref.read(chatServiceProvider).getChatHistory(
+              receiverId: widget.userId,
+              afterId: afterId,
+              limit: ChatReconnectCatchUp.pageSize,
+            );
+        if (!mounted) return;
+        if (_mergePolledHistory(history)) added = true;
+        final next = ChatReconnectCatchUp.nextAfterId(
+          page: history,
+          currentAfterId: afterId,
+        );
+        if (next == null) break;
+        afterId = next;
       }
-      if (mounted) {
-        setState(() {
-          _messages = ChatTimelineMerger.sortChronologically(_messages);
-        });
-      }
-      if (added) _scrollToBottom();
+      if (added && _isNearBottom()) _scrollToBottom();
     } catch (e) {
       AppLogger.warning(
         'Chat realtime fallback poll failed',
-        tag: 'ChatPage',
+        tag: 'Chat',
         error: e,
       );
     }
   }
 
+  bool _mergePolledHistory(ChatHistoryResult history) {
+    final conversationId = history.conversationId ??
+        history.messages
+            .map((m) => m.conversationId)
+            .whereType<int>()
+            .where((id) => id > 0)
+            .firstOrNull;
+    if (conversationId != null &&
+        conversationId > 0 &&
+        _conversationId != conversationId) {
+      unawaited(_subscribePusherConversation(conversationId));
+    }
+    var added = false;
+    // History is newest-first; ingest oldest-first then keep chronological order.
+    for (final message in history.messages.reversed) {
+      _enterGate.markIdentity(
+        ChatMessageEnterGate.identity(
+          clientId: message.clientId,
+          id: message.id,
+        ),
+      );
+      if (_ingestRemoteMessage(message, scroll: false)) {
+        added = true;
+      }
+    }
+    if (mounted) {
+      _messages = ChatTimelineMerger.sortChronologically(_messages);
+    }
+    _ackIncomingDelivered(history.messages);
+    return added;
+  }
+
   bool _ingestRemoteMessage(Message message, {bool scroll = true}) {
+    _ensureMessageIndex();
     if (message.id > 0) {
-      final existingIndex =
-          _messages.indexWhere((msg) => msg['id'] == message.id);
-      if (existingIndex >= 0) {
+      final existingIndex = _thread.index.byServerId(message.id);
+      if (existingIndex != null) {
         final merged = {
           ..._messages[existingIndex],
           ..._messageToMap(message),
         };
-        setState(() {
-          _messages = List<Map<String, dynamic>>.from(_messages);
-          _messages[existingIndex] = merged;
-        });
+        _thread.replaceAt(existingIndex, merged);
+        if (message.senderId == widget.userId) {
+          _ackIncomingDelivered([message]);
+        }
         return false;
       }
     }
-    setState(() {
+
+    final optimisticIndex = _thread.index.byClientId(message.clientId) ??
+        ChatMessageDedup.indexOfRow(
+          _messages,
+          clientId: message.clientId,
+        );
+    var insertedNew = false;
+    if (optimisticIndex >= 0) {
+      _thread.replaceAt(optimisticIndex, _messageToMap(message));
+    } else {
+      insertedNew = true;
       _messages = ChatTimelineMerger.sortChronologically([
-        ..._messages.where((msg) =>
-            msg['client_id'] == null ||
-            msg['delivery_status'] != MessageDeliveryStatus.sending ||
-            msg['text'] != message.message),
+        ..._messages,
         _messageToMap(message),
       ]);
-    });
+    }
+    if (ChatUnseenIncoming.shouldIncrementBadge(
+      insertedNewRow: insertedNew,
+      fromPeer: message.senderId == widget.userId,
+      nearBottom: _isNearBottom(),
+    )) {
+      ref
+          .read(chatThreadViewportProvider(widget.userId).notifier)
+          .incrementUnseen();
+    }
     unawaited(
       ref
           .read(chatLocalRepositoryProvider)
           .upsertMessage(message, widget.userId),
     );
-    if (scroll) _scrollToBottom();
+    if (scroll && _isNearBottom()) {
+      _scrollToBottom(bounce: insertedNew);
+    }
+    if (insertedNew &&
+        message.senderId == widget.userId &&
+        _isNearBottom()) {
+      unawaited(_markAsRead());
+    }
+    if (message.senderId == widget.userId) {
+      _ackIncomingDelivered([message]);
+    }
     return true;
   }
 
+  void _ensureMessageIndex() {
+    _thread.ensureIndex();
+  }
+
+  bool _sameMessageId(dynamic rawId, int messageId) {
+    return ChatOptimistic.sameMessageId(rawId, messageId);
+  }
+
   Future<void> _handleCallTimelineEvent(CallSignalingEvent event) async {
+    final fromPayload =
+        ChatCallTimeline.fromSignalingPayload(event.payload);
+    if (fromPayload != null &&
+        ChatCallTimeline.involvesThread(
+          call: fromPayload,
+          peerUserId: widget.userId,
+          currentUserId: _currentUserId,
+        )) {
+      _appendCallEntry(fromPayload);
+    }
+
     final callId = event.payload['call_id']?.toString();
     if (callId == null || callId.isEmpty) return;
 
     try {
       final call = await ref.read(callServiceProvider).getCall(callId);
-      final involvesPeer = call.callerId == widget.userId ||
-          call.receiverId == widget.userId;
-      if (!involvesPeer || !CallLogLabels.isTerminalStatus(call.status)) {
+      if (!ChatCallTimeline.involvesThread(
+            call: call,
+            peerUserId: widget.userId,
+            currentUserId: _currentUserId,
+          ) ||
+          !CallLogLabels.isTerminalStatus(call.status.toLowerCase())) {
         return;
       }
       _appendCallEntry(call);
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e); }
+    } catch (e) {
+      AppLogger.warning(
+        'Call timeline hydrate failed',
+        tag: 'Chat',
+        error: e,
+      );
+    }
   }
 
   void _appendCallEntry(Call call) {
-    if (_messages.any(
-      (item) => item['kind'] == 'call' && item['call_id'] == call.id,
-    )) {
+    if (!CallLogLabels.isTerminalStatus(call.status.toLowerCase())) {
       return;
     }
 
-    setState(() {
-      final messageItems = _messages
-          .where((item) => item['kind'] != 'call')
-          .toList();
-      final callItems = _messages
-          .where((item) => item['kind'] == 'call')
-          .toList()
-        ..add(_callToMap(call));
-      _messages = ChatTimelineMerger.merge(
-        messages: messageItems,
-        calls: callItems,
-      );
-    });
+    _messages = ChatCallTimeline.upsert(_messages, _callToMap(call));
+    unawaited(
+      ref.read(callHistoryLocalCacheProvider.notifier).upsertCall(
+            widget.userId,
+            call,
+          ),
+    );
     _scrollToBottom();
   }
 
@@ -497,58 +816,299 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         );
   }
 
-  void _onTypingChanged(String text) {
-    _outboundTypingStopTimer?.cancel();
-    final chatService = ref.read(chatServiceProvider);
-    final hasText = text.trim().isNotEmpty;
+  int _peekUnreadCount() {
+    return ChatUnreadSeparator.unreadCountOfPeer(
+      peerUserId: widget.userId,
+      items: [
+        for (final item in ref.read(chatListPreviewProvider).items)
+          (id: item.id, unreadCount: item.unreadCount),
+      ],
+    );
+  }
 
-    Future<void> sendTyping(bool isTyping) async {
-      try {
-        final conversationId = _conversationId;
-        if (conversationId != null && conversationId > 0) {
-          await chatService.setConversationTyping(conversationId, isTyping);
-        } else {
-          await chatService.setTypingStatus(widget.userId, isTyping);
-        }
-      } catch (e) {
-        AppLogger.warning(
-          'Typing indicator failed (non-blocking)',
-          tag: 'chat_page',
-          error: e,
-        );
-      }
+  /// FCM must treat this peer as "open" before history (or a conversation id) exists.
+  void _registerActivePeerImmediately() {
+    ActiveChatPeerBridge.primeActivePeer(widget.userId);
+    ref.read(chatListPreviewProvider.notifier).clearUnreadForPeer(widget.userId);
+    unawaited(Future<void>(() async {
+      if (!mounted) return;
+      _pusherLifecycle.markActiveChat(peerUserId: widget.userId);
+      await _subscribeWhenConversationKnown();
+    }));
+  }
+
+  Future<void> _subscribeWhenConversationKnown() async {
+    if (_conversationId != null && _conversationId! > 0) return;
+
+    final fromList = ref
+        .read(chatListPreviewProvider)
+        .items
+        .where((item) => item.id == widget.userId && item.chatId > 0)
+        .map((item) => item.chatId)
+        .where((id) => id != widget.userId)
+        .firstOrNull;
+    if (fromList != null) {
+      await _subscribePusherConversation(fromList);
+      return;
     }
 
-    if (hasText) {
-      unawaited(sendTyping(true));
-      _outboundTypingStopTimer = Timer(const Duration(seconds: 3), () {
-        unawaited(sendTyping(false));
-      });
-    } else {
-      unawaited(sendTyping(false));
+    try {
+      final localId = await ref
+          .read(chatLocalRepositoryProvider)
+          .conversationIdForOtherUser(widget.userId);
+      if (!mounted) return;
+      if (localId != null &&
+          localId > 0 &&
+          (_conversationId == null || _conversationId != localId)) {
+        await _subscribePusherConversation(localId);
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Local conversation id lookup failed',
+        tag: 'Chat',
+        error: e,
+      );
+    }
+  }
+
+  void _onTypingChanged(String text) {
+    _typingOutbound.onTextChanged(text);
+  }
+
+  void _onComposerFocusChange(bool hasFocus) {
+    if (!hasFocus) {
+      _typingOutbound.onFocusLost();
+    }
+  }
+
+  Future<void> _sendTypingIndicator(bool isTyping) async {
+    try {
+      final conversationId = _conversationId;
+      if (conversationId != null && conversationId > 0) {
+        await ref
+            .read(chatServiceProvider)
+            .setConversationTyping(conversationId, isTyping);
+      } else {
+        await ref
+            .read(chatServiceProvider)
+            .setTypingStatus(widget.userId, isTyping);
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Typing indicator failed (non-blocking)',
+        tag: 'Chat',
+        error: e,
+      );
     }
   }
 
   void _onScroll() {
+    _updateJumpToBottomVisibility();
     if (!_scrollController.hasClients ||
         _isLoading ||
         _isLoadingMore ||
+        _loadMoreFailed ||
         !_hasMoreMessages) {
       return;
     }
-    if (_scrollController.position.pixels <= 120) {
+    if (ChatThreadScroll.isNearOldest(
+      pixels: _scrollController.position.pixels,
+      maxScrollExtent: _scrollController.position.maxScrollExtent,
+    )) {
       unawaited(_loadMoreMessages());
     }
+  }
+
+  void _updateJumpToBottomVisibility() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final showFab = ChatUnseenIncoming.shouldShowFab(
+      pixels: pos.pixels,
+    );
+    ref.read(chatThreadViewportProvider(widget.userId).notifier).applyScroll(
+          showFab: showFab,
+          atBottom: ChatUnseenIncoming.isNearBottom(pixels: pos.pixels),
+        );
+  }
+
+  void _onChatKeyboardInset(double bottom) {
+    if (_keyboardAnchor.shouldPinToBottom(
+      insetBottom: bottom,
+      nearBottom: _isNearBottom(),
+    )) {
+      _pinThreadToKeyboard();
+    }
+  }
+
+  void _onChatKeyboardInsetTick() {
+    if (_keyboardAnchor.isPinned) {
+      _pinThreadToKeyboard();
+    }
+  }
+
+  void _onChatKeyboardInsetSettled() {
+    if (_keyboardAnchor.isPinned) {
+      _pinThreadToKeyboard();
+    }
+  }
+
+  void _pinThreadToKeyboard() {
+    if (!_scrollController.hasClients || !mounted) return;
+    final pos = _scrollController.position;
+    if (!pos.hasContentDimensions) return;
+    final target = ChatKeyboardAnchor.pinnedExtent(
+      pixels: pos.pixels,
+    );
+    if (target == null) return;
+    _scrollController.jumpTo(target);
+  }
+
+  void _jumpToLatest() {
+    ref.read(chatThreadViewportProvider(widget.userId).notifier).clearUnseen();
+    if (_showUnreadSeparator) {
+      setState(() => _showUnreadSeparator = false);
+    }
+    _scrollToBottom();
+    unawaited(_markAsRead());
+  }
+
+  Future<void> _jumpToRepliedMessage(Map<String, dynamic> message) async {
+    final targetId = ChatReplyJump.replyToId(message);
+    if (targetId == null || _jumpingToReply) return;
+    _jumpingToReply = true;
+    var showedSearching = false;
+    try {
+      var jumped = await _tryJumpToRepliedMessage(targetId);
+      if (jumped || !mounted) return;
+
+      showedSearching = true;
+      _showReplyJumpSnack(
+        ChatReplyJump.searchingMessage,
+        duration: const Duration(seconds: 30),
+      );
+
+      var pages = 0;
+      var emptyPage = false;
+      while (mounted &&
+          ChatReplyJump.shouldKeepPaginating(
+            found: _replyTargetInThread(targetId),
+            hasMore: _hasMoreMessages,
+            loadFailed: _loadMoreFailed,
+            pagesLoaded: pages,
+            emptyPage: emptyPage,
+          )) {
+        pages++;
+        final added = await _loadMoreMessages();
+        if (!mounted) return;
+        emptyPage = !added;
+        if (_replyTargetInThread(targetId)) break;
+      }
+
+      if (!mounted) return;
+      if (showedSearching) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      jumped = await _tryJumpToRepliedMessage(targetId);
+      if (jumped || !mounted) return;
+
+      AppLogger.warning(
+        'Original message $targetId not in loaded history',
+        tag: 'Chat',
+      );
+      _showReplyJumpSnack(ChatReplyJump.notLoadedMessage);
+    } finally {
+      _jumpingToReply = false;
+    }
+  }
+
+  bool _replyTargetInThread(int targetId) {
+    _thread.ensureIndex();
+    return _thread.index.byServerId(targetId) != null;
+  }
+
+  void _flashReplyHighlight(int messageId) {
+    if (!mounted || messageId <= 0) return;
+    ref.read(chatReplyHighlightProvider(widget.userId).notifier).flash(
+          messageId,
+          hold: AppAnimations.chatReplyHighlightHold,
+        );
+  }
+
+  void _showReplyJumpSnack(String text, {Duration? duration}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          text,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        duration: duration ?? const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<bool> _tryJumpToRepliedMessage(int targetId) async {
+    if (!mounted) return false;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return false;
+
+    var jumped = await ChatReplyJump.ensureVisible(
+      targetId,
+      context: context,
+    );
+    if (jumped) {
+      _flashReplyHighlight(targetId);
+      return true;
+    }
+    if (!mounted) return false;
+
+    _thread.ensureIndex();
+    final chrono = _thread.index.byServerId(targetId);
+    if (chrono == null) return false;
+
+    if (_scrollController.hasClients) {
+      final row = _messages[chrono];
+      final decorated = ChatUnreadSeparator.insert(
+        items: ChatDateBadgeInserter.wrap(_messages),
+        unreadCount: _showUnreadSeparator ? _openUnreadCount : 0,
+      );
+      final slots = ChatTimelineSlots.build(decoratedRows: decorated);
+      final pixels = ChatReplyJump.estimatedPixels(
+        slots: slots,
+        rowKey: ChatTimelineSlots.rowKey(row, fallbackIndex: chrono),
+        maxScrollExtent: _scrollController.position.maxScrollExtent,
+      );
+      if (pixels != null) {
+        final duration = AppAnimations.chatJumpToReplyDuration(context);
+        if (duration == Duration.zero) {
+          _scrollController.jumpTo(pixels);
+        } else {
+          await _scrollController.animateTo(
+            pixels,
+            duration: duration,
+            curve: AppAnimations.curveDefault,
+          );
+        }
+        if (!mounted) return false;
+        await ChatReplyJump.ensureVisible(
+          targetId,
+          context: context,
+        );
+      }
+    }
+    _flashReplyHighlight(targetId);
+    return true;
   }
 
   Future<void> _loadMessages({bool forceRefresh = false}) async {
     if (widget.userId <= 0) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-          _errorMessage = 'Invalid conversation. Please go back and try again.';
-        });
+        _thread.patch(
+          isLoading: false,
+          hasError: true,
+          errorMessage: 'Invalid conversation. Please go back and try again.',
+        );
       }
       return;
     }
@@ -558,51 +1118,76 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     try {
       final cached = await localRepo.getAllMessagesForOtherUser(widget.userId);
       final pagination = await localRepo.loadHistoryPagination(widget.userId);
-      if (cached.isNotEmpty && mounted) {
+      final cachedCallMaps = _cachedCallMaps();
+      if ((cached.isNotEmpty || cachedCallMaps.isNotEmpty) && mounted) {
         showedCache = true;
-        setState(() {
-          _messages = ChatTimelineMerger.sortChronologically(
-            cached.map(_messageToMap).toList(),
-          );
-          _isLoading = false;
-          _hasError = false;
-          _errorMessage = null;
-          _hasMoreMessages = pagination?.hasMore ?? cached.length >= _historyPageSize;
-          _nextCursor = pagination?.nextCursor;
-        });
-        _scrollToBottom();
+        final mergedCache = await _mergeQueuedOutbox(
+          ChatTimelineMerger.merge(
+            messages: cached.map(_messageToMap).toList(),
+            calls: cachedCallMaps,
+          ),
+        );
+        _enterGate.markAll(mergedCache);
+        _thread.patch(
+          rows: mergedCache,
+          isLoading: false,
+          hasError: false,
+          clearErrorMessage: true,
+        );
+        _hasMoreMessages =
+            pagination?.hasMore ?? cached.length >= _historyPageSize;
+        _nextCursor = pagination?.nextCursor;
+        _scrollAfterHistoryPaint();
+        unawaited(_cacheVisualMedia(cached));
+        unawaited(
+          ref.read(callHistoryLocalCacheProvider.notifier).saveForPeer(
+                widget.userId,
+                _cachedPeerCalls(),
+              ),
+        );
       }
     } catch (e) {
-      AppLogger.warning('Failed to load cached chat messages', tag: 'chat_page', error: e);
+      AppLogger.warning('Failed to load cached chat messages', tag: 'Chat', error: e);
     }
+    await _mergeOutboxIntoThread();
 
-    setState(() {
-      _isLoading = !showedCache;
-      _hasError = false;
-      _errorMessage = null;
-      if (forceRefresh) {
-        _hasMoreMessages = true;
-        _nextCursor = null;
-      }
-    });
+    _thread.patch(
+      isLoading: !showedCache,
+      hasError: false,
+      clearErrorMessage: true,
+    );
+    if (forceRefresh) {
+      _hasMoreMessages = true;
+      _nextCursor = null;
+    }
 
     try {
       final chatService = ref.read(chatServiceProvider);
-      final history = await chatService.getChatHistory(
+      final historyFuture = chatService.getChatHistory(
         receiverId: widget.userId,
         page: 1,
         limit: _historyPageSize,
         forceRefresh: forceRefresh,
       );
+      final callsFuture = ref.read(getCallHistoryUseCaseProvider).execute(
+            peerUserId: widget.userId,
+            limit: 50,
+          );
 
-      List<Call> calls = [];
+      final history = await historyFuture;
+      _ackIncomingDelivered(history.messages);
+      List<Call> calls = const [];
       try {
-        calls = await ref.read(getCallHistoryUseCaseProvider).execute(
-              peerUserId: widget.userId,
-              limit: 50,
-            );
+        calls = await callsFuture;
       } catch (e) {
-        AppLogger.warning('Silently caught exception', tag: 'chat_page', error: e);
+        AppLogger.warning(
+          'Call history fetch failed; using local cache',
+          tag: 'Chat',
+          error: e,
+        );
+        calls = ref
+            .read(callHistoryLocalCacheProvider.notifier)
+            .callsForPeer(widget.userId);
       }
 
       if (mounted) {
@@ -613,21 +1198,36 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             .map(_callToMap)
             .toList();
 
-        final merged = ChatTimelineMerger.merge(
-          messages: messageMaps,
-          calls: callMaps,
+        final merged = await _mergeQueuedOutbox(
+          ChatTimelineMerger.withInFlightOptimistic(
+            serverTimeline: ChatTimelineMerger.merge(
+              messages: messageMaps,
+              calls: callMaps,
+            ),
+            previous: _messages,
+          ),
         );
 
-        setState(() {
-          _messages = merged;
-          _isLoading = false;
-          _hasMoreMessages = history.hasMore;
-          _nextCursor = history.nextCursor;
-        });
-        _scrollToBottom();
+        _enterGate.markAll(merged);
+        _thread.patch(
+          rows: merged,
+          isLoading: false,
+          isLoadingMore: false,
+          loadMoreFailed: false,
+        );
+        _hasMoreMessages = history.hasMore;
+        _nextCursor = history.nextCursor;
+        _scrollAfterHistoryPaint();
         unawaited(
           localRepo.upsertMessages(history.messages, widget.userId),
         );
+        unawaited(
+          ref.read(callHistoryLocalCacheProvider.notifier).saveForPeer(
+                widget.userId,
+                calls,
+              ),
+        );
+        unawaited(_cacheVisualMedia(history.messages));
         unawaited(
           localRepo.saveHistoryPagination(
             widget.userId,
@@ -637,6 +1237,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
           ),
         );
+        await _mergeOutboxIntoThread();
 
         final conversationId = history.conversationId ??
             history.messages
@@ -651,22 +1252,54 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         await _markAsRead();
       }
     } on ApiError catch (e) {
+      AppLogger.warning(
+        'Chat history refresh failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted && !showedCache) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.message;
-          _isLoading = false;
-        });
+        _thread.patch(
+          hasError: true,
+          errorMessage: e.message,
+          isLoading: false,
+        );
       }
     } catch (e) {
+      AppLogger.warning(
+        'Chat history refresh failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted && !showedCache) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
+        _thread.patch(
+          hasError: true,
+          errorMessage: e.toString(),
+          isLoading: false,
+        );
       }
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _mergeQueuedOutbox(
+    List<Map<String, dynamic>> timeline,
+  ) async {
+    final pending =
+        await ref.read(chatOutboundQueueServiceProvider).getPending();
+    if (!mounted) return timeline;
+    ref.read(chatOutboxUiProvider.notifier).sync(pending);
+    final extra = ChatOutboxUi.rowsForPeer(pending, widget.userId);
+    if (extra.isEmpty) return timeline;
+    return ChatTimelineMerger.withInFlightOptimistic(
+      serverTimeline: timeline,
+      previous: extra,
+    );
+  }
+
+  Future<void> _mergeOutboxIntoThread() async {
+    if (!mounted) return;
+    final merged = await _mergeQueuedOutbox(_messages);
+    if (!mounted) return;
+    _thread.setRows(merged);
   }
 
   DateTime? _oldestMessageCreatedAt() {
@@ -700,71 +1333,61 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         .whereType<int>()
         .toSet();
 
-    final newMessageMaps = older
-        .where((message) => !existingMessageIds.contains(message.id))
-        .map(_messageToMap)
-        .toList();
+    final newMessageMaps = ChatLoadOlder.withoutExistingIds(
+      incoming: older,
+      idOf: (message) => message.id,
+      existingIds: existingMessageIds,
+    ).map(_messageToMap).toList();
     if (newMessageMaps.isEmpty) return false;
-
-    final previousMaxExtent = _scrollController.hasClients
-        ? _scrollController.position.maxScrollExtent
-        : 0.0;
-    final previousPixels =
-        _scrollController.hasClients ? _scrollController.position.pixels : 0.0;
 
     final existingMessages =
         _messages.where((item) => item['kind'] != 'call').toList();
     final callItems = _messages.where((item) => item['kind'] == 'call').toList();
 
-    setState(() {
-      _messages = ChatTimelineMerger.merge(
-        messages: [...newMessageMaps, ...existingMessages],
-        calls: callItems,
-      );
-    });
+    _enterGate.markAll(newMessageMaps);
+    _messages = ChatTimelineMerger.merge(
+      messages: [...newMessageMaps, ...existingMessages],
+      calls: callItems,
+    );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      final newMaxExtent = _scrollController.position.maxScrollExtent;
-      final delta = newMaxExtent - previousMaxExtent;
-      if (delta > 0) {
-        _scrollController.jumpTo(previousPixels + delta);
-      }
-    });
+    // Reverse list is anchored at pixel 0 (latest). Older rows grow
+    // maxScrollExtent — no jumpTo compensation (ChatLoadOlder).
     return true;
   }
 
-  Future<void> _loadMoreMessages() async {
-    if (_isLoading || _isLoadingMore || !_hasMoreMessages) return;
+  Future<bool> _loadMoreMessages() {
+    return _loadMoreInFlight ??= _loadMoreMessagesBody().whenComplete(() {
+      _loadMoreInFlight = null;
+    });
+  }
 
-    setState(() => _isLoadingMore = true);
+  Future<bool> _loadMoreMessagesBody() async {
+    if (_isLoading || !_hasMoreMessages) return false;
+
+    _thread.patch(isLoadingMore: true, loadMoreFailed: false);
 
     try {
       final loadedFromCache = await _loadMoreFromCache();
       if (loadedFromCache) {
-        if (mounted) setState(() => _isLoadingMore = false);
-        return;
+        if (mounted) _thread.patch(isLoadingMore: false);
+        return true;
       }
-    } catch (_) {
-      // Fall through to network pagination.
+    } catch (e) {
+      AppLogger.warning(
+        'load more from cache failed; falling through to network',
+        tag: 'Chat',
+        error: e,
+      );
     }
 
     final cursor = _nextCursor;
     if (cursor == null) {
       if (mounted) {
-        setState(() {
-          _isLoadingMore = false;
-          _hasMoreMessages = false;
-        });
+        _thread.patch(isLoadingMore: false);
+        _hasMoreMessages = false;
       }
-      return;
+      return false;
     }
-
-    final previousMaxExtent = _scrollController.hasClients
-        ? _scrollController.position.maxScrollExtent
-        : 0.0;
-    final previousPixels =
-        _scrollController.hasClients ? _scrollController.position.pixels : 0.0;
 
     try {
       final chatService = ref.read(chatServiceProvider);
@@ -776,7 +1399,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         beforeCreatedAt: cursor.beforeCreatedAt,
       );
 
-      if (!mounted) return;
+      if (!mounted) return false;
 
       final existingMessageIds = _messages
           .where((item) => item['kind'] != 'call')
@@ -784,17 +1407,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           .whereType<int>()
           .toSet();
 
-      final newMessageMaps = history.messages
-          .where((message) => !existingMessageIds.contains(message.id))
-          .map((message) => _messageToMap(message))
-          .toList();
+      final newMessageMaps = ChatLoadOlder.withoutExistingIds(
+        incoming: history.messages,
+        idOf: (message) => message.id,
+        existingIds: existingMessageIds,
+      ).map((message) => _messageToMap(message)).toList();
 
       if (newMessageMaps.isEmpty) {
-        setState(() {
-          _isLoadingMore = false;
-          _hasMoreMessages = history.hasMore;
-          _nextCursor = history.nextCursor;
-        });
+        _thread.patch(isLoadingMore: false);
+        _hasMoreMessages = history.hasMore;
+        _nextCursor = history.nextCursor;
         unawaited(
           localRepo.saveHistoryPagination(
             widget.userId,
@@ -804,7 +1426,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
           ),
         );
-        return;
+        return false;
       }
 
       final existingMessages = _messages
@@ -813,19 +1435,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final callItems =
           _messages.where((item) => item['kind'] == 'call').toList();
 
-      setState(() {
-        _messages = ChatTimelineMerger.merge(
-          messages: [...newMessageMaps, ...existingMessages],
-          calls: callItems,
-        );
-        _isLoadingMore = false;
-        _hasMoreMessages = history.hasMore;
-        _nextCursor = history.nextCursor;
-      });
+      _enterGate.markAll(newMessageMaps);
+      _messages = ChatTimelineMerger.merge(
+        messages: [...newMessageMaps, ...existingMessages],
+        calls: callItems,
+      );
+      _thread.patch(isLoadingMore: false);
+      _hasMoreMessages = history.hasMore;
+      _nextCursor = history.nextCursor;
 
       unawaited(
         localRepo.upsertMessages(history.messages, widget.userId),
       );
+      unawaited(_cacheVisualMedia(history.messages));
       unawaited(
         localRepo.saveHistoryPagination(
           widget.userId,
@@ -835,17 +1457,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ),
       );
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scrollController.hasClients) return;
-        final newMaxExtent = _scrollController.position.maxScrollExtent;
-        final delta = newMaxExtent - previousMaxExtent;
-        if (delta > 0) {
-          _scrollController.jumpTo(previousPixels + delta);
-        }
-      });
-    } catch (_) {
-      if (mounted) setState(() => _isLoadingMore = false);
+      return true;
+    } catch (e) {
+      AppLogger.warning(
+        'load more messages failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (mounted) {
+        _thread.patch(isLoadingMore: false, loadMoreFailed: true);
+      }
+      return false;
     }
   }
 
@@ -863,14 +1485,43 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     };
   }
 
+  List<Call> _cachedPeerCalls() {
+    final seen = <int>{};
+    final calls = <Call>[
+      ...ref.read(callHistoryLocalCacheProvider.notifier).callsForPeer(widget.userId),
+      ...ref.read(messengerCallsProvider).calls.where(
+            (call) =>
+                call.callerId == widget.userId ||
+                call.receiverId == widget.userId,
+          ),
+    ];
+    final unique = <Call>[];
+    for (final call in calls) {
+      if (!CallLogLabels.isTerminalStatus(call.status)) continue;
+      if (call.id <= 0 || !seen.add(call.id)) continue;
+      unique.add(call);
+    }
+    return unique;
+  }
+
+  List<Map<String, dynamic>> _cachedCallMaps() =>
+      _cachedPeerCalls().map(_callToMap).toList();
+
   Future<void> _redialCall(Call call) async {
+    final confirmed = await showCallRedialConfirmSheet(
+      context: context,
+      peerName: _peerDisplayName,
+      isVideo: call.isVideoCall,
+    );
+    if (!confirmed || !mounted) return;
     if (call.isVideoCall && !await _ensureVideoCallAccess()) return;
+    if (!mounted) return;
     await startOutgoingCall(
       context: context,
       ref: ref,
       recipientId: widget.userId,
       recipientName: _peerDisplayName,
-      recipientAvatarUrl: _peerAvatarUrl,
+      recipientAvatarUrl: _peerCallPhotoUrl,
       type: call.isVideoCall ? OutgoingCallType.video : OutgoingCallType.voice,
     );
   }
@@ -887,12 +1538,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'sender_id': message.senderId,
       'timestamp': AppDateTime.toLocal(message.createdAt),
       'is_read': message.isRead,
+      'is_delivered': message.isDelivered || message.isRead,
+      'is_edited': message.isEdited,
+      'edited_at': message.editedAt,
       'type': message.messageType,
-      'attachment_url': message.attachmentUrl ?? message.mediaThumbnailUrl,
+      'attachment_url': ChatVisualMedia.displayUrl(message) ??
+          message.attachmentUrl ??
+          message.mediaThumbnailUrl,
       'is_locked': message.isLocked,
       'is_blurred': message.isBlurred,
       'profile_card': message.profileCard,
-      'hero_tag': message.id > 0 ? 'chat_image_${message.id}' : message.clientId,
+      'hero_tag': ChatGalleryItem.heroTagFor(
+        messageId: message.id,
+        clientId: message.clientId,
+      ),
       'delivery_status': message.deliveryStatus,
       'remaining_seconds': message.remainingSeconds,
       'is_expired': message.isExpired,
@@ -901,29 +1560,42 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'media_duration': message.mediaDuration,
       'conversation_id': message.conversationId,
       'expires_in_seconds': message.expiresInSeconds,
+      'reply_to_message_id': message.replyToMessageId,
+      'reply_to_text': message.replyToText ??
+          _replyPreviewForId(message.replyToMessageId),
+      'reply_to_name': message.replyToName,
+      'forwarded_from_message_id': message.forwardedFromMessageId,
+      'forwarded_from_user_id': message.forwardedFromUserId,
+      'forwarded_from_name': message.forwardedFromName,
+      'is_forwarded': message.isForwarded,
+      'reactions': message.reactions,
+      'my_reaction': message.myReaction,
+      'is_deleted': message.isDeleted,
+      'media_thumbnail_url': message.mediaThumbnailUrl,
+      'media_width': message.mediaWidth,
+      'media_height': message.mediaHeight,
     };
   }
 
-  MessageDeliveryStatus _deliveryStatusFromMap(Map<String, dynamic> msg) {
-    final raw = msg['delivery_status'];
-    if (raw is MessageDeliveryStatus) return raw;
-    if (raw is String) {
-      switch (raw) {
-        case 'sending':
-          return MessageDeliveryStatus.sending;
-        case 'failed':
-          return MessageDeliveryStatus.failed;
-        default:
-          return MessageDeliveryStatus.sent;
+  String? _replyPreviewForId(int? id) {
+    if (id == null || id <= 0) return null;
+    for (final msg in _messages) {
+      if (_sameMessageId(msg['id'], id)) {
+        final text = msg['text']?.toString() ?? '';
+        if (text.isNotEmpty) return text;
+        final type = msg['type']?.toString() ?? 'text';
+        if (type == 'image') return 'Photo';
+        if (type == 'voice') return 'Voice message';
+        if (type == 'video') return 'Video';
       }
     }
-    if (msg['is_sending'] == true) return MessageDeliveryStatus.sending;
-    return MessageDeliveryStatus.sent;
+    return null;
   }
 
   Map<String, dynamic> _optimisticVoiceMap({
     required String clientId,
     required int durationSeconds,
+    String? localPath,
   }) {
     return {
       'id': 0,
@@ -933,8 +1605,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'sender_id': _currentUserId,
       'timestamp': DateTime.now(),
       'is_read': false,
+      'is_delivered': false,
       'type': 'voice',
       'media_duration': durationSeconds,
+      'local_path': localPath,
       'delivery_status': MessageDeliveryStatus.sending,
     };
   }
@@ -944,6 +1618,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     required String text,
     String type = 'text',
     String? attachmentUrl,
+    String? localPath,
+    int? expiresInSeconds,
+    int? replyToMessageId,
+    String? replyToText,
+    String? replyToName,
+    String? placeholderDataUri,
+    int? mediaWidth,
+    int? mediaHeight,
   }) {
     return {
       'id': 0,
@@ -953,30 +1635,88 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       'sender_id': _currentUserId,
       'timestamp': DateTime.now(),
       'is_read': false,
+      'is_delivered': false,
       'type': type,
       'attachment_url': attachmentUrl,
+      'local_path': localPath ?? attachmentUrl,
+      'expires_in_seconds': expiresInSeconds,
+      'reply_to_message_id': replyToMessageId,
+      'reply_to_text': replyToText,
+      'reply_to_name': replyToName,
+      'placeholder_data_uri': placeholderDataUri,
+      'media_width': mediaWidth,
+      'media_height': mediaHeight,
       'delivery_status': MessageDeliveryStatus.sending,
+      'hero_tag': ChatGalleryItem.heroTagFor(clientId: clientId),
     };
   }
 
   void _markMessageFailed(String clientId) {
-    setState(() {
-      _messages = _messages.map((msg) {
-        if (msg['client_id'] == clientId) {
-          return {...msg, 'delivery_status': MessageDeliveryStatus.failed};
-        }
-        return msg;
-      }).toList();
+    _thread.mapRows((msg) {
+      if (msg['client_id'] == clientId) {
+        return ChatSendRetry.markFailed(msg);
+      }
+      return msg;
     });
   }
 
+  void _reportImageUploadProgress(String clientId, int sent, int total) {
+    final progress = total <= 0 ? 0.0 : sent / total;
+    ref.read(chatImageUploadProgressProvider.notifier).setProgress(
+          clientId,
+          progress,
+        );
+  }
+
+  void Function(int, int)? _imageSendProgressCallback(
+    String? clientId,
+    String type,
+  ) {
+    if (type != 'image' || clientId == null || clientId.isEmpty) return null;
+    return (sent, total) => _reportImageUploadProgress(clientId, sent, total);
+  }
+
+  void _completeImageUploadProgress(String? clientId, String type) {
+    if (type != 'image' || clientId == null || clientId.isEmpty) return;
+    ref.read(chatImageUploadProgressProvider.notifier).setProgress(
+          clientId,
+          1,
+        );
+  }
+
+  Map<String, dynamic> _carryLocalImagePlaceholder(
+    String clientId,
+    Map<String, dynamic> serverMap,
+  ) {
+    for (final row in _messages) {
+      if (row['client_id']?.toString() != clientId) continue;
+      return {
+        ...serverMap,
+        'placeholder_data_uri':
+            serverMap['placeholder_data_uri'] ?? row['placeholder_data_uri'],
+        'media_width': serverMap['media_width'] ?? row['media_width'],
+        'media_height': serverMap['media_height'] ?? row['media_height'],
+      };
+    }
+    return serverMap;
+  }
+
   void _replaceOptimisticMessage(String clientId, Message serverMessage) {
-    setState(() {
-      _messages = _messages
-          .where((msg) => msg['client_id'] != clientId)
-          .toList()
-        ..add(_messageToMap(serverMessage));
-    });
+    _messages = ChatTimelineMerger.sortChronologically(
+      ChatOptimistic.replaceWithServer(
+        messages: _messages,
+        clientId: clientId,
+        serverId: serverMessage.id,
+        serverMap: _carryLocalImagePlaceholder(
+          clientId,
+          _messageToMap(
+            serverMessage.clientId == null || serverMessage.clientId!.isEmpty
+                ? serverMessage.copyWith(clientId: clientId)
+                : serverMessage,
+          ),
+        ),
+      ),
+    );
     unawaited(
       ref
           .read(chatLocalRepositoryProvider)
@@ -988,13 +1728,82 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _onVoiceListened(Map<String, dynamic> message) async {
+    if (message['is_sent'] == true) return;
+    await _markAsRead();
+  }
+
   Future<void> _markAsRead() async {
+    ref.read(chatListPreviewProvider.notifier).clearUnreadForPeer(widget.userId);
     try {
       final chatService = ref.read(chatServiceProvider);
-      await chatService.markAsRead(widget.userId);
-      ref.read(chatListPreviewProvider.notifier).clearUnreadForPeer(widget.userId);
+      final conversationId = _conversationId;
+      if (conversationId != null && conversationId > 0) {
+        await chatService.markConversationAsRead(conversationId);
+      } else {
+        await chatService.markAsRead(widget.userId);
+      }
     } catch (e) {
-      // Silently fail - marking as read is not critical
+      AppLogger.warning(
+        'Failed to mark messages as read',
+        tag: 'Chat',
+        error: e,
+      );
+    }
+  }
+
+  Future<void> _onPinnedBannerTap() async {
+    final pinned = ref.read(chatPinnedBannerProvider(widget.userId));
+    final messageId = pinned.messageId;
+    if (messageId != null && messageId > 0) {
+      await _jumpToRepliedMessage({'reply_to_message_id': messageId});
+      return;
+    }
+    await _showPinnedMessages();
+  }
+
+  Future<void> _togglePin(Map<String, dynamic> message) async {
+    final messageId = message['id'] is int
+        ? message['id'] as int
+        : int.tryParse(message['id']?.toString() ?? '') ?? 0;
+    if (messageId <= 0) return;
+    final banner = ref.read(chatPinnedBannerProvider(widget.userId).notifier);
+    final snapshot = ref.read(chatPinnedBannerProvider(widget.userId));
+    final preview = chatMessagePreviewText(
+      message: message['text']?.toString(),
+      messageType: message['type']?.toString(),
+    );
+    try {
+      if (snapshot.isPinned(messageId)) {
+        await _chatService.unpinMessage(messageId);
+        if (!mounted) return;
+        banner.applyUnpinned(messageId);
+      } else {
+        final previousId = snapshot.messageId;
+        if (previousId != null && previousId != messageId) {
+          try {
+            await _chatService.unpinMessage(previousId);
+          } catch (e) {
+            AppLogger.warning(
+              'unpin previous $previousId failed',
+              tag: 'Chat',
+              error: e,
+            );
+          }
+        }
+        await _chatService.pinMessage(messageId);
+        if (!mounted) return;
+        banner.applyPinned(messageId: messageId, preview: preview);
+      }
+      ref.invalidate(pinnedCountProvider(widget.userId));
+    } catch (e) {
+      AppLogger.warning(
+        'toggle pin $messageId failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (!mounted) return;
+      ErrorHandlerService.handleError(context, e);
     }
   }
 
@@ -1029,12 +1838,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   msg.createdAt.toLocal().toString(),
                   maxLines: 1,
                 ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  unawaited(
+                    _jumpToRepliedMessage({'reply_to_message_id': msg.id}),
+                  );
+                },
               );
             },
           ),
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning(
+        'load pinned messages failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Unable to load pinned messages.')),
@@ -1042,63 +1862,154 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  void _scrollToBottom() {
+  bool _isNearBottom({double? threshold}) {
+    if (!_scrollController.hasClients) return true;
+    final pos = _scrollController.position;
+    return ChatUnseenIncoming.isNearBottom(
+      pixels: pos.pixels,
+      threshold: threshold ?? ChatUnseenIncoming.autoScrollThreshold,
+    );
+  }
+
+  void _scrollToBottom({bool bounce = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      if (!_scrollController.hasClients || !mounted) return;
+      const target = ChatThreadScroll.latestPixels;
+      final animate = AppAnimations.animationsEnabled(context);
+      if (!animate) {
+        _scrollController.jumpTo(target);
+        return;
+      }
+      _scrollController.animateTo(
+        target,
+        duration: AppAnimations.chatJumpToBottomScroll,
+        curve: Curves.easeOut,
+      );
+      if (bounce &&
+          ChatArrivalBounce.shouldPlay(
+            nearBottom: _isNearBottom(),
+            animationsEnabled: animate,
+          )) {
+        ref.read(chatArrivalBounceProvider(widget.userId).notifier).play();
       }
     });
+  }
+
+  void _scrollAfterHistoryPaint() {
+    if (_showUnreadSeparator) {
+      unawaited(_scrollToUnreadSeparator());
+      return;
+    }
+    _scrollToBottom();
+  }
+
+  Future<void> _scrollToUnreadSeparator() async {
+    if (!mounted) return;
+    final duration = AppAnimations.animationsEnabled(context)
+        ? AppAnimations.chatJumpToBottomScroll
+        : Duration.zero;
+    final found = await ChatUnreadSeparatorScroll.reveal(
+      separatorKey: _unreadSeparatorKey,
+      controller: _scrollController,
+      duration: duration,
+    );
+    if (!found && mounted) _scrollToBottom();
+  }
+
+  Future<void> _cacheVisualMedia(List<Message> messages) async {
+    if (widget.userId <= 0 || messages.isEmpty) return;
+    unawaited(ChatVisualMedia.prefetchMessages(messages));
+    await ref.read(chatInfoCacheProvider.notifier).mergeMedia(
+          widget.userId,
+          ChatVisualMedia.sharedFromMessages(messages),
+        );
   }
 
   Future<void> _handleSend(String text, {String? existingClientId}) async {
     if (text.trim().isEmpty) return;
 
-    final clientId =
-        existingClientId ?? 'local_${DateTime.now().millisecondsSinceEpoch}';
+    final trimmed = text.trim();
+    if (_editingMessageId != null && existingClientId == null) {
+      await _submitEdit(trimmed);
+      return;
+    }
+    if (existingClientId == null) {
+      final now = DateTime.now();
+      if (_lastSentText == trimmed &&
+          _lastSentAt != null &&
+          now.difference(_lastSentAt!) < const Duration(milliseconds: 800)) {
+        return;
+      }
+      _lastSentText = trimmed;
+      _lastSentAt = now;
+    }
+
+    final clientId = existingClientId ?? ChatClientIds.next();
+    final replyId = existingClientId == null ? _repliedToMessageId : null;
+    final replyText = existingClientId == null ? _repliedToMessage : null;
+    final replyName = existingClientId == null ? _repliedToName : null;
 
     if (existingClientId == null) {
-      setState(() {
-        _messages.add(_optimisticMap(clientId: clientId, text: text));
-        _repliedToMessage = null;
-        _repliedToName = null;
-        _repliedToMessageType = null;
-      });
+      _messages = [
+        ..._messages,
+        _optimisticMap(
+          clientId: clientId,
+          text: text,
+          replyToMessageId: replyId,
+          replyToText: replyText,
+          replyToName: replyName,
+        ),
+      ];
+      _composer.clear();
+      ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+            peerUserId: widget.userId,
+            previewText: trimmed,
+            lastMessageType: 'text',
+            timestamp: DateTime.now(),
+          );
     } else {
-      setState(() {
-        _messages = _messages.map((msg) {
-          if (msg['client_id'] == clientId) {
-            return {
-              ...msg,
-              'delivery_status': MessageDeliveryStatus.sending,
-            };
-          }
-          return msg;
-        }).toList();
+      _thread.mapRows((msg) {
+        if (msg['client_id'] == clientId) {
+          return {
+            ...msg,
+            'delivery_status': MessageDeliveryStatus.sending,
+          };
+        }
+        return msg;
       });
     }
-    _scrollToBottom();
+    _scrollToBottom(bounce: true);
 
     try {
       final sentMessage = await ref.read(chatServiceProvider).sendMessage(
             widget.userId,
             text,
             messageType: 'text',
+            replyToMessageId: replyId,
+            clientId: clientId,
           );
 
       if (mounted) {
         _replaceOptimisticMessage(clientId, sentMessage);
+        ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+              peerUserId: widget.userId,
+              previewText: trimmed,
+              lastMessageType: 'text',
+              timestamp: sentMessage.createdAt,
+              lastMessageId: sentMessage.id,
+            );
         _scrollToBottom();
       }
     } on ApiError catch (e) {
+      AppLogger.warning(
+        'Send text failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted) {
-        _markMessageFailed(clientId);
         if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
           await ChatUpgradeBottomSheet.show(context);
-        } else {
+        } else if (!_isOfflineSendError(e)) {
           ErrorHandlerService.showErrorSnackBar(
             context,
             e,
@@ -1107,32 +2018,578 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         }
       }
     } catch (e) {
+      AppLogger.warning(
+        'Send text failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted) {
-        _markMessageFailed(clientId);
-        ErrorHandlerService.handleError(
-          context,
-          e,
-          customMessage: 'Failed to send message',
-          onRetry: () => _handleSend(text, existingClientId: clientId),
+        await _queueOrFailText(
+          clientId: clientId,
+          text: trimmed,
+          error: e,
         );
+        if (!_isOfflineSendError(e)) {
+          ErrorHandlerService.handleError(
+            context,
+            e,
+            customMessage: 'Failed to send message',
+            onRetry: () => _handleSend(text, existingClientId: clientId),
+          );
+        }
       }
     }
   }
 
-  void _retryFailedMessage(Map<String, dynamic> message) {
-    final clientId = message['client_id']?.toString();
+  bool _isOfflineSendError(Object error) {
+    if (error is ApiError) {
+      if (error.code == 0) return true;
+      final message = error.message.toLowerCase();
+      return message.contains('internet') ||
+          message.contains('connection') ||
+          message.contains('queued');
+    }
+    final text = error.toString().toLowerCase();
+    return text.contains('socket') ||
+        text.contains('connection') ||
+        text.contains('network');
+  }
+
+  Future<void> _queueOrFailText({
+    required String clientId,
+    required String text,
+    required Object error,
+  }) async {
+    final senderId = _currentUserId ?? 0;
+    if (_isOfflineSendError(error) && senderId > 0) {
+      final queuedAt = DateTime.now();
+      final queued = QueuedChatMessage(
+        clientId: clientId,
+        receiverId: widget.userId,
+        senderId: senderId,
+        message: text,
+        createdAt: queuedAt,
+      );
+      await ref.read(chatOutboundQueueServiceProvider).enqueue(queued);
+      unawaited(
+        ref.read(chatLocalRepositoryProvider).upsertMessage(
+              Message(
+                id: 0,
+                senderId: senderId,
+                receiverId: widget.userId,
+                message: text,
+                createdAt: queuedAt,
+                clientId: clientId,
+                deliveryStatus: MessageDeliveryStatus.queued,
+              ),
+              widget.userId,
+            ),
+      );
+      ref.read(chatOutboxUiProvider.notifier).addReceiver(widget.userId);
+      _thread.mapRows(
+        (msg) => ChatOutboxUi.markStatus(
+          msg,
+          clientId,
+          MessageDeliveryStatus.queued,
+        ),
+      );
+      return;
+    }
+    _markMessageFailed(clientId);
+  }
+
+  void _beginReply(Map<String, dynamic> message) {
+    if (message['kind'] == 'call') return;
+    final id = message['id'];
+    final parsedId = id is int ? id : int.tryParse(id?.toString() ?? '') ?? 0;
+    if (parsedId <= 0) return;
+    final type = message['type']?.toString() ?? 'text';
     final text = message['text']?.toString() ?? '';
-    if (clientId == null || text.isEmpty) return;
+    _composer.beginReply(
+      messageId: parsedId,
+      text: text.isNotEmpty
+          ? text
+          : (type == 'image'
+              ? 'Photo'
+              : type == 'voice'
+                  ? 'Voice message'
+                  : type == 'video'
+                      ? 'Video'
+                      : 'Message'),
+      type: type,
+      name: message['is_sent'] == true ? 'You' : _peerDisplayName,
+    );
+  }
+
+  void _beginEdit(Map<String, dynamic> message) {
+    final id = message['id'];
+    final parsedId = id is int ? id : int.tryParse(id?.toString() ?? '') ?? 0;
+    final text = message['text']?.toString() ?? '';
+    if (parsedId <= 0 || text.isEmpty) return;
+    _composer.beginEdit(
+      messageId: parsedId,
+      preview: text,
+      createdAt: _messageCreatedAt(message),
+    );
+    ref.read(pendingChatDraftProvider.notifier).state = PendingChatDraft(
+      userId: widget.userId,
+      text: text,
+    );
+  }
+
+  Future<void> _submitEdit(String text) async {
+    final messageId = _editingMessageId;
+    if (messageId == null) return;
+    try {
+      final updated = await ref.read(chatServiceProvider).editMessage(
+            messageId,
+            text,
+          );
+      if (!mounted) return;
+      _thread.mapRows((msg) {
+        if (!_sameMessageId(msg['id'], messageId)) return msg;
+        return ChatEditedApply.patchRow(
+          msg,
+          content: text,
+          editedAt: updated.editedAt ?? DateTime.now(),
+          extra: _messageToMap(updated),
+        );
+      });
+      _composer.clear();
+      ref.read(chatListPreviewProvider.notifier).applyEditedMessage(
+            peerUserId: widget.userId,
+            messageId: messageId,
+            previewText: text,
+          );
+    } catch (e) {
+      AppLogger.warning(
+        'Edit message failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (!mounted) return;
+      ErrorHandlerService.handleError(context, e);
+    }
+  }
+
+  Future<void> _deleteOwnMessage(
+    Map<String, dynamic> message, {
+    required bool forEveryone,
+  }) async {
+    final id = message['id'];
+    final parsedId = id is int ? id : int.tryParse(id?.toString() ?? '') ?? 0;
+    if (parsedId <= 0) return;
+    try {
+      await ref.read(chatServiceProvider).deleteMessage(
+            parsedId,
+            forEveryone: forEveryone,
+          );
+      if (!mounted) return;
+      if (forEveryone) {
+        _applyDeletedTombstone(parsedId);
+        unawaited(
+          ref
+              .read(chatLocalRepositoryProvider)
+              .markMessageDeletedByServerId(parsedId),
+        );
+      } else {
+        _messages = _messages
+            .where((msg) => !_sameMessageId(msg['id'], parsedId))
+            .toList();
+        unawaited(
+          ref
+              .read(chatLocalRepositoryProvider)
+              .deleteMessageByServerId(parsedId),
+        );
+      }
+      unawaited(_refreshPeerListPreview());
+    } catch (e) {
+      AppLogger.warning(
+        'Delete message failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (!mounted) return;
+      ErrorHandlerService.handleError(
+        context,
+        e,
+        customMessage: 'Failed to delete message',
+      );
+    }
+  }
+
+  Future<void> _refreshPeerListPreview() async {
+    final localRepo = ref.read(chatLocalRepositoryProvider);
+    final latest = await localRepo.getMessagesForOtherUser(
+      widget.userId,
+      limit: 1,
+      excludeDeleted: true,
+    );
+    if (!mounted) return;
+    final message = latest.isEmpty ? null : latest.first;
+    ref.read(chatListPreviewProvider.notifier).applyLatestPreview(
+          peerUserId: widget.userId,
+          lastMessage: message == null
+              ? ''
+              : chatMessagePreviewText(
+                  message: message.message,
+                  messageType: message.messageType,
+                  mediaDuration: message.mediaDuration,
+                  isDeleted: message.isDeleted,
+                ),
+          lastMessageType: message?.messageType,
+          lastMessageTime: message?.createdAt,
+          lastMessageFromMe:
+              message != null && message.senderId != widget.userId,
+          lastMessageId: message?.id,
+        );
+  }
+
+  DateTime? _messageCreatedAt(Map<String, dynamic> message) {
+    final ts = message['timestamp'];
+    if (ts is DateTime) return ts;
+    return AppDateTime.parseApi(ts?.toString());
+  }
+
+  void _applyDeletedTombstone(int messageId) {
+    _thread.mapRows((msg) {
+      if (!_sameMessageId(msg['id'], messageId)) return msg;
+      return {
+        ...msg,
+        'is_deleted': true,
+        'text': '',
+        'attachment_url': null,
+        'reactions': <String, int>{},
+        'my_reaction': null,
+      };
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> message) async {
+    if (!mounted) return;
+    final createdAt = _messageCreatedAt(message);
+    final choice = await showChatDeleteConfirmSheet(
+      context: context,
+      canDeleteForEveryone: ChatMessageSheetActions.canDeleteForEveryone(
+        isSent: message['is_sent'] == true,
+        createdAt: createdAt,
+      ),
+    );
+    if (choice == null || !mounted) return;
+    await _deleteOwnMessage(
+      message,
+      forEveryone: choice == ChatDeleteChoice.forEveryone,
+    );
+  }
+
+  Future<void> _showMessageActions(Map<String, dynamic> message, {Offset? at}) {
+    if (message['kind'] == 'call') return Future.value();
+    if (message['is_deleted'] == true) return Future.value();
+    final isSent = message['is_sent'] == true;
+    final type = message['type']?.toString() ?? 'text';
+    final text = message['text']?.toString();
+    final messageId = message['id'] is int ? message['id'] as int : 0;
+    final isExpired = message['is_expired'] == true;
+    final createdAt = _messageCreatedAt(message);
+    final canEdit = ChatMessageSheetActions.canEdit(
+      isSent: isSent,
+      type: type,
+      isExpired: isExpired,
+      messageId: messageId,
+      createdAt: createdAt,
+    );
+    final pinnedNow =
+        ref.read(chatPinnedBannerProvider(widget.userId)).isPinned(messageId);
+    final actions = <AppActionSheetItem>[
+      AppActionSheetItem(
+        iconPath: AppIcons.reply,
+        label: 'Reply',
+        onTap: () => _beginReply(message),
+      ),
+      if (ChatMessageSheetActions.canForward(
+        messageId: messageId,
+        type: type,
+        isDeleted: message['is_deleted'] == true,
+        isExpired: isExpired,
+        isLocked: message['is_locked'] == true,
+      ))
+        AppActionSheetItem(
+          iconPath: AppIcons.forward,
+          label: 'Forward',
+          onTap: () => unawaited(_openForward(message)),
+        ),
+      if (ChatMessageSheetActions.canCopy(text, type: type))
+        AppActionSheetItem(
+          iconPath: AppIcons.copy,
+          label: 'Copy',
+          onTap: () => unawaited(_copyMessageText(text!)),
+        ),
+      if (canEdit)
+        AppActionSheetItem(
+          iconPath: AppIcons.edit2,
+          label: 'Edit',
+          subtitle: ChatMessageSheetActions.editActionSubtitle(
+            createdAt: createdAt,
+          ),
+          onTap: () => _beginEdit(message),
+        ),
+      if (ChatMessageSheetActions.canPin(
+        messageId: messageId,
+        type: type,
+        isDeleted: message['is_deleted'] == true,
+        isExpired: isExpired,
+        isLocked: message['is_locked'] == true,
+      ))
+        AppActionSheetItem(
+          iconPath: pinnedNow ? AppIcons.bookmark2 : AppIcons.bookmark,
+          label: pinnedNow ? 'Unpin' : 'Pin',
+          onTap: () => unawaited(_togglePin(message)),
+        ),
+      if (ChatMessageSheetActions.canDelete(
+        isSent: isSent,
+        messageId: messageId,
+        isDeleted: message['is_deleted'] == true,
+      ))
+        AppActionSheetItem(
+          iconPath: AppIcons.delete,
+          label: 'Delete',
+          iconColor: AppColors.feedbackError,
+          onTap: () => unawaited(_confirmDelete(message)),
+        ),
+      if (ChatMessageSheetActions.canReport(isSent: isSent))
+        AppActionSheetItem(
+          iconPath: AppIcons.flag,
+          label: 'Report',
+          onTap: _openReportFromMessage,
+        ),
+    ];
+    final media = MediaQuery.of(context);
+    return ChatMessageContextMenu.show(
+      context: context,
+      anchor: at ?? Offset(media.size.width / 2, media.size.height / 2),
+      isSent: isSent,
+      actions: actions,
+      showReact: ChatMessageSheetActions.canReact(
+        messageId: messageId,
+        isExpired: isExpired,
+      ),
+      onReact: (emoji) => _handleReact(message, emoji),
+    );
+  }
+
+  Future<void> _openForward(Map<String, dynamic> message) async {
+    final messageId = message['id'] is int ? message['id'] as int : 0;
+    if (messageId <= 0 || !mounted) return;
+    final result = await ChatForwardSheet.show(
+      context: context,
+      messageId: messageId,
+    );
+    if (result == null || !mounted) return;
+
+    for (final sent in result.forwarded) {
+      if (sent.receiverId == widget.userId) {
+        _ingestRemoteMessage(sent);
+      }
+      ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+            peerUserId: sent.receiverId,
+            previewText: chatMessagePreviewText(
+              message: sent.message,
+              messageType: sent.messageType,
+              mediaDuration: sent.mediaDuration,
+            ),
+            lastMessageType: sent.messageType,
+            timestamp: sent.createdAt,
+            lastMessageId: sent.id,
+          );
+      unawaited(
+        ref.read(chatLocalRepositoryProvider).upsertMessage(
+              sent,
+              sent.receiverId,
+            ),
+      );
+    }
+
+    if (!mounted || result.forwarded.isEmpty) return;
+    final n = result.forwarded.length;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          n == 1 ? 'Forwarded' : 'Forwarded to $n chats',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
+    );
+  }
+
+  void _handleReact(Map<String, dynamic> message, String emoji) {
+    unawaited(_reactToMessage(message, emoji));
+  }
+
+  Future<void> _reactToMessage(
+    Map<String, dynamic> message,
+    String emoji,
+  ) async {
+    final id = message['id'];
+    final messageId =
+        id is int ? id : int.tryParse(id?.toString() ?? '') ?? 0;
+    if (messageId <= 0) return;
+    final previous = ChatReactionSummary.fromMap(message);
+    final optimistic = previous.toggle(emoji);
+    _patchMessageReactions(messageId, optimistic);
+    try {
+      final result = await _chatService.reactToMessage(messageId, emoji);
+      if (!mounted) return;
+      _patchMessageReactions(messageId, result.summary);
+    } catch (e) {
+      AppLogger.warning(
+        'react $emoji on $messageId failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (!mounted) return;
+      _patchMessageReactions(messageId, previous);
+    }
+  }
+
+  void _applyReactionEvent(MessageReactedEvent event) {
+    final me = _currentUserId ?? 0;
+    ChatReactionSummary? persisted;
+    _thread.mapRows((msg) {
+      if (!_sameMessageId(msg['id'], event.messageId)) return msg;
+      final next = ChatReactionSummary.applyEvent(
+        current: ChatReactionSummary.fromMap(msg),
+        reactorId: event.userId,
+        currentUserId: me,
+        counts: event.counts,
+        emoji: event.emoji,
+        reacted: event.reacted,
+      );
+      persisted = next;
+      return {
+        ...msg,
+        'reactions': next.counts,
+        'my_reaction': next.mine,
+      };
+    });
+    if (persisted != null) {
+      _persistReactionSummary(event.messageId, persisted!);
+    }
+  }
+
+  void _patchMessageReactions(int messageId, ChatReactionSummary summary) {
+    _thread.mapRows((msg) {
+      if (!_sameMessageId(msg['id'], messageId)) return msg;
+      return {
+        ...msg,
+        'reactions': summary.counts,
+        'my_reaction': summary.mine,
+      };
+    });
+    _persistReactionSummary(messageId, summary);
+  }
+
+  void _persistReactionSummary(int messageId, ChatReactionSummary summary) {
+    if (messageId <= 0) return;
+    unawaited(_writeReactionSummary(messageId, summary));
+  }
+
+  Future<void> _writeReactionSummary(
+    int messageId,
+    ChatReactionSummary summary,
+  ) async {
+    if (!mounted) return;
+    try {
+      await ref.read(chatLocalRepositoryProvider).patchMessageReactions(
+            serverId: messageId,
+            counts: summary.counts,
+            mine: summary.mine,
+          );
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to persist reactions for $messageId',
+        tag: 'Chat',
+        error: e,
+      );
+    }
+  }
+
+  Future<void> _copyMessageText(String text) async {
+    await ChatCopyFeedback.copy(text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      ChatCopyFeedback.snackBar(context),
+    );
+  }
+
+  void _openReportFromMessage() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ReportUserScreen(userId: widget.userId),
+      ),
+    );
+  }
+
+  void _ackIncomingDelivered(Iterable<Message> messages) {
+    final me = _currentUserId;
+    if (me == null || me <= 0) return;
+    final ids = messages
+        .where((message) =>
+            message.receiverId == me &&
+            message.id > 0 &&
+            !message.isDelivered &&
+            !message.isRead)
+        .map((message) => message.id)
+        .toList();
+    if (ids.isEmpty) return;
+    unawaited(
+      ref.read(chatServiceProvider).markMessagesDelivered(ids).catchError((e) {
+        AppLogger.warning(
+          'Failed to ack messages as delivered',
+          tag: 'Chat',
+          error: e,
+        );
+      }),
+    );
+  }
+
+  void _retryFailedMessage(Map<String, dynamic> message) {
+    if (!ChatSendRetry.canRetry(message)) return;
+    final clientId = message['client_id']?.toString();
+    if (clientId == null) return;
+    final type = message['type']?.toString() ?? 'text';
+    final localPath = message['local_path']?.toString();
+    if (type == 'voice') {
+      final duration = message['media_duration'] as int? ?? 1;
+      unawaited(_resendVoice(
+        clientId: clientId,
+        filePath: localPath,
+        durationSeconds: duration,
+      ));
+      return;
+    }
+    if (type == 'image' || type == 'video' || type == 'disappearing_image') {
+      unawaited(_resendMedia(
+        clientId: clientId,
+        type: type,
+        filePath: localPath,
+        expiresInSeconds: message['expires_in_seconds'] as int?,
+      ));
+      return;
+    }
+    final text = message['text']?.toString() ?? '';
+    if (text.isEmpty) return;
     unawaited(_handleSend(text, existingClientId: clientId));
   }
 
-  Future<void> _handleVoiceRecordStart() async {
-    if (await _voiceRecorder.isRecording()) return;
+  Future<bool> _handleVoiceRecordStart() async {
+    if (await _voiceRecorder.isRecording()) return true;
+    if (!mounted) return false;
 
-    final hasPermission = await _voiceRecorder.hasPermission();
-    if (!hasPermission) {
-      throw Exception('Microphone permission required');
-    }
+    final allowed = await ensureChatMediaPermission(
+      context,
+      ChatMediaPermissionKind.microphone,
+    );
+    if (!allowed || !mounted) return false;
 
     final dir = await getTemporaryDirectory();
     _voiceRecordingPath =
@@ -1152,6 +2609,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         unawaited(_handleVoiceRecordSend());
       }
     });
+    return true;
   }
 
   Future<void> _handleVoiceRecordCancel() async {
@@ -1190,17 +2648,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ? _voiceRecordingDurationSeconds
         : 1;
     _voiceRecordingDurationSeconds = 0;
+    if (!mounted) return;
+    await _sendVoiceAtPath(filePath, duration);
+  }
 
-    final clientId = 'local_voice_${DateTime.now().millisecondsSinceEpoch}';
+  Future<void> _sendVoiceAtPath(String filePath, int duration) async {
+    final clientId = ChatClientIds.next();
     final sentAt = DateTime.now();
     if (mounted) {
-      setState(() {
-        _messages.add(_optimisticVoiceMap(
+      _messages = [
+        ..._messages,
+        _optimisticVoiceMap(
           clientId: clientId,
           durationSeconds: duration,
-        ));
-      });
-      _scrollToBottom();
+          localPath: filePath,
+        ),
+      ];
+      _scrollToBottom(bounce: true);
       ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
             peerUserId: widget.userId,
             previewText: chatMessagePreviewText(
@@ -1227,6 +2691,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           messageType: 'voice',
           mediaPath: upload['media_path']?.toString(),
           mediaDuration: (upload['media_duration'] as num?)?.toInt() ?? duration,
+          clientId: clientId,
         );
       } else {
         sent = await chatService.sendMessage(
@@ -1235,6 +2700,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           messageType: 'voice',
           mediaFile: File(filePath),
           mediaDuration: duration,
+          clientId: clientId,
         );
       }
       if (mounted) {
@@ -1242,6 +2708,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _scrollToBottom();
       }
     } on ApiError catch (e) {
+      AppLogger.warning(
+        'Send voice failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted) {
         _markMessageFailed(clientId);
         if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
@@ -1251,6 +2722,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         }
       }
     } catch (e) {
+      AppLogger.warning(
+        'Send voice failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted) {
         _markMessageFailed(clientId);
         ErrorHandlerService.handleError(
@@ -1262,11 +2738,199 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _resendVoice({
+    required String clientId,
+    required String? filePath,
+    required int durationSeconds,
+  }) async {
+    if (filePath == null || !File(filePath).existsSync()) return;
+    _thread.mapRows((msg) {
+      if (msg['client_id'] == clientId) {
+        return {...msg, 'delivery_status': MessageDeliveryStatus.sending};
+      }
+      return msg;
+    });
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      Message sent;
+      if (_conversationId != null && _conversationId! > 0) {
+        final upload = await chatService.uploadChatVoice(
+          _conversationId!,
+          File(filePath),
+          durationSeconds,
+        );
+        sent = await chatService.sendMessage(
+          widget.userId,
+          '',
+          messageType: 'voice',
+          mediaPath: upload['media_path']?.toString(),
+          mediaDuration:
+              (upload['media_duration'] as num?)?.toInt() ?? durationSeconds,
+          clientId: clientId,
+        );
+      } else {
+        sent = await chatService.sendMessage(
+          widget.userId,
+          '',
+          messageType: 'voice',
+          mediaFile: File(filePath),
+          mediaDuration: durationSeconds,
+          clientId: clientId,
+        );
+      }
+      if (mounted) {
+        _replaceOptimisticMessage(clientId, sent);
+        _scrollToBottom();
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Resend voice failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (mounted) _markMessageFailed(clientId);
+    }
+  }
+
+  Future<void> _resendMedia({
+    required String clientId,
+    required String type,
+    required String? filePath,
+    int? expiresInSeconds,
+  }) async {
+    if (filePath == null || !File(filePath).existsSync()) return;
+    final mediaFile = File(filePath);
+    _thread.mapRows((msg) {
+      if (msg['client_id'] == clientId) {
+        return {...msg, 'delivery_status': MessageDeliveryStatus.sending};
+      }
+      return msg;
+    });
+    if (type == 'image') {
+      ref.read(chatImageUploadProgressProvider.notifier).setProgress(
+            clientId,
+            0,
+          );
+    }
+    try {
+      Message sent;
+      if ((type == 'image' || type == 'disappearing_image') &&
+          _conversationId != null &&
+          _conversationId! > 0) {
+        try {
+          final upload = await ref.read(chatServiceProvider).uploadChatImage(
+                _conversationId!,
+                mediaFile,
+                onSendProgress: _imageSendProgressCallback(clientId, type),
+              );
+          _completeImageUploadProgress(clientId, type);
+          sent = await ref.read(chatServiceProvider).sendMessage(
+                widget.userId,
+                '',
+                messageType: type,
+                mediaPath: upload['media_path']?.toString(),
+                mediaThumbnailPath: upload['media_thumbnail_path']?.toString(),
+                mediaWidth: upload['width'] as int?,
+                mediaHeight: upload['height'] as int?,
+                expiresInSeconds: expiresInSeconds,
+                clientId: clientId,
+              );
+        } catch (e, stackTrace) {
+          AppLogger.warning(
+            'Dedicated image upload failed; falling back to sendMessage multipart',
+            tag: 'Chat',
+            error: e,
+          );
+          AppLogger.error(
+            'Chat image upload fallback',
+            tag: 'Chat',
+            error: e,
+            stackTrace: stackTrace,
+          );
+          sent = await ref.read(chatServiceProvider).sendMessage(
+                widget.userId,
+                '',
+                messageType: type,
+                mediaFile: mediaFile,
+                expiresInSeconds: expiresInSeconds,
+                clientId: clientId,
+              );
+        }
+      } else {
+        sent = await ref.read(chatServiceProvider).sendMessage(
+              widget.userId,
+              '',
+              messageType: type,
+              mediaFile: mediaFile,
+              expiresInSeconds: expiresInSeconds,
+              clientId: clientId,
+            );
+      }
+      if (mounted) {
+        _replaceOptimisticMessage(clientId, sent);
+        _scrollToBottom();
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Resend media failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (mounted) _markMessageFailed(clientId);
+    }
+  }
+
   void _handleMediaTap() {
+    unawaited(
+      ChatAttachmentSheet.show(
+        context: context,
+        onCamera: () => unawaited(
+          _pickAndSendMedia(ImageSource.camera, 'image'),
+        ),
+        onGallery: () => unawaited(
+          _pickAndSendMedia(ImageSource.gallery, 'image'),
+        ),
+        onVoice: () => unawaited(_pickAndSendVoiceFile()),
+        onFile: () => unawaited(_pickAndSendDocument()),
+        onProfile: () => unawaited(_shareProfileCard()),
+        onSelfDestruct: _startSelfDestructPhotoFlow,
+      ),
+    );
+  }
+
+  void _handleMediaLongPress() {
     final theme = Theme.of(context);
     AppActionBottomSheet.show<void>(
       context: context,
-      title: 'Send media',
+      title: 'Send photo',
+      actions: [
+        AppActionSheetItem(
+          iconPath: AppIcons.gallery,
+          label: 'Photo',
+          iconColor: theme.colorScheme.primary,
+          onTap: () {
+            Navigator.pop(context);
+            _showNormalPhotoSourceSheet();
+          },
+        ),
+        AppActionSheetItem(
+          iconPath: AppIcons.flame,
+          label: 'Self-Destruct Photo',
+          iconColor: AppColors.feedbackWarning,
+          onTap: () {
+            Navigator.pop(context);
+            _startSelfDestructPhotoFlow();
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showNormalPhotoSourceSheet() {
+    final theme = Theme.of(context);
+    AppActionBottomSheet.show<void>(
+      context: context,
+      title: 'Photo',
       actions: [
         AppActionSheetItem(
           iconPath: AppIcons.camera,
@@ -1286,21 +2950,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             _pickAndSendMedia(ImageSource.gallery, 'image');
           },
         ),
-        AppActionSheetItem(
-          iconPath: AppIcons.timer,
-          label: 'Self-destruct photo',
-          iconColor: AppColors.feedbackWarning,
-          onTap: () {
-            Navigator.pop(context);
-            _startSelfDestructPhotoFlow();
-          },
-        ),
       ],
     );
-  }
-
-  void _handleMediaLongPress() {
-    _startSelfDestructPhotoFlow();
   }
 
   void _startSelfDestructPhotoFlow() {
@@ -1315,16 +2966,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           iconColor: theme.colorScheme.primary,
           onTap: () {
             Navigator.pop(context);
-            SelfDestructDurationSheet.show(
-              context,
-              onSelected: (seconds) {
-                _pickAndSendMedia(
-                  ImageSource.camera,
-                  'disappearing_image',
-                  expiresInSeconds: seconds,
-                );
-              },
-            );
+            unawaited(_pickSelfDestructPhoto(ImageSource.camera));
           },
         ),
         AppActionSheetItem(
@@ -1333,19 +2975,144 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           iconColor: theme.colorScheme.secondary,
           onTap: () {
             Navigator.pop(context);
-            SelfDestructDurationSheet.show(
-              context,
-              onSelected: (seconds) {
-                _pickAndSendMedia(
-                  ImageSource.gallery,
-                  'disappearing_image',
-                  expiresInSeconds: seconds,
-                );
-              },
-            );
+            unawaited(_pickSelfDestructPhoto(ImageSource.gallery));
           },
         ),
       ],
+    );
+  }
+
+  Future<void> _pickSelfDestructPhoto(ImageSource source) async {
+    final seconds = await SelfDestructDurationSheet.show(context);
+    if (seconds == null || !mounted) return;
+    await _pickAndSendMedia(
+      source,
+      SelfDestructSend.messageType,
+      expiresInSeconds: seconds,
+    );
+  }
+
+  Future<void> _pickAndSendVoiceFile() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.audio);
+    if (result == null || !mounted) return;
+    final path = result.files.single.path;
+    if (path == null || path.isEmpty) return;
+    await _sendVoiceAtPath(path, 1);
+  }
+
+  Future<void> _pickAndSendDocument() async {
+    final result = await FilePicker.platform.pickFiles();
+    if (result == null || !mounted) return;
+    final picked = result.files.single;
+    final path = picked.path;
+    if (path == null || path.isEmpty) return;
+    final kind = ChatAttachmentKindResolver.fromName(picked.name);
+    final type = ChatAttachmentKindResolver.messageType(kind);
+    if (type == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'This chat can send photos, videos, and voice notes.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      );
+      return;
+    }
+    if (type == 'voice') {
+      await _sendVoiceAtPath(path, 1);
+      return;
+    }
+    await _sendMediaFile(File(path), type: type);
+  }
+
+  Future<void> _shareProfileCard() async {
+    if (!mounted) return;
+    await ShareProfileSheet.show(
+      context,
+      onProfileSelected: (profileUserId, displayName) {
+        unawaited(_sendProfileLink(profileUserId, displayName));
+      },
+    );
+  }
+
+  Future<void> _sendProfileLink(int profileUserId, String displayName) async {
+    final clientId = ChatClientIds.next();
+    _messages = [
+      ..._messages,
+      {
+        ..._optimisticMap(
+          clientId: clientId,
+          text: '',
+          type: 'profile_link',
+        ),
+        'profile_card': {
+          'user_id': profileUserId,
+          'display_name': displayName,
+        },
+      },
+    ];
+    _scrollToBottom(bounce: true);
+    ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+          peerUserId: widget.userId,
+          previewText: chatMessagePreviewText(messageType: 'profile_link'),
+          lastMessageType: 'profile_link',
+          timestamp: DateTime.now(),
+        );
+    try {
+      final sent = await ref.read(chatServiceProvider).sendProfileLink(
+            widget.userId,
+            profileUserId,
+          );
+      if (!mounted) return;
+      _replaceOptimisticMessage(clientId, sent);
+      _scrollToBottom();
+    } catch (e) {
+      AppLogger.warning(
+        'Share profile failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (!mounted) return;
+      _markMessageFailed(clientId);
+      ErrorHandlerService.handleError(
+        context,
+        e,
+        customMessage: 'Failed to share profile',
+      );
+    }
+  }
+
+  void _openChatVideo(Map<String, dynamic> message) {
+    final url = message['attachment_url']?.toString();
+    if (!ChatVideoPlayback.canOpen(
+      mediaUrl: url,
+      deliveryStatus: ChatDeliveryStatusMap.fromMap(message),
+    )) {
+      return;
+    }
+    unawaited(ChatVideoViewer.open(context, videoUrl: url!));
+  }
+
+  void _openChatImageGallery(Map<String, dynamic> message) {
+    final url = message['attachment_url']?.toString();
+    if (url == null || url.isEmpty) return;
+    final items = ChatGalleryItems.fromMaps(_messages);
+    final index = ChatGalleryItems.indexFor(items, message);
+    final id = message['id'] is int
+        ? message['id'] as int
+        : int.tryParse(message['id']?.toString() ?? '') ?? 0;
+    unawaited(
+      ChatImageViewer.open(
+        context,
+        imageUrl: url,
+        heroTag: ChatGalleryItem.heroTagFor(
+          messageId: id,
+          clientId: message['client_id']?.toString(),
+        ),
+        images: items,
+        initialIndex: index,
+      ),
     );
   }
 
@@ -1361,22 +3128,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
 
     if (!mounted) return;
+    if (expired != true) return;
 
-    setState(() {
-      _messages = _messages.map((msg) {
-        if (msg['id'] == messageId) {
-          return {
-            ...msg,
-            'viewed_at': DateTime.now(),
-            'is_expired': expired == true,
-            'remaining_seconds': expired == true
-                ? 0
-                : (msg['expires_in_seconds'] ?? msg['remaining_seconds']),
-            if (expired == true) 'attachment_url': null,
-          };
-        }
-        return msg;
-      }).toList();
+    _thread.mapRows((msg) {
+      if (msg['id'] == messageId) {
+        return {
+          ...msg,
+          'viewed_at': DateTime.now(),
+          'is_expired': true,
+          'remaining_seconds': 0,
+          'attachment_url': null,
+        };
+      }
+      return msg;
     });
   }
 
@@ -1405,15 +3169,49 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     String type, {
     int? expiresInSeconds,
   }) async {
-    String? clientId;
+    if (!mounted) return;
+    final kind = source == ImageSource.camera
+        ? ChatMediaPermissionKind.camera
+        : (type == 'video'
+            ? ChatMediaPermissionKind.videos
+            : ChatMediaPermissionKind.photos);
+    final allowed = await ensureChatMediaPermission(context, kind);
+    if (!allowed || !mounted) return;
+
     try {
       final picker = ImagePicker();
       final file = type == 'video'
           ? await picker.pickVideo(source: source)
           : await picker.pickImage(source: source);
       if (file == null || !mounted) return;
+      await _sendMediaFile(
+        File(file.path),
+        type: type,
+        expiresInSeconds: expiresInSeconds,
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'Pick chat media failed',
+        tag: 'Chat',
+        error: e,
+      );
+      if (!mounted) return;
+      await ChatMediaPermissionSheet.show(
+        context,
+        kind: kind,
+        permanentlyDenied: true,
+      );
+    }
+  }
 
-      File mediaFile = File(file.path);
+  Future<void> _sendMediaFile(
+    File mediaFile, {
+    required String type,
+    int? expiresInSeconds,
+  }) async {
+    String? clientId;
+    String? mediaPath;
+    try {
       if (type == 'image' || type == 'disappearing_image') {
         final length = await mediaFile.length();
         if (length > _maxChatImageBytes * 2) {
@@ -1424,23 +3222,45 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           }
           return;
         }
-        final compressed = await _compressImageIfNeeded(file.path);
+        final compressed = await _compressImageIfNeeded(mediaFile.path);
         if (compressed != null) mediaFile = compressed;
       }
 
-      clientId = 'local_${DateTime.now().millisecondsSinceEpoch}';
-      final label = type == 'disappearing_image'
-          ? 'Sending self-destruct photo...'
-          : (type == 'video' ? 'Sending video...' : 'Sending image...');
-      setState(() {
-        _messages.add(_optimisticMap(
-          clientId: clientId!,
-          text: label,
+      final optimisticId = ChatClientIds.next();
+      clientId = optimisticId;
+      mediaPath = mediaFile.path;
+      ChatImagePlaceholderData? placeholder;
+      if (type == 'image') {
+        placeholder = await ChatImagePlaceholder.fromFile(mediaFile.path);
+        if (!mounted) return;
+      }
+      _messages = [
+        ..._messages,
+        _optimisticMap(
+          clientId: optimisticId,
+          text: '',
           type: type,
           attachmentUrl: mediaFile.path,
-        ));
-      });
-      _scrollToBottom();
+          localPath: mediaFile.path,
+          expiresInSeconds: expiresInSeconds,
+          placeholderDataUri: placeholder?.dataUri,
+          mediaWidth: placeholder?.width,
+          mediaHeight: placeholder?.height,
+        ),
+      ];
+      if (type == 'image') {
+        ref.read(chatImageUploadProgressProvider.notifier).setProgress(
+              optimisticId,
+              0,
+            );
+        ref.read(chatListPreviewProvider.notifier).bumpOutgoingMessage(
+              peerUserId: widget.userId,
+              previewText: chatMessagePreviewText(messageType: type),
+              lastMessageType: type,
+              timestamp: DateTime.now(),
+            );
+      }
+      _scrollToBottom(bounce: true);
 
       Message sent;
       if ((type == 'image' || type == 'disappearing_image') &&
@@ -1450,7 +3270,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           final upload = await ref.read(chatServiceProvider).uploadChatImage(
                 _conversationId!,
                 mediaFile,
+                onSendProgress: _imageSendProgressCallback(clientId, type),
               );
+          _completeImageUploadProgress(clientId, type);
           sent = await ref.read(chatServiceProvider).sendMessage(
                 widget.userId,
                 '',
@@ -1460,14 +3282,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 mediaWidth: upload['width'] as int?,
                 mediaHeight: upload['height'] as int?,
                 expiresInSeconds: expiresInSeconds,
+                clientId: clientId,
               );
-        } catch (_) {
+        } catch (e, stackTrace) {
+          AppLogger.warning(
+            'Dedicated image upload failed; falling back to sendMessage multipart',
+            tag: 'Chat',
+            error: e,
+          );
+          AppLogger.error(
+            'Chat image upload fallback',
+            tag: 'Chat',
+            error: e,
+            stackTrace: stackTrace,
+          );
           sent = await ref.read(chatServiceProvider).sendMessage(
                 widget.userId,
                 '',
                 messageType: type,
                 mediaFile: mediaFile,
                 expiresInSeconds: expiresInSeconds,
+                clientId: clientId,
               );
         }
       } else {
@@ -1477,6 +3312,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               messageType: type,
               mediaFile: mediaFile,
               expiresInSeconds: expiresInSeconds,
+              clientId: clientId,
             );
       }
 
@@ -1484,6 +3320,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _replaceOptimisticMessage(clientId, sent);
       _scrollToBottom();
     } on ApiError catch (e) {
+      AppLogger.warning(
+        'Send media failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (!mounted) return;
       if (clientId != null) _markMessageFailed(clientId);
       if (e.upgradeRequired || e.errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED') {
@@ -1495,10 +3336,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         e,
         customMessage: 'Failed to send media',
         onRetry: clientId != null
-            ? () => _pickAndSendMedia(source, type)
+            ? () => _resendMedia(
+                  clientId: clientId!,
+                  type: type,
+                  filePath: mediaPath,
+                  expiresInSeconds: expiresInSeconds,
+                )
             : null,
       );
     } catch (e) {
+      AppLogger.warning(
+        'Send media failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (!mounted) return;
       if (clientId != null) _markMessageFailed(clientId);
       ErrorHandlerService.handleError(
@@ -1506,7 +3357,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         e,
         customMessage: 'Failed to send media',
         onRetry: clientId != null
-            ? () => _pickAndSendMedia(source, type)
+            ? () => _resendMedia(
+                  clientId: clientId!,
+                  type: type,
+                  filePath: mediaPath,
+                  expiresInSeconds: expiresInSeconds,
+                )
             : null,
       );
     }
@@ -1514,6 +3370,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   static const String _chatBgLight = 'assets/images/chat/chat-light.png';
   static const String _chatBgDark = 'assets/images/chat/chat-dark.png';
+
+  void _leaveChat() {
+    if (widget.embedded) {
+      widget.onEmbeddedClose?.call();
+      return;
+    }
+    if (!mounted) return;
+    final router = GoRouter.maybeOf(context);
+    if (router != null && router.canPop()) {
+      router.pop();
+      return;
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+    router?.go('${AppRoutes.home}/chat-list');
+  }
 
   Future<bool> _ensureVideoCallAccess() async {
     final guard = PlanGuard(ref.read(planLimitsServiceProvider));
@@ -1542,64 +3416,42 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ref: ref,
       recipientId: widget.userId,
       recipientName: _peerDisplayName,
-      recipientAvatarUrl: _peerAvatarUrl,
+      recipientAvatarUrl: _peerCallPhotoUrl,
       type: OutgoingCallType.video,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(chatActiveBackendSyncProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
     final chatBgAsset = isDark ? _chatBgDark : _chatBgLight;
+    final conversationMuted = ref.watch(
+      conversationMuteCacheProvider.select((ids) => ids.contains(widget.userId)),
+    );
 
-    return Scaffold(
+    final router = GoRouter.maybeOf(context);
+    final canPopRoute =
+        (router?.canPop() ?? false) || Navigator.of(context).canPop();
+
+    return PopScope(
+      canPop: widget.embedded ? false : canPopRoute,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _leaveChat();
+      },
+      child: Scaffold(
       backgroundColor: backgroundColor,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(
-          64 + MediaQuery.paddingOf(context).top,
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: ChatHeader(
-          userId: widget.userId,
-          name: _peerDisplayName,
-          avatarUrl: _peerAvatarUrl,
-          isOnline: _isOnline,
-          lastSeenAt: _lastSeenAt,
-          onBack: widget.embedded
-              ? (widget.onEmbeddedClose ?? () {})
-              : () => Navigator.of(context).pop(),
-          onHeaderTap: _openConversationInfo,
-          onInfo: _openConversationInfo,
-          onCall: () {
-            startOutgoingCall(
-              context: context,
-              ref: ref,
-              recipientId: widget.userId,
-              recipientName: _peerDisplayName,
-              recipientAvatarUrl: _peerAvatarUrl,
-              type: OutgoingCallType.voice,
-            );
-          },
-          onVideoCall: () {
-            _handleVideoCallTap();
-          },
-        ),
-        ),
-      ),
-      body: Column(
-        children: [
-          if (_conversationMuted) const ChatMutedBanner(),
-          Expanded(
-            child: Stack(
+      resizeToAvoidBottomInset: false,
+      body: Stack(
         fit: StackFit.expand,
         children: [
-          // Themed chat background (assets/images/chat/chat-light.png | chat-dark.png)
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
+                color: backgroundColor,
                 image: DecorationImage(
                   image: AssetImage(chatBgAsset),
                   fit: BoxFit.cover,
@@ -1607,127 +3459,106 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               ),
             ),
           ),
-          Column(
-            children: [
-          _PinnedMessagesBannerSection(
-            userId: widget.userId,
-            onTap: _showPinnedMessages,
-          ),
-          // Messages list
-          Expanded(
-            child: _isLoading
-                ? SkeletonChat()
-                : _hasError
-                    ? ErrorDisplayWidget(
-                        errorMessage: _errorMessage ?? 'Failed to load messages',
-                        onRetry: () => _loadMessages(forceRefresh: true),
-                      )
-                    : _messages.isEmpty
-                        ? RefreshIndicator(
-                            onRefresh: () => _loadMessages(forceRefresh: true),
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: SizedBox(
-                                height: MediaQuery.of(context).size.height * 0.5,
-                                child: ChatEmptyConversation(
-                                  peerName: _peerDisplayName,
-                                ),
-                              ),
-                            ),
-                          )
-                        : Column(
-                            children: [
-                              if (_isLoadingMore)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                ),
-                              Expanded(
-                                child: RefreshIndicator(
-                                  onRefresh: () => _loadMessages(forceRefresh: true),
-                                  child: ListView.builder(
-                                    controller: _scrollController,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    itemCount: _messages.length,
-                                    itemBuilder: (context, index) {
-                                      final item = _messages[index];
-                                      if (item['kind'] == 'call' &&
-                                          item['call'] is Call) {
-                                        return CallHistoryBubble(
-                                          call: item['call'] as Call,
-                                          currentUserId: _currentUserId ?? 0,
-                                          timestamp: item['timestamp'] is DateTime
-                                              ? item['timestamp'] as DateTime
-                                              : null,
-                                          onTap: () => _redialCall(
-                                            item['call'] as Call,
-                                          ),
-                                        );
-                                      }
-
-                                      final message = item;
-                                      final deliveryStatus =
-                                          _deliveryStatusFromMap(message);
-                                      return ChatMessageListTile(
-                                        message: message,
-                                        deliveryStatus: deliveryStatus,
-                                        onRetry: deliveryStatus ==
-                                                MessageDeliveryStatus.failed
-                                            ? () => _retryFailedMessage(message)
-                                            : null,
-                                        onSelfDestructTap:
-                                            message['is_sent'] != true &&
-                                                    message['is_expired'] != true
-                                                ? () => _openSelfDestructViewer(message)
-                                                : null,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              ChatPeerTypingIndicator(
-                                peerUserId: widget.userId,
-                                displayName: _peerDisplayName,
-                              ),
-                            ],
-                          ),
-          ),
-          // Reply preview
-          if (_repliedToMessage != null)
-            MessageReplyWidget(
-              repliedToName: _repliedToName,
-              repliedToMessage: _repliedToMessage,
-              repliedToMessageType: _repliedToMessageType,
-              onCancel: () {
-                setState(() {
-                  _repliedToMessage = null;
-                  _repliedToName = null;
-                  _repliedToMessageType = null;
-                });
-              },
+          SafeArea(
+            bottom: false,
+            child: ChatKeyboardInsetPad(
+              onBottomInsetChanged: _onChatKeyboardInset,
+              onInsetTick: _onChatKeyboardInsetTick,
+              onInsetAnimationEnd: _onChatKeyboardInsetSettled,
+              child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ChatHeader(
+                  userId: widget.userId,
+                  name: _peerDisplayName,
+                  avatarUrl: _peerAvatarUrl,
+                  isOnline: _isOnline,
+                  lastSeenAt: _lastSeenAt,
+                  onBack: _leaveChat,
+                  onHeaderTap: _openConversationInfo,
+                  onInfo: _openConversationInfo,
+                  onCall: () {
+                    startOutgoingCall(
+                      context: context,
+                      ref: ref,
+                      recipientId: widget.userId,
+                      recipientName: _peerDisplayName,
+                      recipientAvatarUrl: _peerCallPhotoUrl,
+                      type: OutgoingCallType.voice,
+                    );
+                  },
+                  onVideoCall: _handleVideoCallTap,
+                ),
+                const ChatConnectionBanner(),
+                if (conversationMuted) const ChatMutedBanner(),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _PinnedMessagesBannerSection(
+                        userId: widget.userId,
+                        onTap: () => unawaited(_onPinnedBannerTap()),
+                      ),
+                      Expanded(
+                        child: ChatArrivalBounceLayer(
+                          peerUserId: widget.userId,
+                          child: ChatMessageList(
+                          peerUserId: widget.userId,
+                          peerDisplayName: _peerDisplayName,
+                          currentUserId: _currentUserId ?? 0,
+                          scrollController: _scrollController,
+                          threadListKey: _threadListKey,
+                          unreadSeparatorKey: _unreadSeparatorKey,
+                          showUnreadSeparator: _showUnreadSeparator,
+                          openUnreadCount: _openUnreadCount,
+                          onRetryLoad: () =>
+                              unawaited(_loadMessages(forceRefresh: true)),
+                          onRetryLoadOlder: () =>
+                              unawaited(_loadMoreMessages()),
+                          onSendOpener: (text) {
+                            unawaited(_handleSend(text));
+                          },
+                          onJumpToLatest: _jumpToLatest,
+                          onRedialCall: (call) {
+                            unawaited(_redialCall(call));
+                          },
+                          onRetryFailed: _retryFailedMessage,
+                          onReply: _beginReply,
+                          onJumpToReply: (message) {
+                            unawaited(_jumpToRepliedMessage(message));
+                          },
+                          onReact: _handleReact,
+                          onLongPress: _showMessageActions,
+                          onSelfDestructTap: (message) {
+                            unawaited(_openSelfDestructViewer(message));
+                          },
+                          onImageTap: _openChatImageGallery,
+                          onVideoTap: _openChatVideo,
+                          onVoiceListened: (message) {
+                            unawaited(_onVoiceListened(message));
+                          },
+                        ),
+                        ),
+                      ),
+                      ChatComposerBar(
+                        peerUserId: widget.userId,
+                        onSend: _handleSend,
+                        onMediaTap: _handleMediaTap,
+                        onMediaLongPress: _handleMediaLongPress,
+                        onVoiceRecordStart: _handleVoiceRecordStart,
+                        onVoiceRecordSend: _handleVoiceRecordSend,
+                        onVoiceRecordCancel: _handleVoiceRecordCancel,
+                        onTextChanged: _onTypingChanged,
+                        onFocusChange: _onComposerFocusChange,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          // Message input
-          MessageInput(
-            peerUserId: widget.userId,
-            onSend: _handleSend,
-            onMediaTap: _handleMediaTap,
-            onMediaLongPress: _handleMediaLongPress,
-            onVoiceRecordStart: _handleVoiceRecordStart,
-            onVoiceRecordSend: _handleVoiceRecordSend,
-            onVoiceRecordCancel: _handleVoiceRecordCancel,
-            hintText: 'Type a message...',
-            onTextChanged: _onTypingChanged,
-          ),
-            ],
-          ),
-        ],
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1744,17 +3575,11 @@ class _PinnedMessagesBannerSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncCount = ref.watch(pinnedCountProvider(userId));
-    return asyncCount.when(
-      data: (pinnedCount) {
-        if (pinnedCount == 0) return const SizedBox.shrink();
-        return PinnedMessagesBanner(
-          pinnedCount: pinnedCount,
-          onTap: onTap,
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+    final snapshot = ref.watch(chatPinnedBannerProvider(userId));
+    return PinnedMessagesBanner(
+      pinnedCount: snapshot.count,
+      preview: snapshot.preview,
+      onTap: onTap,
     );
   }
 }

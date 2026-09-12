@@ -46,127 +46,92 @@ class ChatHeader extends ConsumerWidget {
     final actionSize =
         MediaQuery.sizeOf(context).width < 400 ? 36.0 : 40.0;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color:
-            isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.accentViolet.withValues(alpha: 0.1),
-          ),
-        ),
+    return PremiumHeroHeader(
+      onBack: onBack,
+      coverImageUrl: avatarUrl,
+      transparentSides: true,
+      overAmbientBackground: true,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.spacingMD,
+        AppSpacing.spacingMD,
+        AppSpacing.spacingMD,
+        AppSpacing.spacingMD,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 64,
-            child: Padding(
-              padding: ResponsivePadding.horizontal(context).copyWith(
-                left: AppSpacing.spacingSM,
-                right: AppSpacing.spacingSM,
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 320;
-                  final headerActionSize =
-                      compact ? 32.0 : actionSize;
-                  final showVideoCall =
-                      onVideoCall != null && (!compact || onCall == null);
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 280;
+          final headerActionSize = compact ? 36.0 : actionSize;
+          final showVideoCall =
+              onVideoCall != null && (!compact || onCall == null);
 
-                  return Row(
-                    children: [
-                      if (onBack != null)
-                        PremiumTapScale(
-                          onTap: onBack!,
-                          semanticLabel: 'Back',
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.spacingXS),
-                            child: AppSvgIcon(
-                              assetPath: AppIcons.arrowLeft,
-                              size: 24,
-                              color: textColor,
-                            ),
-                          ),
-                        ),
-                      PremiumTapScale(
-                        onTap: onHeaderTap ?? onInfo ?? () {},
-                        semanticLabel: 'Open $name profile',
-                        child: _HeaderAvatar(
-                          imageUrl: avatarUrl,
-                          isOnline: isOnline,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.spacingMD),
-                      Expanded(
-                        child: PremiumTapScale(
-                          onTap: onHeaderTap ?? onInfo ?? () {},
-                          semanticLabel: 'Chat with $name',
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.spacingXS,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                AppText(
-                                  name,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: textColor,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  maxLines: 1,
-                                ),
-                                LastSeenWidget(
-                                  isOnline: isOnline,
-                                  lastSeenAt: lastSeenAt,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (onCall != null)
-                        _HeaderAction(
-                          iconPath: AppIcons.call,
-                          color: AppColors.accentViolet,
-                          label: 'Voice call',
-                          size: headerActionSize,
-                          onTap: onCall!,
-                        ),
-                      if (showVideoCall)
-                        _HeaderAction(
-                          iconPath: AppIcons.videoCall,
-                          color: AppColors.accentRose,
-                          label: 'Video call',
-                          size: headerActionSize,
-                          onTap: onVideoCall!,
-                        ),
-                      if (onInfo != null)
-                        _HeaderAction(
-                          iconPath: AppIcons.infoCircle,
-                          color: AppColors.accentViolet,
-                          label: 'Chat info',
-                          size: headerActionSize,
-                          onTap: onInfo!,
-                        ),
-                    ],
-                  );
-                },
+          return Row(
+            children: [
+              PremiumTapScale(
+                onTap: onHeaderTap ?? onInfo ?? () {},
+                semanticLabel: 'Open $name profile',
+                child: _HeaderAvatar(
+                  imageUrl: avatarUrl,
+                  isOnline: isOnline,
+                ),
               ),
-            ),
-          ),
-          Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(99),
-              gradient: AppColors.brandGradient,
-            ),
-          ),
-        ],
+              const SizedBox(width: AppSpacing.spacingMD),
+              Expanded(
+                child: PremiumTapScale(
+                  onTap: onHeaderTap ?? onInfo ?? () {},
+                  semanticLabel: 'Chat with $name',
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.spacingXS,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AppText(
+                          name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                        ),
+                        LastSeenWidget(
+                          isOnline: isOnline,
+                          lastSeenAt: lastSeenAt,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (onCall != null)
+                _HeaderAction(
+                  iconPath: AppIcons.call,
+                  color: AppColors.accentViolet,
+                  label: 'Voice call',
+                  size: headerActionSize,
+                  onTap: onCall!,
+                ),
+              if (showVideoCall)
+                _HeaderAction(
+                  iconPath: AppIcons.videoCall,
+                  color: AppColors.accentRose,
+                  label: 'Video call',
+                  size: headerActionSize,
+                  onTap: onVideoCall!,
+                ),
+              if (onInfo != null)
+                _HeaderAction(
+                  iconPath: AppIcons.infoCircle,
+                  color: AppColors.accentViolet,
+                  label: 'Chat info',
+                  size: headerActionSize,
+                  onTap: onInfo!,
+                ),
+            ],
+          );
+        },
       ),
     );
   }

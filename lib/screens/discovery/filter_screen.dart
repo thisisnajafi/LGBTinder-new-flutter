@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/services/app_logger.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/typography.dart';
@@ -94,7 +95,14 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     try {
       final prefs = await ref.read(matchingPreferencesProvider.future);
       defaultDistance = prefs.distance;
-    } catch (_) {}
+    } catch (e, stack) {
+      AppLogger.warning(
+        'Failed to load matching preferences for discovery filters',
+        tag: 'FilterScreen',
+        error: e,
+      );
+      AppLogger.debug('Filter prefs stack: $stack', tag: 'FilterScreen');
+    }
 
     defaultDistance ??= await ref
         .read(userLocationProvider.future)
@@ -173,6 +181,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
         'desc':
             'Upgrade to unlock advanced filters and find better matches faster.',
         'minTier': 'silder',
+        'feature': 'Advanced filters',
       },
     ).toString();
     await context.push(target);

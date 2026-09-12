@@ -19,6 +19,9 @@ import '../shared/services/onboarding_service.dart';
 import '../widgets/navbar/lgbtfinder_logo.dart';
 import '../core/providers/startup_flow_provider.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/calls/data/services/call_kit_service.dart';
+import '../features/calls/providers/incoming_call_provider.dart';
+import '../features/calls/utils/call_navigation.dart';
 import '../routes/app_router.dart';
 import '../core/utils/app_logger.dart';
 
@@ -32,11 +35,11 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class _SplashPageState extends ConsumerState<SplashPage>
     with TickerProviderStateMixin {
-  static const Duration _splashDelay = Duration(milliseconds: 400);
   static const Duration _tokenCheckTimeout = Duration(seconds: 4);
   static const Duration _absoluteMaxOnSplash = Duration(seconds: 8);
 
   bool _redirected = false;
+  bool _restoringAcceptedCall = false;
   bool _dotsStarted = false;
   Timer? _absoluteEscapeTimer;
   Timer? _dotsDelayTimer;
@@ -140,7 +143,19 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
     _absoluteEscapeTimer = Timer(_absoluteMaxOnSplash, () {
       if (_redirected || !mounted) return;
-      authLog('Splash: absolute timeout → welcome');
+      // Still escape if restore is hung — otherwise cold-start Accept can
+      // freeze the user on splash forever.
+      authLog(
+        'Splash: absolute timeout → '
+        '${_restoringAcceptedCall ? 'home (restore hung)' : 'welcome'}',
+      );
+      if (_restoringAcceptedCall) {
+        unawaited(_finishStartup(() async {
+          if (!mounted) return;
+          context.go(AppRoutes.home);
+        }));
+        return;
+      }
       unawaited(_goToWelcome(ref.read(tokenStorageServiceProvider)));
     });
 
@@ -307,33 +322,93 @@ class _SplashPageState extends ConsumerState<SplashPage>
     await _goToHome();
   }
 
-  Future<void> _checkAuthAndNavigate() async {
+  Future<bool> _tryRestoreAcceptedCall() async {
+    _restoringAcceptedCall = true;
     try {
-      await Future.delayed(_splashDelay);
-      if (!mounted || _redirected) return;
-      startupLog('SplashPage: delay done');
-
-      final onboardingService = OnboardingService();
-      final hasSeenIntro = await onboardingService.hasSeenIntroOnboarding().timeout(
-        const Duration(seconds: 2),
-        onTimeout: () => true,
-      );
-      if (!mounted || _redirected) return;
-      if (!hasSeenIntro) {
-        await _goToOnboarding();
-        return;
+      final accepted = await CallKitService.instance.restoreAcceptedCall();
+      if (accepted == null || !mounted || _redirected) {
+        return false;
       }
 
       final tokenStorage = ref.read(tokenStorageServiceProvider);
       final hasToken = await tokenStorage.isAuthenticated().timeout(
         const Duration(seconds: 2),
-        onTimeout: () {
-          authLog('Splash: token read timeout → treat as no token');
-          return false;
-        },
+        onTimeout: () => false,
       );
+      if (!hasToken || !mounted || _redirected) {
+        return false;
+      }
 
+      authLog('Splash: restore accepted call ${accepted.callId}');
+      await ref.read(authProvider.notifier).checkAuthStatus();
+      if (!mounted || _redirected) return false;
+
+      // Capture router before navigate — Splash may unmount after go(home).
+      final router = GoRouter.of(context);
+      final joined =
+          await ref.read(incomingCallProvider.notifier).acceptFromCallKit(
+                accepted.callId,
+                extras: accepted,
+                queueNavigation: false,
+              ).timeout(
+                const Duration(seconds: 12),
+                onTimeout: () {
+                  authLog('Splash: acceptFromCallKit timed out');
+                  return false;
+                },
+              );
+      if (!joined) return false;
+
+      await _finishStartup(() async {
+        await openActiveCallOverHome(router, accepted);
+      });
+      return true;
+    } catch (e) {
+      authLog('Splash: accepted-call restore failed: $e');
+      return false;
+    } finally {
+      _restoringAcceptedCall = false;
+    }
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    try {
+      if (await _tryRestoreAcceptedCall()) {
+        return;
+      }
       if (!mounted || _redirected) return;
+
+      final onboardingService = OnboardingService();
+      final tokenStorage = ref.read(tokenStorageServiceProvider);
+      final gate = await splashLoadGate(
+        hasSeenIntro: onboardingService.hasSeenIntroOnboarding().timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => true,
+        ),
+        hasToken: tokenStorage.isAuthenticated().timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {
+            authLog('Splash: token read timeout → treat as no token');
+            return false;
+          },
+        ),
+      );
+      if (!mounted || _redirected) return;
+
+      final hasSeenIntro = gate.hasSeenIntro;
+      final hasToken = gate.hasToken;
+      if (!hasSeenIntro) {
+        await _goToOnboarding();
+        return;
+      }
+
+      final delay = splashBrandingDelay(hasCachedAuth: hasToken);
+      if (delay > Duration.zero) {
+        await Future.delayed(delay);
+        if (!mounted || _redirected) return;
+      }
+      startupLog('SplashPage: gate done hasToken=$hasToken');
+
       if (!hasToken) {
         final profileToken = await tokenStorage.getProfileCompletionToken();
         if (profileToken != null && profileToken.isNotEmpty) {
@@ -612,4 +687,21 @@ class _SplashPageState extends ConsumerState<SplashPage>
       ),
     );
   }
+}
+
+/// Intro flag + token presence, fetched together (PERF-PAGE-SPLASH-001).
+@visibleForTesting
+Future<({bool hasSeenIntro, bool hasToken})> splashLoadGate({
+  required Future<bool> hasSeenIntro,
+  required Future<bool> hasToken,
+}) async {
+  final results = await Future.wait([hasSeenIntro, hasToken]);
+  return (hasSeenIntro: results[0], hasToken: results[1]);
+}
+
+/// Skip the branding pause when a session token is already on disk
+/// (PERF-PAGE-SPLASH-002).
+@visibleForTesting
+Duration splashBrandingDelay({required bool hasCachedAuth}) {
+  return hasCachedAuth ? Duration.zero : const Duration(milliseconds: 400);
 }

@@ -176,7 +176,7 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
                         actionLabel: 'Create Post',
                         onAction: _showCreatePostDialog,
                       )
-                    : RefreshIndicator(
+                    : PremiumRefreshIndicator(
                         onRefresh: () async {
                           await ref.read(forumPostsProvider.notifier).loadPosts(
                                 category: _selectedCategoryId,
@@ -463,16 +463,11 @@ class _CreatePostDialogState extends ConsumerState<CreatePostDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
+              PremiumTextField(
                 controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Title',
-                  hintText: 'Enter your post title',
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.radiusSM),
-                  ),
-                ),
+                label: 'Title',
+                hintText: 'Enter your post title',
+                prefixIconPath: AppIcons.documentText,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
                     return 'Title is required';
@@ -486,12 +481,9 @@ class _CreatePostDialogState extends ConsumerState<CreatePostDialog> {
               const SizedBox(height: AppSpacing.spacingMD),
               DropdownButtonFormField<String>(
                 value: _selectedCategoryId,
-                decoration: InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.radiusSM),
-                  ),
+                decoration: premiumInputDecoration(
+                  context,
+                  hintText: 'Category',
                 ),
                 items: categories.map((category) {
                   return DropdownMenuItem(
@@ -512,17 +504,12 @@ class _CreatePostDialogState extends ConsumerState<CreatePostDialog> {
                 },
               ),
               const SizedBox(height: AppSpacing.spacingMD),
-              TextFormField(
+              PremiumTextField(
                 controller: _contentController,
+                label: 'Content',
+                hintText: 'Share your thoughts...',
+                prefixIconPath: AppIcons.message,
                 maxLines: 5,
-                decoration: InputDecoration(
-                  labelText: 'Content',
-                  hintText: 'Share your thoughts...',
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.radiusSM),
-                  ),
-                ),
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
                     return 'Content is required';

@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/matching/data/models/match.dart';
 import '../../features/matching/data/services/likes_service.dart';
 import '../../features/matching/providers/likes_providers.dart';
-import '../../features/profile/data/models/user_profile.dart';
 import '../../features/profile/data/services/profile_service.dart';
 import '../../features/profile/providers/profile_providers.dart';
 import '../providers/api_providers.dart';
@@ -15,6 +16,7 @@ import '../providers/subscription_provider.dart';
 import 'user_cache_service.dart';
 import 'cache_invalidator.dart';
 import 'user_profile_providers.dart';
+import 'peer_avatar_cache.dart';
 
 /// Central cache orchestrator — stale-while-revalidate for profiles and matches.
 class AppCacheManager {
@@ -46,7 +48,7 @@ class AppCacheManager {
       final numericId = int.parse(userId);
       final fresh = await _profileService.getUserProfile(numericId);
 
-      if (cached == null || !_profilesEqual(cached.data, fresh)) {
+      if (cached == null || cached.data != fresh) {
         await _userCache.saveProfile(userId, fresh, ttl: ttl);
         _ref.read(userProfileProvider(userId).notifier).applyFresh(fresh);
       }
@@ -84,7 +86,7 @@ class AppCacheManager {
       if (fresh.isOnline == true) {
         _ref.read(ownPresenceProvider.notifier).markOnline();
       }
-      if (cached == null || !_profilesEqual(cached.data, fresh)) {
+      if (cached == null || cached.data != fresh) {
         await _userCache.saveProfile(
           userId,
           fresh,
@@ -118,38 +120,45 @@ class AppCacheManager {
 
   Future<void> revalidateMatchList(String userId) async {
     final cached = await _userCache.getMatchList(userId, allowStale: true);
-    if (cached != null) {
+    if (cached != null && cached.data.isNotEmpty) {
       _ref.read(cachedMatchesProvider.notifier).applyCached(cached.data);
+      unawaited(_rememberMatchAvatars(cached.data));
     }
 
     try {
       final fresh = await _likesService.getMatches();
+      unawaited(_rememberMatchAvatars(fresh));
       if (cached == null || !_matchesEqual(cached.data, fresh)) {
         await _userCache.saveMatchList(userId, fresh);
         _ref.read(cachedMatchesProvider.notifier).applyFresh(fresh);
       }
       _ref.read(servingCachedContentProvider.notifier).state = false;
-    } catch (e) {
+    } catch (e, st) {
       if (kDebugMode) {
         debugPrint('AppCacheManager.revalidateMatchList: $e');
       }
       if (cached != null) {
         _ref.read(servingCachedContentProvider.notifier).state = true;
         _ref.read(cachedMatchesProvider.notifier).applyCached(cached.data);
+      } else {
+        _ref.read(cachedMatchesProvider.notifier).applyError(e, st);
       }
     }
-  }
-
-  bool _profilesEqual(UserProfile a, UserProfile b) {
-    return a.toJson().toString() == b.toJson().toString();
   }
 
   bool _matchesEqual(List<Match> a, List<Match> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
-      if (a[i].toJson().toString() != b[i].toJson().toString()) return false;
+      if (a[i] != b[i]) return false;
     }
     return true;
+  }
+
+  Future<void> _rememberMatchAvatars(List<Match> matches) {
+    return _ref.read(peerAvatarCacheProvider.notifier).rememberMany({
+      for (final match in matches)
+        if (match.userId > 0) match.userId: match.primaryImageUrl,
+    });
   }
 }
 

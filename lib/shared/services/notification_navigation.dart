@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/services/app_logger.dart';
+
+import '../../features/calls/data/models/incoming_call_data.dart';
+import '../../features/calls/utils/call_navigation.dart';
 import '../../features/notifications/data/models/notification.dart' as app_models;
 import '../../routes/app_router.dart';
 
@@ -40,7 +44,13 @@ class NotificationNavigation {
         if (decoded is Map) {
           return resolvePeerUserId(Map<String, dynamic>.from(decoded));
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warning(
+          'Nested notification data JSON parse failed',
+          tag: 'Notifications',
+          error: e,
+        );
+      }
     }
 
     // Legacy alias: chat_id was sometimes used as the other user's id.
@@ -120,34 +130,66 @@ class NotificationNavigation {
         }
         return '${AppRoutes.home}/chat-list';
       case 'match':
+      case 'like':
         return '${AppRoutes.home}/matches';
       case 'superlike':
       case 'superlike_sent':
+      case 'superlike_received':
         if (userId != null && userId > 0) {
           return chatThreadLocation(userId: userId, userName: name, avatarUrl: avatar) ??
               '${AppRoutes.home}/discovery';
         }
         return '${AppRoutes.home}/discovery';
-      case 'like':
-        return '${AppRoutes.home}/matches';
       case 'call':
       case 'incoming_call':
       case 'incoming_call_audio':
       case 'incoming_call_video':
-        if (userId != null && userId > 0) {
-          return chatThreadLocation(userId: userId, userName: name, avatarUrl: avatar) ??
-              AppRoutes.chat;
+        final incoming = IncomingCallData.fromPayload(data);
+        if (incoming != null) {
+          return activeCallLocationFromIncoming(incoming);
         }
-        return AppRoutes.chat;
+        return AppRoutes.home;
+      case 'active_call':
+        final location = data['location']?.toString();
+        if (location != null && location.trim().isNotEmpty) {
+          return location.trim();
+        }
+        return AppRoutes.home;
+      case 'missed_call':
+      case 'call_declined':
+      case 'call_not_answered':
+        if (userId != null && userId > 0) {
+          return Uri(
+            path: AppRoutes.peerCallHistory,
+            queryParameters: {'userId': userId.toString()},
+          ).toString();
+        }
+        return '${AppRoutes.home}/chat-list';
       case 'notification':
         return '${AppRoutes.home}/notifications';
       case 'plan_purchased':
       case 'plan_granted':
       case 'plan_upgraded':
+      case 'plan_downgraded':
       case 'subscription_renewed':
+      case 'subscription_canceled':
+      case 'subscription_cancelled':
+      case 'subscription_expired':
+      case 'subscription_reminder':
+      case 'renewal_reminder':
+      case 'payment_success':
+      case 'payment_failed':
+      case 'premium_feature':
         return AppRoutes.subscriptionManagement;
+      case 'superlike_pack_purchased':
+      case 'superlike_pack_finished':
+      case 'superlike_pack_auto_activated':
+        return AppRoutes.superlikePacks;
       case 'profile':
       case 'profile_view':
+      case 'view':
+      case 'visit':
+      case 'profile_visit':
         if (userId != null && userId > 0) {
           return Uri(
             path: AppRoutes.profileDetail,
@@ -155,10 +197,94 @@ class NotificationNavigation {
           ).toString();
         }
         return '${AppRoutes.home}/discovery';
+      case 'safety_alert':
+        return '${AppRoutes.home}/safety-center';
+      case 'system_announcement':
+      case 'announcement':
+      case 'admin':
+      case 'system':
+      case 'general':
+        return '${AppRoutes.home}/notifications';
+      case 'verification_reminder':
+      case 'verification_approved':
+      case 'verification_rejected':
+        return AppRoutes.profileVerification;
+      case 'marketing':
+      case 'promotion':
+      case 'promo':
+        return AppRoutes.subscriptionPlans;
+      case 'story_like':
+      case 'story_reply':
+      case 'feed_like':
+      case 'feed_comment':
+      case 'comment':
+      case 'reply':
+      case 'comment_like':
+        return '${AppRoutes.home}/discovery';
       default:
         return '${AppRoutes.home}/notifications';
     }
   }
+
+  /// Types registered for push / deep-link tap handling.
+  static const List<String> routableTypes = [
+    'message',
+    'chat',
+    'match',
+    'like',
+    'superlike',
+    'superlike_sent',
+    'superlike_received',
+    'call',
+    'incoming_call',
+    'incoming_call_audio',
+    'incoming_call_video',
+    'active_call',
+    'missed_call',
+    'call_declined',
+    'call_not_answered',
+    'profile',
+    'profile_view',
+    'view',
+    'visit',
+    'profile_visit',
+    'notification',
+    'plan_purchased',
+    'plan_granted',
+    'plan_upgraded',
+    'plan_downgraded',
+    'subscription_renewed',
+    'subscription_canceled',
+    'subscription_cancelled',
+    'subscription_expired',
+    'subscription_reminder',
+    'renewal_reminder',
+    'payment_success',
+    'payment_failed',
+    'premium_feature',
+    'superlike_pack_purchased',
+    'superlike_pack_finished',
+    'superlike_pack_auto_activated',
+    'safety_alert',
+    'system_announcement',
+    'announcement',
+    'admin',
+    'system',
+    'general',
+    'verification_reminder',
+    'verification_approved',
+    'verification_rejected',
+    'marketing',
+    'promotion',
+    'promo',
+    'story_like',
+    'story_reply',
+    'feed_like',
+    'feed_comment',
+    'comment',
+    'reply',
+    'comment_like',
+  ];
 
   static String resolveFromNotification(app_models.Notification notification) {
     if (notification.actionUrl != null && notification.actionUrl!.trim().isNotEmpty) {
@@ -229,7 +355,13 @@ class NotificationNavigation {
       if (decoded is Map) {
         return normalizePayload(Map<String, dynamic>.from(decoded));
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning(
+        'Local notification payload JSON parse failed',
+        tag: 'Notifications',
+        error: e,
+      );
+    }
 
     return null;
   }

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../providers/admin_provider.dart';
 import '../widgets/analytics_card.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 
 /// Admin dashboard screen
 /// Main dashboard for administrators with key metrics and system status
@@ -96,7 +97,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         context,
         adminState.isLoading
             ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+            : PremiumRefreshIndicator(
                 onRefresh: () => adminNotifier.refreshDashboard(),
                 child: SingleChildScrollView(
                   padding: ResponsivePadding.page(context),

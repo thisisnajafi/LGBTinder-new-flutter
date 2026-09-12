@@ -1,13 +1,10 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lgbtindernew/features/chat/data/models/message.dart';
-import 'package:lgbtindernew/features/chat/providers/chat_providers.dart';
 import 'package:lgbtindernew/features/user/providers/user_providers.dart';
 import 'package:lgbtindernew/pages/chat_page.dart';
 import 'package:lgbtindernew/routes/app_router.dart';
@@ -76,7 +73,6 @@ void main() {
 
       final user = MockUserService();
       stubCurrentUser(user);
-      final ws = stubWebSocket();
 
       final router = chatTestRouter(chat: chat);
       await pumpChatRouter(
@@ -85,7 +81,6 @@ void main() {
         overrides: [
           ...chatListOverrides(chat: chat),
           userServiceProvider.overrideWithValue(user),
-          webSocketServiceProvider.overrideWithValue(ws),
         ],
       );
 
@@ -158,20 +153,19 @@ void main() {
     });
 
     // TEST-058
-    testWidgets('TEST-058: websocket message appears in open thread', (tester) async {
+    testWidgets('TEST-058: remote history message appears in open thread', (tester) async {
       final chat = MockChatService();
-      final messageController = StreamController<Message>.broadcast();
-      final ws = stubWebSocket(messageStream: messageController.stream);
 
-      await pumpChatPage(tester, chat: chat, webSocket: ws, userId: 2);
-
-      messageController.add(
-        sampleMessage(id: 777, senderId: 2, receiverId: 1, text: 'Realtime ping'),
+      await pumpChatPage(
+        tester,
+        chat: chat,
+        userId: 2,
+        history: [
+          sampleMessage(id: 777, senderId: 2, receiverId: 1, text: 'Realtime ping'),
+        ],
       );
-      await e2ePumpFrames(tester, frames: 4);
 
       expect(find.text('Realtime ping'), findsOneWidget);
-      await messageController.close();
     });
   });
 

@@ -65,6 +65,8 @@ class AppIcons {
   static const String message = '$_basePath/message-2.svg';
   static const String messageCircle = '$_basePath/message-circle.svg';
   static const String messageSquare = '$_basePath/message-square.svg';
+  /// Curved reply arrow shown while swiping a bubble (CHAT-ANIM-010).
+  static String get reply => getIconPath('undo');
   static String get chatBubbleOutline => getIconPath('message'); // For chat_bubble_outline
   static String get commentOutlined => getIconPath('message'); // For comment_outlined (use message icon)
   static String get user => getIconPath('user'); // Use outline style
@@ -98,6 +100,7 @@ class AppIcons {
   static String get shareOutlined => getIconPath('share'); // For share_outlined
   static const String share1 = '$_basePath/share-1.svg';
   static const String download = '$_basePath/document-download.svg';
+  static String get downloadOutline => getIconPath('document-download');
   static const String upload = '$_basePath/document-upload.svg';
   static const String copy = '$_basePath/copy.svg';
   static const String filter = '$_basePath/filter.svg';
@@ -114,7 +117,8 @@ class AppIcons {
   static String get arrowDown => getIconPath('arrow-down');
   static String get arrowDown2 => getIconPath('arrow-down-2');
   static String get back => getIconPath('arrow-left');
-  static String get forward => getIconPath('arrow-right');
+  /// Curved forward arrow (CHAT-THREAD-008). Not `arrow-right`.
+  static String get forward => getIconPath('forward');
   static String get chevronRight => getIconPath('arrow-right-2'); // For chevron_right
   static String get chevronLeft => getIconPath('arrow-left-2'); // For chevron_left
   // Legacy paths
@@ -154,6 +158,7 @@ class AppIcons {
   static String get emailOutlined => getIconPath('sms');
   static const String attach = '$_basePath/attach-circle.svg';
   static const String attachSquare = '$_basePath/attach-square.svg';
+  static String get link => getIconPath('link');
   static const String emoji = '$_basePath/emoji-happy.svg';
   static const String emojiSad = '$_basePath/emoji-sad.svg';
   static const String emojiNormal = '$_basePath/emoji-normal.svg';
@@ -296,6 +301,9 @@ class AppIcons {
   static const String timer1 = '$_basePath/timer-1.svg';
   static const String timerPause = '$_basePath/timer-pause.svg';
   static const String timerStart = '$_basePath/timer-start.svg';
+  /// Self-destruct / view-once glyph (CHAT-SD-001 / CHAT-SD-006).
+  static String get flame => getIconPath('flame');
+  static String get flameBold => getIconBold('flame');
 
   // Info & Help Icons
   static const String infoCircle = '$_basePath/info-circle.svg';
@@ -326,16 +334,20 @@ class AppIcons {
   static const String archive2 = '$_basePath/archive-2.svg';
 
   // Network & Connection Icons
+  static String get wifiOutline => getIconPath('wifi');
   static const String wifi = '$_basePath/wifi.svg';
   static const String wifiSquare = '$_basePath/wifi-square.svg';
   static const String wifiOff = 'assets/icons/broken/wifi.svg';
   static const String wifiWeak = '$_basePath/warning-2.svg';
   static const String bluetooth = '$_basePath/bluetooth.svg';
   static const String bluetooth2 = '$_basePath/bluetooth-2.svg';
+  static String get headphone => getIconPath('headphone');
+  static String get volumeHigh => getIconPath('volume-high');
   static const String cloud = '$_basePath/cloud.svg';
   static const String cloudAdd = '$_basePath/cloud-add.svg';
   static const String cloudRemove = '$_basePath/cloud-remove.svg';
   static const String cloudConnection = '$_basePath/cloud-connection.svg';
+  static String get refreshOutline => getIconPath('refresh-2');
   static const String refresh = '$_basePath/refresh.svg';
   static const String refresh2 = '$_basePath/refresh-2.svg';
   static const String refreshCircle = '$_basePath/refresh-circle.svg';

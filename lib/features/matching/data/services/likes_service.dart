@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/like.dart';
@@ -128,8 +130,12 @@ class LikesService {
         fromJson: (json) => json as Map<String, dynamic>,
       );
       if (!response.isSuccess || response.data == null) return 0;
-      final data = response.data!['data'] as Map<String, dynamic>?;
-      return data?['count'] as int? ?? 0;
+      final data = response.data!;
+      final nested = data['data'];
+      if (nested is Map) {
+        return _parseCount(nested['count']);
+      }
+      return _parseCount(data['count']);
     } catch (e) {
       return 0;
     }
@@ -142,108 +148,110 @@ class LikesService {
       fromJson: (json) => json as Map<String, dynamic>,
     );
     if (!response.isSuccess || response.data == null) throw Exception(response.message);
-    final data = response.data!['data'] as Map<String, dynamic>? ?? response.data!;
+    final data = response.data!;
+    final nestedData = data['data'];
+    if (nestedData is Map && nestedData['match'] is Map) {
+      return Match.fromJson(Map<String, dynamic>.from(nestedData['match'] as Map));
+    }
+    if (data['match'] is Map) {
+      return Match.fromJson(Map<String, dynamic>.from(data['match'] as Map));
+    }
+    if (nestedData is Map) {
+      return Match.fromJson(Map<String, dynamic>.from(nestedData));
+    }
     return Match.fromJson(Map<String, dynamic>.from(data));
   }
 
   /// Get all matches (from likes/matches)
   Future<List<Match>> getMatches() async {
-    try {
-      final response = await _apiService.get<dynamic>(
-        ApiEndpoints.likesMatches,
-      );
-
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-
-      if (dataList != null) {
-        return dataList.map((item) => Match.fromJson(item as Map<String, dynamic>)).toList();
-      }
-      return [];
-    } catch (e) {
-      rethrow;
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.likesMatches,
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
+    return parseCollection(response.data, collectionKeys: const ['matches'])
+        .map(Match.fromJson)
+        .toList();
   }
 
   /// Get matches from matching/matches (API: GET matching/matches). Same shape as likes/matches.
   Future<List<Match>> getMatchingMatches() async {
-    try {
-      final response = await _apiService.get<dynamic>(ApiEndpoints.matchingMatches);
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-      if (dataList != null) {
-        return dataList.map((item) => Match.fromJson(item as Map<String, dynamic>)).toList();
-      }
-      return [];
-    } catch (e) {
-      rethrow;
+    final response = await _apiService.get<dynamic>(ApiEndpoints.matchingMatches);
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
+    return parseCollection(response.data, collectionKeys: const ['matches'])
+        .map(Match.fromJson)
+        .toList();
   }
 
   /// Get pending likes (likes received from others)
   Future<List<Like>> getPendingLikes() async {
-    try {
-      final response = await _apiService.get<dynamic>(
-        ApiEndpoints.likesPending,
-      );
-
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-
-      if (dataList != null) {
-        return dataList.map((item) => Like.fromJson(item as Map<String, dynamic>)).toList();
-      }
-      return [];
-    } catch (e) {
-      rethrow;
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.likesPending,
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
+    return parseCollection(
+      response.data,
+      collectionKeys: const ['pending_likes', 'likes'],
+    ).map(Like.fromJson).toList();
   }
 
   /// Get superlike history
   Future<List<Like>> getSuperlikeHistory() async {
-    try {
-      final response = await _apiService.get<dynamic>(
-        ApiEndpoints.likesSuperlikeHistory,
-      );
-
-      List<dynamic>? dataList;
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['data'] != null && data['data'] is List) {
-          dataList = data['data'] as List;
-        }
-      } else if (response.data is List) {
-        dataList = response.data as List;
-      }
-
-      if (dataList != null) {
-        return dataList.map((item) => Like.fromJson(item as Map<String, dynamic>)).toList();
-      }
-      return [];
-    } catch (e) {
-      rethrow;
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.likesSuperlikeHistory,
+    );
+    if (!response.isSuccess) {
+      throw Exception(response.message);
     }
+    return parseCollection(
+      response.data,
+      collectionKeys: const ['usage_history', 'superlikes', 'likes'],
+    ).map(Like.fromJson).toList();
+  }
+
+  /// Backend envelopes vary: `{matches:[...]}`, `{data:{matches:[...]}}`, or a raw list.
+  @visibleForTesting
+  static List<Map<String, dynamic>> parseCollection(
+    dynamic payload, {
+    List<String> collectionKeys = const ['matches'],
+  }) {
+    return _listFromPayload(payload, collectionKeys: collectionKeys)
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  static List<dynamic> _listFromPayload(
+    dynamic payload, {
+    required List<String> collectionKeys,
+  }) {
+    if (payload == null) return const [];
+    if (payload is List) return payload;
+    if (payload is! Map) return const [];
+
+    final map = Map<String, dynamic>.from(payload);
+    for (final key in collectionKeys) {
+      final value = map[key];
+      if (value is List) return value;
+    }
+
+    final nested = map['data'];
+    if (nested is List) return nested;
+    if (nested is Map) {
+      return _listFromPayload(nested, collectionKeys: collectionKeys);
+    }
+
+    return const [];
+  }
+
+  static int _parseCount(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 

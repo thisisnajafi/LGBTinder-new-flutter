@@ -40,6 +40,7 @@ class ApiEndpoints {
   static const String landingBlogs = '/landing/blogs';
   static String landingBlogBySlug(String slug) => '/landing/blogs/$slug';
   static const String landingSettings = '/landing/settings';
+  static const String realtimeConfig = '/realtime/config';
   static const String landingContact = '/landing/contact';
   static const String landingAppImages = '/landing/app-images';
   static const String landingStats = '/landing/stats';
@@ -158,10 +159,15 @@ class ApiEndpoints {
   static const String chatUsers = '/chat/users';
   static const String chatAccessUsers = '/chat/access-users';
   static const String chatMessage = '/chat/message';
+  static const String chatDelivered = '/chat/delivered';
+  static String chatMessageDelivered(int messageId) =>
+      '/chat/messages/$messageId/delivered';
   static const String chatTyping = '/chat/typing';
   static String chatConversationTyping(int conversationId) =>
       '/chat/$conversationId/typing';
   static const String chatRead = '/chat/read';
+  static String chatConversationRead(int conversationId) =>
+      '/chat/$conversationId/read';
   static const String chatUnreadCount = '/chat/unread-count';
   // NOTE (Task 2.3.2): Backend handles media uploads directly in sendMessage via 'media' field.
   // Use multipart/form-data request with 'media' file when sending images/videos.
@@ -173,10 +179,19 @@ class ApiEndpoints {
   static const String chatPinnedCount = '/chat/pinned-count';
   static const String chatPinMessage = '/chat/pin-message';
   static const String chatUnpinMessage = '/chat/unpin-message';
+  static String chatConversationPin(int conversationId, int messageId) =>
+      '/chat/$conversationId/pin/$messageId';
+  static String chatConversationUnpin(int conversationId, int messageId) =>
+      '/chat/$conversationId/unpin/$messageId';
   static const String chatPinnedMessages = '/chat/pinned-messages';
   static const String chatSearch = '/chat/search';
   static String chatConversationMute(int userId) =>
       '/chat/conversations/$userId/mute';
+  /// Viewer-scoped conversation pin (not message pin REST aliases).
+  static String chatPeerConversationPin(int userId) =>
+      '/chat/conversations/$userId/pin';
+  static String chatConversationActive(int conversationId) =>
+      '/chat/$conversationId/active';
   static const String chatStickerPacks = '/chat/sticker-packs';
   static String chatStickerPackStickers(int packId) =>
       '/chat/sticker-packs/$packId/stickers';
@@ -186,6 +201,13 @@ class ApiEndpoints {
       '/chat/$conversationId/upload-voice';
   static String chatMessageView(int messageId) =>
       '/chat/messages/$messageId/view';
+  static String chatMessageScreenshotDetected(int messageId) =>
+      '/chat/messages/$messageId/screenshot-detected';
+  static String chatMessageForward(int messageId) =>
+      '/chat/messages/$messageId/forward';
+  static String chatMessageReact(int messageId) =>
+      '/chat/messages/$messageId/react';
+  static const String linkPreview = '/link-preview';
 
   // ==================== Notifications ====================
   static const String notifications = '/notifications';
@@ -194,7 +216,7 @@ class ApiEndpoints {
   static const String notificationsReadAll = '/notifications/read-all';
   static String notificationsById(int id) => '/notifications/$id';
   static const String notificationsPermissions = '/notifications/permissions';
-  static const String notificationPreferences = '/notification-preferences';
+  static const String notificationPreferences = '/notifications/preferences';
   static const String notificationsTest = '/notifications/test';
   static const String notificationsRegisterDevice = '/notifications/register-device';
   static const String notificationsUnregisterDevice = '/notifications/unregister-device';
@@ -442,7 +464,7 @@ class ApiEndpoints {
   static const String validateReceipt = '/payments/validate-receipt';
   static const String restorePurchases = '/payments/restore-purchases';
   static const String purchaseSuperlikePack = '/payments/purchase-superlike-pack';
-  static const String paymentHistory = '/payments/history';
+  static const String paymentHistory = '/billing-history';
 
   // ==================== Google Play Billing ====================
   static const String googlePlayProducts = '/google-play/products';

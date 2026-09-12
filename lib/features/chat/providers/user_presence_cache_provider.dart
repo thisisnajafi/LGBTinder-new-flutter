@@ -25,13 +25,21 @@ class UserPresenceCacheNotifier extends Notifier<Map<int, UserPresenceSnapshot>>
   Map<int, UserPresenceSnapshot> build() => {};
 
   void apply(UserPresenceEvent event) {
+    if (event.userId <= 0) return;
+    final next = UserPresenceSnapshot(
+      isOnline: event.isOnline,
+      lastSeenAt: event.lastSeenAt,
+      updatedAt: event.timestamp,
+    );
+    final previous = state[event.userId];
+    if (previous != null &&
+        previous.isOnline == next.isOnline &&
+        previous.lastSeenAt == next.lastSeenAt) {
+      return;
+    }
     state = {
       ...state,
-      event.userId: UserPresenceSnapshot(
-        isOnline: event.isOnline,
-        lastSeenAt: event.lastSeenAt,
-        updatedAt: event.timestamp,
-      ),
+      event.userId: next,
     };
   }
 }

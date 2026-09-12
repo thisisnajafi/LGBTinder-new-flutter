@@ -1,9 +1,11 @@
-import 'models.dart';
+import 'package:equatable/equatable.dart';
+
 import '../../../../core/utils/app_date_time.dart';
 import '../../../../shared/models/match_reason.dart';
+import 'models.dart';
 
 /// User profile model with full details
-class UserProfile {
+class UserProfile extends Equatable {
   final int id;
   final String firstName;
   final String lastName;
@@ -54,7 +56,7 @@ class UserProfile {
   final String? locationSource;
   final Map<String, dynamic>? additionalData;
 
-  UserProfile({
+  const UserProfile({
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -374,5 +376,54 @@ class UserProfile {
         'match_reasons': matchReasons.map((e) => e.toJson()).toList(),
     };
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+        countryId,
+        country,
+        cityId,
+        city,
+        genderId,
+        gender,
+        birthDate,
+        profileBio,
+        height,
+        weight,
+        smoke,
+        drink,
+        gym,
+        images,
+        musicGenres,
+        educations,
+        jobs,
+        languages,
+        interests,
+        interestTitles,
+        jobTitles,
+        educationTitles,
+        preferredGenders,
+        relationGoals,
+        minAgePreference,
+        maxAgePreference,
+        isVerified,
+        verification,
+        isPremium,
+        isOnline,
+        isPhoneVerified,
+        isEmailVerified,
+        viewsCount,
+        lastSeen,
+        matchPercentage,
+        matchReasons,
+        latitude,
+        longitude,
+        locationUpdatedAt,
+        locationSource,
+      ];
 }
 

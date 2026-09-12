@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/premium/premium_settings.dart';
 import 'settings_tile.dart';
 
 /// Switch tile widget
@@ -125,13 +126,13 @@ class _SwitchTileState extends ConsumerState<SwitchTile> {
                 ),
 
                 // Switch
-                Switch(
+                PremiumSwitch(
                   value: _value,
-                  onChanged: widget.enabled ? _handleToggle : null,
-                  activeColor: widget.activeColor ?? AppColors.primaryLight,
-                  activeTrackColor: (widget.activeColor ?? AppColors.primaryLight).withOpacity(0.3),
-                  inactiveThumbColor: isDark ? Colors.grey[400] : Colors.grey[300],
-                  inactiveTrackColor: isDark ? Colors.grey[700] : Colors.grey[200],
+                  onChanged: widget.enabled
+                      ? (value) {
+                          if (value != _value) _handleToggle();
+                        }
+                      : null,
                 ),
               ],
             ),

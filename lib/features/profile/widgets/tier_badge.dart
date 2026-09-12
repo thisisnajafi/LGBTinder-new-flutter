@@ -13,11 +13,14 @@ import '../../../core/responsive/responsive.dart';
 class TierBadge extends ConsumerWidget {
   final UserTier tier;
   final bool compact;
+  /// Optional API plan title (e.g. Premium / Golden). Falls back to [UserTier.displayLabel].
+  final String? label;
 
   const TierBadge({
     super.key,
     required this.tier,
     this.compact = false,
+    this.label,
   });
 
   factory TierBadge.fromPremium(bool isPremium) {
@@ -26,7 +29,14 @@ class TierBadge extends ConsumerWidget {
     );
   }
 
-  String get _label => tier.displayLabel;
+  String get _label {
+    final raw = label?.trim();
+    if (raw == null || raw.isEmpty) return tier.displayLabel;
+    final lower = raw.toLowerCase();
+    if (lower == 'basid') return 'Basic';
+    if (lower == 'silder' || lower == 'silver') return 'Silver';
+    return raw;
+  }
 
   LinearGradient get _gradient {
     if (tier == UserTier.golden) {

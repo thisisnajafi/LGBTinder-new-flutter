@@ -5,7 +5,6 @@ import '../../theme/app_colors.dart';
 import '../../theme/border_radius_constants.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
-import '../app_page_header.dart';
 import '../../responsive/responsive.dart';
 
 /// Glass card shell — source of truth for premium surfaces across the app.
@@ -15,7 +14,7 @@ class PremiumShell extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.spacingLG),
     this.margin = const EdgeInsets.symmetric(
-      horizontal: AppPageHeader.horizontalPadding,
+      horizontal: AppSpacing.spacingLG,
     ),
   });
 
@@ -157,11 +156,13 @@ class PremiumTapScale extends StatefulWidget {
     super.key,
     required this.child,
     required this.onTap,
+    this.onLongPress,
     this.semanticLabel,
   });
 
   final Widget child;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final String? semanticLabel;
 
   @override
@@ -180,10 +181,12 @@ class _PremiumTapScaleState extends State<PremiumTapScale> {
       button: true,
       label: widget.semanticLabel,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _pressed = true),
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: AnimatedScale(
           scale: scale,
           duration: const Duration(milliseconds: 120),

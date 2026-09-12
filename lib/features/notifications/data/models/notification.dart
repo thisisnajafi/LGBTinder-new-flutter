@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../../core/services/app_logger.dart';
 import '../../../../core/utils/app_date_time.dart';
 
 /// Notification model
@@ -34,6 +35,38 @@ class Notification {
     this.isPlanRestricted = false,
     this.upgradeRequired = false,
   });
+
+  Notification copyWith({
+    int? id,
+    String? type,
+    String? title,
+    String? message,
+    DateTime? createdAt,
+    bool? isRead,
+    Map<String, dynamic>? data,
+    int? userId,
+    String? userName,
+    String? userImageUrl,
+    String? actionUrl,
+    bool? isPlanRestricted,
+    bool? upgradeRequired,
+  }) {
+    return Notification(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      createdAt: createdAt ?? this.createdAt,
+      isRead: isRead ?? this.isRead,
+      data: data ?? this.data,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userImageUrl: userImageUrl ?? this.userImageUrl,
+      actionUrl: actionUrl ?? this.actionUrl,
+      isPlanRestricted: isPlanRestricted ?? this.isPlanRestricted,
+      upgradeRequired: upgradeRequired ?? this.upgradeRequired,
+    );
+  }
 
   factory Notification.fromJson(Map<String, dynamic> json) {
     // Use default values instead of throwing on missing id/type
@@ -77,7 +110,13 @@ class Notification {
           if (parsed is Map) {
             dataMap = Map<String, dynamic>.from(parsed);
           }
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.warning(
+            'Notification data JSON parse failed',
+            tag: 'Notifications',
+            error: e,
+          );
+        }
       }
       final rawId = dataMap?['user_id'] ?? dataMap?['sender_id'] ?? dataMap?['from_user_id'];
       if (rawId != null) {
@@ -136,7 +175,13 @@ class Notification {
       try {
         final parsed = jsonDecode(raw);
         if (parsed is Map) return Map<String, dynamic>.from(parsed);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warning(
+          'Notification data field JSON parse failed',
+          tag: 'Notifications',
+          error: e,
+        );
+      }
     }
     return null;
   }

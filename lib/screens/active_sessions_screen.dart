@@ -17,6 +17,22 @@ import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 
+String _maskIpAddress(String? ip) {
+  if (ip == null || ip.trim().isEmpty) return '—';
+  final value = ip.trim();
+  final v4 = value.split('.');
+  if (v4.length == 4) {
+    return '${v4[0]}.${v4[1]}.${v4[2]}.xxx';
+  }
+  if (value.contains(':')) {
+    final groups = value.split(':').where((g) => g.isNotEmpty).toList();
+    if (groups.length >= 2) {
+      return '${groups[0]}:${groups[1]}:xxxx';
+    }
+  }
+  return value;
+}
+
 /// Active sessions screen — view and remotely log out signed-in devices.
 class ActiveSessionsScreen extends ConsumerStatefulWidget {
   const ActiveSessionsScreen({super.key});
@@ -301,7 +317,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
     final currentSession =
         currentMatches.isEmpty ? null : currentMatches.first;
 
-    return RefreshIndicator(
+    return PremiumRefreshIndicator(
       onRefresh: _loadSessions,
       child: AppSettingsDetailList(
         children: [
@@ -492,7 +508,7 @@ class _SessionTile extends StatelessWidget {
               Expanded(
                 child: _Meta(
                   label: 'IP address',
-                  value: session['ip_address']?.toString() ?? '—',
+                  value: _maskIpAddress(session['ip_address']?.toString()),
                 ),
               ),
               _Meta(

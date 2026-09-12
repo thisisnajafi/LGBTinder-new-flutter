@@ -97,7 +97,7 @@ class _NearbySafePlacesScreenState extends ConsumerState<NearbySafePlacesScreen>
               ? _buildError(textColor, secondaryTextColor)
               : _places.isEmpty
                   ? _buildEmpty(textColor, secondaryTextColor)
-                  : RefreshIndicator(
+                  : PremiumRefreshIndicator(
                       onRefresh: _loadPlaces,
                       child: AppSettingsDetailList(
                         children: [

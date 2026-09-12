@@ -78,8 +78,14 @@ class CallRepository {
   }
 
   /// Check if user can call another user
-  Future<CallEligibility> checkCallEligibility(int targetUserId) async {
-    return await _callService.checkCallEligibility(targetUserId);
+  Future<CallEligibility> checkCallEligibility(
+    int targetUserId, {
+    String callType = 'audio',
+  }) async {
+    return await _callService.checkCallEligibility(
+      targetUserId,
+      callType: callType,
+    );
   }
 
   /// Report call issue

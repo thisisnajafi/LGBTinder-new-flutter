@@ -5,6 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/stored_user_session.dart';
 import '../../features/auth/data/models/login_response.dart';
 
+final Expando<int> _tokenStorageRevision = Expando<int>('authRevision');
+
 /// Service for securely storing authentication tokens and user session data.
 class TokenStorageService {
   static const String _authTokenKey = 'auth_token';
@@ -21,9 +23,18 @@ class TokenStorageService {
     ),
   );
 
+  /// Revision bumped on every token/session write so route guards can skip
+  /// secure-storage reads when nothing changed (PERF-ROUTE-003).
+  int get authRevision => _tokenStorageRevision[this] ?? 0;
+
+  void bumpAuthRevision() {
+    _tokenStorageRevision[this] = authRevision + 1;
+  }
+
   /// Save authentication token
   Future<void> saveAuthToken(String token) async {
     await _storage.write(key: _authTokenKey, value: token);
+    bumpAuthRevision();
   }
 
   /// Get authentication token
@@ -34,6 +45,7 @@ class TokenStorageService {
   /// Save profile completion token
   Future<void> saveProfileCompletionToken(String token) async {
     await _storage.write(key: _profileCompletionTokenKey, value: token);
+    bumpAuthRevision();
   }
 
   /// Get profile completion token
@@ -44,6 +56,7 @@ class TokenStorageService {
   /// Save refresh token
   Future<void> saveRefreshToken(String token) async {
     await _storage.write(key: _refreshTokenKey, value: token);
+    bumpAuthRevision();
   }
 
   /// Get refresh token
@@ -66,6 +79,7 @@ class TokenStorageService {
       key: _userSessionKey,
       value: jsonEncode(session.toJson()),
     );
+    bumpAuthRevision();
   }
 
   /// Load persisted user session, if any.
@@ -83,6 +97,7 @@ class TokenStorageService {
   /// Clear persisted user session only.
   Future<void> clearUserSession() async {
     await _storage.delete(key: _userSessionKey);
+    bumpAuthRevision();
   }
 
   /// Clear all tokens and user session.
@@ -93,16 +108,19 @@ class TokenStorageService {
       _storage.delete(key: _refreshTokenKey),
       _storage.delete(key: _userSessionKey),
     ]);
+    bumpAuthRevision();
   }
 
   /// Clear only auth token
   Future<void> clearAuthToken() async {
     await _storage.delete(key: _authTokenKey);
+    bumpAuthRevision();
   }
 
   /// Clear only profile completion token
   Future<void> clearProfileCompletionToken() async {
     await _storage.delete(key: _profileCompletionTokenKey);
+    bumpAuthRevision();
   }
 
   /// Check if user is authenticated

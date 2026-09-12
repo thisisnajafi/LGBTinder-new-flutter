@@ -57,6 +57,58 @@ void main() {
     });
   });
 
+  group('AppDateTime.formatChatTime', () {
+    test('formats Telegram HH:mm in local time', () {
+      expect(
+        AppDateTime.formatChatTime(DateTime(2026, 9, 11, 15, 7)),
+        '15:07',
+      );
+      expect(
+        AppDateTime.formatChatTime(DateTime(2026, 9, 11, 0, 5)),
+        '00:05',
+      );
+      expect(
+        AppDateTime.formatChatTime(DateTime(2026, 9, 11, 12, 0)),
+        '12:00',
+      );
+    });
+  });
+
+      group('AppDateTime.formatChatDateBadge', () {
+        final now = DateTime(2026, 8, 21, 17, 0);
+
+        test('labels today and yesterday', () {
+          expect(AppDateTime.formatChatDateBadge(now, now: now), 'Today');
+          expect(
+            AppDateTime.formatChatDateBadge(
+              now.subtract(const Duration(days: 1)),
+              now: now,
+            ),
+            'Yesterday',
+          );
+        });
+
+        test('uses weekday within the past week', () {
+          expect(
+            AppDateTime.formatChatDateBadge(
+              DateTime(2026, 8, 18, 10),
+              now: now,
+            ),
+            'Tuesday',
+          );
+        });
+
+        test('uses day and month for older dates this year', () {
+          expect(
+            AppDateTime.formatChatDateBadge(
+              DateTime(2026, 1, 5),
+              now: now,
+            ),
+            '5 Jan',
+          );
+        });
+      });
+
   group('Notification.fromJson', () {
     test('localizes a naive UTC created_at from the notifications API', () {
       final notification = Notification.fromJson({
@@ -89,3 +141,4 @@ void main() {
     });
   });
 }
+

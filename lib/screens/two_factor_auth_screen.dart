@@ -85,28 +85,18 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
-      // Then get backup codes
-      final backupResponse = await ref.read(apiServiceProvider).post<Map<String, dynamic>>(
-        ApiEndpoints.twoFactorBackupCodes,
-        data: {},
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (qrResponse.isSuccess && qrResponse.data != null &&
-          backupResponse.isSuccess && backupResponse.data != null) {
+      if (qrResponse.isSuccess && qrResponse.data != null) {
         final qrData = qrResponse.data!;
-        final backupData = backupResponse.data!;
 
         setState(() {
           _qrCodeUrl = qrData['qr_code_url'] ?? '';
           _backupCodes.clear();
-          _backupCodes.addAll(List<String>.from(backupData['backup_codes'] ?? []));
           _isEnabled = false; // Still need to verify
           _isLoading = false;
           _showVerificationStep = true;
         });
       } else {
-        throw Exception('Failed to get QR code or backup codes');
+        throw Exception('Failed to get QR code');
       }
     } catch (e) {
       setState(() {
@@ -119,11 +109,34 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
   }
 
   Future<void> _disable2FA() async {
+    final passwordController = TextEditingController();
+    final codeController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Disable 2FA'),
-        content: const Text('Are you sure you want to disable two-factor authentication? This will make your account less secure.'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter your password and a 6-digit authenticator code to disable two-factor authentication.',
+            ),
+            const SizedBox(height: AppSpacing.spacingMD),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password'),
+            ),
+            const SizedBox(height: AppSpacing.spacingSM),
+            TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: '6-digit code'),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -140,43 +153,62 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
       ),
     );
 
-    if (confirmed == true) {
+    final password = passwordController.text.trim();
+    final code = codeController.text.trim();
+    passwordController.dispose();
+    codeController.dispose();
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+    if (password.isEmpty || code.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password and a 6-digit code are required'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.twoFactorDisable,
+        data: {
+          'password': password,
+          'code': code,
+        },
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+
+      if (!mounted) return;
       setState(() {
-        _isLoading = true;
+        _isEnabled = false;
+        _qrCodeUrl = null;
+        _backupCodes.clear();
+        _backupCodesCount = 0;
+        _showVerificationStep = false;
+        _isLoading = false;
       });
 
-      try {
-        final apiService = ref.read(apiServiceProvider);
-        await apiService.post<Map<String, dynamic>>(
-          ApiEndpoints.twoFactorDisable,
-          data: {},
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
-
-        setState(() {
-          _isEnabled = false;
-          _qrCodeUrl = null;
-          _backupCodes.clear();
-          _backupCodesCount = 0;
-          _showVerificationStep = false;
-          _isLoading = false;
-        });
-
-        AlertDialogCustom.show(
-          context,
-          title: '2FA Disabled',
-          message: 'Two-factor authentication has been disabled',
-          iconPath: AppIcons.info,
-          iconColor: AppColors.feedbackWarning,
-        );
-      } catch (e) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to disable 2FA: $e')),
-        );
-      }
+      AlertDialogCustom.show(
+        context,
+        title: '2FA Disabled',
+        message: 'Two-factor authentication has been disabled',
+        iconPath: AppIcons.info,
+        iconColor: AppColors.feedbackWarning,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to disable 2FA: $e')),
+      );
     }
   }
 
@@ -194,7 +226,8 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
       );
 
       if (response.isSuccess) {
-        await _load2FAStatus(); // Reload status to confirm it's enabled
+        await _fetchBackupCodes();
+        await _load2FAStatus();
         setState(() {
           _showVerificationStep = false;
           _isLoading = false;
@@ -218,6 +251,23 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
         SnackBar(content: Text('Verification failed: $e')),
       );
     }
+  }
+
+  Future<void> _fetchBackupCodes() async {
+    final backupResponse = await ref.read(apiServiceProvider).post<Map<String, dynamic>>(
+      ApiEndpoints.twoFactorBackupCodes,
+      data: {},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!backupResponse.isSuccess || backupResponse.data == null) return;
+    final backupData = backupResponse.data!;
+    if (!mounted) return;
+    setState(() {
+      _backupCodes
+        ..clear()
+        ..addAll(List<String>.from(backupData['backup_codes'] ?? []));
+      _backupCodesCount = _backupCodes.length;
+    });
   }
 
   Future<void> _copyAllBackupCodes() async {
@@ -349,18 +399,14 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                           ),
                         ),
                         const SizedBox(height: AppSpacing.spacingMD),
-                        TextFormField(
-                          decoration: InputDecoration(
-                            labelText: 'Verification code',
-                            hintText: '000000',
-                            prefixIcon: AppSvgIcon(
-                              assetPath: AppIcons.timer,
-                              size: 20,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+                        PremiumTextField(
+                          label: 'Verification code',
+                          hintText: '000000',
+                          prefixIconPath: AppIcons.timer,
                           keyboardType: TextInputType.number,
                           maxLength: 6,
+                          textAlign: TextAlign.center,
+                          autocorrect: false,
                           onChanged: (value) {
                             if (value.length == 6) {
                               _verify2FACode(value);
@@ -458,7 +504,44 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                       AppSettingsLayout.horizontalPadding,
                       0,
                     ),
-                    child: OutlinedButton(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  setState(() => _isLoading = true);
+                                  try {
+                                    await _fetchBackupCodes();
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Failed to regenerate backup codes: $e',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoading = false);
+                                    }
+                                  }
+                                },
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSpacing.spacingMD,
+                            ),
+                          ),
+                          child: Text(
+                            'Regenerate backup codes',
+                            style: AppTypography.button,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.spacingSM),
+                        OutlinedButton(
                     onPressed: _disable2FA,
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: AppSpacing.spacingMD),
@@ -470,6 +553,8 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
                         color: AppColors.notificationRed,
                       ),
                     ),
+                    ),
+                      ],
                     ),
                   ),
                 ],

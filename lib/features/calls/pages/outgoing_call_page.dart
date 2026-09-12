@@ -1,24 +1,53 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../../core/config/agora_config.dart';
+import '../../../core/services/app_logger.dart';
+import '../../../core/services/connectivity_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/spacing_constants.dart';
-import '../../../core/theme/typography.dart';
-import '../../../core/utils/app_icons.dart';
+import '../../../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
+import '../../../features/profile/providers/profile_providers.dart';
+import '../../../features/settings/providers/sound_preferences_provider.dart';
+import '../../../features/user/providers/user_providers.dart';
+import '../../../shared/models/api_error.dart';
+import '../../../shared/services/agora_rtc_types.dart';
 import '../../../shared/services/agora_service.dart';
+import '../../../shared/services/call_permissions.dart';
 import '../../../shared/services/call_quality_monitor.dart';
+import '../../../shared/services/call_token_refresh.dart';
+import '../data/models/call.dart';
 import '../data/models/call_action_request.dart';
+import '../data/models/call_end_summary.dart';
+import '../data/models/call_hud_policy.dart';
+import '../data/models/call_initiate_exception.dart';
+import '../data/models/call_reconnect_policy.dart';
+import '../data/models/call_wake_lock.dart';
+import '../data/models/active_call_session.dart';
 import '../data/services/call_signaling_service.dart';
-import '../presentation/widgets/agora_call_video_layer.dart';
+import '../presentation/widgets/call_end_overlay.dart';
+import '../presentation/widgets/call_connect_transition.dart';
+import '../presentation/widgets/call_hud.dart';
+import '../presentation/widgets/call_live_chrome.dart';
+import '../presentation/widgets/call_quality_toast.dart';
+import '../presentation/widgets/call_outgoing_pulse.dart';
+import '../presentation/widgets/call_permission_sheet.dart';
+import '../presentation/widgets/call_stage_placeholder.dart';
+import '../providers/active_call_session_provider.dart';
+import '../providers/agora_rtc_session_provider.dart';
+import '../providers/call_end_summary_provider.dart';
 import '../providers/call_provider.dart';
-import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../providers/call_providers.dart';
+import '../providers/live_call_ui_provider.dart';
+import '../providers/messenger_calls_provider.dart';
+import '../utils/call_log_labels.dart';
+import '../utils/call_audio_route.dart';
+import '../utils/call_navigation.dart';
+import '../utils/call_ring_timeout.dart';
 
 enum OutgoingCallType { voice, video }
 
@@ -30,6 +59,7 @@ class OutgoingCallPage extends ConsumerStatefulWidget {
   final int callId;
   final OutgoingCallType type;
   final bool isCallee;
+  final bool shouldInitiate;
 
   const OutgoingCallPage({
     super.key,
@@ -39,6 +69,7 @@ class OutgoingCallPage extends ConsumerStatefulWidget {
     required this.callId,
     required this.type,
     this.isCallee = false,
+    this.shouldInitiate = false,
   });
 
   @override
@@ -46,25 +77,35 @@ class OutgoingCallPage extends ConsumerStatefulWidget {
 }
 
 class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late final AnimationController _pulseController;
+    with WidgetsBindingObserver {
   late final AgoraService _agoraService;
   late final CallQualityMonitor _qualityMonitor;
+  late final CallSignalingService _signaling;
+  final CallWakeLock _wakeLock = CallWakeLock();
 
   Timer? _durationTimer;
-  Duration _duration = Duration.zero;
-  bool _isMuted = false;
-  bool _isSpeakerOn = true;
-  bool _isCameraOn = true;
-  bool _isFrontCamera = true;
-  bool _callConnected = false;
   bool _agoraJoined = false;
-  bool _showDeclinedMessage = false;
   String? _statusLabel;
   String? _channelName;
-  int? _remoteUid;
   String? _connectionError;
-  String _networkQuality = 'unknown';
+  late int _callId;
+  bool _leaving = false;
+  bool _hangupTonePlayed = false;
+  bool _joiningAgora = false;
+  bool _endPosted = false;
+  Timer? _acceptPollTimer;
+  Timer? _ringTimeoutTimer;
+  Timer? _remoteLeftTimer;
+  Timer? _reconnectWatchdog;
+  StreamSubscription<NetworkConnectionState>? _connectivitySub;
+  final CallReconnectPolicy _reconnect = CallReconnectPolicy();
+  CallRtcConnectionUi? _lastRtcConnection;
+  bool _giveUpStarted = false;
+  bool _preservingEngine = false;
+  String? _primaryPhotoUrl;
+  String? _backdropPhotoUrl;
+  String? _localAvatarUrl;
+  int _localUserId = 0;
 
   @override
   void initState() {
@@ -72,35 +113,97 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     WidgetsBinding.instance.addObserver(this);
     _agoraService = AgoraService();
     _qualityMonitor = CallQualityMonitor(_agoraService);
-    _statusLabel = widget.isCallee ? 'Connecting...' : 'Calling...';
+    _signaling = ref.read(callSignalingServiceProvider);
+    _callId = widget.callId;
+    _statusLabel = 'Connecting...';
+    unawaited(_wakeLock.enable());
 
-    final disableAnimations =
-        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
-    if (!disableAnimations) {
-      _pulseController.repeat();
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final session = ref.read(activeCallSessionProvider);
+      final resuming = ActiveCallLifecycle.shouldResume(
+        pageCallId: widget.callId,
+        session: session,
+        agoraInCall: _agoraService.isInCall,
+      );
+      if (resuming && session != null) {
+        unawaited(_resumeActiveCall(session));
+        return;
+      }
+      ref.read(agoraRtcSessionProvider.notifier).reset();
+      ref.read(liveCallUiProvider.notifier).reset(
+            speakerOn: widget.type == OutgoingCallType.video,
+          );
+      final me = ref.read(cachedCurrentUserProvider).asData?.value;
+      _localUserId = me?.id ?? 0;
+      _localAvatarUrl = me?.avatarUrl;
+      unawaited(_resolveCallPhotos());
+      _connectivitySub ??=
+          ConnectivityService.instance.onStateChange.listen(_onConnectivityState);
+      if (!widget.isCallee) {
+        unawaited(SoundService.instance.startOutgoingRingback());
+      }
+      if (widget.shouldInitiate || _callId <= 0) {
+        unawaited(_startOutgoing());
+      } else if (widget.isCallee) {
+        _listenForCallEvents();
+        unawaited(_onCallAccepted({}));
+      } else {
+        _listenForCallEvents();
+        unawaited(_joinAgoraChannel());
+        _startAcceptPoll();
+        _startRingTimeout();
+      }
+    });
+  }
 
-    _listenForCallEvents();
-    if (widget.isCallee) {
-      _onCallAccepted({});
+  String? get _headerPhotoUrl => _primaryPhotoUrl ?? widget.recipientAvatarUrl;
+
+  String? get _displayBackdropUrl =>
+      _backdropPhotoUrl ?? _primaryPhotoUrl ?? widget.recipientAvatarUrl;
+
+  bool _sessionConnected() => ref.read(liveCallUiProvider).connected;
+
+  LiveCallUiNotifier get _liveUi => ref.read(liveCallUiProvider.notifier);
+
+  Future<void> _resolveCallPhotos() async {
+    if (widget.recipientId <= 0) return;
+    try {
+      final profile = await ref
+          .read(profileServiceProvider)
+          .getUserProfile(widget.recipientId);
+      final primaryUrl = primaryProfilePhotoUrl(profile.images);
+      final backdropUrl = firstNonPrimaryProfilePhotoUrl(profile.images);
+      if (!mounted) return;
+      setState(() {
+        if (primaryUrl != null && primaryUrl.isNotEmpty) {
+          _primaryPhotoUrl = primaryUrl;
+        }
+        if (backdropUrl != null && backdropUrl.isNotEmpty) {
+          _backdropPhotoUrl = backdropUrl;
+        }
+      });
+    } catch (e) {
+      AppLogger.warning(
+        'Could not resolve call photos',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_agoraJoined) return;
-    if (state == AppLifecycleState.resumed && widget.type == OutgoingCallType.voice) {
-      unawaited(_agoraService.setSpeakerphoneEnabled(_isSpeakerOn));
+    if (!_agoraJoined || !_sessionConnected()) return;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_restoreLocalMedia());
     }
   }
 
   void _listenForCallEvents() {
-    ref.read(callSignalingServiceProvider).listen(
-      callId: widget.callId,
+    if (_callId <= 0) return;
+    _signaling.listen(
+      callId: _callId,
       onAccepted: _onCallAccepted,
       onRejected: _onCallRejected,
       onEnded: _onCallEnded,
@@ -108,63 +211,517 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     );
   }
 
-  Future<void> _onCallAccepted(Map<String, dynamic> _) async {
-    if (!mounted || _callConnected) return;
+  void _cancelRingingTimers() {
+    _acceptPollTimer?.cancel();
+    _ringTimeoutTimer?.cancel();
+  }
+
+  /// Caller UI timeout only — never `POST reject` / `POST end`.
+  void _startRingTimeout() {
+    _ringTimeoutTimer?.cancel();
+    _ringTimeoutTimer = Timer(CallRingTimeout.duration, () async {
+      if (!mounted || _sessionConnected() || _leaving || _callId <= 0) return;
+      try {
+        final call = await ref
+            .read(callRepositoryProvider)
+            .getCall(_callId.toString());
+        if (!mounted || _sessionConnected() || _leaving) return;
+        final status = call.status.toLowerCase();
+        if (status == 'active' || status == 'connected') {
+          unawaited(_onCallAccepted({}));
+          return;
+        }
+        if (CallLogLabels.isTerminalStatus(status)) {
+          _onCallEnded({'status': status});
+          return;
+        }
+      } catch (e) {
+        AppLogger.warning(
+          'Ring timeout getCall failed',
+          tag: 'outgoing_call_page',
+          error: e,
+        );
+        if (!mounted || _sessionConnected() || _leaving) return;
+      }
+      _onCallEnded({'status': 'missed'});
+    });
+  }
+
+  void _startAcceptPoll() {
+    _acceptPollTimer?.cancel();
+    var ticks = 0;
+    _acceptPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (!mounted || _sessionConnected() || _leaving || _callId <= 0) {
+        _acceptPollTimer?.cancel();
+        return;
+      }
+      ticks += 1;
+      if (ticks > 23) {
+        _acceptPollTimer?.cancel();
+        return;
+      }
+      try {
+        final call = await ref.read(callRepositoryProvider).getCall(_callId.toString());
+        if (!mounted || _sessionConnected() || _leaving) return;
+        final status = call.status.toLowerCase();
+        if (status == 'active' || status == 'connected') {
+          _cancelRingingTimers();
+          unawaited(_onCallAccepted({}));
+        } else if (CallLogLabels.isTerminalStatus(status)) {
+          _cancelRingingTimers();
+          _onCallEnded({'status': status});
+        }
+      } catch (e) {
+        AppLogger.warning(
+          'Accept poll getCall failed',
+          tag: 'outgoing_call_page',
+          error: e,
+        );
+      }
+    });
+  }
+
+  String _userFacingCallError(Object error) {
+    final text = error.toString();
+    if (text.contains('No space left') ||
+        text.contains('Writing to the log') ||
+        text.contains('errno=28') ||
+        text.contains('ApiError')) {
+      return 'Connection failed';
+    }
+    return 'Connection failed';
+  }
+
+  void _setStatus(String message) {
+    if (!mounted) return;
     setState(() {
-      _callConnected = true;
-      _statusLabel = null;
+      _statusLabel = message;
       _connectionError = null;
     });
+  }
+
+  void _leaveCallUi() {
+    if (!mounted) return;
+    leaveCallRoute(
+      context,
+      callId: _callId > 0 ? _callId.toString() : null,
+    );
+  }
+
+  ActiveCallSession _currentSession({bool minimized = false}) {
+    return ActiveCallSession(
+      callId: _callId,
+      peerId: widget.recipientId,
+      peerName: widget.recipientName,
+      peerAvatarUrl: widget.recipientAvatarUrl ?? _headerPhotoUrl,
+      isVideo: widget.type == OutgoingCallType.video,
+      channelName: _channelName ?? _agoraService.currentChannelId,
+      agoraJoined: _agoraJoined || _agoraService.isInCall,
+      minimized: minimized,
+      isCallee: widget.isCallee,
+    );
+  }
+
+  void _syncActiveSession() {
+    if (_callId <= 0) return;
+    try {
+      ref.read(activeCallSessionProvider.notifier).attach(_currentSession());
+    } catch (e) {
+      AppLogger.warning(
+        'attach active session failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
+  }
+
+  void _clearActiveSession() {
+    try {
+      ref.read(activeCallSessionProvider.notifier).clearUiOnly();
+    } catch (e) {
+      AppLogger.warning(
+        'clear active session failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
+  }
+
+  void _minimizeCall() {
+    if (_leaving || _callId <= 0 || !_sessionConnected()) return;
+    _preservingEngine = true;
+    try {
+      ref.read(activeCallSessionProvider.notifier).minimize(_currentSession());
+    } catch (e) {
+      AppLogger.warning(
+        'minimize active session failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+      _preservingEngine = false;
+      return;
+    }
+    if (!mounted) return;
+    leaveCallRoute(context);
+  }
+
+  Future<void> _resumeActiveCall(ActiveCallSession session) async {
+    _callId = session.callId;
+    _channelName = _agoraService.currentChannelId ?? session.channelName;
+    unawaited(_wakeLock.enable());
+    final me = ref.read(cachedCurrentUserProvider).asData?.value;
+    _localUserId = me?.id ?? 0;
+    _localAvatarUrl = me?.avatarUrl;
+    unawaited(_resolveCallPhotos());
+    _connectivitySub ??=
+        ConnectivityService.instance.onStateChange.listen(_onConnectivityState);
+    _listenForCallEvents();
+    try {
+      ref.read(activeCallSessionProvider.notifier).reveal();
+    } catch (e) {
+      AppLogger.warning(
+        'reveal active session failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
+    await _joinAgoraChannel();
+    if (!mounted) return;
+    if (_sessionConnected()) {
+      _statusLabel = null;
+      _durationTimer?.cancel();
+      _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) {
+          _liveUi.tick();
+        }
+      });
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _failOnPage(String message) {
+    unawaited(SoundService.instance.stopCallSounds());
+    if (!mounted) return;
+    setState(() {
+      _statusLabel = message;
+      _connectionError = message;
+    });
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted && !_sessionConnected()) _leaveCallUi();
+    });
+  }
+
+  Future<void> _startOutgoing() async {
+    _setStatus('Connecting...');
+    final isVideo = widget.type == OutgoingCallType.video;
+    final allowed = await ensureCallMediaPermissions(context, video: isVideo);
+    if (!allowed) {
+      if (mounted) _leaveCallUi();
+      return;
+    }
+    if (!mounted) return;
+    try {
+      final apiType = widget.type == OutgoingCallType.video ? 'video' : 'voice';
+      final call = await ref.read(callProvider.notifier).initiateCall(
+            InitiateCallRequest(
+              receiverId: widget.recipientId,
+              callType: apiType,
+            ),
+          );
+      if (!mounted) return;
+      final id = call != null && call.id > 0
+          ? call.id
+          : int.tryParse(call?.callId ?? '') ?? 0;
+      if (id <= 0) {
+        _failOnPage('Could not start call');
+        return;
+      }
+      _callId = id;
+      _listenForCallEvents();
+      unawaited(_joinAgoraChannel());
+      _startAcceptPoll();
+      _startRingTimeout();
+      _setStatus('Ringing...');
+    } on CallInitiateException catch (e) {
+      if (e.alreadyInCall) {
+        await _rejoinActiveCall();
+        return;
+      }
+      _failOnPage(e.message);
+    } on ApiError catch (e) {
+      if (e.message.toLowerCase().contains('already an active call')) {
+        await _rejoinActiveCall();
+        return;
+      }
+      _failOnPage(e.message);
+    } catch (e) {
+      AppLogger.warning('Outgoing call start failed', tag: 'outgoing_call_page', error: e);
+      _failOnPage('Could not start call');
+    }
+  }
+
+  Future<void> _rejoinActiveCall() async {
+    _setStatus('Connecting...');
+    final existing = await ref.read(callRepositoryProvider).getActiveCall();
+    if (!mounted) return;
+    if (existing == null || existing.id <= 0) {
+      _failOnPage('There is already an active call with this user');
+      return;
+    }
+    final peer = widget.recipientId;
+    final involvesPeer =
+        existing.callerId == peer || existing.receiverId == peer;
+    if (!involvesPeer) {
+      _failOnPage("You're already in another call");
+      return;
+    }
+    await _attachExistingCall(existing);
+  }
+
+  Future<void> _attachExistingCall(Call existing) async {
+    _callId = existing.id;
+    _listenForCallEvents();
+    final me = ref.read(cachedCurrentUserProvider).asData?.value.id ?? 0;
+    final iAmCallee = me > 0 && existing.receiverId == me;
+    final status = existing.status.toLowerCase();
+    final live = status == 'active' || status == 'connected';
+    if (live || iAmCallee) {
+      if (iAmCallee && !live) {
+        final allowed = await ensureCallMediaPermissions(
+          context,
+          video: widget.type == OutgoingCallType.video,
+        );
+        if (!allowed || !mounted) {
+          if (mounted) _leaveCallUi();
+          return;
+        }
+        try {
+          await ref.read(callProvider.notifier).acceptCall(
+                CallActionRequest.accept(_callId.toString()),
+              );
+        } catch (e) {
+          AppLogger.warning('Could not accept existing call', tag: 'outgoing_call_page', error: e);
+        }
+      }
+      await _onCallAccepted({});
+      return;
+    }
+    _setStatus('Connecting...');
+  }
+
+  Future<void> _onCallAccepted(Map<String, dynamic> _) async {
+    if (!mounted || _sessionConnected()) return;
+    _cancelRingingTimers();
+    _remoteLeftTimer?.cancel();
+    await SoundService.instance.stopCallSounds();
+    if (!mounted || _sessionConnected()) return;
+    unawaited(SoundService.instance.playCallConnect());
+    _liveUi.setConnected(true);
+    if (mounted) {
+      setState(() {
+        _connectionError = null;
+      });
+    }
     _durationTimer?.cancel();
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
-        setState(() => _duration = _duration + const Duration(seconds: 1));
+        _liveUi.tick();
       }
     });
-    await WakelockPlus.enable();
-    await _joinAgoraChannel();
+    if (!_agoraJoined) {
+      await _joinAgoraChannel();
+    }
+    _syncActiveSession();
   }
 
   Future<void> _joinAgoraChannel() async {
+    if (_joiningAgora || _callId <= 0) return;
+    _joiningAgora = true;
     final isVideo = widget.type == OutgoingCallType.video;
+    final rtc = ref.read(agoraRtcSessionProvider.notifier);
     try {
       _agoraService.onRemoteUserJoined = (uid) {
         if (!mounted) return;
-        setState(() => _remoteUid = uid);
+        _remoteLeftTimer?.cancel();
+        _remoteLeftTimer = null;
+        rtc.remoteUserJoined(uid);
       };
-      _agoraService.onRemoteUserLeft = (uid) {
+      _agoraService.onRemoteUserLeft = (_) {};
+      _agoraService.onRemoteUserOffline = (uid, reason) {
         if (!mounted) return;
-        setState(() => _remoteUid = null);
-        if (_callConnected) {
-          unawaited(Future.delayed(const Duration(seconds: 1), _endCall));
+        rtc.remoteUserLeft(uid, reason);
+        if (!_sessionConnected()) return;
+        if (reason == CallRemoteLeaveReason.quit) {
+          _remoteLeftTimer?.cancel();
+          _remoteLeftTimer = null;
+          _setStatus('Call ended');
+          unawaited(_endCall());
+          return;
+        }
+        if (reason == CallRemoteLeaveReason.dropped) {
+          _qualityMonitor.recordConnectionDrop();
+          _remoteLeftTimer?.cancel();
+          _remoteLeftTimer = Timer(const Duration(seconds: 8), () {
+            if (!mounted || _leaving) return;
+            final stillGone =
+                ref.read(agoraRtcSessionProvider).remoteUid == null;
+            if (!stillGone) return;
+            unawaited(_endCall());
+          });
+        }
+      };
+      _agoraService.onRemoteVideoMuted = (uid, muted) {
+        if (!mounted) return;
+        final current = ref.read(agoraRtcSessionProvider).remoteUid;
+        if (current != null && uid != current) return;
+        rtc.setRemoteCameraOn(!muted);
+      };
+      _agoraService.onRemoteVideoUiChanged = ({
+        required bool stopped,
+        required bool frozen,
+      }) {
+        if (!mounted) return;
+        rtc.setRemoteVideoUi(stopped: stopped, frozen: frozen);
+      };
+      _agoraService.onLocalCameraFailed = (failed, message) {
+        if (!mounted) return;
+        rtc.setLocalCameraFailed(failed, message: message);
+      };
+      _agoraService.onRtcUiConnectionChanged = (state) {
+        if (!mounted) return;
+        final previous = _lastRtcConnection;
+        final wasUnstable = previous == CallRtcConnectionUi.reconnecting ||
+            previous == CallRtcConnectionUi.failed ||
+            _reconnect.inFlight;
+        rtc.setConnection(state);
+        _lastRtcConnection = state;
+        if (state == CallRtcConnectionUi.reconnecting &&
+            previous != CallRtcConnectionUi.reconnecting) {
+          _qualityMonitor.recordConnectionDrop();
+          if (_sessionConnected()) {
+            _armReconnectWatchdog();
+          }
+        }
+        if (state == CallRtcConnectionUi.connected &&
+            _sessionConnected() &&
+            _agoraJoined &&
+            wasUnstable) {
+          _cancelReconnectWatchdog();
+          _reconnect.markRecovered();
+          rtc.setReconnectInFlight(false);
+          unawaited(_restoreLocalMedia());
+        }
+        if (state == CallRtcConnectionUi.failed && _sessionConnected()) {
+          unawaited(_retryOrEndCall());
+        }
+        if (state == CallRtcConnectionUi.failed && !_sessionConnected()) {
+          _failOnPage('Connection failed');
         }
       };
       _agoraService.onError = (message) {
         _qualityMonitor.recordError(message);
         if (!mounted) return;
-        setState(() => _connectionError = message);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        rtc.setUserFacingError(message);
+        if (!_sessionConnected()) {
+          setState(() {
+            _connectionError = message;
+            _statusLabel = message;
+          });
+        }
       };
-      _agoraService.onNetworkQuality = (_, rxQuality) {
-        final label = _qualityFromScore(rxQuality);
+      _agoraService.onWarning = (message) {
+        AppLogger.warning(message, tag: 'outgoing_call_page');
+      };
+      _agoraService.onNetworkQuality = (_, label) {
         _qualityMonitor.updateNetworkQuality(label);
         if (!mounted) return;
-        setState(() => _networkQuality = label);
+        rtc.setNetworkQuality(label);
+      };
+      _agoraService.onRtcStatsUpdate = ({
+        required int bitrateKbps,
+        required int packetLossPercent,
+      }) {
+        _qualityMonitor.applyRtcStats(
+          bitrateKbps: bitrateKbps,
+          packetLossPercent: packetLossPercent,
+        );
+        if (!mounted) return;
+        rtc.setRtcStats(
+          bitrateKbps: bitrateKbps,
+          packetLossPercent: packetLossPercent,
+        );
+      };
+      _agoraService.onSpeakingChanged = ({
+        int? remoteUid,
+        required bool localSpeaking,
+      }) {
+        if (!mounted) return;
+        rtc.setSpeaking(remoteUid: remoteUid, localSpeaking: localSpeaking);
+      };
+      _agoraService.onFirstRemoteVideoFrame = (uid, width, height) {
+        if (!mounted) return;
+        rtc.setFirstRemoteVideoFrame();
+      };
+      _agoraService.onAudioRouteChanged = (routing) {
+        if (!mounted) return;
+        final previous = ref.read(agoraRtcSessionProvider).audioRoute;
+        rtc.setAudioRoute(routing);
+        final preference = ref.read(isSpeakerOnProvider);
+        if (CallAudioRoute.shouldRestoreSpeakerPreference(
+          previousRouting: previous,
+          nextRouting: routing,
+          speakerPreference: preference,
+        )) {
+          unawaited(_agoraService.setSpeakerphoneEnabled(preference));
+        }
       };
       _agoraService.onTokenRefreshRequired = () async {
-        final tokenData =
-            await ref.read(callSignalingServiceProvider).fetchAgoraToken(widget.callId);
-        return tokenData.token;
+        try {
+          final tokenData = await _signaling.fetchAgoraToken(_callId);
+          return CallTokenRefreshResult(
+            token: tokenData.token,
+            expiresAt: tokenData.expiresAt,
+          );
+        } catch (e) {
+          AppLogger.warning(
+            'Agora token refresh failed',
+            tag: 'outgoing_call_page',
+            error: e,
+          );
+          return const CallTokenRefreshResult(token: '');
+        }
       };
 
+      if (ActiveCallLifecycle.shouldSkipJoin(
+        agoraInCall: _agoraService.isInCall,
+        engineChannelId: _agoraService.currentChannelId,
+        sessionChannelId: _channelName,
+        sessionJoined: _agoraJoined || _agoraService.isInCall,
+      )) {
+        if (!mounted) return;
+        setState(() {
+          _agoraJoined = true;
+          _channelName = _agoraService.currentChannelId ?? _channelName;
+        });
+        _syncActiveSession();
+        return;
+      }
+
       final tokenData =
-          await ref.read(callSignalingServiceProvider).fetchAgoraToken(widget.callId);
+          await _signaling.fetchAgoraToken(_callId);
+      final appId = AgoraConfig.resolveAppId(tokenData.appId);
+      if (appId.isEmpty) {
+        AppLogger.error(
+          'Agora app_id missing from token payload',
+          tag: 'outgoing_call_page',
+        );
+        if (mounted) _failOnPage('Connection failed');
+        return;
+      }
 
       await _agoraService.initialize(
         isVideoCall: isVideo,
-        appId: tokenData.appId,
+        appId: appId,
       );
       await _agoraService.joinChannel(
         channelId: tokenData.channelName,
@@ -172,503 +729,614 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         userId: tokenData.uid,
         isVideoCall: isVideo,
       );
+      _agoraService.scheduleProactiveTokenRefresh(tokenData.expiresAt);
 
       _qualityMonitor.startMonitoring(
-        callId: widget.callId.toString(),
+        callId: _callId.toString(),
         callerId: widget.isCallee ? widget.recipientId : tokenData.uid,
         receiverId: widget.isCallee ? tokenData.uid : widget.recipientId,
         callType: isVideo ? 'video' : 'voice',
       );
 
       if (!mounted) return;
+      final existingRemote = _agoraService.remoteUid;
+      if (existingRemote != null) {
+        rtc.remoteUserJoined(existingRemote);
+      }
       setState(() {
         _agoraJoined = true;
         _channelName = tokenData.channelName;
-        _remoteUid = _agoraService.remoteUid;
       });
+      _syncActiveSession();
+    } on CallPermissionDeniedException catch (e) {
+      _qualityMonitor.recordError(e.toString());
+      if (!mounted) return;
+      await CallPermissionSheet.show(
+        context,
+        video: e.video,
+        permanentlyDenied: e.permanentlyDenied,
+      );
+      if (mounted) _leaveCallUi();
     } catch (e) {
       _qualityMonitor.recordError(e.toString());
       if (mounted) {
-        setState(() {
-          _connectionError = 'Connection failed';
-          _statusLabel = 'Connection failed';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connection failed: $e')),
-        );
-        await _endCall();
+        _failOnPage(_userFacingCallError(e));
+      }
+    } finally {
+      _joiningAgora = false;
+    }
+  }
+
+  void _onConnectivityState(NetworkConnectionState state) {
+    if (state != NetworkConnectionState.connected) return;
+    if (!_sessionConnected() || _leaving || !_agoraJoined || _giveUpStarted) return;
+    final connection = ref.read(agoraRtcSessionProvider).connection;
+    if (connection != CallRtcConnectionUi.reconnecting &&
+        connection != CallRtcConnectionUi.failed) {
+      return;
+    }
+    unawaited(_retryOrEndCall());
+  }
+
+  void _armReconnectWatchdog() {
+    _reconnectWatchdog?.cancel();
+    _reconnectWatchdog = Timer(CallReconnectPolicy.watchdog, () {
+      if (!mounted || _leaving || !_sessionConnected()) return;
+      final connection = ref.read(agoraRtcSessionProvider).connection;
+      if (connection != CallRtcConnectionUi.reconnecting &&
+          !_reconnect.inFlight) {
+        return;
+      }
+      unawaited(_retryOrEndCall());
+    });
+  }
+
+  void _cancelReconnectWatchdog() {
+    _reconnectWatchdog?.cancel();
+    _reconnectWatchdog = null;
+  }
+
+  Future<void> _restoreLocalMedia() async {
+    if (_leaving || !_agoraJoined) return;
+    await _agoraService.restoreLocalMedia(
+      muted: ref.read(isMutedProvider),
+      speakerOn: ref.read(isSpeakerOnProvider),
+      cameraOn: ref.read(isCameraOnProvider),
+      isVideoCall: widget.type == OutgoingCallType.video,
+    );
+  }
+
+  Future<void> _retryOrEndCall() async {
+    if (_leaving || _giveUpStarted || !_sessionConnected() || !_agoraJoined) return;
+    if (!_reconnect.beginRetry()) {
+      if (_reconnect.shouldGiveUp) {
+        await _giveUpReconnect();
+      }
+      return;
+    }
+    _cancelReconnectWatchdog();
+    final rtc = ref.read(agoraRtcSessionProvider.notifier);
+    rtc.setReconnectInFlight(true);
+    AppLogger.info(
+      'Call rejoin attempt ${_reconnect.attempts}/${CallReconnectPolicy.maxAttempts}',
+      tag: 'Agora',
+    );
+    try {
+      final tokenData = await _signaling.fetchAgoraToken(_callId);
+      if (!mounted || _leaving || _giveUpStarted) {
+        _reconnect.markRetryFinished();
+        rtc.setReconnectInFlight(false);
+        return;
+      }
+      await _agoraService.rejoinChannel(
+        channelId: tokenData.channelName,
+        token: tokenData.token,
+        userId: tokenData.uid,
+        isVideoCall: widget.type == OutgoingCallType.video,
+      );
+      _agoraService.scheduleProactiveTokenRefresh(tokenData.expiresAt);
+      if (!mounted || _leaving) {
+        _reconnect.markRetryFinished();
+        return;
+      }
+      await _restoreLocalMedia();
+      _reconnect.markRecovered();
+      rtc.setConnection(CallRtcConnectionUi.connected);
+      rtc.setReconnectInFlight(false);
+    } catch (e) {
+      AppLogger.warning(
+        'Call rejoin failed attempt=${_reconnect.attempts}',
+        tag: 'Agora',
+        error: e,
+      );
+      if (_agoraService.isInCall) {
+        await _restoreLocalMedia();
+        _reconnect.markRecovered();
+        rtc.setConnection(CallRtcConnectionUi.connected);
+        rtc.setReconnectInFlight(false);
+        return;
+      }
+      _reconnect.markRetryFinished();
+      rtc.setReconnectInFlight(_reconnect.canRetry);
+      if (_reconnect.shouldGiveUp) {
+        await _giveUpReconnect();
+      } else {
+        _armReconnectWatchdog();
       }
     }
   }
 
-  String _qualityFromScore(int score) {
-    if (score <= 1) return 'good';
-    if (score <= 3) return 'poor';
-    if (score >= 4) return 'bad';
-    return 'unknown';
+  Future<void> _giveUpReconnect() async {
+    if (_giveUpStarted || _leaving) return;
+    _giveUpStarted = true;
+    _cancelReconnectWatchdog();
+    _reconnect.markRetryFinished();
+    final rtc = ref.read(agoraRtcSessionProvider.notifier);
+    rtc.setReconnectInFlight(false);
+    rtc.setConnection(CallRtcConnectionUi.failed);
+    rtc.setUserFacingError(CallReconnectPolicy.lostMessage);
+    AppLogger.warning(
+      'Reconnect exhausted, ending call',
+      tag: 'Agora',
+    );
+    if (mounted) {
+      setState(() {
+        _statusLabel = CallReconnectPolicy.lostMessage;
+        _connectionError = CallReconnectPolicy.lostMessage;
+      });
+    }
+    await _postEndIfNeeded();
+    await Future<void>.delayed(CallReconnectPolicy.giveUpVisible);
+    if (_leaving) return;
+    await _endCall();
   }
 
-  void _onCallRejected(Map<String, dynamic> _) {
-    if (!mounted) return;
-    setState(() {
-      _showDeclinedMessage = true;
-      _statusLabel = 'Call declined';
-    });
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) context.pop();
-    });
+  void _syncMessengerStatus(String status) {
+    if (_callId <= 0) return;
+    ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
+          callId: _callId,
+          status: status,
+        );
   }
 
-  void _onCallEnded(Map<String, dynamic> _) {
-    if (mounted) context.pop();
+  void _onCallRejected(Map<String, dynamic> payload) {
+    if (_leaving) return;
+    _leaving = true;
+    _preservingEngine = false;
+    _clearActiveSession();
+    _cancelRingingTimers();
+    _remoteLeftTimer?.cancel();
+    _cancelReconnectWatchdog();
+    unawaited(_playBusyTone());
+    final status = payload['status']?.toString();
+    _syncMessengerStatus(status ?? 'rejected');
+    unawaited(_stopCallMedia());
+    _presentEndSummary(
+      CallEndSummary.resolve(
+        wasConnected: false,
+        status: status,
+      ),
+    );
+  }
+
+  void _onCallEnded(Map<String, dynamic> payload) {
+    if (_leaving) return;
+    _leaving = true;
+    _preservingEngine = false;
+    _clearActiveSession();
+    _cancelRingingTimers();
+    _remoteLeftTimer?.cancel();
+    _cancelReconnectWatchdog();
+    unawaited(_playHangupTone());
+    final connected = _sessionConnected();
+    final status = payload['status']?.toString();
+    _syncMessengerStatus(status ?? (connected ? 'ended' : 'missed'));
+    unawaited(_stopCallMedia());
+    _presentEndSummary(
+      CallEndSummary.resolve(
+        wasConnected: connected,
+        status: status,
+        connectionError: _connectionError,
+      ),
+    );
+  }
+
+  Future<void> _playBusyTone() async {
+    if (_hangupTonePlayed) return;
+    _hangupTonePlayed = true;
+    await SoundService.instance.stopCallSounds();
+    await SoundService.instance.playCallBusy();
+  }
+
+  Future<void> _playHangupTone() async {
+    if (_hangupTonePlayed) return;
+    _hangupTonePlayed = true;
+    await SoundService.instance.stopCallSounds();
+    await SoundService.instance.playCallEnded();
   }
 
   Future<void> _endCall() async {
+    if (_leaving) return;
+    _leaving = true;
+    _preservingEngine = false;
+    _clearActiveSession();
+    _cancelRingingTimers();
+    _remoteLeftTimer?.cancel();
+    _cancelReconnectWatchdog();
+    unawaited(_playHangupTone());
     _qualityMonitor.stopMonitoring(callSuccessful: _agoraJoined);
-    await WakelockPlus.disable();
 
+    final connected = _sessionConnected();
+    if (mounted) {
+      _syncMessengerStatus(connected ? 'ended' : 'missed');
+    }
+
+    unawaited(_stopCallMedia());
+    unawaited(_postEndIfNeeded());
+    _presentEndSummary(
+      CallEndSummary.resolve(
+        wasConnected: connected,
+        connectionError: _connectionError,
+      ),
+    );
+  }
+
+  Future<void> _stopCallMedia() async {
+    _durationTimer?.cancel();
+    await _wakeLock.disable();
     try {
-      await ref.read(callProvider.notifier).endCall(
-            CallActionRequest.end(widget.callId.toString()),
-          );
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'outgoing_call_page', error: e); }
+      await _agoraService.dispose();
+    } catch (e) {
+      AppLogger.warning(
+        'Agora teardown failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
+    if (_callId > 0) {
+      _signaling.disposeCall(_callId);
+    }
+  }
 
+  void _presentEndSummary(CallEndReason reason) {
+    if (!mounted) return;
+    final live = ref.read(liveCallUiProvider);
+    ref.read(callEndSummaryProvider.notifier).state = CallEndSummary(
+      reason: reason,
+      talkTime: live.duration,
+      isVideo: widget.type == OutgoingCallType.video,
+      wasConnected: live.connected,
+    );
+  }
+
+  Future<void> _postEndIfNeeded({dynamic notifier}) async {
+    if (_endPosted || _callId <= 0) return;
+    _endPosted = true;
+    final endCall = notifier ??
+        (mounted ? ref.read(callProvider.notifier) : null);
+    if (endCall == null) {
+      _endPosted = false;
+      return;
+    }
     try {
-      await _agoraService.leaveChannel();
-    } catch (e) { AppLogger.warning('Silently caught exception', tag: 'outgoing_call_page', error: e); }
-
-    ref.read(callSignalingServiceProvider).disposeCall(widget.callId);
-    if (mounted) context.pop();
+      await endCall.endCall(CallActionRequest.end(_callId.toString()));
+    } catch (e) {
+      AppLogger.warning(
+        'endCall API failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
   }
 
   Future<void> _toggleMute() async {
-    setState(() => _isMuted = !_isMuted);
-    await _agoraService.toggleAudio(!_isMuted);
+    final muted = !ref.read(isMutedProvider);
+    _liveUi.setMuted(muted);
+    await _agoraService.toggleAudio(!muted);
   }
 
   Future<void> _toggleSpeaker() async {
-    setState(() => _isSpeakerOn = !_isSpeakerOn);
-    await _agoraService.setSpeakerphoneEnabled(_isSpeakerOn);
+    final preference = ref.read(isSpeakerOnProvider);
+    final kind = CallAudioRoute.kind(
+      ref.read(agoraRtcSessionProvider).audioRoute,
+      fallbackSpeakerOn: preference,
+    );
+    if (!CallAudioRoute.canToggleSpeaker(kind)) return;
+    final on = !preference;
+    _liveUi.setSpeakerOn(on);
+    await _agoraService.setSpeakerphoneEnabled(on);
   }
 
   Future<void> _toggleCamera() async {
-    setState(() => _isCameraOn = !_isCameraOn);
-    await _agoraService.toggleVideo(_isCameraOn);
+    final on = !ref.read(isCameraOnProvider);
+    _liveUi.setCameraOn(on);
+    await _agoraService.toggleVideo(on);
   }
 
   Future<void> _flipCamera() async {
-    await _agoraService.switchCamera();
-    setState(() => _isFrontCamera = !_isFrontCamera);
+    if (!ref.read(isCameraOnProvider) || !_agoraJoined) return;
+    try {
+      await _agoraService.switchCamera();
+    } catch (e) {
+      AppLogger.warning('Camera flip failed', tag: 'outgoing_call_page', error: e);
+    }
   }
 
   @override
   void dispose() {
+    final keep = ActiveCallLifecycle.keepEngine(
+      callEnded: _leaving,
+      minimized: _preservingEngine,
+    );
+    if (keep) {
+      _cancelRingingTimers();
+      _remoteLeftTimer?.cancel();
+      _cancelReconnectWatchdog();
+      unawaited(_connectivitySub?.cancel());
+      WidgetsBinding.instance.removeObserver(this);
+      _durationTimer?.cancel();
+      super.dispose();
+      return;
+    }
+    final shouldEnd = !_leaving && !_endPosted && _callId > 0;
+    final callId = _callId;
+    final wasConnected = _sessionConnected();
+    dynamic endNotifier;
+    if (shouldEnd) {
+      try {
+        endNotifier = ref.read(callProvider.notifier);
+        ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
+              callId: callId,
+              status: wasConnected ? 'ended' : 'missed',
+            );
+      } catch (e) {
+        AppLogger.warning(
+          'dispose applyRemoteStatus failed',
+          tag: 'outgoing_call_page',
+          error: e,
+        );
+      }
+    }
+    _leaving = true;
+    _cancelRingingTimers();
+    _remoteLeftTimer?.cancel();
+    _cancelReconnectWatchdog();
+    unawaited(_connectivitySub?.cancel());
     WidgetsBinding.instance.removeObserver(this);
     _durationTimer?.cancel();
-    _pulseController.dispose();
+    _agoraService.clearSessionCallbacks(keepTokenRefresh: true);
     _qualityMonitor.stopMonitoring(callSuccessful: false, failureReason: 'disposed');
-    unawaited(WakelockPlus.disable());
-    ref.read(callSignalingServiceProvider).disposeCall(widget.callId);
+    unawaited(_wakeLock.disable(force: true));
+    if (callId > 0) {
+      _signaling.disposeCall(callId);
+    }
     unawaited(_agoraService.dispose());
+    unawaited(SoundService.instance.stopCallSounds());
+    if (endNotifier != null) {
+      unawaited(_postEndIfNeeded(notifier: endNotifier));
+    }
+    try {
+      ref.read(liveCallUiProvider.notifier).reset();
+      ref.read(agoraRtcSessionProvider.notifier).reset();
+      ref.read(callEndSummaryProvider.notifier).state = null;
+    } catch (e) {
+      AppLogger.warning(
+        'dispose live-call reset failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final connected = ref.watch(callStatusProvider);
     final isVideo = widget.type == OutgoingCallType.video;
+    final engine = _agoraService.engine;
     final showVideoLayer =
-        isVideo && _callConnected && _agoraJoined && _agoraService.engine != null && _channelName != null;
+        isVideo && _agoraJoined && engine != null && _channelName != null;
+    final topPad = MediaQuery.paddingOf(context).top;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final showRingChrome = !_leaving &&
+        _connectionError == null;
 
-    return Scaffold(
-      backgroundColor: isVideo ? Colors.black : (isDark ? AppColors.backgroundDark : AppColors.backgroundLight),
-      body: SafeArea(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (showVideoLayer)
-              AgoraCallVideoLayer(
-                engine: _agoraService.engine!,
-                channelId: _channelName!,
-                remoteUid: _remoteUid,
-                showLocalPreview: _isCameraOn,
-                mirrorLocal: _isFrontCamera,
-              )
-            else
-              _buildVoiceOrRingingBody(theme, isDark, textPrimary, textSecondary),
-            if (showVideoLayer)
-              Positioned(
-                top: AppSpacing.spacingMD,
-                left: AppBreakpoints.value(
-                  context,
-                  phone: AppSpacing.spacingLG,
-                  tablet: AppSpacing.spacingXL,
-                ),
-                right: AppSpacing.spacingLG,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      widget.recipientName,
-                      style: AppTypography.titleLarge.copyWith(color: Colors.white),
-                      maxLines: 1,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_sessionConnected() && !_leaving) {
+          _minimizeCall();
+          return;
+        }
+        unawaited(_endCall());
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: CallHudHost(
+          autoHide: CallHudPolicy.autoHide(
+            isVideo: isVideo,
+            connected: connected && !_leaving,
+          ),
+          child: CallConnectHost(
+            connected: connected && !_leaving,
+            child: Builder(
+              builder: (context) {
+              void revealHud() {
+                CallHudController.maybeOf(context)?.reveal();
+              }
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  CallConnectStage(
+                    child: showVideoLayer
+                        ? RepaintBoundary(
+                            child: CallLiveVideoStage(
+                              engine: engine,
+                              channelId: _channelName!,
+                              localAvatarUrl: _localAvatarUrl,
+                              remoteAvatarUrl: _headerPhotoUrl,
+                              localUserId: _localUserId,
+                              remoteUserId: widget.recipientId,
+                              onFlipCamera: () {
+                                unawaited(_flipCamera());
+                              },
+                              onStageTap: revealHud,
+                            ),
+                          )
+                        : Consumer(
+                            builder: (context, ref, _) {
+                              final failed = ref.watch(
+                                agoraRtcSessionProvider.select(
+                                  (state) => state.localCameraFailed,
+                                ),
+                              );
+                              final caption = ref.watch(
+                                agoraRtcSessionProvider.select(
+                                  (state) => state.localCameraCaption,
+                                ),
+                              );
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: revealHud,
+                                child: CallStagePlaceholder(
+                                  userId: widget.recipientId,
+                                  imageUrl: _displayBackdropUrl,
+                                  caption: failed ? caption : 'Camera is off',
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  if (showRingChrome)
+                    IgnorePointer(
+                      child: Center(
+                        child: CallConnectPulse(
+                          child: CallOutgoingPulseAvatar(
+                            active: !connected,
+                            userId: widget.recipientId,
+                            imageUrl: _headerPhotoUrl,
+                          ),
+                        ),
+                      ),
                     ),
-                    Text(
-                      _formatDuration(_duration),
-                      style: AppTypography.bodyMedium.copyWith(color: Colors.white70),
+                  Positioned(
+                    top: topPad + AppSpacing.spacingMD,
+                    left: AppBreakpoints.value(
+                      context,
+                      phone: AppSpacing.spacingLG,
+                      tablet: AppSpacing.spacingXL,
                     ),
-                  ],
-                ),
-              ),
-            if (_networkQuality == 'poor' || _networkQuality == 'bad')
-              Positioned(
-                top: AppSpacing.spacingMD,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.spacingMD,
-                      vertical: AppSpacing.spacingXS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.feedbackWarning.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _networkQuality == 'bad' ? 'Poor connection' : 'Unstable connection',
-                      style: AppTypography.labelSmall.copyWith(color: AppColors.textPrimaryDark),
+                    right: AppSpacing.spacingLG,
+                    child: CallHudFade(
+                      child: OutgoingCallHeader(
+                        recipientName: widget.recipientName,
+                        recipientId: widget.recipientId,
+                        photoUrl: _headerPhotoUrl,
+                        statusLabel: _statusLabel,
+                        connectionError: _connectionError,
+                      ),
                     ),
                   ),
-                ),
-              ),
-            if (_connectionError != null && !_callConnected)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.spacingLG),
-                  child: Text(
-                    _connectionError!,
-                    style: AppTypography.bodyMedium.copyWith(color: AppColors.feedbackError),
-                    textAlign: TextAlign.center,
+                  Positioned(
+                    top: topPad +
+                        AppSpacing.spacingXXXL +
+                        AppSpacing.spacingXL,
+                    left: 0,
+                    right: 0,
+                    child: CallHudFade(
+                      child: const CallQualityToast(),
+                    ),
                   ),
-                ),
-              ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.spacingXL,
-              child: _buildControls(theme, isDark),
-            ),
-          ],
+                  CallReconnectLayer(leaving: _leaving),
+                  Positioned(
+                    left: AppSpacing.spacingSM,
+                    right: AppSpacing.spacingSM,
+                    bottom: bottomPad + AppSpacing.spacingSM,
+                    child: CallHudFade(
+                      child: _buildControlSheet(),
+                    ),
+                  ),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      return CallEndOverlay(
+                        summary: ref.watch(callEndSummaryProvider),
+                        onFinished: _leaveCallUi,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildVoiceOrRingingBody(
-    ThemeData theme,
-    bool isDark,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
-    final ringSize =
-        (MediaQuery.sizeOf(context).width * 0.55).clamp(160.0, 220.0);
-    final avatarSize = (ringSize * 0.64).clamp(100.0, 140.0);
+  Widget _buildControlSheet() {
+    final isVideo = widget.type == OutgoingCallType.video;
+    const circle = 56.0;
 
-    return Center(
-      child: Padding(
-        padding: ResponsivePadding.horizontal(context),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: ringSize,
-              height: ringSize,
-              child: Stack(
-                alignment: Alignment.center,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.spacingLG,
+            AppSpacing.spacingSM,
+            AppSpacing.spacingLG,
+            AppSpacing.spacingLG,
+          ),
+          color: AppColors.backgroundDark.withValues(alpha: 0.92),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textPrimaryDark.withValues(alpha: 0.24),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(height: AppSpacing.spacingLG),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  if (!_callConnected) ...[
-                    _PulsingRing(
-                      controller: _pulseController,
-                      intervalBegin: 0.0,
-                      intervalEnd: 0.33,
-                      size: avatarSize,
+                  CallMuteButton(onTap: _toggleMute, size: circle),
+                  if (isVideo)
+                    CallFlipButton(onTap: _flipCamera, size: circle),
+                  CallEndButton(onTap: _endCall, size: circle),
+                ],
+              ),
+              SizedBox(height: AppSpacing.spacingMD),
+              Row(
+                children: [
+                  if (_sessionConnected()) ...[
+                    Expanded(
+                      child: CallHideButton(onTap: _minimizeCall),
                     ),
-                    _PulsingRing(
-                      controller: _pulseController,
-                      intervalBegin: 0.33,
-                      intervalEnd: 0.66,
-                      size: avatarSize,
-                    ),
-                    _PulsingRing(
-                      controller: _pulseController,
-                      intervalBegin: 0.66,
-                      intervalEnd: 1.0,
-                      size: avatarSize,
-                    ),
+                    SizedBox(width: AppSpacing.spacingSM),
                   ],
-                  ClipOval(
-                    child: widget.recipientAvatarUrl != null
-                        ? ImageFiltered(
-                            imageFilter: ImageFilter.blur(
-                              sigmaX: _callConnected ? 0 : 8,
-                              sigmaY: _callConnected ? 0 : 8,
-                            ),
-                            child: CachedNetworkImage(
-                              imageUrl: widget.recipientAvatarUrl!,
-                              width: avatarSize,
-                              height: avatarSize,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : Container(
-                            width: avatarSize,
-                            height: avatarSize,
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: AppSvgIcon(
-                              assetPath: AppIcons.userOutline,
-                              size: avatarSize * 0.34,
-                              color: textSecondary,
-                            ),
-                          ),
+                  if (isVideo) ...[
+                    Expanded(
+                      child: CallCameraPill(onTap: _toggleCamera),
+                    ),
+                    SizedBox(width: AppSpacing.spacingSM),
+                  ],
+                  Expanded(
+                    child: CallSpeakerPill(onTap: _toggleSpeaker),
                   ),
                 ],
               ),
-            ),
-            SizedBox(height: AppSpacing.spacingLG),
-            AppText(
-              widget.recipientName,
-              style: AppTypography.headlineSmall.copyWith(color: textPrimary),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-            ),
-          SizedBox(height: AppSpacing.spacingSM),
-          Text(
-            _showDeclinedMessage
-                ? 'Call declined'
-                : (_callConnected
-                    ? _formatDuration(_duration)
-                    : (_statusLabel ?? 'Calling...')),
-            style: AppTypography.bodyLarge.copyWith(color: textSecondary),
-          ),
-        ],
-      ),
-    ),
-    );
-  }
-
-  Widget _buildControls(ThemeData theme, bool isDark) {
-    final isVideo = widget.type == OutgoingCallType.video;
-    final actionCount = isVideo ? 4.0 : 3.0;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final buttonSize =
-            (constraints.maxWidth / (actionCount + 1)).clamp(48.0, 56.0);
-
-        return Padding(
-          padding: ResponsivePadding.horizontal(context),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Semantics(
-                label: _isMuted ? 'Unmute microphone' : 'Mute microphone',
-                button: true,
-                child: _CallActionButton(
-                  icon: _isMuted ? AppIcons.microphoneSlash : AppIcons.microphone,
-                  label: _isMuted ? 'Unmute' : 'Mute',
-                  onTap: _toggleMute,
-                  isDark: isDark,
-                  size: buttonSize,
-                ),
-              ),
-              Semantics(
-                label: 'End call',
-                button: true,
-                child: _CallActionButton(
-                  icon: AppIcons.callMissed,
-                  label: 'End',
-                  onTap: _endCall,
-                  isDark: isDark,
-                  isDestructive: true,
-                  size: buttonSize,
-                ),
-              ),
-              if (isVideo)
-                Semantics(
-                  label: _isCameraOn ? 'Turn camera off' : 'Turn camera on',
-                  button: true,
-                  child: _CallActionButton(
-                    icon: AppIcons.video,
-                    label: _isCameraOn ? 'Camera' : 'Cam off',
-                    onTap: _toggleCamera,
-                    isDark: isDark,
-                    size: buttonSize,
-                  ),
-                )
-              else
-                Semantics(
-                  label: _isSpeakerOn ? 'Speaker on' : 'Speaker off',
-                  button: true,
-                  child: _CallActionButton(
-                    icon: AppIcons.getIconPath('volume-high'),
-                    label: 'Speaker',
-                    onTap: _toggleSpeaker,
-                    isDark: isDark,
-                    isActive: _isSpeakerOn,
-                    size: buttonSize,
-                  ),
-                ),
-              if (isVideo)
-                Semantics(
-                  label: 'Flip camera',
-                  button: true,
-                  child: _CallActionButton(
-                    icon: AppIcons.getIconPath('rotate-right'),
-                    label: 'Flip',
-                    onTap: _flipCamera,
-                    isDark: isDark,
-                    size: buttonSize,
-                  ),
-                ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  String _formatDuration(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-}
-
-class _PulsingRing extends StatelessWidget {
-  final AnimationController controller;
-  final double intervalBegin;
-  final double intervalEnd;
-  final double size;
-
-  const _PulsingRing({
-    required this.controller,
-    required this.intervalBegin,
-    required this.intervalEnd,
-    this.size = 140,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
-
-    if (disableAnimations) return const SizedBox.shrink();
-
-    final scale = Tween<double>(begin: 1.0, end: 1.8).animate(
-      CurvedAnimation(
-        parent: controller,
-        curve: Interval(intervalBegin, intervalEnd, curve: Curves.easeOut),
-      ),
-    );
-    final opacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: controller,
-        curve: Interval(intervalBegin, intervalEnd, curve: Curves.easeOut),
-      ),
-    );
-
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: scale.value,
-          child: Opacity(
-            opacity: opacity.value,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: theme.colorScheme.primary, width: 2),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _CallActionButton extends StatelessWidget {
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isDark;
-  final bool isDestructive;
-  final bool isActive;
-  final double size;
-
-  const _CallActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    required this.isDark,
-    this.isDestructive = false,
-    this.isActive = false,
-    this.size = 56,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    Color bg;
-    Color fg;
-    if (isDestructive) {
-      bg = AppColors.feedbackError;
-      fg = AppColors.textPrimaryDark;
-    } else if (isActive) {
-      bg = theme.colorScheme.primary;
-      fg = theme.colorScheme.onPrimary;
-    } else {
-      bg = isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
-      fg = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Material(
-          color: bg,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: size,
-              height: size,
-              child: Center(
-                child: AppSvgIcon(
-                  assetPath: icon,
-                  size: size * 0.43,
-                  color: fg,
-                ),
-              ),
-            ),
-          ),
         ),
-        SizedBox(height: AppSpacing.spacingXS),
-        AppText(
-          label,
-          style: AppTypography.labelSmall.copyWith(
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-          ),
-          maxLines: 1,
-        ),
-      ],
+      ),
     );
   }
 }

@@ -27,6 +27,7 @@ void main() {
       expect(find.byType(ChatPage), findsOneWidget);
       expect(find.text('Test User'), findsOneWidget);
       expect(find.byType(MessageInput), findsOneWidget);
+      await _unmountChat(tester);
     });
 
     testWidgets('shows empty messages state after load', (WidgetTester tester) async {
@@ -46,8 +47,18 @@ void main() {
       await waitForAsync(tester);
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('No messages yet'), findsOneWidget);
+      expect(find.byType(MessageInput), findsOneWidget);
+      expect(
+        find.textContaining('Say hi to Test User'),
+        findsOneWidget,
+      );
+      await _unmountChat(tester);
     });
   });
 }
 
+Future<void> _unmountChat(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  // CHAT-PERF-005: conversation close is debounced 900ms.
+  await tester.pump(const Duration(milliseconds: 950));
+}

@@ -1,7 +1,9 @@
-import '../../../profile/data/models/user_profile.dart';
+import 'package:equatable/equatable.dart';
+
+import '../../../../core/utils/media_url.dart';
 
 /// Match model
-class Match {
+class Match extends Equatable {
   final int id;
   final int userId;
   final String firstName;
@@ -15,7 +17,7 @@ class Match {
   final DateTime? lastMessageAt;
   final int? unreadCount;
 
-  Match({
+  const Match({
     required this.id,
     required this.userId,
     required this.firstName,
@@ -31,12 +33,14 @@ class Match {
   });
 
   factory Match.fromJson(Map<String, dynamic> json) {
+    json = _flattenNestedUser(json);
+
     // Get ID from multiple possible fields
     int matchId = 0;
-    if (json['id'] != null) {
-      matchId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
-    } else if (json['match_id'] != null) {
+    if (json['match_id'] != null) {
       matchId = (json['match_id'] is int) ? json['match_id'] as int : int.tryParse(json['match_id'].toString()) ?? 0;
+    } else if (json['id'] != null) {
+      matchId = (json['id'] is int) ? json['id'] as int : int.tryParse(json['id'].toString()) ?? 0;
     }
     
     // Get user ID — backend match list historically sends the peer as `id`
@@ -58,10 +62,7 @@ class Match {
       firstName: firstName,
       lastName: json['last_name']?.toString(),
       profileBio: json['profile_bio']?.toString(),
-      primaryImageUrl: json['primary_image_url']?.toString() ??
-          json['image_url']?.toString() ??
-          json['avatar']?.toString() ??
-          json['avatar_url']?.toString(),
+      primaryImageUrl: _photoUrl(json),
       imageUrls: json['images'] != null && json['images'] is List
           ? (json['images'] as List).map((e) => e.toString()).toList()
           : null,
@@ -75,6 +76,40 @@ class Match {
           : null,
       unreadCount: json['unread_count'] != null ? ((json['unread_count'] is int) ? json['unread_count'] as int : int.tryParse(json['unread_count'].toString())) : null,
     );
+  }
+
+  static String? _photoUrl(Map<String, dynamic> json) {
+    for (final key in const [
+      'primary_image_url',
+      'image_url',
+      'avatar_url',
+      'avatar',
+    ]) {
+      final value = json[key]?.toString();
+      if (value == null || MediaUrl.isPlaceholder(value)) continue;
+      return value;
+    }
+    return null;
+  }
+
+  static Map<String, dynamic> _flattenNestedUser(Map<String, dynamic> json) {
+    final nestedUser = json['user'];
+    if (nestedUser is! Map) return json;
+
+    final userMap = Map<String, dynamic>.from(nestedUser);
+    return {
+      ...userMap,
+      ...json,
+      'user_id': json['user_id'] ?? userMap['id'] ?? userMap['user_id'],
+      'first_name': json['first_name'] ?? userMap['first_name'] ?? userMap['name'],
+      'last_name': json['last_name'] ?? userMap['last_name'],
+      'primary_image_url': json['primary_image_url'] ??
+          json['avatar_url'] ??
+          json['avatar'] ??
+          userMap['primary_image_url'] ??
+          userMap['avatar_url'] ??
+          userMap['avatar'],
+    };
   }
 
   Map<String, dynamic> toJson() {
@@ -93,4 +128,20 @@ class Match {
       if (unreadCount != null) 'unread_count': unreadCount,
     };
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        userId,
+        firstName,
+        lastName,
+        profileBio,
+        primaryImageUrl,
+        imageUrls,
+        matchedAt,
+        isRead,
+        lastMessage,
+        lastMessageAt,
+        unreadCount,
+      ];
 }

@@ -1,13 +1,14 @@
 // Widget: CardStackManager
 // Card stack manager with horizontal swipe gestures
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/widgets/premium/premium_page.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../../core/utils/app_icons.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../shared/models/match_reason.dart';
@@ -16,7 +17,6 @@ import '../../features/discover/widgets/discover_empty_state.dart';
 import '../../features/discover/utils/discovery_image_prefetch.dart';
 import '../../widgets/loading/skeleton_loader.dart';
 import '../../core/widgets/loading_indicator.dart';
-import '../../core/responsive/responsive.dart';
 
 /// True when [cardId] was already painted in the visible deck, so promoting
 /// it to the front must not rebuild the photo as a fresh network load.
@@ -35,6 +35,10 @@ bool discoverCardWasVisibleInStack(
   return false;
 }
 
+enum _SwipeLane { undecided, horizontal, vertical }
+
+enum _StampKind { none, like, nope, superlike }
+
 /// Card stack manager widget
 /// Manages a stack of swipeable cards for discovery screen
 class CardStackManager extends ConsumerStatefulWidget {
@@ -52,6 +56,7 @@ class CardStackManager extends ConsumerStatefulWidget {
   final VoidCallback? onEmptyTertiaryAction;
   final String? emptyTitle;
   final String? emptySubtitle;
+  final String? emptyIconPath;
   final bool isSheetOpen;
   /// Resting position below header chrome; cards may paint above when swiping.
   final double contentTopInset;
@@ -76,6 +81,7 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.onEmptyTertiaryAction,
     this.emptyTitle,
     this.emptySubtitle,
+    this.emptyIconPath,
     this.isSheetOpen = false,
     this.contentTopInset = 0,
     this.contentBottomInset = 0,
@@ -83,13 +89,15 @@ class CardStackManager extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CardStackManager> createState() => _CardStackManagerState();
+  CardStackManagerState createState() => CardStackManagerState();
 }
 
-class _CardStackManagerState extends ConsumerState<CardStackManager>
+class CardStackManagerState extends ConsumerState<CardStackManager>
     with TickerProviderStateMixin {
   Map<String, dynamic>? _exitingCardSnapshot;
   Offset _dragOffset = Offset.zero;
+  _SwipeLane _lane = _SwipeLane.undecided;
+  bool _thresholdHapticFired = false;
   late AnimationController _exitController;
   late Animation<Offset> _exitSlide;
   late Animation<double> _exitFade;
@@ -101,6 +109,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
   int _prefetchGeneration = 0;
   bool _frontImagesReady = true;
   final Map<int, GlobalKey> _cardKeys = <int, GlobalKey>{};
+  _StampKind _exitStamp = _StampKind.none;
 
   @override
   void initState() {
@@ -214,7 +223,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     }
     _pruneCardKeys();
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
-      _dragOffset = Offset.zero;
+      _resetDrag();
       _lastTopCardId = null;
       _frontImagesReady = true;
     }
@@ -234,40 +243,86 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     if (mounted) {
       setState(() {
         _exitingCardSnapshot = null;
+        _exitStamp = _StampKind.none;
         _dragOffset = Offset.zero;
       });
     }
   }
 
   double get _swipeThreshold => MediaQuery.sizeOf(context).width * 0.22;
+  static const double _laneLockDistance = 16;
+  static const double _sheetOpenDistance = 72;
+  static const double _horizontalArc = 0.10;
+
+  void _resetDrag() {
+    _dragOffset = Offset.zero;
+    _lane = _SwipeLane.undecided;
+    _thresholdHapticFired = false;
+  }
+
+  Offset _constrainToLane(Offset next) {
+    if (_lane == _SwipeLane.undecided && next.distance >= _laneLockDistance) {
+      final goingUp =
+          next.dy < 0 && next.dy.abs() > next.dx.abs() * 1.2;
+      _lane = goingUp ? _SwipeLane.vertical : _SwipeLane.horizontal;
+    }
+
+    switch (_lane) {
+      case _SwipeLane.undecided:
+        return Offset(next.dx, next.dy * 0.25);
+      case _SwipeLane.horizontal:
+        return Offset(next.dx, -next.dx.abs() * _horizontalArc);
+      case _SwipeLane.vertical:
+        return Offset(0, math.min(next.dy, 0));
+    }
+  }
+
+  void _onPanStart(DragStartDetails details) {
+    if (_exitingCardSnapshot != null || widget.isSheetOpen) return;
+    _lane = _SwipeLane.undecided;
+    _thresholdHapticFired = false;
+  }
 
   void _onPanUpdate(DragUpdateDetails details) {
     if (_exitingCardSnapshot != null || widget.isSheetOpen) return;
-    setState(() {
-      _dragOffset += details.delta;
-    });
+    final next = _constrainToLane(_dragOffset + details.delta);
+    final crossedLike = next.dx.abs() >= _swipeThreshold;
+    if (crossedLike && !_thresholdHapticFired && _lane == _SwipeLane.horizontal) {
+      _thresholdHapticFired = true;
+      unawaited(HapticFeedback.selectionClick());
+    }
+    setState(() => _dragOffset = next);
   }
 
   void _onPanEnd(DragEndDetails details) {
     if (_exitingCardSnapshot != null || widget.isSheetOpen) return;
-    final isPrimarilyVertical =
-        _dragOffset.dy.abs() > (_dragOffset.dx.abs() * 1.35);
-    if (isPrimarilyVertical) {
-      if (_dragOffset.dy < -100 || details.velocity.pixelsPerSecond.dy < -300) {
+    final vx = details.velocity.pixelsPerSecond.dx;
+    final vy = details.velocity.pixelsPerSecond.dy;
+
+    if (_lane == _SwipeLane.vertical) {
+      if (_dragOffset.dy < -_sheetOpenDistance || vy < -300) {
+        unawaited(HapticFeedback.lightImpact());
         widget.onSheetOpenChanged?.call(true);
-        setState(() => _dragOffset = Offset.zero);
-        return;
       }
+      setState(_resetDrag);
+      return;
     }
-    if (_dragOffset.dx > _swipeThreshold) {
+
+    if (_dragOffset.dx > _swipeThreshold || vx > 850) {
       _handleAction('like');
       return;
     }
-    if (_dragOffset.dx < -_swipeThreshold) {
+    if (_dragOffset.dx < -_swipeThreshold || vx < -850) {
       _handleAction('dislike');
       return;
     }
-    setState(() => _dragOffset = Offset.zero);
+
+    setState(_resetDrag);
+  }
+
+  void _onPanCancel() {
+    if (_exitingCardSnapshot != null) return;
+    setState(_resetDrag);
   }
 
   @override
@@ -281,6 +336,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
         title: widget.emptyTitle ?? "You've seen everyone nearby",
         subtitle: widget.emptySubtitle ??
             'Check back soon or expand your filters to see more people',
+        iconPath: widget.emptyIconPath,
         primaryActionLabel: widget.emptyActionLabel ?? 'Adjust filters',
         onPrimaryAction: widget.onEmptyAction ?? widget.onRefresh,
         secondaryActionLabel: widget.emptySecondaryActionLabel,
@@ -480,8 +536,10 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
                       ..setEntry(3, 2, 0.0011)
                       ..rotateZ(rotation),
                     child: GestureDetector(
+                      onPanStart: _onPanStart,
                       onPanUpdate: _onPanUpdate,
                       onPanEnd: _onPanEnd,
+                      onPanCancel: _onPanCancel,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           boxShadow: isDragging
@@ -532,69 +590,68 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
           opacity: _exitFade,
           child: Align(
             alignment: Alignment.center,
-            child: SizedBox(
-              width: cardSize.width,
-              height: cardSize.height,
-              child: _buildCard(cardData, depth: 0),
-            ),
+              child: SizedBox(
+                width: cardSize.width,
+                height: cardSize.height,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _buildCard(cardData, depth: 0),
+                    _buildSwipeOverlay(forExit: true),
+                  ],
+                ),
+              ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSwipeOverlay() {
-    final likeOpacity = (_dragOffset.dx / 80.0).clamp(0.0, 1.0);
-    final nopeOpacity = ((-_dragOffset.dx) / 80.0).clamp(0.0, 1.0);
-    final superOpacity = ((-_dragOffset.dy) / 60.0).clamp(0.0, 1.0);
+  Widget _buildSwipeOverlay({bool forExit = false}) {
+    final theme = Theme.of(context);
+    final committed = forExit || _exitStamp != _StampKind.none;
+    final likeOpacity = committed
+        ? (_exitStamp == _StampKind.like ? 1.0 : 0.0)
+        : (_lane == _SwipeLane.horizontal
+            ? (_dragOffset.dx / 80.0).clamp(0.0, 1.0)
+            : 0.0);
+    final nopeOpacity = committed
+        ? (_exitStamp == _StampKind.nope ? 1.0 : 0.0)
+        : (_lane == _SwipeLane.horizontal
+            ? ((-_dragOffset.dx) / 80.0).clamp(0.0, 1.0)
+            : 0.0);
+    final superOpacity =
+        committed && _exitStamp == _StampKind.superlike ? 1.0 : 0.0;
 
     Widget stamp({
       required String text,
-      required String iconPath,
-      required Gradient gradient,
       required Color borderColor,
-      required Color iconColor,
       required Color textColor,
       required double opacity,
       required double angle,
     }) {
+      if (opacity <= 0) return const SizedBox.shrink();
       return Opacity(
         opacity: opacity,
         child: Transform.rotate(
           angle: angle,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-              gradient: gradient,
-              border: Border.all(color: borderColor, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: borderColor.withValues(alpha: 0.4),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingSM,
+              vertical: AppSpacing.spacingXS,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppSvgIcon(
-                  assetPath: iconPath,
-                  size: 20,
-                  color: iconColor,
-                ),
-                const SizedBox(width: 6),
-                AppText(
-                  text,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: textColor,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                  maxLines: 1,
-                ),
-              ],
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.radiusXS),
+              color: borderColor.withValues(alpha: 0.16),
+              border: Border.all(color: borderColor, width: 2),
+            ),
+            child: Text(
+              text,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ),
@@ -609,11 +666,8 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
             left: 20,
             child: stamp(
               text: 'LIKE',
-              iconPath: AppIcons.heart,
-              gradient: AppColors.discoverLikeGradient,
-              borderColor: const Color(0xFFBBF7D0),
-              iconColor: Colors.white,
-              textColor: Colors.white,
+              borderColor: AppColors.feedbackSuccess,
+              textColor: AppColors.feedbackSuccess,
               opacity: likeOpacity,
               angle: -0.18,
             ),
@@ -623,27 +677,20 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
             right: 20,
             child: stamp(
               text: 'NOPE',
-              iconPath: AppIcons.close,
-              gradient: AppColors.discoverDislikeGradient,
-              borderColor: const Color(0xFFFFB4BC),
-              iconColor: Colors.white,
-              textColor: Colors.white,
+              borderColor: theme.colorScheme.error,
+              textColor: theme.colorScheme.error,
               opacity: nopeOpacity,
               angle: 0.18,
             ),
           ),
-          Positioned(
-            top: 24,
-            left: 0,
-            right: 0,
-            child: Center(
+          Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 24),
               child: stamp(
                 text: 'SUPER',
-                iconPath: AppIcons.star,
-                gradient: AppColors.discoverSuperlikeGradient,
-                borderColor: const Color(0xFFFEF9C3),
-                iconColor: const Color(0xFF78350F),
-                textColor: const Color(0xFF78350F),
+                borderColor: theme.colorScheme.primary,
+                textColor: theme.colorScheme.primary,
                 opacity: superOpacity,
                 angle: 0,
               ),
@@ -679,6 +726,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
       bio: cardData['bio']?.toString(),
       isVerified: cardData['is_verified'] == true,
       isPremium: cardData['is_premium'] == true,
+      isSuperliked: cardData['is_superliked'] == true,
       isOnline: cardData['is_online'] == true,
       distance: (cardData['distance'] as num?)?.toDouble(),
       matchPercentage: (cardData['match_percentage'] as num?)?.toInt() ??
@@ -726,6 +774,51 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
     return text.split(',').first.trim();
   }
 
+  /// Plays the SUPER stamp + upward exit after the message sheet succeeds.
+  void beginSuperlikeExit() {
+    if (!mounted || widget.cards.isEmpty || _exitingCardSnapshot != null) {
+      return;
+    }
+
+    final exitingCard = Map<String, dynamic>.from(widget.cards[0]);
+    _exitStamp = _StampKind.superlike;
+
+    if (!AppAnimations.animationsEnabled(context)) {
+      setState(() {
+        _exitingCardSnapshot = exitingCard;
+        _resetDrag();
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _exitingCardSnapshot = null;
+          _exitStamp = _StampKind.none;
+        });
+      });
+      return;
+    }
+
+    _exitSlide = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, -1.2),
+    ).animate(
+      CurvedAnimation(
+        parent: _exitController,
+        curve: AppAnimations.curveDefault,
+      ),
+    );
+
+    setState(() {
+      _exitingCardSnapshot = exitingCard;
+      _resetDrag();
+    });
+
+    _exitController
+      ..reset()
+      ..addStatusListener(_onExitStatus)
+      ..forward();
+  }
+
   void _handleAction(String action) {
     if (widget.cards.isEmpty || _exitingCardSnapshot != null) return;
 
@@ -741,12 +834,13 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     final exitingCard = Map<String, dynamic>.from(widget.cards[0]);
     final userId = exitingCard['id'] as int? ?? 0;
-    final direction = action == 'like'
-        ? const Offset(1.2, 0)
-        : const Offset(-1.2, 0);
+    final isLike = action == 'like';
+    final direction = isLike ? const Offset(1.2, 0) : const Offset(-1.2, 0);
+    _exitStamp = isLike ? _StampKind.like : _StampKind.nope;
 
     if (!AppAnimations.animationsEnabled(context)) {
       widget.onSwipe?.call(userId, action);
+      _exitStamp = _StampKind.none;
       return;
     }
 
@@ -759,7 +853,7 @@ class _CardStackManagerState extends ConsumerState<CardStackManager>
 
     setState(() {
       _exitingCardSnapshot = exitingCard;
-      _dragOffset = Offset.zero;
+      _resetDrag();
     });
 
     widget.onSwipe?.call(userId, action);

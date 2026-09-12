@@ -71,7 +71,8 @@ dependencies:
   # Media
   video_player: ^2.8.1
   audioplayers: ^6.0.0
-  just_audio: ^0.9.46
+  # just_audio removed: Android plugin fatally crashes with
+  # NoClassDefFoundError AudioPlayer$1 on debug/release devices.
   record: ^6.1.0
   video_compress: ^3.1.3
 
@@ -116,7 +117,6 @@ dependencies:
   webview_flutter: ^4.4.2
 
   # Real-time Communication
-  socket_io_client: ^3.1.2
   pusher_channels_flutter: ^2.4.0
 
   # Payments (Google Play Billing only; Stripe removed)
@@ -180,12 +180,11 @@ flutter:
     - assets/icons/bold/
     - assets/icons/broken/wifi.svg
     - assets/sounds/
+    - assets/lottie/chat_heart.json
 
-  # Custom Fonts
-  # Download fonts from Google Fonts: https://fonts.google.com/specimen/Inter
-  # Place font files in: assets/fonts/Inter/
+  # Inter only (PERF-INFRA-030). Unused Nunito/Urbanist/Poppins files were
+  # removed so they cannot be re-bundled by accident.
   fonts:
-    # Inter only — other families were unused and added ~2MB to the APK
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter/Inter-Regular.ttf

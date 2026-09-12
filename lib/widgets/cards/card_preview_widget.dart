@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
-import '../images/optimized_image.dart';
+import '../../core/widgets/optimized_image.dart';
 import '../badges/verification_badge.dart';
 import '../badges/premium_badge.dart';
 import 'swipeable_card.dart';

@@ -5,6 +5,7 @@ import '../../theme/border_radius_constants.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
 import 'premium_shell.dart';
+import 'profile_locked_overlay.dart';
 import '../../responsive/responsive.dart';
 
 /// Hub action card data (settings, profile account hub, UI sync).
@@ -82,75 +83,78 @@ class PremiumHubCard extends StatelessWidget {
 
     return PremiumTapScale(
       onTap: data.onTap,
-      semanticLabel: data.title,
-      child: Container(
-        height: 108,
-        padding: const EdgeInsets.all(AppSpacing.spacingMD),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
-          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-          border: Border.all(
-            color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+      semanticLabel: data.locked ? '${data.title}, locked' : data.title,
+      child: ProfileLockedOverlay(
+        locked: data.locked,
+        label: 'Upgrade',
+        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+        child: Container(
+          height: 108,
+          padding: const EdgeInsets.all(AppSpacing.spacingMD),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.cardBackgroundDark
+                : AppColors.cardBackgroundLight,
+            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+            border: Border.all(
+              color: AppColors.accentViolet.withValues(alpha: isDark ? 0.12 : 0.1),
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AppSvgIcon(
-                  assetPath: data.iconPath,
-                  size: 22,
-                  color: data.locked
-                      ? theme.colorScheme.onSurface.withValues(alpha: 0.35)
-                      : AppColors.accentViolet,
-                ),
-                const Spacer(),
-                if (data.locked)
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
                   AppSvgIcon(
-                    assetPath: AppIcons.lockOutline,
-                    size: 14,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
-                  )
-                else if (data.statusLabel != null)
-                  Flexible(
-                    child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: (data.statusColor ?? AppColors.feedbackSuccess)
-                          .withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: AppText(
-                      data.statusLabel!,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: data.statusColor ?? AppColors.feedbackSuccess,
+                    assetPath: data.iconPath,
+                    size: 22,
+                    color: data.locked
+                        ? theme.colorScheme.onSurface.withValues(alpha: 0.35)
+                        : AppColors.accentViolet,
+                  ),
+                  const Spacer(),
+                  if (!data.locked && data.statusLabel != null)
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingSM,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (data.statusColor ?? AppColors.feedbackSuccess)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                        ),
+                        child: AppText(
+                          data.statusLabel!,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: data.statusColor ?? AppColors.feedbackSuccess,
+                          ),
+                          maxLines: 1,
+                        ),
                       ),
-                      maxLines: 1,
                     ),
-                  ),
-                  ),
-              ],
-            ),
-            const Spacer(),
-            AppText(
-              data.title,
-              maxLines: 1,
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            AppText(
-              data.subtitle,
-              maxLines: 2,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                height: 1.2,
+                ],
               ),
-            ),
-          ],
+              const Spacer(),
+              AppText(
+                data.title,
+                maxLines: 1,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              AppText(
+                data.subtitle,
+                maxLines: 2,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

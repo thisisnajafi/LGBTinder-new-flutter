@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -59,7 +58,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
 
     _autoDismissTimer = Timer(MatchCelebrationOverlay.autoDismissDuration, () {
       if (!_userInteracted && mounted) {
-        widget.onKeepSwiping();
+        widget.onSendMessage();
       }
     });
   }
@@ -241,10 +240,10 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                   Column(
                     children: [
                       Semantics(
-                        label: 'New Match',
+                        label: "It's a Match",
                         header: true,
                         child: AppText(
-                          'New Match!',
+                          "It's a Match!",
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: isDark
@@ -289,7 +288,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                     Semantics(
-                      label: 'Start chat',
+                      label: 'Send a Message',
                       button: true,
                       child: ElevatedButton(
                         onPressed: () => _onUserAction(widget.onSendMessage),
@@ -305,7 +304,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                           ),
                         ),
                         child: Text(
-                          'Start',
+                          'Send a Message',
                           style: theme.textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),

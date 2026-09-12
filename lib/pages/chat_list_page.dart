@@ -1,12 +1,20 @@
 // Screen: ChatListPage
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
-import '../core/theme/border_radius_constants.dart';
 import '../core/responsive/responsive.dart';
+import '../core/utils/app_haptics.dart';
 import '../core/utils/app_icons.dart';
+import '../core/services/app_logger.dart';
+import '../core/constants/animation_constants.dart';
+import '../core/utils/media_url.dart';
+import '../core/cache/peer_avatar_cache.dart';
+import '../core/widgets/app_action_bottom_sheet.dart';
 import '../core/widgets/premium/premium_design_system.dart';
+import '../widgets/chat/chat_connection_banner.dart';
 import '../widgets/chat/chat_matches_row.dart';
 import '../features/matching/data/models/match.dart';
 import '../features/matching/providers/likes_providers.dart';
@@ -14,23 +22,31 @@ import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
 import '../widgets/chat/chat_list_item.dart';
 import '../widgets/chat/chat_list_loading.dart';
 import '../widgets/chat/chat_list_empty.dart';
+import '../widgets/chat/chat_list_reorder_row.dart';
+import '../widgets/chat/chat_list_search_field.dart';
+import '../widgets/chat/chat_list_swipe_row.dart';
 import '../widgets/error_handling/error_display_widget.dart';
+import '../widgets/modals/confirmation_dialog.dart';
 import '../features/chat/providers/conversation_mute_cache_provider.dart';
-import '../features/chat/providers/chat_provider.dart';
+import '../features/chat/providers/conversation_pin_cache_provider.dart';
+import '../features/chat/providers/chat_list_hidden_peers_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
-import '../features/chat/providers/chat_typing_providers.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
-import '../features/chat/data/models/chat.dart';
-import '../features/chat/utils/chat_message_preview.dart';
+import '../features/chat/providers/user_presence_cache_provider.dart';
+import '../features/chat/utils/chat_list_filter.dart';
+import '../features/calls/presentation/widgets/messenger_calls_list.dart';
+import '../features/calls/providers/messenger_calls_provider.dart';
+import '../features/calls/utils/messenger_call_groups.dart';
 import '../shared/models/api_error.dart';
 import '../core/providers/subscription_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-import '../core/widgets/staggered_list_item.dart';
 import '../routes/app_router.dart';
+import '../routes/home_tab_routes.dart';
 import 'chat_page.dart';
+import '../screens/message_search_screen.dart';
 
-enum _ChatFilter { all, unread, online }
+enum _MessengerSection { chats, calls }
 
 /// Chat list page - Displays list of conversations
 class ChatListPage extends ConsumerStatefulWidget {
@@ -53,12 +69,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   bool _hasError = false;
   String? _errorMessage;
   String _searchQuery = '';
-  List<Map<String, dynamic>> _chats = [];
   List<Match> _matches = [];
-  bool _didInitialLoadAnimation = false;
   bool _showSearch = false;
   final TextEditingController _searchController = TextEditingController();
-  _ChatFilter _activeFilter = _ChatFilter.all;
+  ChatListRowFilter _activeFilter = ChatListRowFilter.all;
+  _MessengerSection _section = _MessengerSection.chats;
+  MessengerCallFilter _callFilter = MessengerCallFilter.all;
   bool _premiumBannerDismissed = false;
   bool _retriedForMissingNames = false;
   int? _tabletSelectedUserId;
@@ -85,6 +101,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     if (nowSelected && !wasSelected) {
       _loadChats(forceRefresh: true);
       _loadMatches();
+      if (_section == _MessengerSection.calls) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ref.read(messengerCallsProvider.notifier).refresh();
+        });
+      }
     }
   }
 
@@ -94,14 +116,31 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     super.dispose();
   }
 
+  Future<void> _refreshMessenger() async {
+    if (_section == _MessengerSection.calls) {
+      await ref.read(messengerCallsProvider.notifier).refresh();
+      return;
+    }
+    await _loadChats(forceRefresh: true);
+    await _loadMatches();
+  }
+
   Future<void> _loadMatches() async {
     try {
       final matches = await ref.read(likesServiceProvider).getMatches();
+      unawaited(ref.read(peerAvatarCacheProvider.notifier).rememberMany({
+        for (final match in matches)
+          if (match.userId > 0) match.userId: match.primaryImageUrl,
+      }));
       if (mounted) {
         setState(() => _matches = matches);
       }
-    } catch (_) {
-      // Non-blocking — matches row hides when empty.
+    } catch (e) {
+      AppLogger.warning(
+        'Matches row load failed',
+        tag: 'Chat',
+        error: e,
+      );
     }
   }
 
@@ -131,17 +170,24 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         if (cached.isNotEmpty && mounted) {
           showedCache = true;
           ref.read(conversationMuteCacheProvider.notifier).seedFromChats(cached);
-          final maps = cached.map((chat) => _chatToMap(chat)).toList();
-          ref.read(chatListPreviewProvider.notifier).seedFromMaps(maps);
+          ref.read(conversationPinCacheProvider.notifier).seedFromChats(cached);
+          final items = await _hydratePreviewAvatars(
+            cached.map(ChatListPreviewItem.fromChat).toList(),
+          );
+          if (!mounted) return;
+          ref.read(chatListPreviewProvider.notifier).seedFromItems(items);
           setState(() {
-            _chats = maps;
             _isLoading = false;
             _hasError = false;
             _errorMessage = null;
           });
         }
-      } catch (_) {
-        // Non-blocking — fall through to network.
+      } catch (e) {
+        AppLogger.warning(
+          'Cached conversation list load failed; falling through to network',
+          tag: 'Chat',
+          error: e,
+        );
       }
     }
 
@@ -170,21 +216,23 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
             .read(chatLocalRepositoryProvider)
             .replaceAllConversations(chats);
         ref.read(conversationMuteCacheProvider.notifier).seedFromChats(chats);
-        final maps = chats.map((chat) => _chatToMap(chat)).toList();
-        ref.read(chatListPreviewProvider.notifier).seedFromMaps(maps);
+        ref.read(conversationPinCacheProvider.notifier).seedFromChats(chats);
+        final items = await _hydratePreviewAvatars(
+          chats.map(ChatListPreviewItem.fromChat).toList(),
+        );
+        if (!mounted) return;
+        ref.read(chatListPreviewProvider.notifier).seedFromItems(items);
         setState(() {
-          _chats = maps;
           _isLoading = false;
           _hasError = false;
         });
-        Future.delayed(
-          const Duration(milliseconds: 800),
-          () {
-            if (mounted) setState(() => _didInitialLoadAnimation = true);
-          },
-        );
       }
     } on ApiError catch (e) {
+      AppLogger.warning(
+        'Conversation list refresh failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
@@ -193,6 +241,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         });
       }
     } catch (e) {
+      AppLogger.warning(
+        'Conversation list refresh failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
@@ -201,6 +254,28 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         });
       }
     }
+  }
+
+  Future<List<ChatListPreviewItem>> _hydratePreviewAvatars(
+    List<ChatListPreviewItem> items,
+  ) async {
+    final cache = ref.read(peerAvatarCacheProvider.notifier);
+    await cache.rememberMany({
+      for (final item in items)
+        if (item.id > 0) item.id: item.avatarUrl,
+    });
+    final cached = ref.read(peerAvatarCacheProvider);
+    return [
+      for (final item in items)
+        item.copyWith(
+          avatarUrl: MediaUrl.pick(
+                userId: item.id,
+                incoming: item.avatarUrl,
+                cached: cached[item.id],
+              ) ??
+              item.avatarUrl,
+        ),
+    ];
   }
 
   String _displayNameFromMap(Map<String, dynamic> chat) {
@@ -214,58 +289,33 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     return 'User';
   }
 
-  Map<String, dynamic> _chatToMap(Chat chat) {
-    return {
-      'id': chat.userId, // Use userId for navigation to chat
-      'chat_id': chat.id, // Keep chat id for reference
-      'name': chat.displayName,
-      'first_name': chat.firstName,
-      'last_name': chat.lastName,
-      'avatar_url': chat.primaryImageUrl,
-      'last_message': chatMessagePreviewText(
-        message: chat.lastMessage?.message,
-        messageType: chat.lastMessage?.messageType,
-        mediaDuration: chat.lastMessage?.mediaDuration,
-      ),
-      'last_message_type': chat.lastMessage?.messageType,
-      'last_message_time': chat.lastMessageAt ?? chat.lastMessage?.createdAt,
-      'unread_count': chat.unreadCount,
-      'is_online': chat.isOnline,
-      'is_typing': chat.isTyping,
-      'is_muted': chat.isMuted,
-    };
-  }
+  List<Map<String, dynamic>> _filteredChats(ChatListPreviewState preview) {
+    final pinnedIds = ref.watch(conversationPinCacheProvider);
+    final source = [
+      for (final item in preview.items) item.toMap(),
+    ];
+    final withPins = [
+      for (final chat in source)
+        {
+          ...chat,
+          'is_pinned': pinnedIds.contains(chat['id'] as int? ?? 0) ||
+              chat['is_pinned'] == true ||
+              chat['is_pinned'] == 1,
+        },
+    ];
 
-  List<Map<String, dynamic>> get _filteredChats {
-    final source = ref.watch(chatListPreviewProvider).isSeeded
-        ? ref.watch(chatListPreviewProvider).items.map((e) => e.toMap()).toList()
-        : _chats;
-
-    final base = source.where((chat) {
-      switch (_activeFilter) {
-        case _ChatFilter.unread:
-          return (chat['unread_count'] as int? ?? 0) > 0;
-        case _ChatFilter.online:
-          return chat['is_online'] == true;
-        case _ChatFilter.all:
-          return true;
-      }
-    }).toList();
-
-    if (_searchQuery.isEmpty) {
-      return base;
-    }
-    return base
-        .where((chat) =>
-            chat['name']
-                .toString()
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase()) ||
-            chat['last_message']
-                .toString()
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase()))
-        .toList();
+    return ChatListFilter.apply(
+      source: withPins,
+      filter: _activeFilter,
+      query: _searchQuery,
+      hiddenIds: ref.watch(chatListHiddenPeersProvider),
+      presenceByUser: _activeFilter == ChatListRowFilter.online
+          ? {
+              for (final entry in ref.watch(userPresenceCacheProvider).entries)
+                entry.key: entry.value.isOnline,
+            }
+          : const {},
+    );
   }
 
   void _handleChatTap(Map<String, dynamic> chat) {
@@ -300,6 +350,149 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     context.push(target);
   }
 
+  Future<void> _swipeMute(int userId, bool currentlyMuted) async {
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      final muted = currentlyMuted
+          ? await chatService.unmuteConversation(userId)
+          : await chatService.muteConversation(userId);
+      ref.read(conversationMuteCacheProvider.notifier).setMuted(userId, muted);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(muted ? 'Conversation muted' : 'Conversation unmuted'),
+        ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e, stack) {
+      AppLogger.error(
+        'Swipe mute failed',
+        tag: 'ChatListPage',
+        error: e,
+        stackTrace: stack,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update mute')),
+      );
+    }
+  }
+
+  Future<void> _togglePin(int userId, bool currentlyPinned) async {
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      final pinned = currentlyPinned
+          ? await chatService.unpinConversation(userId)
+          : await chatService.pinConversation(userId);
+      ref.read(conversationPinCacheProvider.notifier).setPinned(userId, pinned);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(pinned ? 'Conversation pinned' : 'Conversation unpinned'),
+        ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e, stack) {
+      AppLogger.error(
+        'Conversation pin failed',
+        tag: 'ChatListPage',
+        error: e,
+        stackTrace: stack,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update pin')),
+      );
+    }
+  }
+
+  Future<void> _showConversationActions({
+    required int userId,
+    required String name,
+    required bool pinned,
+  }) async {
+    AppHaptics.medium();
+    await AppActionBottomSheet.show<void>(
+      context: context,
+      title: name == 'User' ? 'Conversation' : name,
+      actions: [
+        AppActionSheetItem(
+          iconPath: pinned ? AppIcons.bookmark2 : AppIcons.bookmark,
+          label: pinned ? 'Unpin' : 'Pin',
+          subtitle: pinned
+              ? 'Remove from the top of your list'
+              : 'Keep this chat at the top of your list',
+          onTap: () {
+            Navigator.pop(context);
+            unawaited(_togglePin(userId, pinned));
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<bool> _confirmHideConversation(String name) async {
+    final ok = await ConfirmationDialog.show(
+      context,
+      title: 'Delete conversation?',
+      message: name == 'User'
+          ? 'Remove this chat from your list? You can undo for a few seconds.'
+          : 'Remove $name from your list? You can undo for a few seconds.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+    );
+    return ok == true;
+  }
+
+  void _hideConversation(int userId, String name) {
+    ref.read(chatListHiddenPeersProvider.notifier).hide(userId);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: AppAnimations.chatListDeleteUndo,
+        content: Text(
+          name == 'User' ? 'Conversation hidden' : '$name hidden',
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            ref.read(chatListHiddenPeersProvider.notifier).restore(userId);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openPeerChat({
+    required int userId,
+    required String name,
+    String? avatarUrl,
+  }) {
+    _handleChatTap({
+      'id': userId,
+      'name': name,
+      'avatar_url': avatarUrl,
+      'unread_count': 0,
+      'is_online': false,
+    });
+  }
+
+  void _selectMessengerSection(_MessengerSection section) {
+    if (_section == section) return;
+    setState(() => _section = section);
+  }
+
   void _clearTabletSelection() {
     setState(() {
       _tabletSelectedUserId = null;
@@ -308,158 +501,236 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     });
   }
 
-  Widget _buildSearchField(ThemeData theme) {
-    if (!_showSearch) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        PremiumPageHeader.horizontalPadding,
-        0,
-        PremiumPageHeader.horizontalPadding,
-        AppSpacing.spacingSM,
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) => setState(() => _searchQuery = value),
-        decoration: InputDecoration(
-          hintText: 'Search conversations...',
-          prefixIcon: _MessengerSearchPrefixIcon(
-            isDark: theme.brightness == Brightness.dark,
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 52,
-            minHeight: 44,
-          ),
-          filled: true,
-          fillColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            borderSide: BorderSide(
-              color: AppColors.accentViolet.withValues(alpha: 0.14),
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            borderSide: BorderSide(
-              color: AppColors.accentViolet.withValues(alpha: 0.45),
-              width: 1.5,
-            ),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.spacingMD,
-            vertical: AppSpacing.spacingSM,
-          ),
-        ),
+  void _closeSearch() {
+    _searchController.clear();
+    setState(() {
+      _showSearch = false;
+      _searchQuery = '';
+    });
+  }
+
+  void _openMessageSearch(String value) {
+    if (_section != _MessengerSection.chats) return;
+    final query = value.trim();
+    if (query.length < 2) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MessageSearchScreen(initialQuery: query),
       ),
     );
   }
 
+  void _toggleSearch() {
+    if (_showSearch) {
+      _closeSearch();
+      return;
+    }
+    setState(() => _showSearch = true);
+  }
+
+  Widget _buildSearchField() {
+    return ChatListSearchField(
+      visible: _showSearch,
+      controller: _searchController,
+      hintText: _section == _MessengerSection.calls
+          ? 'Search calls...'
+          : 'Search conversations...',
+      onChanged: (value) => setState(() => _searchQuery = value),
+      onSubmitted: _openMessageSearch,
+      onClose: _closeSearch,
+    );
+  }
+
   Widget _buildConversationList({
-    required Map<int, bool> typingUsers,
     required EdgeInsets listPadding,
   }) {
+    final preview = ref.watch(chatListPreviewProvider);
+    final filtered = _filteredChats(preview);
+    final mutedIds = ref.watch(conversationMuteCacheProvider);
+    final pinnedIds = ref.watch(conversationPinCacheProvider);
+    final showLoading =
+        _isLoading && !preview.isSeeded && filtered.isEmpty;
+    final showError =
+        _hasError && !preview.isSeeded && filtered.isEmpty;
+
     return Expanded(
-      child: _isLoading && _chats.isEmpty
+      child: showLoading
           ? const ChatListLoading(itemCount: 5)
-          : _hasError && _chats.isEmpty
+          : showError
               ? ErrorDisplayWidget(
                   errorMessage:
                       _errorMessage ?? 'Failed to load conversations',
                   onRetry: _loadChats,
                 )
-              : _filteredChats.isEmpty
-                  ? RefreshIndicator(
-                      onRefresh: () async {
-                        await _loadChats(forceRefresh: true);
-                        await _loadMatches();
-                      },
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.35,
-                          child: const ChatListEmpty(),
+              : filtered.isEmpty
+                  ? SingleChildScrollView(
+                      physics: AppScroll.bouncing,
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height *
+                            (ChatListEmpty.showsDiscoverCta(_searchQuery)
+                                ? 0.5
+                                : 0.35),
+                        child: ChatListEmpty(
+                          title: ChatListEmpty.titleFor(_searchQuery),
+                          message: ChatListEmpty.messageFor(_searchQuery),
+                          iconPath: ChatListEmpty.isSearchQuery(_searchQuery)
+                              ? AppIcons.search
+                              : AppIcons.chatBubbleOutline,
+                          onDiscover:
+                              ChatListEmpty.showsDiscoverCta(_searchQuery)
+                                  ? () => context.go(
+                                        HomeTabRoutes.locationForTab(0),
+                                      )
+                                  : null,
                         ),
                       ),
                     )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        await _loadChats(forceRefresh: true);
-                        await _loadMatches();
+                  : ChatListReorderList(
+                      physics: AppScroll.forChat(context),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: listPadding,
+                      itemCount: filtered.length,
+                      itemIdAt: (index) => filtered[index]['id'] as int,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.spacingXS),
+                      itemBuilder: (context, index) {
+                        final chat = filtered[index];
+                        final userId = chat['id'] as int;
+                        final name = _displayNameFromMap(chat);
+                        final muted = mutedIds.contains(userId) ||
+                            chat['is_muted'] == true;
+                        final pinned = pinnedIds.contains(userId) ||
+                            chat['is_pinned'] == true ||
+                            chat['is_pinned'] == 1;
+                        final hasPlan = ref.watch(isPremiumProvider);
+                        return ChatListSwipeRow(
+                          userId: userId,
+                          isMuted: muted,
+                          isPinned: pinned,
+                          onMuteToggle: () => _swipeMute(userId, muted),
+                          onPinToggle: () => _togglePin(userId, pinned),
+                          onConfirmDelete: () =>
+                              _confirmHideConversation(name),
+                          onDeleted: () => _hideConversation(userId, name),
+                          child: RepaintBoundary(
+                            child: ChatListItem(
+                              userId: userId,
+                              name: name,
+                              avatarUrl: chat['avatar_url'],
+                              lastMessage: chat['last_message'],
+                              lastMessageType:
+                                  chat['last_message_type']?.toString(),
+                              lastMessageTime: chat['last_message_time'],
+                              unreadCount: chat['unread_count'],
+                              isOnline: chat['is_online'] == true ||
+                                  chat['is_online'] == 1,
+                              lastSeenAt: chat['last_seen'] is DateTime
+                                  ? chat['last_seen'] as DateTime
+                                  : DateTime.tryParse(
+                                      chat['last_seen']?.toString() ??
+                                          chat['last_seen_at']?.toString() ??
+                                          '',
+                                    ),
+                              isTyping: chat['is_typing'] == true,
+                              isMuted: muted,
+                              isPinned: pinned,
+                              lastMessageFromMe:
+                                  chat['last_message_from_me'] == true,
+                              lastMessageIsRead:
+                                  chat['last_message_is_read'] == true,
+                              lastMessageIsDelivered:
+                                  chat['last_message_is_delivered'] == true,
+                              highlightQuery: _searchQuery,
+                              onTap: () => _handleChatTap(chat),
+                              onLongPress: () => _showConversationActions(
+                                userId: userId,
+                                name: name,
+                                pinned: pinned,
+                              ),
+                            ),
+                          ),
+                        );
                       },
-                      child: ListView.separated(
-                        padding: listPadding,
-                        itemCount: _filteredChats.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.spacingSM),
-                        itemBuilder: (context, index) {
-                          final chat = _filteredChats[index];
-                          final userId = chat['id'] as int;
-                          final isTypingLive = typingUsers[userId] == true;
-                          final item = ChatListItem(
-                            userId: userId,
-                            name: _displayNameFromMap(chat),
-                            avatarUrl: chat['avatar_url'],
-                            lastMessage: chat['last_message'],
-                            lastMessageType:
-                                chat['last_message_type']?.toString(),
-                            lastMessageTime: chat['last_message_time'],
-                            unreadCount: chat['unread_count'],
-                            isOnline: chat['is_online'],
-                            isTyping:
-                                chat['is_typing'] == true || isTypingLive,
-                            isMuted: chat['is_muted'] == true,
-                            onTap: () => _handleChatTap(chat),
-                          );
-                          return StaggeredListItem(
-                            index: index,
-                            animateAppear:
-                                !_didInitialLoadAnimation && index < 8,
-                            child: item,
-                          );
-                        },
-                      ),
                     ),
     );
   }
 
   Widget _buildMessengerBody({
     required ThemeData theme,
-    required Map<int, bool> typingUsers,
     required bool showPremiumBanner,
-    EdgeInsets listPadding = const EdgeInsets.symmetric(
-      horizontal: PremiumPageHeader.horizontalPadding,
+    EdgeInsets listPadding = const EdgeInsets.fromLTRB(
+      PremiumPageHeader.horizontalPadding,
+      AppSpacing.spacingXS,
+      PremiumPageHeader.horizontalPadding,
+      AppSpacing.spacingLG,
     ),
     bool compactHeader = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSearchField(theme),
+        const ChatConnectionBanner(),
+        _buildSearchField(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            PremiumPageHeader.horizontalPadding,
+            0,
+            PremiumPageHeader.horizontalPadding,
+            AppSpacing.spacingSM,
+          ),
+          child: _MessengerSectionSwitch(
+            selectedIndex: _section.index,
+            onSelected: (i) =>
+                _selectMessengerSection(_MessengerSection.values[i]),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
           child: PremiumCategoryChips(
-            labels: const ['All', 'Unread', 'Online'],
-            selectedIndex: _activeFilter.index,
-            onSelected: (i) =>
-                setState(() => _activeFilter = _ChatFilter.values[i]),
+            labels: _section == _MessengerSection.calls
+                ? const ['All', 'Missed', 'Incoming', 'Outgoing']
+                : const ['All', 'Unread', 'Online'],
+            selectedIndex: _section == _MessengerSection.calls
+                ? _callFilter.index
+                : _activeFilter.index,
+            onSelected: (i) {
+              setState(() {
+                if (_section == _MessengerSection.calls) {
+                  _callFilter = MessengerCallFilter.values[i];
+                } else {
+                  _activeFilter = ChatListRowFilter.values[i];
+                }
+              });
+            },
           ),
         ),
-        if (!compactHeader) ...[
-          ChatMatchesRow(matches: _matches),
-          const SizedBox(height: AppSpacing.spacingMD),
-        ],
-        if (showPremiumBanner && !compactHeader)
+        if (_section == _MessengerSection.chats)
+          ChatMatchesRow(
+            matches: _matches,
+            onMatchTap: (match) => _openPeerChat(
+              userId: match.userId,
+              name: match.firstName,
+              avatarUrl: match.primaryImageUrl,
+            ),
+          ),
+        if (_section == _MessengerSection.chats &&
+            showPremiumBanner &&
+            !compactHeader)
           ChatPremiumBanner(
             onDismiss: _dismissPremiumBanner,
             onUpgrade: () => context.push(AppRoutes.subscriptionPlans),
           ),
-        _buildConversationList(
-          typingUsers: typingUsers,
-          listPadding: listPadding,
-        ),
+        if (_section == _MessengerSection.calls)
+          MessengerCallsList(
+            filter: _callFilter,
+            searchQuery: _searchQuery,
+            listPadding: listPadding,
+          )
+        else
+          _buildConversationList(
+            listPadding: listPadding,
+          ),
       ],
     );
   }
@@ -499,7 +770,6 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
 
   Widget _buildTabletMasterDetail({
     required ThemeData theme,
-    required Map<int, bool> typingUsers,
     required bool showPremiumBanner,
   }) {
     final isDark = theme.brightness == Brightness.dark;
@@ -510,41 +780,42 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     return Scaffold(
       backgroundColor:
           isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SizedBox(
               width: ResponsiveGrid.chatMasterPanelWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  PremiumPageHeader(
-                    title: 'Messenger',
-                    subtitle: 'Conversations',
-                    action: IconButton(
-                      icon: AppSvgIcon(
-                        assetPath: AppIcons.search,
-                        size: 24,
-                        color: theme.colorScheme.onSurface,
+              child: PremiumRefreshScope(
+                    onRefresh: _refreshMessenger,
+                    header: PremiumPageHeader(
+                      title: 'Messenger',
+                      subtitle: _section == _MessengerSection.calls
+                          ? 'Voice and video recents'
+                          : 'Conversations',
+                      action: IconButton(
+                        icon: AppSvgIcon(
+                          assetPath: AppIcons.search,
+                          size: 24,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        tooltip: _showSearch ? 'Close search' : 'Search',
+                        onPressed: _toggleSearch,
                       ),
-                      onPressed: () =>
-                          setState(() => _showSearch = !_showSearch),
                     ),
-                  ),
-                  Expanded(
-                    child: _buildMessengerBody(
+                    body: _buildMessengerBody(
                       theme: theme,
-                      typingUsers: typingUsers,
                       showPremiumBanner: showPremiumBanner,
-                      listPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingSM,
+                      listPadding: const EdgeInsets.fromLTRB(
+                        AppSpacing.spacingSM,
+                        AppSpacing.spacingXS,
+                        AppSpacing.spacingSM,
+                        AppSpacing.spacingLG,
                       ),
                       compactHeader: true,
                     ),
                   ),
-                ],
-              ),
             ),
             VerticalDivider(width: 1, color: dividerColor),
             Expanded(
@@ -567,90 +838,115 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(chatTypingSyncProvider);
-    ref.watch(chatListSyncProvider);
-    final typingUsers = ref.watch(
-      chatProvider.select((state) => state.typingUsers),
-    );
-
     final theme = Theme.of(context);
     final showPremiumBanner =
         !ref.watch(isPremiumProvider) && !_premiumBannerDismissed;
 
-    return ResponsiveLayout(
-      phone: PremiumTabPageLayout(
-        title: 'Messenger',
-        subtitle: 'Your conversations & matches',
-        action: IconButton(
-          icon: AppSvgIcon(
-            assetPath: AppIcons.search,
-            size: 24,
-            color: theme.colorScheme.onSurface,
+    try {
+      return ResponsiveLayout(
+        phone: (_) => PremiumTabPageLayout(
+          title: 'Messenger',
+          subtitle: _section == _MessengerSection.calls
+              ? 'Voice and video recents'
+              : 'Your conversations & matches',
+          onRefresh: _refreshMessenger,
+          action: IconButton(
+            icon: AppSvgIcon(
+              assetPath: AppIcons.search,
+              size: 24,
+              color: theme.colorScheme.onSurface,
+            ),
+            tooltip: _showSearch ? 'Close search' : 'Search',
+            onPressed: _toggleSearch,
           ),
-          onPressed: () => setState(() => _showSearch = !_showSearch),
+          body: _buildMessengerBody(
+            theme: theme,
+            showPremiumBanner: showPremiumBanner,
+          ),
         ),
-        body: _buildMessengerBody(
+        tablet: (_) => _buildTabletMasterDetail(
           theme: theme,
-          typingUsers: typingUsers,
           showPremiumBanner: showPremiumBanner,
         ),
-      ),
-      tablet: _buildTabletMasterDetail(
-        theme: theme,
-        typingUsers: typingUsers,
-        showPremiumBanner: showPremiumBanner,
-      ),
-    );
+      );
+    } catch (error, stack) {
+      AppLogger.error(
+        'ChatListPage build failed',
+        tag: 'ChatListPage',
+        error: error,
+        stackTrace: stack,
+      );
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: ErrorDisplayWidget(
+          title: 'Messenger unavailable',
+          errorMessage:
+              'This screen hit an unexpected error. Retry without leaving the app.',
+          onRetry: () {
+            if (mounted) setState(() {});
+          },
+        ),
+      );
+    }
   }
 }
 
-/// Gradient search badge for the messenger search field prefix.
-class _MessengerSearchPrefixIcon extends StatelessWidget {
-  const _MessengerSearchPrefixIcon({required this.isDark});
+/// Chats | Calls switch at the top of Messenger.
+class _MessengerSectionSwitch extends StatelessWidget {
+  const _MessengerSectionSwitch({
+    required this.selectedIndex,
+    required this.onSelected,
+  });
 
-  final bool isDark;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.spacingSM),
-      child: Container(
-        width: 34,
-        height: 34,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.accentViolet.withValues(alpha: isDark ? 0.32 : 0.16),
-              AppColors.accentPink.withValues(alpha: isDark ? 0.24 : 0.12),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppColors.accentViolet.withValues(alpha: 0.28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.accentViolet.withValues(alpha: isDark ? 0.18 : 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    const labels = ['Chats', 'Calls'];
+    final theme = Theme.of(context);
+    final track = theme.colorScheme.onSurface.withValues(alpha: 0.06);
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: track,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(
+          color: AppColors.accentViolet.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: PremiumTapScale(
+                onTap: () => onSelected(i),
+                semanticLabel: labels[i],
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  alignment: Alignment.center,
+                  constraints: const BoxConstraints(minHeight: 44),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.spacingSM,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(99),
+                    gradient: selectedIndex == i ? AppColors.brandGradient : null,
+                  ),
+                  child: Text(
+                    labels[i],
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: selectedIndex == i
+                          ? Colors.white
+                          : AppColors.accentViolet,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.accentViolet, AppColors.accentPink],
-          ).createShader(bounds),
-          blendMode: BlendMode.srcIn,
-          child: AppSvgIcon(
-            assetPath: AppIcons.getIconBold('search-normal'),
-            size: 17,
-          ),
-        ),
+        ],
       ),
     );
   }

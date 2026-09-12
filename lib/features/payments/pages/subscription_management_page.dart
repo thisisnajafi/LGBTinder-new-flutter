@@ -260,7 +260,8 @@ class _SubscriptionManagementPageState
     if (tier == null) return 'Free';
     switch (tier.toLowerCase()) {
       case 'silder':
-        return 'Silder';
+      case 'silver':
+        return 'Silver';
       case 'golden':
         return 'Golden';
       case 'basic':
@@ -305,7 +306,7 @@ class _SubscriptionManagementPageState
 
     return Stack(
       children: [
-        RefreshIndicator(
+        PremiumRefreshIndicator(
           onRefresh: _loadAll,
           child: AppSettingsDetailList(
             children: [
@@ -444,7 +445,7 @@ class _SubscriptionManagementPageState
         const SizedBox(height: AppSpacing.spacingSM),
         ..._planOptions.map((subPlan) {
           final isYearly = (subPlan.durationDays ?? 0) >= 365;
-          final tierName = subPlan.planId == 3 ? 'Golden' : 'Silder';
+          final tierName = subPlan.planId == 3 ? 'Golden' : 'Silver';
 
           return Card(
             margin: const EdgeInsets.symmetric(

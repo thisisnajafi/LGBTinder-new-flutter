@@ -96,6 +96,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
   final CacheService _cacheService;
 
   bool _fetchInProgress = false;
+  int _badgeEpoch = 0;
 
   static const Duration _listCacheDuration = Duration(hours: 24);
 
@@ -134,7 +135,13 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
         if (item is Map<String, dynamic>) {
           try {
             notifications.add(app_models.Notification.fromJson(item));
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.warning(
+              'Skipping malformed cached notification',
+              tag: 'Notifications',
+              error: e,
+            );
+          }
         }
       }
       if (notifications.isEmpty) return;
@@ -195,6 +202,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       clearError: true,
     );
 
+    final epoch = _badgeEpoch;
     try {
       final page = await _fetchPage(1);
       if (page == null) return;
@@ -207,7 +215,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
         isRefreshing: false,
         clearError: true,
       );
-      _syncUnreadBadge(page.unreadCount);
+      _syncUnreadBadge(page.unreadCount, epoch: epoch);
       unawaited(_persistCache());
     } on ApiError catch (e) {
       state = state.copyWith(
@@ -238,6 +246,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     _fetchInProgress = true;
 
     state = state.copyWith(isLoadingMore: true, clearError: true);
+    final epoch = _badgeEpoch;
 
     try {
       final page = await _fetchPage(state.currentPage);
@@ -260,7 +269,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
         isLoadingMore: false,
         clearError: true,
       );
-      _syncUnreadBadge(page.unreadCount);
+      _syncUnreadBadge(page.unreadCount, epoch: epoch);
       unawaited(_persistCache());
     } on ApiError catch (e) {
       AppLogger.warning(
@@ -288,61 +297,36 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     );
   }
 
-  void _syncUnreadBadge(int unreadCount) {
-    _ref.invalidate(unreadNotificationCountProvider);
+  void _syncUnreadBadge(int unreadCount, {required int epoch}) {
+    if (epoch != _badgeEpoch) return;
+    _ref.read(unreadNotificationCountSeedProvider.notifier).state = unreadCount;
+  }
+
+  void clearUnreadBadge() {
+    _badgeEpoch++;
+    _ref.read(unreadNotificationCountSeedProvider.notifier).state = 0;
+  }
+
+  void syncBadgeFromLocalList() {
+    final unread = state.notifications.where((n) => !n.isRead).length;
+    _ref.read(unreadNotificationCountSeedProvider.notifier).state = unread;
   }
 
   void markAsReadLocal(int notificationId) {
     state = state.copyWith(
       notifications: state.notifications
-          .map(
-            (n) => n.id == notificationId
-                ? app_models.Notification(
-                    id: n.id,
-                    type: n.type,
-                    title: n.title,
-                    message: n.message,
-                    createdAt: n.createdAt,
-                    isRead: true,
-                    data: n.data,
-                    userId: n.userId,
-                    userName: n.userName,
-                    userImageUrl: n.userImageUrl,
-                    actionUrl: n.actionUrl,
-                    isPlanRestricted: n.isPlanRestricted,
-                    upgradeRequired: n.upgradeRequired,
-                  )
-                : n,
-          )
+          .map((n) => n.id == notificationId ? n.copyWith(isRead: true) : n)
           .toList(growable: false),
     );
-    _syncUnreadBadge(0);
     unawaited(_persistCache());
   }
 
   void markAllAsReadLocal() {
     state = state.copyWith(
       notifications: state.notifications
-          .map(
-            (n) => app_models.Notification(
-              id: n.id,
-              type: n.type,
-              title: n.title,
-              message: n.message,
-              createdAt: n.createdAt,
-              isRead: true,
-              data: n.data,
-              userId: n.userId,
-              userName: n.userName,
-              userImageUrl: n.userImageUrl,
-              actionUrl: n.actionUrl,
-              isPlanRestricted: n.isPlanRestricted,
-              upgradeRequired: n.upgradeRequired,
-            ),
-          )
+          .map((n) => n.copyWith(isRead: true))
           .toList(growable: false),
     );
-    _syncUnreadBadge(0);
     unawaited(_persistCache());
   }
 
@@ -352,7 +336,17 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           .where((n) => n.id != notificationId)
           .toList(growable: false),
     );
-    _syncUnreadBadge(0);
+    syncBadgeFromLocalList();
+    unawaited(_persistCache());
+  }
+
+  void insertLocal(app_models.Notification notification, {int? index}) {
+    if (state.notifications.any((n) => n.id == notification.id)) return;
+    final next = [...state.notifications];
+    final insertAt = (index ?? 0).clamp(0, next.length);
+    next.insert(insertAt, notification);
+    state = state.copyWith(notifications: next);
+    syncBadgeFromLocalList();
     unawaited(_persistCache());
   }
 
@@ -364,7 +358,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       initialLoadComplete: true,
       clearError: true,
     );
-    _syncUnreadBadge(0);
+    clearUnreadBadge();
     final key = _cacheKey();
     if (key != null) {
       unawaited(_cacheService.clearCache(key));

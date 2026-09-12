@@ -10,7 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
-import '../images/optimized_image.dart';
+import '../../core/widgets/optimized_image.dart';
 import '../../core/responsive/responsive.dart';
 
 /// Avatar upload widget with gradient ring, SVG icons, and rim action button.

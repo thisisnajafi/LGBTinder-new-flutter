@@ -8,3 +8,6 @@ final likesServiceProvider = Provider<LikesService>((ref) {
   return LikesService(apiService);
 });
 
+/// Bumped when Pusher `new.like` arrives so Likes You can reload.
+final likesReceivedEpochProvider = StateProvider<int>((ref) => 0);
+

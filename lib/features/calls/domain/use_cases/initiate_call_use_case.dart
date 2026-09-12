@@ -1,5 +1,6 @@
 import '../../data/repositories/call_repository.dart';
 import '../../data/models/call.dart';
+import '../../data/models/call_initiate_exception.dart';
 
 /// Use Case: InitiateCallUseCase
 /// Handles initiating new voice or video calls
@@ -23,9 +24,16 @@ class InitiateCallUseCase {
       );
 
       // Check call eligibility first
-      final eligibility = await _callRepository.checkCallEligibility(normalized.receiverId);
+      final eligibility = await _callRepository.checkCallEligibility(
+        normalized.receiverId,
+        callType: normalized.callType,
+      );
       if (!eligibility.canCall) {
-        throw Exception(eligibility.reason ?? 'Unable to initiate call');
+        throw CallInitiateException(
+          eligibility.reason ?? 'Unable to initiate call',
+          upgradeRequired: eligibility.isPremiumRequired,
+          matchRequired: eligibility.isMatchRequired,
+        );
       }
 
       return await _callRepository.initiateCall(normalized);

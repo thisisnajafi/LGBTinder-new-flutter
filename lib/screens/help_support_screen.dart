@@ -593,47 +593,35 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                   style: AppTypography.h3.copyWith(color: textColor, fontWeight: FontWeight.bold),
                 ),
               SizedBox(height: AppSpacing.spacingMD),
-              TextField(
+              PremiumTextField(
                 controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                ),
+                label: 'Name',
+                hintText: 'Your name',
+                prefixIconPath: AppIcons.user,
                 textCapitalization: TextCapitalization.words,
               ),
               SizedBox(height: AppSpacing.spacingMD),
-              TextField(
+              PremiumTextField(
                 controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                ),
+                label: 'Email',
+                hintText: 'name@example.com',
+                prefixIconPath: AppIcons.email,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
               ),
               SizedBox(height: AppSpacing.spacingMD),
-              TextField(
+              PremiumTextField(
                 controller: subjectController,
-                decoration: InputDecoration(
-                  labelText: 'Subject (optional)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                ),
+                label: 'Subject (optional)',
+                hintText: 'How can we help?',
+                prefixIconPath: AppIcons.documentText,
               ),
               SizedBox(height: AppSpacing.spacingMD),
-              TextField(
+              PremiumTextField(
                 controller: messageController,
-                decoration: InputDecoration(
-                  labelText: 'Message',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.radiusSM)),
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                ),
+                label: 'Message',
+                hintText: 'Tell us what’s going on',
+                prefixIconPath: AppIcons.message,
                 maxLines: 4,
               ),
               SizedBox(height: AppSpacing.spacingLG),

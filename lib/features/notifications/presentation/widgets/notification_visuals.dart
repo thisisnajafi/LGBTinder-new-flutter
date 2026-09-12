@@ -30,6 +30,12 @@ class NotificationVisuals {
     'premium_feature',
     'verification_reminder',
     'general',
+    'info',
+    'safety_alert',
+    'safety',
+    'report',
+    'moderation',
+    'system_announcement',
   };
 
   static const Set<String> _userTypes = {
@@ -49,6 +55,10 @@ class NotificationVisuals {
     'incoming_call_audio',
     'incoming_call_video',
     'call',
+    'missed_call',
+    'missed-call',
+    'call_missed',
+    'call.missed',
     'story_like',
     'story_reply',
     'feed_like',
@@ -125,7 +135,9 @@ class NotificationVisuals {
       case 'view':
       case 'profile_view':
       case 'profile':
-        return AppIcons.getIconPath('eye');
+      case 'visit':
+      case 'profile_visit':
+        return AppIcons.eye;
       case 'plan_purchased':
       case 'plan_granted':
       case 'plan_upgraded':
@@ -148,7 +160,24 @@ class NotificationVisuals {
       case 'incoming_call_audio':
       case 'incoming_call_video':
       case 'call':
-        return AppIcons.getIconPath('call');
+        return AppIcons.call;
+      case 'missed_call':
+      case 'missed-call':
+      case 'call_missed':
+      case 'call.missed':
+        return AppIcons.callMissed;
+      case 'safety_alert':
+      case 'safety':
+      case 'report':
+      case 'moderation':
+        return AppIcons.shield;
+      case 'system':
+      case 'announcement':
+      case 'admin':
+      case 'general':
+      case 'info':
+      case 'system_announcement':
+        return AppIcons.infoCircle;
       default:
         return AppIcons.notification;
     }
@@ -177,6 +206,23 @@ class NotificationVisuals {
       case 'subscription_renewed':
       case 'payment_success':
         return AppColors.feedbackSuccess;
+      case 'missed_call':
+      case 'missed-call':
+      case 'call_missed':
+      case 'call.missed':
+        return AppColors.feedbackError;
+      case 'safety_alert':
+      case 'safety':
+      case 'report':
+      case 'moderation':
+        return AppColors.feedbackWarning;
+      case 'system':
+      case 'announcement':
+      case 'admin':
+      case 'general':
+      case 'info':
+      case 'system_announcement':
+        return AppColors.feedbackInfo;
       default:
         return AppColors.accentViolet;
     }

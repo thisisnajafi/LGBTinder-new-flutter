@@ -14,9 +14,16 @@ import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
 import 'notification_navigation.dart';
 import '../../features/calls/data/models/incoming_call_data.dart';
+import '../../features/calls/data/models/active_call_notification.dart';
+import '../../features/calls/data/models/active_call_session.dart';
 import '../../features/settings/providers/sound_preferences_provider.dart';
 import '../../features/settings/data/models/sound_preferences.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
+import '../../features/chat/providers/active_chat_peer_bridge.dart';
+import '../../features/chat/providers/in_app_chat_banner_provider.dart';
+import '../../features/chat/utils/chat_fcm_suppress.dart';
+import '../../features/chat/utils/in_app_chat_banner.dart';
+import '../../features/notifications/data/foreground_push_policy.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Service for handling push notifications
@@ -45,7 +52,14 @@ class PushNotificationService {
     'plan_purchased',
     'plan_granted',
     'plan_upgraded',
+    'plan_downgraded',
     'subscription_renewed',
+    'subscription_canceled',
+    'subscription_cancelled',
+    'subscription_expired',
+    'payment_success',
+    'payment_failed',
+    'premium_feature',
   };
 
   /// Set API service for backend communication and push the current token if we have one.
@@ -110,12 +124,18 @@ class PushNotificationService {
       );
 
       if (response.isSuccess) {
-        AppLogger.debug('FCM token sent to backend successfully');
+        AppLogger.info('FCM token sent to backend successfully', tag: 'Notifications');
       } else {
-        AppLogger.debug('Failed to send FCM token to backend: ${response.message}');
+        AppLogger.error(
+          'Failed to send FCM token to backend: ${response.message}',
+          tag: 'Notifications',
+        );
       }
     } catch (e) {
-      AppLogger.debug('Error sending FCM token to backend: $e');
+      AppLogger.error(
+        'Error sending FCM token to backend: $e',
+        tag: 'Notifications',
+      );
     }
   }
 
@@ -163,13 +183,34 @@ class PushNotificationService {
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
+    final iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          ActiveCallNotification.iosCategory,
+          actions: [
+            DarwinNotificationAction.plain(
+              ActiveCallNotification.actionReturn,
+              'Return',
+              options: {
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+            DarwinNotificationAction.plain(
+              ActiveCallNotification.actionHangup,
+              'Hang up',
+              options: {
+                DarwinNotificationActionOption.destructive,
+              },
+            ),
+          ],
+        ),
+      ],
     );
 
-    const initSettings = InitializationSettings(
+    final initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
@@ -188,6 +229,16 @@ class PushNotificationService {
         'LGBTFinder Notifications',
         description: 'Notifications for LGBTFinder app',
         importance: Importance.high,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        ActiveCallNotification.androidChannelId,
+        ActiveCallNotification.androidChannelName,
+        description: 'Ongoing call — tap to return',
+        importance: Importance.high,
+        playSound: false,
+        enableVibration: false,
       ),
     );
   }
@@ -215,13 +266,7 @@ class PushNotificationService {
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       AppLogger.debug('Received foreground message: ${message.messageId}');
-      if (_isIncomingCallPayload(message.data)) {
-        _handleIncomingCall(message.data);
-        return;
-      }
-      unawaited(_handlePremiumAccessNotification(message.data));
-      unawaited(_playPayloadSound(message.data));
-      _showLocalNotification(message);
+      unawaited(_onForegroundMessage(message));
     });
 
     // Handle background messages (when app is in background)
@@ -246,6 +291,70 @@ class PushNotificationService {
     });
   }
 
+  Future<void> _onForegroundMessage(RemoteMessage message) async {
+    if (_isIncomingCallPayload(message.data)) {
+      _handleIncomingCall(message.data);
+      return;
+    }
+    unawaited(_handlePremiumAccessNotification(message.data));
+    if (_shouldSuppressMessageAlert(message.data)) {
+      final openChat = _isOpenChatMessage(message.data);
+      AppLogger.info(
+        openChat
+            ? 'Suppressed FCM banner for the open chat'
+            : 'Suppressed FCM banner for a muted chat',
+        tag: 'Notifications',
+      );
+      if (openChat) {
+        await _markSuppressedChatRead(message.data);
+      }
+      return;
+    }
+
+    final type = message.data['type']?.toString() ?? 'general';
+    final fromUserId = NotificationNavigation.resolvePeerUserId(message.data);
+    if (ForegroundPushPolicy.shouldSuppress(
+      type: type,
+      fromUserId: fromUserId,
+    )) {
+      AppLogger.info(
+        'Suppressed FCM banner for muted user / quiet hours / disabled type ($type)',
+        tag: 'Notifications',
+      );
+      return;
+    }
+
+    if (ChatFcmSuppress.isChatPayload(message.data) ||
+        InAppChatBannerPolicy.fromGenericFcm(message.data) != null) {
+      final isChat = ChatFcmSuppress.isChatPayload(message.data);
+      final item = InAppChatBannerPolicy.fromFcm(
+        message.data,
+        notificationTitle: message.notification?.title,
+        notificationBody: message.notification?.body,
+      );
+      if (item != null &&
+          InAppChatBannerPolicy.shouldPresent(
+            isChatPayload: isChat,
+            isGenericPayload: !isChat,
+            suppressedOpenOrMuted: false,
+            isOwnMessage: false,
+            appForeground: inAppChatBannerAppForeground(),
+          ) &&
+          InAppChatBannerBridge.tryPresent(item)) {
+        AppLogger.info(
+          'In-app banner from FCM type=${item.type} peer=${item.peerUserId}',
+          tag: 'Notifications',
+        );
+        unawaited(_playPayloadSound(message.data));
+        ForegroundPushPolicy.bumpUnread?.call();
+        return;
+      }
+    }
+    unawaited(_playPayloadSound(message.data));
+    ForegroundPushPolicy.bumpUnread?.call();
+    await _showLocalNotification(message);
+  }
+
   /// Show local notification
   /// FEATURE ENHANCEMENT (Task 9.1.2): Added notification grouping
   Future<void> _showLocalNotification(RemoteMessage message) async {
@@ -266,7 +375,7 @@ class PushNotificationService {
 
     final type = data['type']?.toString() ?? 'general';
 
-    if (type == 'message' && _isMutedMessageSender(data)) {
+    if (_shouldSuppressMessageAlert(data)) {
       return;
     }
     
@@ -274,8 +383,8 @@ class PushNotificationService {
     String? groupKey;
     String? groupChannelId;
     
-    if (type == 'message') {
-      final userId = data['user_id']?.toString();
+    if (ChatFcmSuppress.isChatPayload(data)) {
+      final userId = data['user_id']?.toString() ?? data['sender_id']?.toString();
       if (userId != null) {
         groupKey = 'messages_$userId';
         groupChannelId = 'lgbtfinder_messages';
@@ -424,6 +533,15 @@ class PushNotificationService {
 
   /// Handle local notification tap (foreground FCM shown as local notification).
   void _onNotificationTapped(NotificationResponse response) {
+    if (ActiveCallNotification.isHangupAction(response.actionId) ||
+        ActiveCallNotification.isReturnAction(
+          response.actionId,
+          response.payload,
+        )) {
+      ActiveCallBridge.dispatch(response.actionId, response.payload);
+      return;
+    }
+
     final payload = NotificationNavigation.parseLocalNotificationPayload(
       response.payload,
     );
@@ -506,14 +624,99 @@ class PushNotificationService {
     await SoundService.instance.playNotificationSound();
   }
 
-  bool _isMutedMessageSender(Map<String, dynamic> data) {
-    final senderId = int.tryParse(
-      data['sender_id']?.toString() ??
-          data['user_id']?.toString() ??
-          '',
+  bool _isOpenChatMessage(Map<String, dynamic> data) {
+    return ChatFcmSuppress.matchesOpenChat(
+      data,
+      isActivePeer: ActiveChatPeerBridge.isActivePeer,
+      isActiveConversation: ActiveChatPeerBridge.isActiveConversation,
     );
-    if (senderId == null || senderId <= 0) return false;
-    return ConversationMuteBridge.isPeerMuted?.call(senderId) ?? false;
+  }
+
+  bool _shouldSuppressMessageAlert(Map<String, dynamic> data) {
+    return ChatFcmSuppress.shouldSuppress(
+      data,
+      isActivePeer: ActiveChatPeerBridge.isActivePeer,
+      isActiveConversation: ActiveChatPeerBridge.isActiveConversation,
+      isMutedPeer: ConversationMuteBridge.isPeerMuted,
+    );
+  }
+
+  Future<void> _markSuppressedChatRead(Map<String, dynamic> data) async {
+    final senderId = ChatFcmSuppress.senderId(data);
+    if (senderId == null || _apiService == null) return;
+    try {
+      await _apiService!.post<void>(
+        ApiEndpoints.chatRead,
+        data: {'sender_id': senderId},
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'Mark-as-read after FCM suppress failed',
+        tag: 'Notifications',
+        error: e,
+      );
+    }
+  }
+
+  Future<void> showActiveCall(ActiveCallSession session) async {
+    final title = ActiveCallNotification.titleFor(session.peerName);
+    const androidDetails = AndroidNotificationDetails(
+      ActiveCallNotification.androidChannelId,
+      ActiveCallNotification.androidChannelName,
+      channelDescription: 'Ongoing call — tap to return',
+      importance: Importance.high,
+      priority: Priority.high,
+      ongoing: true,
+      autoCancel: false,
+      playSound: false,
+      enableVibration: false,
+      onlyAlertOnce: true,
+      category: AndroidNotificationCategory.call,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          ActiveCallNotification.actionReturn,
+          'Return',
+          showsUserInterface: true,
+          cancelNotification: false,
+        ),
+        AndroidNotificationAction(
+          ActiveCallNotification.actionHangup,
+          'Hang up',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ],
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: false,
+      categoryIdentifier: ActiveCallNotification.iosCategory,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+    );
+    try {
+      await _localNotifications.show(
+        ActiveCallNotification.notificationId,
+        title,
+        'Tap to return',
+        const NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: ActiveCallNotification.encode(
+          callId: session.callId,
+          location: session.routeLocation,
+          peerName: session.peerName,
+        ),
+      );
+    } catch (e) {
+      AppLogger.warning('Active call notification failed', error: e);
+    }
+  }
+
+  Future<void> hideActiveCall() async {
+    try {
+      await _localNotifications.cancel(ActiveCallNotification.notificationId);
+    } catch (e) {
+      AppLogger.debug('Active call notification cancel failed: $e');
+    }
   }
 }
 

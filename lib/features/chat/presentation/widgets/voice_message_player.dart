@@ -11,6 +11,9 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_haptics.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../utils/voice_waveform_layout.dart';
+import '../../utils/chat_voice_bubble_layout.dart';
+import '../../utils/chat_media_playback.dart';
 import '../../../../widgets/chat/voice_waveform_bars.dart';
 
 /// Voice message bubble with animated waveform and playback progress.
@@ -18,12 +21,14 @@ class VoiceMessagePlayer extends StatefulWidget {
   final String mediaUrl;
   final int? durationSeconds;
   final bool isSent;
+  final VoidCallback? onListened;
 
   const VoiceMessagePlayer({
     super.key,
     required this.mediaUrl,
     this.durationSeconds,
     this.isSent = false,
+    this.onListened,
   });
 
   @override
@@ -32,10 +37,15 @@ class VoiceMessagePlayer extends StatefulWidget {
 
 class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   final _player = AudioPlayer();
+  final List<StreamSubscription<dynamic>> _playerSubs = [];
+  final _positionGate = ChatVoicePositionGate();
+  Duration? _queuedPosition;
   bool _isPlaying = false;
+  bool _notifiedListen = false;
   double _speed = 1.0;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  int _ownInterrupt = 0;
 
   @override
   void initState() {
@@ -44,27 +54,49 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       _duration = Duration(seconds: widget.durationSeconds!);
     }
 
-    _player.onPlayerComplete.listen((_) {
-      if (!mounted) return;
-      setState(() {
-        _isPlaying = false;
-        _position = Duration.zero;
-      });
-    });
-    _player.onPositionChanged.listen((position) {
-      if (!mounted) return;
-      setState(() => _position = position);
-    });
-    _player.onDurationChanged.listen((duration) {
-      if (!mounted || duration.inMilliseconds <= 0) return;
-      setState(() => _duration = duration);
-    });
+    _playerSubs.add(
+      _player.onPlayerComplete.listen((_) {
+        if (!mounted) return;
+        _positionGate.reset();
+        _queuedPosition = null;
+        setState(() {
+          _isPlaying = false;
+          _position = Duration.zero;
+        });
+      }),
+    );
+    _playerSubs.add(
+      _player.onPositionChanged.listen((position) {
+        if (!mounted) return;
+        _setPosition(position);
+      }),
+    );
+    _playerSubs.add(
+      _player.onDurationChanged.listen((duration) {
+        if (!mounted || duration.inMilliseconds <= 0) return;
+        setState(() => _duration = duration);
+      }),
+    );
+    ChatMediaPlayback.interruptToken.addListener(_onMediaInterrupt);
   }
 
   @override
   void dispose() {
+    ChatMediaPlayback.interruptToken.removeListener(_onMediaInterrupt);
+    for (final sub in _playerSubs) {
+      unawaited(sub.cancel());
+    }
+    unawaited(_player.stop());
     unawaited(_player.dispose());
     super.dispose();
+  }
+
+  void _onMediaInterrupt() {
+    if (!mounted || !_isPlaying) return;
+    if (ChatMediaPlayback.interruptToken.value == _ownInterrupt) return;
+    unawaited(_player.pause());
+    _flushPosition();
+    setState(() => _isPlaying = false);
   }
 
   Future<void> _togglePlay() async {
@@ -72,27 +104,43 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
     if (_isPlaying) {
       await _player.pause();
+      _flushPosition();
       setState(() => _isPlaying = false);
       return;
     }
 
+    ChatMediaPlayback.interrupt();
+    _ownInterrupt = ChatMediaPlayback.interruptToken.value;
     await _player.setPlaybackRate(_speed);
     await _player.play(UrlSource(widget.mediaUrl));
     setState(() => _isPlaying = true);
+    if (!widget.isSent && !_notifiedListen) {
+      _notifiedListen = true;
+      widget.onListened?.call();
+    }
+  }
+
+  void _setPosition(Duration position, {bool force = false}) {
+    if (!force && !_positionGate.allow(DateTime.now())) {
+      _queuedPosition = position;
+      return;
+    }
+    _queuedPosition = null;
+    if (!mounted || _position == position) return;
+    setState(() => _position = position);
+  }
+
+  void _flushPosition() {
+    final queued = _queuedPosition;
+    if (queued == null) return;
+    _positionGate.reset();
+    _setPosition(queued, force: true);
   }
 
   Future<void> _cycleSpeed() async {
     AppHaptics.selection();
 
-    setState(() {
-      if (_speed == 1.0) {
-        _speed = 1.5;
-      } else if (_speed == 1.5) {
-        _speed = 2.0;
-      } else {
-        _speed = 1.0;
-      }
-    });
+    setState(() => _speed = ChatVoiceBubbleLayout.nextSpeed(_speed));
     if (_isPlaying) {
       await _player.setPlaybackRate(_speed);
     }
@@ -110,22 +158,19 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     return (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
   }
 
-  String _speedLabel(double speed) {
-    if (speed == speed.roundToDouble()) {
-      return '${speed.toInt()}x';
-    }
-    return '${speed}x';
-  }
+  String _speedLabel(double speed) => ChatVoiceBubbleLayout.speedLabel(speed);
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.isSent ? Colors.white : AppColors.accentPurple;
+    final theme = Theme.of(context);
+    final accent =
+        widget.isSent ? theme.colorScheme.onPrimary : AppColors.accentPurple;
     final mutedAccent = accent.withValues(alpha: 0.72);
     final playButtonFill = widget.isSent
-        ? Colors.white.withValues(alpha: 0.22)
+        ? theme.colorScheme.onPrimary.withValues(alpha: 0.22)
         : AppColors.accentPurple.withValues(alpha: 0.14);
     final speedChipFill = widget.isSent
-        ? Colors.white.withValues(alpha: 0.16)
+        ? theme.colorScheme.onPrimary.withValues(alpha: 0.16)
         : AppColors.accentPurple.withValues(alpha: 0.1);
 
     final displayDuration = _duration.inMilliseconds > 0
@@ -138,16 +183,17 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxWidth = ResponsiveGrid.chatBubbleMaxWidth(
+        final cap = ResponsiveGrid.chatBubbleMaxWidth(
           context,
           fraction: 0.72,
-        ).clamp(200.0, 280.0);
+        );
+        final width = ChatVoiceBubbleLayout.width(
+          durationSeconds: displayDuration.inSeconds,
+          maxWidth: cap,
+        );
 
-        return ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: 200,
-            maxWidth: maxWidth,
-          ),
+        return SizedBox(
+          width: width,
           child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -167,7 +213,9 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                   height: 44,
                   child: Center(
                     child: AnimatedSwitcher(
-                      duration: AppAnimations.feedbackShort,
+                      duration: AppAnimations.animationsEnabled(context)
+                          ? AppAnimations.feedbackShort
+                          : Duration.zero,
                       switchInCurve: AppAnimations.curveDefault,
                       switchOutCurve: AppAnimations.curveDefault,
                       transitionBuilder: (child, animation) {
@@ -198,7 +246,6 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                   active: _isPlaying,
                   color: accent,
                   height: 28,
-                  barCount: 24,
                   progress: _progress,
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),

@@ -1,10 +1,11 @@
 // Screen: HomePage
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/constants/animation_constants.dart';
 import '../core/responsive/responsive.dart';
 import '../core/widgets/app_bottom_nav_bar.dart';
 import '../pages/discovery_page.dart';
@@ -13,6 +14,10 @@ import '../pages/profile_page.dart';
 import '../features/settings/pages/settings_page.dart';
 import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/notifications/providers/notification_providers.dart';
+import '../features/matching/data/models/match.dart' as match_models;
+import '../features/matching/widgets/match_celebration_launcher.dart';
+import '../features/chat/providers/chat_pusher_providers.dart';
+import '../shared/services/pusher_websocket_service.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../core/utils/app_logger.dart';
 import '../core/location/location_providers.dart';
@@ -20,7 +25,26 @@ import '../core/widgets/connectivity_banner.dart';
 import '../core/providers/api_providers.dart';
 import '../routes/home_tab_routes.dart';
 
-/// Home page — main shell with animated tabs and root back-navigation.
+/// Notifications + Settings unmount after this idle window (PERF-PAGE-HOME-004).
+@visibleForTesting
+const Duration homeIdleTabDisposeAfter = Duration(minutes: 5);
+
+@visibleForTesting
+const Set<int> homeIdleDisposableTabs = {2, 4};
+
+/// Drops idle Settings/Notifications tabs while keeping the current one.
+@visibleForTesting
+Set<int> homeTabsAfterIdleDispose({
+  required Iterable<int> mounted,
+  required int currentIndex,
+}) {
+  return {
+    for (final tab in mounted)
+      if (tab == currentIndex || !homeIdleDisposableTabs.contains(tab)) tab,
+  };
+}
+
+/// Home page — main shell with lazy tabs and root back-navigation.
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -29,10 +53,11 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  late final PageController _pageController;
+  final Set<int> _mountedTabs = {};
   int _lastRouteTab = 0;
-  bool _pageChangeFromRoute = false;
   DateTime? _lastExitBackPressAt;
+  StreamSubscription<MatchEvent>? _matchSub;
+  Timer? _idleDisposeTimer;
 
   static const Duration _exitConfirmWindow = Duration(seconds: 2);
 
@@ -41,115 +66,98 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     screenLog('HomePage', 'initState');
     startupLog('HomePage: reached HOME');
-    _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final initialTab = HomeTabRoutes.tabIndexFromGoState(GoRouterState.of(context));
       _lastRouteTab = initialTab;
-      if (_pageController.hasClients && initialTab != 0) {
-        _pageController.jumpToPage(initialTab);
-      }
+      _mountedTabs.add(initialTab);
+      if (initialTab != 0) setState(() {});
       runStaleLocationBootstrap(ref);
+      _matchSub = ref
+          .read(pusherWebSocketServiceProvider)
+          .matchStream
+          .listen(_onRemoteMatch);
     });
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _idleDisposeTimer?.cancel();
+    _matchSub?.cancel();
     super.dispose();
   }
 
-  void _onTabTapped(int index) {
-    _navigateToTab(index, animate: true);
-  }
-
-  void _onPageChanged(int index) {
-    if (_pageChangeFromRoute) return;
-    _lastRouteTab = index;
-    final target = HomeTabRoutes.locationForTab(index);
-    if (GoRouterState.of(context).uri.toString() != target) {
-      context.go(target);
+  void _onRemoteMatch(MatchEvent event) {
+    if (!mounted) return;
+    if (MatchCelebrationDedupe.wasRecentlyShown(event.matchId, event.userId)) {
+      return;
     }
+    if ((event.userId ?? 0) <= 0) return;
+    MatchCelebrationDedupe.mark(event.matchId, event.userId);
+    final match = match_models.Match(
+      id: event.matchId ?? 0,
+      userId: event.userId ?? 0,
+      firstName: (event.firstName != null && event.firstName!.isNotEmpty)
+          ? event.firstName!
+          : 'Someone',
+      lastName: event.lastName,
+      primaryImageUrl: event.avatarUrl,
+      matchedAt: event.timestamp,
+    );
+    unawaited(
+      MatchCelebrationLauncher.show(
+        context,
+        ref,
+        match: match,
+        matchedAvatarUrl: event.avatarUrl,
+      ),
+    );
   }
 
-  /// Animates between tabs in bottom-nav order (direction-aware slide).
-  void _navigateToTab(int index, {required bool animate}) {
-    final bounded = index.clamp(0, HomeTabRoutes.tabCount - 1);
-    final currentPage = _pageController.hasClients
-        ? _pageController.page?.round() ?? _lastRouteTab
-        : _lastRouteTab;
+  void _onTabTapped(int index) {
+    _navigateToTab(index);
+  }
 
+  void _navigateToTab(int index) {
+    final bounded = index.clamp(0, HomeTabRoutes.tabCount - 1);
     if (bounded != 0) {
       _lastExitBackPressAt = null;
     }
+
+    _lastRouteTab = bounded;
+    final added = _mountedTabs.add(bounded);
+    if (added) setState(() {});
+    _scheduleIdleDispose(bounded);
 
     final target = HomeTabRoutes.locationForTab(bounded);
     if (GoRouterState.of(context).uri.toString() != target) {
       context.go(target);
     }
-
-    if (bounded == currentPage) {
-      _lastRouteTab = bounded;
-      return;
-    }
-
-    _lastRouteTab = bounded;
-    _pageChangeFromRoute = true;
-
-    if (!_pageController.hasClients) {
-      _pageChangeFromRoute = false;
-      return;
-    }
-
-    final shouldAnimate =
-        animate && AppAnimations.animationsEnabled(context);
-
-    if (shouldAnimate) {
-      _pageController
-          .animateToPage(
-            bounded,
-            duration: AppAnimations.transitionTab,
-            curve: AppAnimations.curveDefault,
-          )
-          .whenComplete(() {
-        if (mounted) _pageChangeFromRoute = false;
-      });
-    } else {
-      _pageController.jumpToPage(bounded);
-      _pageChangeFromRoute = false;
-    }
   }
 
-  void _syncPageControllerToRoute(int tabIndex) {
-    if (_lastRouteTab == tabIndex &&
-        (_pageController.hasClients
-            ? _pageController.page?.round() == tabIndex
-            : true)) {
-      return;
-    }
-    _lastRouteTab = tabIndex;
-
-    void jumpToTab() {
-      if (!_pageController.hasClients) return;
-      final current = _pageController.page?.round() ?? tabIndex;
-      if (current == tabIndex) return;
-      _pageChangeFromRoute = true;
-      _pageController.jumpToPage(tabIndex);
-      _pageChangeFromRoute = false;
-    }
-
-    if (_pageController.hasClients) {
-      jumpToTab();
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) jumpToTab();
+  void _scheduleIdleDispose(int currentIndex) {
+    _idleDisposeTimer?.cancel();
+    _idleDisposeTimer = Timer(homeIdleTabDisposeAfter, () {
+      if (!mounted) return;
+      final next = homeTabsAfterIdleDispose(
+        mounted: _mountedTabs,
+        currentIndex: currentIndex,
+      );
+      if (next.length == _mountedTabs.length &&
+          next.containsAll(_mountedTabs)) {
+        return;
+      }
+      setState(() {
+        _mountedTabs
+          ..clear()
+          ..addAll(next);
       });
-    }
+    });
   }
 
   void _handleSystemBack(int currentIndex, double navBarReserve) {
     if (currentIndex != 0) {
-      _navigateToTab(0, animate: true);
+      _navigateToTab(0);
       return;
     }
 
@@ -183,19 +191,29 @@ class _HomePageState extends ConsumerState<HomePage> {
     return int.tryParse(raw);
   }
 
-  List<Widget> _buildPages(int selectedTabIndex, int? profileUserId) => [
-        DiscoveryPage(
+  Widget _tabPage(int index, int selectedTabIndex, int? profileUserId) {
+    switch (index) {
+      case 0:
+        return DiscoveryPage(
           selectedTabIndex: selectedTabIndex,
           discoveryTabIndex: 0,
-        ),
-        ChatListPage(
+        );
+      case 1:
+        return ChatListPage(
           selectedTabIndex: selectedTabIndex,
           messengerTabIndex: 1,
-        ),
-        const NotificationsScreen(),
-        ProfilePage(userId: profileUserId),
-        const SettingsPage(),
-      ];
+        );
+      case 2:
+        return NotificationsScreen(
+          selectedTabIndex: selectedTabIndex,
+          notificationsTabIndex: 2,
+        );
+      case 3:
+        return ProfilePage(userId: profileUserId);
+      default:
+        return const SettingsPage();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -205,11 +223,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     final currentIndex = HomeTabRoutes.tabIndexFromGoState(routerState);
     final profileUserId = _profileUserIdFromRoute(routerState);
 
-    if (currentIndex != _lastRouteTab ||
-        (_pageController.hasClients &&
-            _pageController.page?.round() != currentIndex)) {
+    _mountedTabs.add(currentIndex);
+    if (_lastRouteTab != currentIndex) {
+      _lastRouteTab = currentIndex;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _syncPageControllerToRoute(currentIndex);
+        if (mounted) _scheduleIdleDispose(currentIndex);
       });
     }
 
@@ -217,8 +235,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     final navBarReserve = AppBottomNavBar.bottomReserve(bottomInset);
 
     ref.watch(connectivityServiceBindingProvider);
-
-    final pages = _buildPages(currentIndex, profileUserId);
 
     return PopScope(
       canPop: false,
@@ -229,53 +245,36 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        resizeToAvoidBottomInset: currentIndex != 1,
         body: ConnectivityBanner(
           child: Stack(
             fit: StackFit.expand,
             children: [
               Padding(
                 padding: EdgeInsets.only(bottom: navBarReserve),
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _KeepAliveTab(
-                      key: const ValueKey('tab_discovery'),
-                      child: pages[0],
-                    ),
-                    _KeepAliveTab(
-                      key: const ValueKey('tab_chat'),
-                      child: pages[1],
-                    ),
-                    _KeepAliveTab(
-                      key: const ValueKey('tab_notifications'),
-                      child: pages[2],
-                    ),
-                    _KeepAliveTab(
-                      key: const ValueKey('tab_profile'),
-                      child: pages[3],
-                    ),
-                    _KeepAliveTab(
-                      key: const ValueKey('tab_settings'),
-                      child: pages[4],
-                    ),
-                  ],
+                child: RepaintBoundary(
+                  child: IndexedStack(
+                    index: currentIndex,
+                    sizing: StackFit.expand,
+                    children: [
+                      for (var i = 0; i < HomeTabRoutes.tabCount; i++)
+                        KeyedSubtree(
+                          key: ValueKey('tab_$i'),
+                          child: _mountedTabs.contains(i)
+                              ? _tabPage(i, currentIndex, profileUserId)
+                              : const SizedBox.shrink(),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: AppBottomNavBar(
+                child: _HomeBottomNavHost(
                   currentIndex: currentIndex,
                   onTap: _onTabTapped,
-                  messengerUnreadCount: ref.watch(unreadChatCountProvider),
-                  notificationCount: ref.watch(unreadNotificationCountProvider).when(
-                        data: (count) => count,
-                        loading: () => null,
-                        error: (_, __) => null,
-                      ),
                 ),
               ),
             ],
@@ -286,24 +285,31 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-/// Keeps off-screen tab state when switching main sections.
-class _KeepAliveTab extends StatefulWidget {
-  final Widget child;
+/// Isolated badge watches so chat/notification counts do not rebuild tab bodies
+/// (PERF-PAGE-HOME-002 / 005).
+class _HomeBottomNavHost extends ConsumerWidget {
+  const _HomeBottomNavHost({
+    required this.currentIndex,
+    required this.onTap,
+  });
 
-  const _KeepAliveTab({super.key, required this.child});
-
-  @override
-  State<_KeepAliveTab> createState() => _KeepAliveTabState();
-}
-
-class _KeepAliveTabState extends State<_KeepAliveTab>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final messengerUnread = ref.watch(unreadChatCountProvider);
+    final notificationCount = ref.watch(
+      unreadNotificationCountProvider.select((async) => async.asData?.value),
+    );
+
+    return RepaintBoundary(
+      child: AppBottomNavBar(
+        currentIndex: currentIndex,
+        onTap: onTap,
+        messengerUnreadCount: messengerUnread,
+        notificationCount: notificationCount,
+      ),
+    );
   }
 }

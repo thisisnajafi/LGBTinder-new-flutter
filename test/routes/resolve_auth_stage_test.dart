@@ -3,7 +3,19 @@ import 'package:lgbtindernew/routes/app_router.dart';
 
 import '../e2e/helpers/mock_services.dart';
 
+class _CountingTokenStorage extends InMemoryTokenStorage {
+  int profileTokenReads = 0;
+
+  @override
+  Future<String?> getProfileCompletionToken() async {
+    profileTokenReads++;
+    return super.getProfileCompletionToken();
+  }
+}
+
 void main() {
+  setUp(resetAuthStageCache);
+
   group('resolveAuthStage', () {
     test('treats a surviving auth token with no session as authenticated',
         () async {
@@ -44,6 +56,20 @@ void main() {
       final storage = InMemoryTokenStorage()..seedUnauthenticated();
 
       expect(await resolveAuthStage(storage), AuthStage.unauthenticated);
+    });
+  });
+
+  group('resolveAuthStageCached', () {
+    test('reuses the stage until authRevision changes', () async {
+      final storage = _CountingTokenStorage()..seedAuthenticated();
+
+      expect(await resolveAuthStageCached(storage), AuthStage.authenticated);
+      expect(await resolveAuthStageCached(storage), AuthStage.authenticated);
+      expect(storage.profileTokenReads, 1);
+
+      storage.seedUnauthenticated();
+      expect(await resolveAuthStageCached(storage), AuthStage.unauthenticated);
+      expect(storage.profileTokenReads, 2);
     });
   });
 }

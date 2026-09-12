@@ -1,4 +1,6 @@
 ﻿// Screen: VideoCallScreen
+// DEAD UI (CALL-PERF-006). Canonical live call UI:
+// `lib/features/calls/pages/outgoing_call_page.dart`. Do not enhance this file.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
@@ -657,8 +659,6 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
             child: widget.userAvatarUrl != null
                 ? ProfileImageWidget(
                     imageUrl: widget.userAvatarUrl,
-                    width: double.infinity,
-                    height: double.infinity,
                     fit: BoxFit.cover,
                   )
                 : Center(

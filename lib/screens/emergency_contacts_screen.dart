@@ -408,13 +408,12 @@ class _AddContactDialogState extends ConsumerState<_AddContactDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Name field
-              TextFormField(
+              PremiumTextField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Full Name *',
-                  hintText: 'Enter contact\'s full name',
-                  prefixIcon: Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant),
-                ),
+                label: 'Full name',
+                hintText: 'Enter contact\'s full name',
+                prefixIconPath: AppIcons.user,
+                textCapitalization: TextCapitalization.words,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Name is required';
@@ -464,14 +463,13 @@ class _AddContactDialogState extends ConsumerState<_AddContactDialog> {
               SizedBox(height: AppSpacing.spacingMD),
 
               // Email field (optional)
-              TextFormField(
+              PremiumTextField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email (Optional)',
-                  hintText: 'contact@example.com',
-                  prefixIcon: Icon(Icons.email, color: theme.colorScheme.onSurfaceVariant),
-                ),
+                label: 'Email (optional)',
+                hintText: 'contact@example.com',
+                prefixIconPath: AppIcons.email,
                 keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
                     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
@@ -486,9 +484,10 @@ class _AddContactDialogState extends ConsumerState<_AddContactDialog> {
               // Relationship dropdown
               DropdownButtonFormField<String>(
                 value: _relationshipController.text.isNotEmpty ? _relationshipController.text : null,
-                decoration: InputDecoration(
-                  labelText: 'Relationship *',
-                  prefixIcon: Icon(Icons.people, color: theme.colorScheme.onSurfaceVariant),
+                decoration: premiumInputDecoration(
+                  context,
+                  hintText: 'Relationship',
+                  prefixIconPath: AppIcons.user,
                 ),
                 items: _relationshipOptions.map((relationship) {
                   return DropdownMenuItem<String>(

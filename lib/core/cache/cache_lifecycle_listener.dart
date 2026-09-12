@@ -78,7 +78,9 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
             await ref.read(presenceServiceProvider).onForeground();
             await ref.read(appCacheManagerProvider).revalidateAll();
             unawaited(
-              ref.read(chatPusherLifecycleProvider.notifier).reconnect(),
+              ref
+                  .read(chatPusherLifecycleProvider.notifier)
+                  .reconnect(manual: true),
             );
           }());
         }

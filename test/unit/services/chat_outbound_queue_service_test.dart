@@ -68,5 +68,132 @@ void main() {
 
       expect(await service.getPending(), isEmpty);
     });
+
+    test('getPending returns FIFO enqueue order', () async {
+      final t = DateTime(2026, 9, 12, 1);
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'a',
+          receiverId: 1,
+          senderId: 2,
+          message: 'first',
+          createdAt: t,
+        ),
+      );
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'b',
+          receiverId: 1,
+          senderId: 2,
+          message: 'second',
+          createdAt: t.add(const Duration(seconds: 1)),
+        ),
+      );
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'c',
+          receiverId: 1,
+          senderId: 2,
+          message: 'third',
+          createdAt: t.add(const Duration(seconds: 2)),
+        ),
+      );
+
+      expect(
+        (await service.getPending()).map((m) => m.clientId),
+        ['a', 'b', 'c'],
+      );
+    });
+
+    test('re-enqueue keeps original FIFO slot', () async {
+      final t = DateTime(2026, 9, 12, 1);
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'a',
+          receiverId: 1,
+          senderId: 2,
+          message: 'first',
+          createdAt: t,
+        ),
+      );
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'b',
+          receiverId: 1,
+          senderId: 2,
+          message: 'second',
+          createdAt: t.add(const Duration(seconds: 1)),
+        ),
+      );
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'a',
+          receiverId: 1,
+          senderId: 2,
+          message: 'first-updated',
+          createdAt: t,
+        ),
+      );
+
+      final pending = await service.getPending();
+      expect(pending.map((m) => m.clientId), ['a', 'b']);
+      expect(pending.first.message, 'first-updated');
+    });
+
+    test('cap drops the oldest FIFO row', () async {
+      service = ChatOutboundQueueService(repo, maxQueueSize: 2);
+      final t = DateTime(2026, 9, 12, 1);
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'a',
+          receiverId: 1,
+          senderId: 2,
+          message: 'first',
+          createdAt: t,
+        ),
+      );
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'b',
+          receiverId: 1,
+          senderId: 2,
+          message: 'second',
+          createdAt: t.add(const Duration(seconds: 1)),
+        ),
+      );
+      await service.enqueue(
+        QueuedChatMessage(
+          clientId: 'c',
+          receiverId: 1,
+          senderId: 2,
+          message: 'third',
+          createdAt: t.add(const Duration(seconds: 2)),
+        ),
+      );
+
+      expect(
+        (await service.getPending()).map((m) => m.clientId),
+        ['b', 'c'],
+      );
+    });
+
+    test('default cap of 50 drops the oldest row', () async {
+      for (var i = 0; i < 51; i++) {
+        await service.enqueue(
+          QueuedChatMessage(
+            clientId: 'c$i',
+            receiverId: 1,
+            senderId: 2,
+            message: '$i',
+            createdAt: DateTime(2026, 9, 12).add(Duration(seconds: i)),
+          ),
+        );
+      }
+
+      final pending = await service.getPending();
+      expect(pending, hasLength(50));
+      expect(pending.first.clientId, 'c1');
+      expect(pending.last.clientId, 'c50');
+    });
   });
 }

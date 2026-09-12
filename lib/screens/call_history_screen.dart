@@ -79,6 +79,7 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
     return AppSettingsDetailScaffold(
       title: 'Call history',
       subtitle: 'Recent voice and video calls',
+      onRefresh: _isLoading ? null : _loadCallHistory,
       action: IconButton(
         icon: AppSvgIcon(
           assetPath: AppIcons.getIconPath('refresh'),

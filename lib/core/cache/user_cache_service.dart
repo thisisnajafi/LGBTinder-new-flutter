@@ -1,12 +1,13 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/matching/data/models/match.dart';
 import '../../features/profile/data/models/user_profile.dart';
+import '../services/app_logger.dart';
 import 'cache_config.dart';
 import 'cache_entry.dart';
+import 'isolate_json.dart';
 
 /// Memory + disk cache for user profiles, match lists, and related JSON.
 class UserCacheService {
@@ -37,8 +38,9 @@ class UserCacheService {
       final raw = _prefs.getString(_diskKey(CacheConfig.userProfileKey(userId)));
       if (raw == null) return mem;
 
+      final json = await decodeJsonMapIsolate(raw);
       final entry = CacheEntry<UserProfile>.fromJson(
-        json: jsonDecode(raw) as Map<String, dynamic>,
+        json: json,
         dataFromJson: UserProfile.fromJson,
       );
 
@@ -49,9 +51,11 @@ class UserCacheService {
       _profileMemory[userId] = entry;
       return entry;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('UserCacheService.getProfile error: $e');
-      }
+      AppLogger.warning(
+        'UserCacheService.getProfile failed',
+        tag: 'Cache',
+        error: e,
+      );
       return mem;
     }
   }
@@ -76,9 +80,11 @@ class UserCacheService {
         ),
       );
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('UserCacheService.saveProfile error: $e');
-      }
+      AppLogger.warning(
+        'UserCacheService.saveProfile failed',
+        tag: 'Cache',
+        error: e,
+      );
     }
   }
 
@@ -109,7 +115,7 @@ class UserCacheService {
           _prefs.getString(_diskKey(CacheConfig.matchListKey(userId)));
       if (raw == null) return mem;
 
-      final map = jsonDecode(raw) as Map<String, dynamic>;
+      final map = await decodeJsonMapIsolate(raw);
       final list = (map['data'] as List)
           .map((e) => Match.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
@@ -125,9 +131,11 @@ class UserCacheService {
       _matchListMemory[userId] = entry;
       return entry;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('UserCacheService.getMatchList error: $e');
-      }
+      AppLogger.warning(
+        'UserCacheService.getMatchList failed',
+        tag: 'Cache',
+        error: e,
+      );
       return mem;
     }
   }
@@ -153,9 +161,11 @@ class UserCacheService {
         }),
       );
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('UserCacheService.saveMatchList error: $e');
-      }
+      AppLogger.warning(
+        'UserCacheService.saveMatchList failed',
+        tag: 'Cache',
+        error: e,
+      );
     }
   }
 

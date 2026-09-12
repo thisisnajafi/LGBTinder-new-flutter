@@ -25,10 +25,14 @@ class CacheConfig {
   static const String diskTimestampSuffix = '_ts';
   static const String diskTtlSuffix = '_ttl';
 
-  // ── Image cache (flutter_cache_manager) ───────────────────────────────────
+  // ── Image cache (flutter_cache_manager disk + Flutter ImageCache RAM) ──
   static const String imageCacheKey = 'lgbtfinder_image_cache';
   static const int imageCacheMaxObjects = 500;
   static const Duration imageCacheStalePeriod = Duration(hours: 30);
+  /// Live decoded bitmaps in [ImageCache] (CHAT-PERF-002).
+  static const int imageMemoryMaxLiveImages = 200;
+  /// ~80 MiB decoded-image RAM cap.
+  static const int imageMemoryMaxBytes = 80 * 1024 * 1024;
 
   static Duration profileTtlForUser(String userId, String? currentUserId) {
     if (currentUserId != null && userId == currentUserId) {

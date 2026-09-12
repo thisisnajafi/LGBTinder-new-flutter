@@ -15,6 +15,7 @@ import '../screens/auth/email_verification_screen.dart';
 import '../pages/profile_wizard_page.dart';
 import '../screens/onboarding/onboarding_preferences_screen.dart';
 import '../features/calls/pages/outgoing_call_page.dart';
+import '../features/calls/pages/peer_call_history_page.dart';
 import '../pages/chat_list_page.dart';
 import '../pages/chat_page.dart';
 import '../pages/profile_edit_page.dart';
@@ -62,6 +63,7 @@ class AppRoutes {
   static const String chatList = '/chat-list';
   static const String chat = '/chat';
   static const String outgoingCall = '/call/outgoing';
+  static const String peerCallHistory = '/calls/history';
   static const String profile = '/profile';
   static const String profileEdit = '/profile/edit';
   static const String profileVerification = '/profile/verification';
@@ -92,6 +94,7 @@ Page<void> slideFadePage(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
+    opaque: true,
     transitionDuration: AppAnimations.transitionPage,
     reverseTransitionDuration: AppAnimations.transitionPage,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -112,14 +115,27 @@ Page<void> slideFadePage(GoRouterState state, Widget child) {
   );
 }
 
-/// Instant page — use on splash so startup never waits on route transitions (ANR-safe).
-Page<void> noTransitionPage(GoRouterState state, Widget child) {
+/// Instant page — splash, home shell (tab query must not animate).
+Page<void> noTransitionPage(
+  GoRouterState state,
+  Widget child, {
+  LocalKey? key,
+}) {
   return CustomTransitionPage<void>(
-    key: state.pageKey,
+    key: key ?? state.pageKey,
     child: child,
     transitionDuration: Duration.zero,
     reverseTransitionDuration: Duration.zero,
     transitionsBuilder: (_, __, ___, child) => child,
+  );
+}
+
+/// Platform page — Android 14+ predictive back (PERF-ROUTE-004).
+Page<void> platformPredictivePage(GoRouterState state, Widget child) {
+  return MaterialPage<void>(
+    key: state.pageKey,
+    name: state.name,
+    child: child,
   );
 }
 
@@ -156,6 +172,7 @@ const Set<String> _authOnlyTopLevelRoutes = {
   AppRoutes.subscriptionPlans,
   AppRoutes.chat,
   AppRoutes.outgoingCall,
+  AppRoutes.peerCallHistory,
   AppRoutes.featureLocked,
   AppRoutes.tierComparison,
   AppRoutes.subscriptionStatus,
@@ -222,6 +239,27 @@ Future<AuthStage> resolveAuthStage(TokenStorageService tokenStorage) async {
   return AuthStage.authenticated;
 }
 
+AuthStage? _cachedAuthStage;
+int _cachedAuthRevision = -1;
+
+/// Skips secure-storage when [TokenStorageService.authRevision] is unchanged.
+Future<AuthStage> resolveAuthStageCached(TokenStorageService tokenStorage) async {
+  final revision = tokenStorage.authRevision;
+  if (_cachedAuthStage != null && revision == _cachedAuthRevision) {
+    return _cachedAuthStage!;
+  }
+  final stage = await resolveAuthStage(tokenStorage);
+  _cachedAuthStage = stage;
+  _cachedAuthRevision = revision;
+  return stage;
+}
+
+@visibleForTesting
+void resetAuthStageCache() {
+  _cachedAuthStage = null;
+  _cachedAuthRevision = -1;
+}
+
 _GuardDecision evaluateGuardDecision({
   required String location,
   required bool hasLeftStartupFlow,
@@ -232,6 +270,9 @@ _GuardDecision evaluateGuardDecision({
   required bool hasPendingProtectedRoute,
 }) {
   if (location == AppRoutes.splash && hasLeftStartupFlow) {
+    if (authStage == AuthStage.authenticated) {
+      return const _GuardDecision(redirectTo: AppRoutes.home);
+    }
     return const _GuardDecision(redirectTo: AppRoutes.welcome);
   }
 
@@ -291,7 +332,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return legacyResolved;
       }
 
-      final authStage = await resolveAuthStage(tokenStorage);
+      final authStage = await resolveAuthStageCached(tokenStorage);
       final pending = _redirector.pendingProtectedRoute;
       final decision = evaluateGuardDecision(
         location: loc,
@@ -430,7 +471,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         name: 'home',
-        pageBuilder: (context, state) => slideFadePage(state, const HomePage()),
+        pageBuilder: (context, state) => noTransitionPage(
+          state,
+          const HomePage(),
+          key: const ValueKey('home-shell'),
+        ),
         routes: [
           // Main tabs live inside [HomePage]; legacy paths redirect to ?tab=.
           GoRoute(
@@ -528,7 +573,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (userId == null) {
             return slideFadePage(state, const HomePage());
           }
-          return slideFadePage(
+          return platformPredictivePage(
             state,
             ProfileDetailScreen(userId: int.parse(userId)),
           );
@@ -638,6 +683,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               recipientAvatarUrl: qp['avatarUrl'],
               type: type,
               isCallee: qp['callee'] == '1',
+              shouldInitiate: qp['initiate'] == '1' || callId <= 0,
+            ),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: AppRoutes.peerCallHistory,
+        name: 'peer-call-history',
+        pageBuilder: (context, state) {
+          final qp = state.uri.queryParameters;
+          final userId = int.tryParse(qp['userId'] ?? '') ?? 0;
+          return slideFadePage(
+            state,
+            PeerCallHistoryPage(
+              peerUserId: userId,
+              peerName: qp['userName'] ?? 'User',
+              peerAvatarUrl: qp['avatarUrl'],
             ),
           );
         },
@@ -666,7 +729,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   userName: userName,
                   avatarUrl: avatarUrl,
                 );
-          return slideFadePage(state, child);
+          return platformPredictivePage(state, child);
         },
       ),
     ],

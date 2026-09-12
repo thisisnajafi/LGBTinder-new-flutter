@@ -1,6 +1,7 @@
 // Screen: BillingHistoryScreen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/services/app_logger.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/typography.dart';
 import '../core/theme/spacing_constants.dart';
@@ -22,6 +23,9 @@ class BillingHistoryScreen extends ConsumerStatefulWidget {
 
 class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _page = 1;
   List<Map<String, dynamic>> _transactions = [];
 
   @override
@@ -30,17 +34,27 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
     _loadBillingHistory();
   }
 
-  Future<void> _loadBillingHistory() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadBillingHistory({bool refresh = true}) async {
+    if (refresh) {
+      setState(() {
+        _isLoading = true;
+        _page = 1;
+        _hasMore = true;
+      });
+    } else {
+      if (_isLoadingMore || !_hasMore) return;
+      setState(() => _isLoadingMore = true);
+    }
 
     try {
-      final historyList =
-          await ref.read(paymentServiceProvider).getPaymentHistory();
+      final historyList = await ref.read(paymentServiceProvider).getPaymentHistory(
+            page: refresh ? 1 : _page,
+            limit: 20,
+          );
 
+      if (!mounted) return;
       setState(() {
-        _transactions = historyList.map((item) {
+        final mapped = historyList.map((item) {
           return {
             'id': item.id,
             'date': item.createdAt,
@@ -51,15 +65,37 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
             'method': item.type,
           };
         }).toList();
+        if (refresh) {
+          _transactions = mapped;
+          _page = 2;
+        } else {
+          _transactions = [..._transactions, ...mapped];
+          _page += 1;
+        }
+        _hasMore = historyList.length >= 20;
       });
-    } catch (e) {
-      setState(() {
-        _transactions = [];
-      });
+    } catch (e, stack) {
+      AppLogger.error(
+        'Failed to load billing history',
+        tag: 'BillingHistory',
+        error: e,
+        stackTrace: stack,
+      );
+      if (mounted && refresh) {
+        setState(() {
+          _transactions = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load billing history')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
     }
   }
 
@@ -75,12 +111,15 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
     switch (status.toLowerCase()) {
       case 'completed':
       case 'succeeded':
+      case 'success':
         return AppColors.feedbackSuccess;
       case 'pending':
         return AppColors.feedbackWarning;
       case 'failed':
       case 'cancelled':
         return AppColors.feedbackError;
+      case 'refunded':
+        return AppColors.feedbackInfo;
       default:
         return AppColors.textSecondaryLight;
     }
@@ -104,15 +143,31 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                   message: 'Your payment history will appear here.',
                   iconPath: AppIcons.receipt,
                 )
-              : RefreshIndicator(
+              : PremiumRefreshIndicator(
                   onRefresh: _loadBillingHistory,
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.spacingLG,
                       vertical: AppSpacing.spacingSM,
                     ),
-                    itemCount: _transactions.length,
+                    itemCount: _transactions.length + (_hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index >= _transactions.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: AppSpacing.spacingLG,
+                          ),
+                          child: Center(
+                            child: _isLoadingMore
+                                ? const CircularProgressIndicator()
+                                : TextButton(
+                                    onPressed: () =>
+                                        _loadBillingHistory(refresh: false),
+                                    child: const Text('Load more'),
+                                  ),
+                          ),
+                        );
+                      }
                       final transaction = _transactions[index];
                       final statusColor =
                           _getStatusColor(transaction['status'] as String);
@@ -151,7 +206,11 @@ class _BillingHistoryScreenState extends ConsumerState<BillingHistoryScreen> {
                                   ),
                                   Expanded(
                                     child: AppText(
-                                      transaction['description'] as String,
+                                      (transaction['description'] as String?)
+                                                  ?.isNotEmpty ==
+                                              true
+                                          ? transaction['description'] as String
+                                          : 'Payment',
                                       style: AppTypography.bodyLarge.copyWith(
                                         color: textColor,
                                         fontWeight: FontWeight.w700,

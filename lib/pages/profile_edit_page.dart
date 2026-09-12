@@ -9,6 +9,7 @@ import '../core/theme/app_colors.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/metric_slider_tile.dart';
 import '../core/theme/spacing_constants.dart';
+import '../core/utils/app_icons.dart';
 import '../widgets/profile/edit/profile_image_editor.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/buttons/gradient_button.dart';
@@ -743,7 +744,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
-              title: 'Images',
+              title: 'Gallery',
+              subtitle: 'Profiles with 3+ photos get 5× more matches',
               children: [
                 ProfileImageEditor(
                   imageUrls:
@@ -763,16 +765,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
-              title: 'About me',
+              title: 'Personality',
+              subtitle: 'Let your authentic self shine',
               children: [
-                TextFormField(
+                PremiumTextField(
                   controller: _bioController,
-                  decoration: const InputDecoration(
-                    labelText: 'Bio',
-                    hintText: 'Tell others about yourself',
-                    alignLabelWithHint: true,
-                  ),
+                  label: 'Bio',
+                  hintText: 'Tell others about yourself',
                   maxLines: 5,
+                  minLines: 4,
                   maxLength: 500,
                   onChanged: (value) => _bio = value,
                 ),
@@ -780,32 +781,42 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
             const SizedBox(height: AppSpacing.spacingXL),
             PremiumSettingsGroup(
-              title: 'Personal details',
+              title: 'About me',
+              subtitle: 'The details that help you match better',
               children: [
-                HeightSliderTile(
-                  value: _height ?? 170,
-                  onChanged: (value) => setState(() => _height = value),
+                PremiumInsetCard(
+                  child: HeightSliderTile(
+                    value: _height ?? 170,
+                    onChanged: (value) => setState(() => _height = value),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.spacingSM),
-                WeightSliderTile(
-                  value: _weight ?? 70,
-                  onChanged: (value) => setState(() => _weight = value),
+                PremiumInsetCard(
+                  child: WeightSliderTile(
+                    value: _weight ?? 70,
+                    onChanged: (value) => setState(() => _weight = value),
+                  ),
                 ),
+                const SizedBox(height: AppSpacing.spacingSM),
                 PremiumToggleRow(
                   title: 'Smoking',
-                  subtitle: 'Do you smoke?',
+                  subtitle: _smoke ? 'Yes' : 'No',
+                  iconPath: AppIcons.getIconPath('cloud'),
                   value: _smoke,
                   onChanged: (value) => setState(() => _smoke = value),
                 ),
                 PremiumToggleRow(
                   title: 'Drinking',
-                  subtitle: 'Do you drink alcohol?',
+                  subtitle: _drink ? 'Yes' : 'No',
+                  iconPath: AppIcons.getIconPath('glass'),
                   value: _drink,
                   onChanged: (value) => setState(() => _drink = value),
                 ),
                 PremiumToggleRow(
                   title: 'Gym',
-                  subtitle: 'Do you work out regularly?',
+                  subtitle: _gym ? 'Active' : 'Sometimes',
+                  iconPath: AppIcons.getIconPath('weight'),
+                  accent: AppColors.warningYellow,
                   value: _gym,
                   onChanged: (value) => setState(() => _gym = value),
                 ),

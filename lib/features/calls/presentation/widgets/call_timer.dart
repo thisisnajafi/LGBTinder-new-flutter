@@ -6,6 +6,8 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../providers/call_provider.dart';
 
+/// DEAD UI (CALL-PERF-006). Canonical live timer lives on
+/// `lib/features/calls/pages/outgoing_call_page.dart` via live-call UI providers.
 /// Call timer widget
 /// Displays and manages call duration
 class CallTimer extends ConsumerStatefulWidget {

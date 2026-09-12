@@ -16,6 +16,7 @@ import '../../providers/payment_providers.dart';
 import '../widgets/purchase_history_item.dart';
 import '../widgets/purchase_filter_chip.dart';
 import 'purchase_details_screen.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 
 /// Google Play Purchase History Screen
 /// Displays user's Google Play purchases with filtering options
@@ -198,7 +199,7 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
                       )
                     : _purchases.isEmpty
                         ? _buildEmptyState(textColor, secondaryTextColor)
-                        : RefreshIndicator(
+                        : PremiumRefreshIndicator(
                             onRefresh: () => _loadPurchases(refresh: true),
                             child: ListView.builder(
                               padding: EdgeInsets.all(AppSpacing.spacingMD),

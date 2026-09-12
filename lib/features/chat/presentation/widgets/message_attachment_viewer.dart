@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -500,36 +501,45 @@ class _VoicePlaybackControlsState extends State<_VoicePlaybackControls> {
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  final List<StreamSubscription<dynamic>> _playerSubs = [];
 
   @override
   void initState() {
     super.initState();
 
-    // Listen to player state changes
-    widget.player.onPlayerStateChanged.listen((state) {
-      setState(() {
-        _isPlaying = state == PlayerState.playing;
-      });
-    });
-
-    // Listen to duration changes
-    widget.player.onDurationChanged.listen((duration) {
-      setState(() {
-        _duration = duration;
-      });
-    });
-
-    // Listen to position changes
-    widget.player.onPositionChanged.listen((position) {
-      setState(() {
-        _position = position;
-      });
-    });
+    _playerSubs.add(
+      widget.player.onPlayerStateChanged.listen((state) {
+        if (!mounted) return;
+        setState(() {
+          _isPlaying = state == PlayerState.playing;
+        });
+      }),
+    );
+    _playerSubs.add(
+      widget.player.onDurationChanged.listen((duration) {
+        if (!mounted) return;
+        setState(() {
+          _duration = duration;
+        });
+      }),
+    );
+    _playerSubs.add(
+      widget.player.onPositionChanged.listen((position) {
+        if (!mounted) return;
+        setState(() {
+          _position = position;
+        });
+      }),
+    );
   }
 
   @override
   void dispose() {
-    widget.player.dispose();
+    for (final sub in _playerSubs) {
+      unawaited(sub.cancel());
+    }
+    unawaited(widget.player.stop());
+    unawaited(widget.player.dispose());
     super.dispose();
   }
 

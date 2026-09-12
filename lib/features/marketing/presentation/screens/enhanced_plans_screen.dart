@@ -16,6 +16,7 @@ import '../../providers/marketing_providers.dart';
 import '../../data/models/campaign_model.dart';
 import '../widgets/promo_code_input.dart';
 import '../widgets/promotional_banner.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
 
 /// Enhanced subscription plans screen with marketing features
 /// Part of the Marketing System Implementation (Task 3.5.1)
@@ -119,7 +120,7 @@ class _EnhancedPlansScreenState extends ConsumerState<EnhancedPlansScreen> {
       backgroundColor: backgroundColor,
       body: _isLoading
           ? const SkeletonLoading()
-          : RefreshIndicator(
+          : PremiumRefreshIndicator(
               onRefresh: _loadPlans,
               child: ListView(
                 padding: EdgeInsets.all(AppSpacing.spacingLG),

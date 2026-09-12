@@ -128,11 +128,11 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   }
 
   /// Update notification preferences
-  Future<void> updatePreferences(UpdateNotificationPreferencesRequest request) async {
+  Future<void> updatePreferences(NotificationPreferences preferences) async {
     state = state.copyWith(isUpdating: true, error: null);
 
     try {
-      final updatedPreferences = await _updatePreferencesUseCase.execute(request);
+      final updatedPreferences = await _updatePreferencesUseCase.execute(preferences);
       state = state.copyWith(
         preferences: updatedPreferences,
         isUpdating: false,
@@ -234,12 +234,9 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   /// Update unread count
   Future<void> _updateUnreadCount() async {
-    try {
-      final unreadCount = await _notificationRepository.getUnreadCount();
-      state = state.copyWith(unreadCount: unreadCount);
-    } catch (e) {
-      // Don't set error for unread count updates, just keep current state
-    }
+    final unreadCount =
+        state.notifications.where((notification) => !notification.isRead).length;
+    state = state.copyWith(unreadCount: unreadCount);
   }
 
   /// Check if notification should be shown based on preferences

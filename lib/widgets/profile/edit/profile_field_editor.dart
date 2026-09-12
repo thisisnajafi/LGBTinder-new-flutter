@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/theme/spacing_constants.dart';
-import '../../../core/theme/border_radius_constants.dart';
+import '../../../core/widgets/premium/premium_text_field.dart';
 import '../../buttons/gradient_button.dart';
 import '../../../core/responsive/responsive.dart';
 
@@ -62,8 +62,6 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     return Container(
       padding: EdgeInsets.all(AppSpacing.spacingLG),
@@ -77,34 +75,13 @@ class _ProfileFieldEditorState extends ConsumerState<ProfileFieldEditor> {
             maxLines: 2,
           ),
           SizedBox(height: AppSpacing.spacingMD),
-          TextField(
+          PremiumTextField(
             controller: _controller,
+            hintText: widget.hintText,
             keyboardType: widget.keyboardType,
-            maxLines: widget.maxLines,
+            maxLines: widget.maxLines ?? 1,
             maxLength: widget.maxLength,
             onChanged: widget.onChanged,
-            style: AppTypography.body.copyWith(color: textColor),
-            decoration: InputDecoration(
-              hintText: widget.hintText,
-              hintStyle: AppTypography.body.copyWith(color: secondaryTextColor),
-              filled: true,
-              fillColor: isDark
-                  ? AppColors.surfaceElevatedDark
-                  : AppColors.surfaceElevatedLight,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
-              ),
-              contentPadding: EdgeInsets.all(AppSpacing.spacingMD),
-            ),
           ),
           if (widget.showSaveButton) ...[
             SizedBox(height: AppSpacing.spacingLG),

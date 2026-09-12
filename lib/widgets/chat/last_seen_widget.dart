@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/responsive/responsive.dart';
+import '../../features/chat/utils/chat_presence_copy.dart';
 
 /// Last seen timestamp widget
 /// Displays when a user was last seen online
@@ -14,10 +15,10 @@ class LastSeenWidget extends ConsumerWidget {
   final bool isOnline;
 
   const LastSeenWidget({
-    Key? key,
+    super.key,
     this.lastSeenAt,
     this.isOnline = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,7 +40,7 @@ class LastSeenWidget extends ConsumerWidget {
           ),
           SizedBox(width: AppSpacing.spacingXS),
           AppText(
-            'Online',
+            ChatPresenceCopy.online,
             style: AppTypography.caption.copyWith(color: textColor),
             maxLines: 1,
           ),
@@ -50,29 +51,14 @@ class LastSeenWidget extends ConsumerWidget {
     final lastSeen = lastSeenAt?.toLocal();
     if (lastSeen == null) {
       return AppText(
-        'Offline',
+        ChatPresenceCopy.offline,
         style: AppTypography.caption.copyWith(color: textColor),
         maxLines: 1,
       );
     }
 
-    final difference = DateTime.now().difference(lastSeen);
-
-    String text;
-    if (difference.inMinutes < 1) {
-      text = 'Just now';
-    } else if (difference.inMinutes < 60) {
-      text = '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      text = '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      text = '${difference.inDays}d ago';
-    } else {
-      text = '${lastSeen.day}/${lastSeen.month}';
-    }
-
     return AppText(
-      'Last seen $text',
+      ChatPresenceCopy.lastSeenLabel(lastSeen),
       style: AppTypography.caption.copyWith(color: textColor),
       maxLines: 1,
     );

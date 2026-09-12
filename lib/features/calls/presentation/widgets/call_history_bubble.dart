@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:lgbtindernew/core/theme/app_colors.dart';
-import 'package:lgbtindernew/core/theme/border_radius_constants.dart';
-import 'package:lgbtindernew/core/theme/spacing_constants.dart';
-import 'package:lgbtindernew/core/theme/typography.dart';
 import 'package:lgbtindernew/core/utils/app_icons.dart';
 import 'package:lgbtindernew/features/calls/data/models/call.dart';
 import 'package:lgbtindernew/features/calls/utils/call_log_labels.dart';
-import '../../../../core/responsive/responsive.dart';
-/// Centered call log bubble shown inline in a chat thread (WhatsApp-style).
+import 'package:lgbtindernew/widgets/chat/chat_system_message.dart';
+
+/// Centered call log row in a chat thread (CHAT-BUBBLE-007 system chrome).
 class CallHistoryBubble extends StatelessWidget {
   final Call call;
   final int currentUserId;
@@ -22,8 +20,6 @@ class CallHistoryBubble extends StatelessWidget {
     this.timestamp,
     this.onTap,
   });
-
-  bool get _isOutgoing => call.callerId == currentUserId;
 
   bool get _isVideo => call.isVideoCall;
 
@@ -39,67 +35,15 @@ class CallHistoryBubble extends StatelessWidget {
     final textColor = isNegative
         ? AppColors.feedbackError
         : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight);
-    final iconPath = _isVideo ? AppIcons.video : AppIcons.phone;
-    final directionIcon =
-        _isOutgoing ? AppIcons.arrowRight : AppIcons.arrowLeft;
+    final iconPath = isNegative
+        ? AppIcons.callMissed
+        : (_isVideo ? AppIcons.video : AppIcons.phone);
 
-    return Align(
-      alignment: Alignment.center,
-      child: Padding(
-        padding: ResponsivePadding.horizontal(context).copyWith(
-          top: AppSpacing.spacingSM,
-          bottom: AppSpacing.spacingSM,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context, fraction: 0.85),
-          ),
-          child: Semantics(
-            label: label,
-            button: onTap != null,
-            child: Material(
-              color: (isDark ? AppColors.surfaceDark : AppColors.surfaceLight)
-                  .withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingMD,
-                    vertical: AppSpacing.spacingSM,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppSvgIcon(
-                        assetPath: directionIcon,
-                        size: 14,
-                        color: textColor,
-                      ),
-                      SizedBox(width: AppSpacing.spacingXS),
-                      AppSvgIcon(
-                        assetPath: isNegative ? AppIcons.callMissed : iconPath,
-                        size: 16,
-                        color: textColor,
-                      ),
-                      SizedBox(width: AppSpacing.spacingXS),
-                      Flexible(
-                        child: AppText(
-                          label,
-                          style: AppTypography.labelMedium.copyWith(color: textColor),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    return ChatSystemMessage(
+      caption: label,
+      iconPath: iconPath,
+      color: textColor,
+      onTap: onTap,
     );
   }
 }

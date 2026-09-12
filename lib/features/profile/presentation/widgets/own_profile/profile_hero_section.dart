@@ -10,12 +10,17 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
+import '../../../../../core/widgets/premium/premium_hero_header.dart';
 import '../../../../../core/widgets/profile_image_widget.dart';
 import '../../../../../core/widgets/profile_camera_badge.dart';
+import '../../../../../core/widgets/premium/profile_locked_overlay.dart';
 import '../../../../../features/matching/providers/likes_providers.dart';
 import '../../../../../routes/home_tab_routes.dart';
+import '../../../../../screens/feature_locked_screen.dart';
+import '../../../../../shared/models/page_tier_rules.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../widgets/tier_badge.dart';
+import 'profile_photo_utils.dart';
 import '../../../../../core/responsive/responsive.dart';
 
 /// Premium profile hero — identity, status, stats, and quick actions.
@@ -42,6 +47,7 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
     this.onMore,
     this.matchPercent,
     this.onPhotoTap,
+    this.planLabel,
   });
 
   final String fullName;
@@ -64,6 +70,7 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
   final VoidCallback? onMore;
   final int? matchPercent;
   final void Function(int index)? onPhotoTap;
+  final String? planLabel;
 
   @override
   ConsumerState<ProfileHeroSection> createState() =>
@@ -95,7 +102,7 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   }
 
   void _initPhotoController() {
-    if (widget.photoUrls.length > 1) {
+    if (uniqueProfilePhotoUrls(widget.photoUrls).length > 1) {
       _photoController = PageController();
     } else {
       _photoController = null;
@@ -148,121 +155,55 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenW = MediaQuery.sizeOf(context).width;
     final photoSize = (screenW * 0.28).clamp(104.0, 132.0);
+    final coverUrl = widget.photoUrls.isNotEmpty
+        ? widget.photoUrls[_photoIndex.clamp(0, widget.photoUrls.length - 1)]
+        : widget.avatarUrl;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.spacingLG,
-        AppSpacing.spacingXS,
-        AppSpacing.spacingLG,
-        0,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.radiusXL),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+    return PremiumHeroHeader(
+      onBack: widget.viewerMode ? widget.onBack : null,
+      inlineBack: false,
+      coverImageUrl: coverUrl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildPhotoCard(context, photoSize, isDark),
+          const SizedBox(height: AppSpacing.spacingMD),
+          _buildIdentityRow(context, isDark),
+          const SizedBox(height: AppSpacing.spacingSM),
+          _buildMetaRow(context, isDark),
+          const SizedBox(height: AppSpacing.spacingSM),
+          Align(
+            alignment: Alignment.center,
+            child: TierBadge(
+              tier: widget.tier,
+              compact: false,
+              label: widget.planLabel,
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.radiusXL),
-          child: Stack(
-            children: [
-              Positioned.fill(child: _CoverBackground(
-                avatarUrl: widget.photoUrls.isNotEmpty
-                    ? widget.photoUrls[_photoIndex.clamp(0, widget.photoUrls.length - 1)]
-                    : widget.avatarUrl,
-                isDark: isDark,
-              )),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.25),
-                      width: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingLG,
-                  AppSpacing.spacingMD,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (widget.viewerMode && widget.onBack != null)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _HeroTapScale(
-                          onTap: widget.onBack!,
-                          semanticLabel: 'Back',
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.35),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: Center(
-                              child: AppSvgIcon(
-                                assetPath: AppIcons.arrowLeft,
-                                size: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (widget.viewerMode && widget.onBack != null)
-                      const SizedBox(height: AppSpacing.spacingSM),
-                    _buildPhotoCard(context, photoSize, isDark),
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    _buildIdentityRow(context, isDark),
-                    const SizedBox(height: AppSpacing.spacingSM),
-                    _buildMetaRow(context, isDark),
-                    const SizedBox(height: AppSpacing.spacingSM),
-                    Align(
-                      alignment: Alignment.center,
-                      child: TierBadge(tier: widget.tier, compact: false),
-                    ),
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    _buildQuickActions(context, isDark),
-                    if (!widget.viewerMode) ...[
-                      const SizedBox(height: AppSpacing.spacingMD),
-                      _buildStatsPanel(context, isDark),
-                    ] else if (widget.matchPercent != null) ...[
-                      const SizedBox(height: AppSpacing.spacingMD),
-                      _buildViewerMatchChip(context),
-                    ],
-                  ],
-                ),
-              ),
-            ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.spacingMD),
+          _buildQuickActions(context, isDark),
+          if (!widget.viewerMode) ...[
+            const SizedBox(height: AppSpacing.spacingMD),
+            _buildStatsPanel(context, isDark),
+          ] else if (widget.matchPercent != null) ...[
+            const SizedBox(height: AppSpacing.spacingMD),
+            _buildViewerMatchChip(context),
+          ],
+        ],
       ),
     );
   }
 
   Widget _buildPhotoCard(BuildContext context, double size, bool isDark) {
-    final urls = widget.photoUrls.isNotEmpty
-        ? widget.photoUrls
-        : (widget.avatarUrl != null ? [widget.avatarUrl!] : const <String>[]);
-    final hasMultiple = urls.length > 1 && _photoController != null;
+    final urls = uniqueProfilePhotoUrls(
+      widget.photoUrls.isNotEmpty
+          ? widget.photoUrls
+          : (widget.avatarUrl != null ? [widget.avatarUrl!] : const <String>[]),
+    );
+    final hasMultiple = urls.length > 1;
 
     final photoStack = SizedBox(
       width: size + 12,
@@ -641,13 +582,7 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
               ),
               _statDivider(isDark),
               Expanded(
-                child: _StatCell(
-                  icon: AppIcons.heartTick,
-                  label: 'Likes',
-                  value: _likesReceived,
-                  color: AppColors.feedbackSuccess,
-                  loading: _statsLoading,
-                ),
+                child: _likesStatCell(context),
               ),
               _statDivider(isDark),
               Expanded(
@@ -666,6 +601,50 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
             ],
       ),
     );
+  }
+
+  Widget _likesStatCell(BuildContext context) {
+    final likesLocked =
+        !canAccessFeature(widget.tier, TierGatedFeature.likesYou);
+    final cell = _StatCell(
+      icon: AppIcons.heartTick,
+      label: 'Likes',
+      value: likesLocked ? 0 : _likesReceived,
+      color: AppColors.feedbackSuccess,
+      loading: likesLocked ? false : _statsLoading,
+    );
+
+    if (likesLocked) {
+      return ProfileLockedOverlay(
+        locked: true,
+        compact: true,
+        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+        semanticLabel: 'See who liked you. Upgrade to unlock.',
+        onUnlock: () => _openLikes(context),
+        child: cell,
+      );
+    }
+
+    return _HeroTapScale(
+      onTap: () => _openLikes(context),
+      semanticLabel: 'People who liked you',
+      child: cell,
+    );
+  }
+
+  void _openLikes(BuildContext context) {
+    if (!canAccessFeature(widget.tier, TierGatedFeature.likesYou)) {
+      context.push(
+        FeatureLockedScreen.location(
+          title: 'See who liked you',
+          description:
+              'Unlock this feature to view everyone who has liked your profile.',
+          minTier: minimumTierForFeature(TierGatedFeature.likesYou),
+        ),
+      );
+      return;
+    }
+    context.pushNamed('likes-received');
   }
 
   Widget _statDivider(bool isDark) {
@@ -712,85 +691,6 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _CoverBackground extends StatelessWidget {
-  const _CoverBackground({
-    required this.avatarUrl,
-    required this.isDark,
-  });
-
-  final String? avatarUrl;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (avatarUrl != null && avatarUrl!.isNotEmpty)
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-            child: Transform.scale(
-              scale: 1.15,
-              child: ProfileImageWidget(
-                imageUrl: avatarUrl,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          )
-        else
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF2E1064),
-                  Color(0xFF4C1D95),
-                  Color(0xFF831843),
-                ],
-              ),
-            ),
-          ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: isDark
-                  ? [
-                      AppColors.backgroundDark.withValues(alpha: 0.55),
-                      AppColors.backgroundDark.withValues(alpha: 0.88),
-                      AppColors.backgroundDark.withValues(alpha: 0.96),
-                    ]
-                  : [
-                      Colors.white.withValues(alpha: 0.72),
-                      Colors.white.withValues(alpha: 0.9),
-                      Colors.white.withValues(alpha: 0.96),
-                    ],
-              stops: const [0.0, 0.55, 1.0],
-            ),
-          ),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.accentViolet.withValues(alpha: isDark ? 0.22 : 0.12),
-                AppColors.accentPink.withValues(alpha: isDark ? 0.14 : 0.08),
-                AppColors.feedbackInfo.withValues(alpha: isDark ? 0.1 : 0.05),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

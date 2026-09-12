@@ -7,6 +7,7 @@ import '../../core/utils/app_icons.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../common/selection_bottom_sheet.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/widgets/premium/premium_settings.dart';
 
 /// Compact subsection label inside a [PremiumFilterSection].
 class FilterSubsectionTitle extends StatelessWidget {
@@ -258,13 +259,9 @@ class FilterToggleRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: AppSpacing.spacingSM),
-          Switch.adaptive(
+          PremiumSwitch(
             value: value,
             onChanged: onChanged,
-            activeTrackColor: AppColors.accentPurple.withValues(alpha: 0.45),
-            activeThumbColor: Colors.white,
-            inactiveThumbColor: isDark ? AppColors.surfaceElevatedDark : Colors.white,
-            inactiveTrackColor: isDark ? AppColors.borderMediumDark : AppColors.borderSubtleLight,
           ),
         ],
       ),
@@ -373,7 +370,7 @@ class FilterPremiumGate extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppSvgIcon(
-                    assetPath: AppIcons.crown,
+                    assetPath: AppIcons.lock,
                     size: 18,
                     color: AppColors.accentPurple,
                   ),

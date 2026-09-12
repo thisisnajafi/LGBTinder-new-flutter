@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:photo_view/photo_view.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -8,47 +7,7 @@ import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../routes/app_router.dart';
 import '../../../../core/responsive/responsive.dart';
 
-/// Full-screen chat image viewer with pinch-to-zoom.
-class ChatImageViewer extends StatelessWidget {
-  final String imageUrl;
-  final String? heroTag;
-
-  const ChatImageViewer({
-    super.key,
-    required this.imageUrl,
-    this.heroTag,
-  });
-
-  static void open(BuildContext context, {required String imageUrl, String? heroTag}) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => ChatImageViewer(imageUrl: imageUrl, heroTag: heroTag),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final image = PhotoView(
-      imageProvider: NetworkImage(imageUrl),
-      minScale: PhotoViewComputedScale.contained,
-      maxScale: PhotoViewComputedScale.covered * 3,
-      backgroundDecoration: const BoxDecoration(color: Colors.black),
-    );
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: CloseButton(color: AppColors.textPrimaryDark),
-      ),
-      body: heroTag != null
-          ? Hero(tag: heroTag!, child: image)
-          : image,
-    );
-  }
-}
+export '../../../../widgets/chat/chat_image_viewer.dart';
 
 /// Upgrade CTA when basid daily send limit is reached.
 class ChatUpgradeBottomSheet extends StatelessWidget {

@@ -1,8 +1,9 @@
-import '../../../../core/constants/api_endpoints.dart';
+import 'package:equatable/equatable.dart';
+import '../../../../core/utils/media_url.dart';
 
 /// User Image model
 /// FIXED: Task 5.3.2 - Updated to use centralized storageUrl instead of hardcoded CDN domain
-class UserImage {
+class UserImage extends Equatable {
   final int id;
   final int userId;
   final String path;
@@ -11,7 +12,7 @@ class UserImage {
   final bool isPrimary;
   final Map<String, dynamic>? sizes;
 
-  UserImage({
+  const UserImage({
     required this.id,
     required this.userId,
     required this.path,
@@ -23,11 +24,7 @@ class UserImage {
 
   /// Build full URL from path using centralized storage URL
   static String _buildUrl(String pathOrUrl) {
-    if (pathOrUrl.isEmpty) return '';
-    if (pathOrUrl.startsWith('http')) return pathOrUrl;
-    // Remove leading slash if present to avoid double slashes
-    final cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl.substring(1) : pathOrUrl;
-    return '${ApiEndpoints.storageUrl}/$cleanPath';
+    return MediaUrl.resolve(pathOrUrl) ?? '';
   }
 
   /// Get the full URL for the image
@@ -149,4 +146,7 @@ class UserImage {
       sizes: sizes ?? this.sizes,
     );
   }
+
+  @override
+  List<Object?> get props => [id, userId, path, type, order, isPrimary, sizes];
 }

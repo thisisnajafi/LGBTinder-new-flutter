@@ -313,9 +313,11 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: ResponsiveGrid.constrained(
-        context,
-        OtherUserProfileView(
+      body: SafeArea(
+        bottom: false,
+        child: ResponsiveGrid.constrained(
+          context,
+          OtherUserProfileView(
           profile: profile,
           showInteractionActions: widget.showInteractionActions,
           isMatched: _isMatched,
@@ -357,6 +359,7 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
           preferredGenderLabels: profileLabelsFromRefs(
             ids: profile.preferredGenders,
             refs: preferredGendersRef,
+          ),
           ),
         ),
       ),

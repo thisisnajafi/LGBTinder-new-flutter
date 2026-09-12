@@ -4,6 +4,7 @@ import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 import '../../../features/reference_data/data/models/reference_item.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/country_phone_utils.dart';
+import '../premium/premium_text_field.dart';
 import 'national_phone_input_formatter.dart';
 import '../../responsive/responsive.dart';
 
@@ -112,8 +113,9 @@ class _CountryPhoneInputState extends State<CountryPhoneInput> {
               ? TextFormField(
                   controller: widget.dialCodeController,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Code',
+                  decoration: premiumInputDecoration(
+                    context,
+                    hintText: 'Code',
                   ),
                   validator: CountryPhoneUtils.validateDialCode,
                   onChanged: (_) {
@@ -122,13 +124,9 @@ class _CountryPhoneInputState extends State<CountryPhoneInput> {
                   },
                 )
               : InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Code',
-                    filled: true,
-                    fillColor: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
-                        .withValues(alpha: 0.35),
+                  decoration: premiumInputDecoration(
+                    context,
+                    hintText: 'Code',
                   ),
                   child: AppText(
                     widget.dialCodeController?.text.isNotEmpty == true
@@ -144,9 +142,10 @@ class _CountryPhoneInputState extends State<CountryPhoneInput> {
           child: TextFormField(
             controller: widget.nationalController,
             keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              labelText: 'Phone Number',
+            decoration: premiumInputDecoration(
+              context,
               hintText: hint,
+              prefixIconPath: null,
             ),
             inputFormatters: [
               NationalPhoneInputFormatter(iso),

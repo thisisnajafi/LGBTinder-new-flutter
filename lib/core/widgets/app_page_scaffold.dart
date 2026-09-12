@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../responsive/responsive.dart';
-import '../theme/app_colors.dart';
-import '../theme/spacing_constants.dart';
 import '../../routes/app_router.dart';
-import 'app_page_header.dart';
+import 'premium/premium_design_system.dart';
 
-/// Flat scaffold shell — SafeArea, [AppPageHeader], and body (REF-05).
+/// Pushed-page shell with the same header and bounce-scroll chrome as Messenger.
 class AppPageScaffold extends StatelessWidget {
   final String title;
   final Widget body;
@@ -18,6 +15,7 @@ class AppPageScaffold extends StatelessWidget {
   final Widget? floatingActionButton;
   final Color? backgroundColor;
   final bool expandBody;
+  final RefreshCallback? onRefresh;
 
   const AppPageScaffold({
     required this.title,
@@ -29,6 +27,7 @@ class AppPageScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.backgroundColor,
     this.expandBody = true,
+    this.onRefresh,
     super.key,
   });
 
@@ -46,34 +45,20 @@ class AppPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = backgroundColor ??
-        (isDark ? AppColors.backgroundDark : AppColors.backgroundLight);
-
-    final content = expandBody ? Expanded(child: body) : body;
-
-    return Scaffold(
-      backgroundColor: bg,
+    return PremiumDetailScaffold(
+      title: title,
+      action: action,
+      showBackButton: showBackButton,
+      onBack: showBackButton ? (onBack ?? () => defaultBack(context)) : null,
       bottomNavigationBar: bottomNavigationBar,
       floatingActionButton: floatingActionButton,
-      body: SafeArea(
-        child: ResponsiveGrid.constrained(
-          context,
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppPageHeader(
-                title: title,
-                action: action,
-                showBackButton: showBackButton,
-                onBack: onBack ?? () => defaultBack(context),
-              ),
-              const SizedBox(height: AppSpacing.spacingLG),
-              content,
-            ],
-          ),
-        ),
-      ),
+      onRefresh: onRefresh,
+      body: expandBody
+          ? body
+          : ListView(
+              physics: AppScroll.bouncing,
+              children: [body],
+            ),
     );
   }
 }

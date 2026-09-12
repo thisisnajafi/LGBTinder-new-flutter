@@ -8,9 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cache/cache_providers.dart';
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/match_percentage_colors.dart';
+import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../shared/models/match_reason.dart';
 import '../ui/distance_tag.dart';
@@ -31,6 +33,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
   final String? bio;
   final bool isVerified;
   final bool isPremium;
+  final bool isSuperliked;
   final bool isOnline;
   final double? distance;
   final int? matchPercentage;
@@ -53,6 +56,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.bio,
     this.isVerified = false,
     this.isPremium = false,
+    this.isSuperliked = false,
     this.isOnline = false,
     this.distance,
     this.matchPercentage,
@@ -196,14 +200,8 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
   void _cycleImage(int delta, int imageCount) {
     if (imageCount <= 1) return;
     setState(() {
-      final nextIndex = _currentImageIndex + delta;
-      if (nextIndex < 0) {
-        _currentImageIndex = imageCount - 1;
-      } else if (nextIndex >= imageCount) {
-        _currentImageIndex = 0;
-      } else {
-        _currentImageIndex = nextIndex;
-      }
+      final nextIndex = (_currentImageIndex + delta).clamp(0, imageCount - 1);
+      _currentImageIndex = nextIndex;
     });
     _scheduleImageCarousel();
   }
@@ -288,23 +286,48 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                   Positioned(
                     top: 0,
                     left: 0,
-                    right: 56,
+                    right: 0,
                     bottom: 120,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: () => _cycleImage(1, images.length),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () => _cycleImage(-1, images.length),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: () => _cycleImage(1, images.length),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 if (!widget.isBackgroundPreview) ...[
-                  if (matchPct != null && matchPct > 0)
+                  if ((matchPct != null && matchPct > 0) || widget.isSuperliked)
                     Positioned(
                       top: 14,
                       left: 14,
-                      child: _MatchPercentageBadge(percentage: matchPct),
+                      right: 56,
+                      child: Wrap(
+                        spacing: AppSpacing.spacingXS,
+                        runSpacing: AppSpacing.spacingXS,
+                        children: [
+                          if (matchPct != null && matchPct > 0)
+                            _MatchPercentageBadge(percentage: matchPct),
+                          if (widget.isSuperliked)
+                            const _SuperlikedYouBadge(),
+                        ],
+                      ),
                     ),
                   if (cardReasons.isNotEmpty)
                     Positioned(
-                      top: matchPct != null && matchPct > 0 ? 52 : 14,
+                      top: (matchPct != null && matchPct > 0) ||
+                              widget.isSuperliked
+                          ? 52
+                          : 14,
                       left: 14,
                       right: 56,
                       child: _MatchReasonBadges(reasons: cardReasons),
@@ -320,6 +343,25 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                         disableAnimations: disableAnimations,
                       ),
                     ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: textBottomInset + AppSpacing.spacingXXXL,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Container(
+                          width: AppSpacing.spacingXXL,
+                          height: AppSpacing.spacingXS,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.radiusRound,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   Positioned(
                     left: 16,
                     right: 16,
@@ -455,8 +497,9 @@ class _PhotoLayer extends ConsumerWidget {
       fit: StackFit.expand,
       children: [
         AnimatedSwitcher(
-          duration:
-              disableAnimations ? Duration.zero : const Duration(milliseconds: 320),
+          duration: disableAnimations
+              ? Duration.zero
+              : AppAnimations.imageFadeIn,
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) {
@@ -526,6 +569,33 @@ class _PhotoGradientOverlay extends StatelessWidget {
             Colors.black.withValues(alpha: 0.62),
             Colors.black.withValues(alpha: 0.92),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuperlikedYouBadge extends StatelessWidget {
+  const _SuperlikedYouBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Superliked you',
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.spacingXS),
+        decoration: BoxDecoration(
+          color: AppColors.warningYellow.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.28),
+            width: 1,
+          ),
+        ),
+        child: const AppSvgIcon(
+          assetPath: AppIcons.star,
+          size: 14,
+          color: Colors.white,
         ),
       ),
     );
@@ -651,7 +721,7 @@ class _PhotoStripIndicator extends StatelessWidget {
           child: AnimatedContainer(
             duration: disableAnimations
                 ? Duration.zero
-                : const Duration(milliseconds: 200),
+                : AppAnimations.imageFadeIn,
             curve: Curves.easeOutCubic,
             width: 4,
             height: isActive ? 28 : 8,

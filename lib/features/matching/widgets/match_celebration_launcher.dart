@@ -9,6 +9,25 @@ import '../../user/providers/user_providers.dart';
 import '../data/models/match.dart' as match_models;
 import '../pages/match_found_page.dart';
 
+/// Dedupes Discover overlay vs global Pusher match celebrations.
+class MatchCelebrationDedupe {
+  MatchCelebrationDedupe._();
+
+  static final Map<String, DateTime> _shown = <String, DateTime>{};
+
+  static String _key(int? matchId, int? userId) => '${matchId ?? 0}:${userId ?? 0}';
+
+  static void mark(int? matchId, int? userId) {
+    _shown[_key(matchId, userId)] = DateTime.now();
+  }
+
+  static bool wasRecentlyShown(int? matchId, int? userId) {
+    final shownAt = _shown[_key(matchId, userId)];
+    if (shownAt == null) return false;
+    return DateTime.now().difference(shownAt) < const Duration(seconds: 8);
+  }
+}
+
 /// Shows the premium match celebration overlay for a mutual match.
 class MatchCelebrationLauncher {
   MatchCelebrationLauncher._();

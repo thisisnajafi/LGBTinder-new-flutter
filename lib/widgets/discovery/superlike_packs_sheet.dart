@@ -182,6 +182,20 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
         const <SuperlikePack>[];
   }
 
+  int? _bestValuePackId(List<SuperlikePack> packs) {
+    int? bestId;
+    double? bestUnit;
+    for (final pack in packs) {
+      if (pack.superlikeCount <= 0 || pack.price <= 0) continue;
+      final unit = pack.price / pack.superlikeCount;
+      if (bestUnit == null || unit < bestUnit) {
+        bestUnit = unit;
+        bestId = pack.id;
+      }
+    }
+    return bestId;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -196,6 +210,7 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
 
     final remotePacksAsync = ref.watch(availableSuperlikePacksProvider);
     final packs = _resolvePacks();
+    final bestValueId = _bestValuePackId(packs);
     final isLoadingPacks =
         packs.isEmpty && remotePacksAsync.isLoading && !_isLoadingCount;
 
@@ -310,6 +325,7 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                             itemBuilder: (context, index) {
                               final pack = packs[index];
                               final selected = _selectedPackId == pack.id;
+                              final isBestValue = pack.id == bestValueId;
                               return Material(
                                 color: Colors.transparent,
                                 child: InkWell(
@@ -352,6 +368,39 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
                                                 ),
                                                 maxLines: 2,
                                               ),
+                                              if (isBestValue) ...[
+                                                SizedBox(
+                                                  height: AppSpacing.spacingXS,
+                                                ),
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal:
+                                                        AppSpacing.spacingSM,
+                                                    vertical:
+                                                        AppSpacing.spacingXS,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors
+                                                        .warningYellow
+                                                        .withValues(alpha: 0.18),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      AppRadius.radiusXS,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    'Best value',
+                                                    style: AppTypography
+                                                        .caption
+                                                        .copyWith(
+                                                      color: AppColors
+                                                          .warningYellow,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                               SizedBox(
                                                 height: AppSpacing.spacingXS,
                                               ),

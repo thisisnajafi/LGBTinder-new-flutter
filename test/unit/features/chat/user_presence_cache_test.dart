@@ -24,5 +24,36 @@ void main() {
       expect(snapshot!.isOnline, isTrue);
       expect(snapshot.lastSeenAt, event.lastSeenAt);
     });
+
+    test('apply ignores duplicate snapshots', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(userPresenceCacheProvider.notifier);
+      final seen = DateTime.parse('2026-06-26T12:00:00Z');
+      notifier.apply(
+        UserPresenceEvent(
+          userId: 42,
+          isOnline: true,
+          lastSeenAt: seen,
+          timestamp: DateTime.parse('2026-06-26T12:00:01Z'),
+        ),
+      );
+      final first = container.read(userPresenceCacheProvider);
+
+      notifier.apply(
+        UserPresenceEvent(
+          userId: 42,
+          isOnline: true,
+          lastSeenAt: seen,
+          timestamp: DateTime.parse('2026-06-26T12:00:02Z'),
+        ),
+      );
+
+      expect(
+        identical(container.read(userPresenceCacheProvider), first),
+        isTrue,
+      );
+    });
   });
 }

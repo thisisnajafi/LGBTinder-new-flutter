@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_icons.dart';
 
-/// Dislike, superlike, or like action on the discover screen / profile sheet.
+/// Dislike, superlike, like, or rewind action on the discover screen.
 enum DiscoverySwipeActionType {
+  rewind,
   dislike,
   superlike,
   like,
@@ -39,8 +41,8 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
-      reverseDuration: const Duration(milliseconds: 180),
+      duration: AppAnimations.transitionModal,
+      reverseDuration: AppAnimations.feedbackShort,
     );
     _scale = Tween<double>(begin: 1.0, end: 0.92).animate(
       CurvedAnimation(
@@ -73,30 +75,41 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
 
   Future<void> _animatePressDown(bool disableAnimations) async {
     if (disableAnimations) return;
-    _controller.duration = const Duration(milliseconds: 100);
-    await _controller.animateTo(0.4, curve: Curves.easeOutCubic);
+    _controller.duration = AppAnimations.tapDuration;
+    await _controller.animateTo(0.4, curve: AppAnimations.curveDefault);
   }
 
   Future<void> _animateRelease(bool disableAnimations) async {
     if (disableAnimations) return;
-    _controller.reverseDuration = const Duration(milliseconds: 180);
-    await _controller.animateBack(0.0, curve: Curves.easeOutCubic);
+    _controller.reverseDuration = AppAnimations.feedbackShort;
+    await _controller.animateBack(0.0, curve: AppAnimations.curveDefault);
   }
 
   Future<void> _animateSuperlikePulse(bool disableAnimations) async {
     if (disableAnimations || widget.type != DiscoverySwipeActionType.superlike) {
       return;
     }
-    _controller.duration = const Duration(milliseconds: 250);
+    _controller.duration = AppAnimations.transitionModal;
     await _controller.forward(from: 0);
   }
 
   _SwipeActionVisuals _visualsFor(BuildContext context) {
     switch (widget.type) {
+      case DiscoverySwipeActionType.rewind:
+        return _SwipeActionVisuals(
+          gradient: const LinearGradient(
+            colors: [AppColors.accentViolet, AppColors.accentPurple],
+          ),
+          borderColor: AppColors.accentViolet,
+          glowColor: AppColors.accentViolet,
+          iconPath: AppIcons.refresh,
+          semanticLabel: 'Rewind last swipe',
+          iconColor: Colors.white,
+        );
       case DiscoverySwipeActionType.dislike:
         return _SwipeActionVisuals(
           gradient: AppColors.discoverDislikeGradient,
-          borderColor: const Color(0xFFFFB4BC),
+          borderColor: AppColors.feedbackError.withValues(alpha: 0.55),
           glowColor: AppColors.feedbackError,
           iconPath: AppIcons.close,
           semanticLabel: 'Dislike profile',
@@ -105,16 +118,16 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
       case DiscoverySwipeActionType.superlike:
         return _SwipeActionVisuals(
           gradient: AppColors.discoverSuperlikeGradient,
-          borderColor: const Color(0xFFFEF9C3),
+          borderColor: AppColors.warningYellow.withValues(alpha: 0.7),
           glowColor: AppColors.warningYellow,
           iconPath: AppIcons.star,
           semanticLabel: 'Super like profile',
-          iconColor: const Color(0xFF78350F),
+          iconColor: AppColors.textPrimaryLight,
         );
       case DiscoverySwipeActionType.like:
         return _SwipeActionVisuals(
           gradient: AppColors.discoverLikeGradient,
-          borderColor: const Color(0xFFBBF7D0),
+          borderColor: AppColors.onlineGreen.withValues(alpha: 0.55),
           glowColor: AppColors.onlineGreen,
           iconPath: AppIcons.heart,
           semanticLabel: 'Like profile',
@@ -125,7 +138,6 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final disableAnimations = MediaQuery.of(context).disableAnimations;
     final visuals = _visualsFor(context);
     final touchSize = widget.size < 48 ? 48.0 : widget.size;
@@ -181,15 +193,9 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: visuals.glowColor.withValues(alpha: 0.45),
-                      blurRadius: 20,
+                      color: visuals.glowColor.withValues(alpha: 0.28),
+                      blurRadius: 24,
                       offset: const Offset(0, 8),
-                      spreadRadius: -2,
-                    ),
-                    BoxShadow(
-                      color: theme.colorScheme.shadow.withValues(alpha: 0.22),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),

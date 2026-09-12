@@ -13,6 +13,9 @@ import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
 import '../widgets/loading/skeleton_discovery.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
+import '../features/discover/providers/discovery_filters_provider.dart';
+import '../features/discover/utils/discover_active_filter_labels.dart';
+import '../features/discover/utils/discovery_image_prefetch.dart';
 import '../features/discover/providers/discovery_providers.dart';
 import '../features/discover/data/models/discovery_profile.dart';
 import '../features/profile/providers/profile_page_cache_provider.dart';
@@ -67,17 +70,24 @@ class DiscoveryPage extends ConsumerStatefulWidget {
 const double _kDiscoverHorizontalPadding = PremiumPageHeader.horizontalPadding;
 
 class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
-  // Filter state
-  Map<String, dynamic>? _activeFilters;
   bool _isClearingPassport = false;
   bool _isSwipeInProgress = false;
   bool _isProfileSheetOpen = false;
   bool _isClosingProfileSheet = false;
   late final DraggableScrollableController _sheetController;
+  final GlobalKey<CardStackManagerState> _cardStackKey =
+      GlobalKey<CardStackManagerState>();
+  bool _dailyCapReached = false;
+  Timer? _filterApplyDebounce;
+  Map<String, dynamic>? _lastAppliedQueryFilters;
+  int? _precacheSignature;
 
   Map<String, dynamic>? _discoverQueryFilters() {
     final location = ref.read(userLocationProvider).valueOrNull;
-    final merged = DiscoveryFilterMapper.withPassportSearch(_activeFilters, location);
+    final merged = DiscoveryFilterMapper.withPassportSearch(
+      ref.read(discoveryFiltersProvider),
+      location,
+    );
     return merged.isEmpty ? null : merged;
   }
 
@@ -86,6 +96,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     if (!mounted) return;
     ref.read(profilePageCacheProvider.notifier).refresh();
     ref.read(discoverCacheProvider.notifier).refresh(filters: _discoverQueryFilters());
+    _lastAppliedQueryFilters = _discoverQueryFilters();
   }
 
   @override
@@ -99,46 +110,69 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   @override
   void dispose() {
+    _filterApplyDebounce?.cancel();
     _sheetController.dispose();
     super.dispose();
   }
 
   void _setProfileSheetOpen(bool open) {
-    if (_isProfileSheetOpen == open) return;
-    setState(() => _isProfileSheetOpen = open);
     if (open) {
-      if (_sheetController.isAttached) {
-        _sheetController.jumpTo(0.58);
-      }
+      unawaited(_openProfileSheet());
+      return;
+    }
+    _closeProfileSheet();
+  }
+
+  Future<void> _openProfileSheet() async {
+    if (_isProfileSheetOpen) return;
+    final stack = ref.read(discoverCacheProvider).stack;
+    final sheetProfile = _sheetProfileFromStack(stack);
+    if (sheetProfile == null) return;
+
+    setState(() => _isProfileSheetOpen = true);
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: false,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.46),
+      builder: (ctx) {
+        final height = MediaQuery.sizeOf(ctx).height;
+        return SizedBox(
+          height: height,
+          child: ProfileDetailSheet(
+            controller: _sheetController,
+            profile: sheetProfile,
+            sharedInterests: _sharedInterestSet(stack.first),
+            onClose: _closeProfileSheet,
+            actionsDisabled: _isSwipeInProgress,
+            onDislike: () => _handleSheetAction('dislike'),
+            onSuperlike: () => _handleSheetAction('superlike'),
+            onLike: () => _handleSheetAction('like'),
+          ),
+        );
+      },
+    );
+    if (mounted) {
+      setState(() {
+        _isProfileSheetOpen = false;
+        _isClosingProfileSheet = false;
+      });
     }
   }
 
   void _closeProfileSheet() {
     if (!_isProfileSheetOpen || _isClosingProfileSheet) return;
     _isClosingProfileSheet = true;
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
-    if (disableAnimations || !_sheetController.isAttached) {
-      setState(() {
-        _isProfileSheetOpen = false;
-        _isClosingProfileSheet = false;
-      });
+    final nav = Navigator.of(context, rootNavigator: true);
+    if (nav.canPop()) {
+      nav.pop();
       return;
     }
-    _sheetController
-        .animateTo(
-      0.50,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-    )
-        .whenComplete(() {
-      if (mounted) {
-        setState(() {
-          _isProfileSheetOpen = false;
-          _isClosingProfileSheet = false;
-        });
-      } else {
-        _isClosingProfileSheet = false;
-      }
+    setState(() {
+      _isProfileSheetOpen = false;
+      _isClosingProfileSheet = false;
     });
   }
 
@@ -204,6 +238,12 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       distance: profile.distance,
       interests: profile.interestNames ?? const [],
       imageUrls: profile.imageUrls ?? const [],
+      smoke: profile.smoke,
+      drink: profile.drink,
+      gym: profile.gym,
+      languages: profile.languages ?? const [],
+      musicGenres: profile.musicGenres ?? const [],
+      relationshipGoal: profile.relationshipGoal,
     );
   }
 
@@ -256,9 +296,67 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       case 'superlike':
         unawaited(_showSuperlikeBottomSheet(userId, source: 'action_row'));
         break;
+      case 'rewind':
+        unawaited(_handleRewind());
+        break;
       case 'message':
         _handleCardTap(userId);
         break;
+    }
+  }
+
+  Future<void> _handleRewind() async {
+    if (_isSwipeInProgress) return;
+
+    Future<void> openPaywall() {
+      return context.push(
+        Uri(
+          path: AppRoutes.featureLocked,
+          queryParameters: {
+            'title': 'Rewind',
+            'desc': 'Undo your last swipe and take another look.',
+            'minTier': 'silder',
+            'feature': 'Rewind',
+          },
+        ).toString(),
+      );
+    }
+
+    final allowed =
+        ref.read(planLimitsProvider).valueOrNull?.features.rewind == true;
+    if (!allowed) {
+      await openPaywall();
+      return;
+    }
+    if (ref.read(discoverCacheProvider).lastSwipedUserId == null) return;
+
+    setState(() => _isSwipeInProgress = true);
+    try {
+      await ref.read(discoverCacheProvider.notifier).rewindLastSwipe();
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      if (e.isPlanLimitError || e.code == 403) {
+        await openPaywall();
+      } else {
+        ErrorHandlerService.showErrorSnackBar(
+          context,
+          e,
+          customMessage: 'Could not rewind',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ErrorHandlerService.handleError(
+        context,
+        e,
+        customMessage: 'Could not rewind',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSwipeInProgress = false);
+      } else {
+        _isSwipeInProgress = false;
+      }
     }
   }
 
@@ -377,14 +475,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         return;
       }
 
-      final message = result.message;
-      if (message == null || message.isEmpty) {
-        _logDiscoverySuperlike('message_sheet_empty', {
-          'userId': userId,
-          'source': source,
-        });
-        return;
-      }
+      final message = result.message?.trim() ?? '';
 
       if (_isProfileSheetOpen) {
         _logDiscoverySuperlike('close_profile_sheet_before_send', {
@@ -404,7 +495,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         userId,
         'superlike',
         fromRow: source != 'card_swipe',
-        superlikeMessage: message,
+        superlikeMessage: message.isEmpty ? null : message,
         superlikeSource: source,
         onSuperlikeSent: () {
           if (!mounted) return;
@@ -587,13 +678,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         final hasReached = await _hasReachedSwipeLimit(planLimitsService);
         if (!mounted) return false;
         if (hasReached) {
-          final limits = await planLimitsService.getPlanLimits();
-          if (!mounted) return false;
-          UpgradeDialog.showSwipeLimitDialog(
-            context,
-            limits.usage.swipes.usedToday,
-            limits.usage.swipes.limit,
-          );
+          if (mounted) {
+            setState(() => _dailyCapReached = true);
+          }
           return false;
         }
       }
@@ -617,6 +704,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         // Let the bottom sheet finish closing before mutating the card stack.
         await Future<void>.delayed(Duration.zero);
         if (!mounted) return false;
+        _cardStackKey.currentState?.beginSuperlikeExit();
       }
       _applySwipeToCache(
         userId,
@@ -650,18 +738,17 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Future<void> _clearActiveFilters() async {
-    setState(() => _activeFilters = null);
-    ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
-    await ref
-        .read(discoverCacheProvider.notifier)
-        .clearAndRefresh(filters: _discoverQueryFilters());
+    ref.read(discoveryFiltersProvider.notifier).clear();
+    _applyDiscoverFilters(immediate: true);
   }
 
   Future<void> _openFilters() async {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (context) => FilterScreen(initialFilters: _activeFilters),
+        builder: (context) => FilterScreen(
+          initialFilters: ref.read(discoveryFiltersProvider),
+        ),
       ),
     );
     if (result != null) {
@@ -669,26 +756,51 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       final filters = isPremium
           ? result
           : DiscoveryFilterMapper.stripPremiumKeys(result);
-      setState(() {
-        _activeFilters = filters.isEmpty ? null : filters;
-      });
-      ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
-      ref.read(discoverCacheProvider.notifier).clearAndRefresh(filters: _discoverQueryFilters());
+      final next = filters.isEmpty ? null : filters;
+      if (discoveryFiltersEqual(next, ref.read(discoveryFiltersProvider))) {
+        return;
+      }
+      ref.read(discoveryFiltersProvider.notifier).setFilters(next);
+      _applyDiscoverFilters();
     }
   }
 
   void _expandRadiusAndRetry() {
-    final nextFilters = <String, dynamic>{...?_activeFilters};
+    final nextFilters = <String, dynamic>{
+      ...?ref.read(discoveryFiltersProvider),
+    };
     final current = (nextFilters['max_distance'] as num?)?.toInt() ?? 50;
     final expanded = (current + 25).clamp(25, 200);
     nextFilters['max_distance'] = expanded;
-    setState(() {
-      _activeFilters = nextFilters;
-    });
-    ref.read(discoverCacheProvider.notifier).refresh(filters: nextFilters);
+    ref.read(discoveryFiltersProvider.notifier).setFilters(nextFilters);
+    _applyDiscoverFilters(immediate: true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Expanded distance to $expanded km and retrying...')),
     );
+  }
+
+  /// Debounced stack reload; skips identical query maps (PERF-PAGE-DISCOVERY-005).
+  void _applyDiscoverFilters({bool immediate = false}) {
+    final next = _discoverQueryFilters();
+    if (discoveryFiltersEqual(next, _lastAppliedQueryFilters)) return;
+    _filterApplyDebounce?.cancel();
+    void commit() {
+      _lastAppliedQueryFilters =
+          next == null ? null : Map<String, dynamic>.from(next);
+      ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
+      unawaited(
+        ref.read(discoverCacheProvider.notifier).clearAndRefresh(filters: next),
+      );
+    }
+
+    if (immediate) {
+      commit();
+      return;
+    }
+    _filterApplyDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      commit();
+    });
   }
 
   bool _hasCoordinates(UserLocation? location) {
@@ -713,6 +825,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         onSecondary: _expandRadiusAndRetry,
         tertiaryLabel: 'Adjust filters',
         onTertiary: _openFilters,
+        iconPath: AppIcons.locationSlash,
       );
     }
 
@@ -727,6 +840,54 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         onSecondary: _expandRadiusAndRetry,
         tertiaryLabel: 'Adjust filters',
         onTertiary: _openFilters,
+        iconPath: AppIcons.location,
+      );
+    }
+
+    final limits = ref.watch(planLimitsProvider).valueOrNull;
+    final swipeCapped =
+        _dailyCapReached || (limits?.hasReachedLimit('swipes') ?? false);
+    if (swipeCapped) {
+      return _DiscoverEmptyConfig(
+        title: "You're out of likes for today",
+        subtitle:
+            'Upgrade your plan for more daily likes, or come back tomorrow.',
+        primaryLabel: 'Upgrade',
+        onPrimary: () {
+          final cached = limits ??
+              ref.read(planLimitsServiceProvider).getCachedLimits();
+          if (cached != null) {
+            UpgradeDialog.showSwipeLimitDialog(
+              context,
+              cached.usage.swipes.usedToday,
+              cached.usage.swipes.limit,
+            );
+          } else {
+            context.push(AppRoutes.subscriptionPlans);
+          }
+        },
+        iconPath: AppIcons.crown,
+        forceEmpty: true,
+      );
+    }
+
+    final remaining = ref.watch(superlikesRemainingProvider);
+    final superlikesOut = (remaining != null && remaining <= 0) ||
+        (limits?.hasReachedLimit('superlikes') ?? false);
+    if (superlikesOut) {
+      return _DiscoverEmptyConfig(
+        title: "You're out of Super Likes",
+        subtitle: 'Get a pack to stand out, or keep swiping with likes.',
+        primaryLabel: 'Get Super Likes',
+        onPrimary: () {
+          showSuperlikePacksSheet(
+            context,
+            headerMessage: "You're out of superlikes — get more below",
+          );
+        },
+        secondaryLabel: 'Adjust filters',
+        onSecondary: _openFilters,
+        iconPath: AppIcons.star,
       );
     }
 
@@ -737,6 +898,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       onPrimary: _openFilters,
       secondaryLabel: 'Increase distance + retry',
       onSecondary: _expandRadiusAndRetry,
+      iconPath: AppIcons.search,
     );
   }
 
@@ -847,6 +1009,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   void _showMatchDialog(match_models.Match? match) {
     if (match == null || !mounted) return;
+    MatchCelebrationDedupe.mark(match.id, match.userId);
     MatchCelebrationLauncher.show(context, ref, match: match);
   }
 
@@ -946,7 +1109,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           iconPath: AppIcons.filter,
           semanticLabel: 'Open filters',
           onTap: _openFilters,
-          showBadge: _activeFilters != null && _activeFilters!.isNotEmpty,
+          showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
         ),
       ],
     );
@@ -1014,19 +1177,30 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cacheState = ref.watch(discoverCacheProvider);
-    final stack = cacheState.stack;
+    final feed = ref.watch(
+      discoverCacheProvider.select(DiscoverFeedSlice.fromState),
+    );
+    final stack = feed.stack;
     final cards = stack.map(_profileToCardMap).toList();
-    final showSkeleton = !cacheState.initialLoadComplete && stack.isEmpty;
-    final sheetProfile = _sheetProfileFromStack(stack);
+    final showSkeleton = !feed.initialLoadComplete && stack.isEmpty;
+    final precacheSignature = Object.hash(feed.nextUserId, feed.secondNextUserId);
+    if (precacheSignature != _precacheSignature) {
+      _precacheSignature = precacheSignature;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(DiscoveryImagePrefetch.precacheNextTwo(context, stack));
+      });
+    }
 
-    final showActionRow =
-        !showSkeleton && cards.isNotEmpty && !_isProfileSheetOpen;
     final emptyConfig = ref.watch(userLocationProvider).when(
           data: _emptyStateConfig,
           loading: () => _emptyStateConfig(null),
           error: (_, __) => _emptyStateConfig(null),
         );
+    final showActionRow = !showSkeleton &&
+        cards.isNotEmpty &&
+        !_isProfileSheetOpen &&
+        !emptyConfig.forceEmpty;
 
     final passport = ref.watch(passportLocationProvider);
 
@@ -1047,13 +1221,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                   action: _buildHeaderActions(context),
                 ),
                 const SizedBox(height: AppSpacing.spacingMD),
-                const DiscoverGreetingWidget(),
-                if (_activeFilters != null && _activeFilters!.isNotEmpty)
-                  DiscoverActiveFiltersBar(
-                    labels: _activeFilterLabels(),
-                    onEdit: _openFilters,
-                    onClear: _clearActiveFilters,
+                const RepaintBoundary(child: DiscoverGreetingWidget()),
+                DiscoverActiveFiltersBar(
+                  labels: DiscoverActiveFilterLabels.fromMap(
+                    ref.watch(discoveryFiltersProvider),
                   ),
+                  onEdit: _openFilters,
+                  onClear: _clearActiveFilters,
+                ),
                 DiscoverPassportBanner(
                   passport: passport,
                   isClearing: _isClearingPassport,
@@ -1078,7 +1253,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                   child: const SkeletonDiscovery(),
                                 )
                               : CardStackManager(
-                                  cards: cards,
+                                  key: _cardStackKey,
+                                  cards: emptyConfig.forceEmpty
+                                      ? const <Map<String, dynamic>>[]
+                                      : cards,
                                   onSwipe: _onCardStackSwipe,
                                   onViewProfile: _handleCardTap,
                                   isSheetOpen: _isProfileSheetOpen,
@@ -1099,6 +1277,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                   },
                                   emptyTitle: emptyConfig.title,
                                   emptySubtitle: emptyConfig.subtitle,
+                                  emptyIconPath: emptyConfig.iconPath,
                                   emptyActionLabel: emptyConfig.primaryLabel,
                                   onEmptyAction: emptyConfig.onPrimary,
                                   emptySecondaryActionLabel:
@@ -1119,10 +1298,12 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                               _kDiscoverHorizontalPadding,
                               AppSpacing.spacingXS,
                             ),
-                            child: AnimatedOpacity(
-                              opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                              duration: const Duration(milliseconds: 150),
-                              child: _buildDiscoveryActionRow(),
+                            child: RepaintBoundary(
+                              child: AnimatedOpacity(
+                                opacity: _isSwipeInProgress ? 0.5 : 1.0,
+                                duration: const Duration(milliseconds: 150),
+                                child: _buildDiscoveryActionRow(),
+                              ),
                             ),
                           ),
                       ],
@@ -1132,30 +1313,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 ),
               ],
             ),
-            if (_isProfileSheetOpen && sheetProfile != null)
-              Positioned.fill(
-                child: Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: _closeProfileSheet,
-                      behavior: HitTestBehavior.opaque,
-                      child: ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.42),
-                      ),
-                    ),
-                    ProfileDetailSheet(
-                      controller: _sheetController,
-                      profile: sheetProfile,
-                      sharedInterests: _sharedInterestSet(stack.first),
-                      onClose: _closeProfileSheet,
-                      actionsDisabled: _isSwipeInProgress,
-                      onDislike: () => _handleSheetAction('dislike'),
-                      onSuperlike: () => _handleSheetAction('superlike'),
-                      onLike: () => _handleSheetAction('like'),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
@@ -1163,49 +1320,43 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
   }
 
-  List<String> _activeFilterLabels() {
-    final filters = _activeFilters;
-    if (filters == null || filters.isEmpty) return const [];
-
-    final labels = <String>[];
-    final maxDistance = filters['max_distance'];
-    if (maxDistance != null) {
-      labels.add('${maxDistance}km');
-    }
-    final minAge = filters['min_age'];
-    final maxAge = filters['max_age'];
-    if (minAge != null || maxAge != null) {
-      labels.add('${minAge ?? 18}–${maxAge ?? 99}');
-    }
-    if (filters['online_only'] == true) {
-      labels.add('Online');
-    }
-    if (filters['verified_only'] == true) {
-      labels.add('Verified');
-    }
-    if (labels.isEmpty) {
-      labels.add('Custom filters');
-    }
-    return labels;
-  }
-
   Widget _buildDiscoveryActionRow() {
-    final buttons = [
+    return Consumer(
+      builder: (context, ref, _) {
+        final lastSwipeId = ref.watch(
+          discoverCacheProvider.select((s) => s.lastSwipedUserId),
+        );
+        final rewindAllowed = ref.watch(
+          planLimitsProvider.select(
+            (async) => async.valueOrNull?.features.rewind == true,
+          ),
+        );
+        const actionSize = AppSpacing.spacingXXXL + AppSpacing.spacingSM;
+        final buttons = [
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.rewind,
+            size: AppSpacing.spacingXXXL,
+            onPressed:
+                _isSwipeInProgress || (rewindAllowed && lastSwipeId == null)
+                    ? null
+                    : _handleRewind,
+          ),
+      const SizedBox(width: AppSpacing.spacingLG),
       DiscoverySwipeActionButton(
         type: DiscoverySwipeActionType.dislike,
-        size: 58,
+        size: actionSize,
         onPressed: _isSwipeInProgress ? null : () => _handleAction('dislike'),
       ),
-      const SizedBox(width: AppSpacing.spacingXXL),
+      const SizedBox(width: AppSpacing.spacingXL),
       DiscoverySwipeActionButton(
         type: DiscoverySwipeActionType.superlike,
-        size: 54,
+        size: actionSize,
         onPressed: _isSwipeInProgress ? null : () => _handleAction('superlike'),
       ),
-      const SizedBox(width: AppSpacing.spacingXXL),
+      const SizedBox(width: AppSpacing.spacingXL),
       DiscoverySwipeActionButton(
         type: DiscoverySwipeActionType.like,
-        size: 58,
+        size: actionSize,
         onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
       ),
     ];
@@ -1230,6 +1381,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         );
       },
     );
+      },
+    );
   }
 }
 
@@ -1243,6 +1396,8 @@ class _DiscoverEmptyConfig {
     this.onSecondary,
     this.tertiaryLabel,
     this.onTertiary,
+    this.iconPath,
+    this.forceEmpty = false,
   });
 
   final String title;
@@ -1253,4 +1408,6 @@ class _DiscoverEmptyConfig {
   final VoidCallback? onSecondary;
   final String? tertiaryLabel;
   final VoidCallback? onTertiary;
+  final String? iconPath;
+  final bool forceEmpty;
 }

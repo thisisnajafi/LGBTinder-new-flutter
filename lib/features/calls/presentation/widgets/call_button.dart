@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/subscription_provider.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../data/models/call.dart';
 import '../../providers/call_provider.dart';
 
 /// Call button widget
@@ -104,15 +106,11 @@ class CallButton extends ConsumerWidget {
       callType: callType,
     );
 
-    final success = await callNotifier.initiateCall(request);
-
-    if (success) {
+    try {
+      await callNotifier.initiateCall(request);
       onCallInitiated?.call();
-      // Navigate to call screen
-      // Navigator.of(context).pushNamed('/call/active');
-    } else {
+    } catch (_) {
       onCallFailed?.call();
-      // Error is already handled in the provider
     }
   }
 }
@@ -267,7 +265,8 @@ class PremiumCallButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (isPremium) {
+    final livePremium = isPremium || ref.watch(canMakeVideoCallsProvider);
+    if (livePremium) {
       return CallButton(
         targetUserId: targetUserId,
         callType: callType,

@@ -118,6 +118,7 @@ class AppTypography {
     bodyMedium: body.copyWith(color: Colors.white),
     bodySmall: bodySmall.copyWith(color: const Color(0xFFA6A6A6)),
     labelLarge: button.copyWith(color: Colors.white),
+    labelSmall: labelSmall.copyWith(color: Colors.white),
   );
 
   static TextTheme get textThemeLight => TextTheme(
@@ -129,6 +130,7 @@ class AppTypography {
     bodyMedium: body.copyWith(color: Colors.black),
     bodySmall: bodySmall.copyWith(color: const Color(0xFF6B6B6B)),
     labelLarge: button.copyWith(color: Colors.black),
+    labelSmall: labelSmall.copyWith(color: Colors.black),
   );
 }
 

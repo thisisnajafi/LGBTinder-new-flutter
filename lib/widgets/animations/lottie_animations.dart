@@ -12,6 +12,7 @@ class ThemeAwareLottie extends StatelessWidget {
   final double? height;
   final bool loop;
   final bool animate;
+  final Widget? fallback;
   final BoxFit fit;
   final Alignment alignment;
 
@@ -22,6 +23,7 @@ class ThemeAwareLottie extends StatelessWidget {
     this.height,
     this.loop = true,
     this.animate = true,
+    this.fallback,
     this.fit = BoxFit.contain,
     this.alignment = Alignment.center,
   });
@@ -39,10 +41,12 @@ class ThemeAwareLottie extends StatelessWidget {
     );
   }
 
+  Widget _resolvedFallback() => fallback ?? _fallbackSpinner();
+
   @override
   Widget build(BuildContext context) {
     if (MediaQuery.disableAnimationsOf(context)) {
-      return _fallbackSpinner();
+      return _resolvedFallback();
     }
 
     return Lottie.asset(
@@ -55,11 +59,11 @@ class ThemeAwareLottie extends StatelessWidget {
       alignment: alignment,
       frameBuilder: (context, child, composition) {
         if (composition == null) {
-          return _fallbackSpinner();
+          return _resolvedFallback();
         }
         return child;
       },
-      errorBuilder: (_, __, ___) => _fallbackSpinner(),
+      errorBuilder: (_, __, ___) => _resolvedFallback(),
     );
   }
 }
@@ -114,6 +118,15 @@ class AppLottieAnimations {
       width: size,
       height: size,
       loop: false,
+    );
+  }
+
+  static Widget chatHeart({double size = 140, Widget? fallback}) {
+    return ThemeAwareLottie(
+      assetPath: 'assets/lottie/chat_heart.json',
+      width: size,
+      height: size,
+      fallback: fallback,
     );
   }
 

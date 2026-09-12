@@ -1,4 +1,5 @@
 import '../../../../core/utils/app_date_time.dart';
+import '../../utils/chat_reaction_summary.dart';
 import 'message_delivery_status.dart';
 
 /// Safe integer parsing helper
@@ -39,6 +40,10 @@ class Message {
   final String messageType; // 'text', 'image', 'voice', 'video', etc.
   final DateTime createdAt;
   final bool isRead;
+  final bool isDelivered;
+  final bool isEdited;
+  final DateTime? editedAt;
+  final DateTime? deliveredAt;
   final bool isDeleted;
   final String? attachmentUrl;
   final Map<String, dynamic>? metadata;
@@ -60,6 +65,14 @@ class Message {
   final int? mediaDuration;
   final int? conversationId;
   final int? expiresInSeconds;
+  final int? replyToMessageId;
+  final String? replyToText;
+  final String? replyToName;
+  final Map<String, int> reactions;
+  final String? myReaction;
+  final int? forwardedFromMessageId;
+  final int? forwardedFromUserId;
+  final String? forwardedFromName;
 
   Message({
     required this.id,
@@ -69,6 +82,10 @@ class Message {
     this.messageType = 'text',
     required this.createdAt,
     this.isRead = false,
+    this.isDelivered = false,
+    this.isEdited = false,
+    this.editedAt,
+    this.deliveredAt,
     this.isDeleted = false,
     this.attachmentUrl,
     this.metadata,
@@ -87,9 +104,22 @@ class Message {
     this.mediaDuration,
     this.conversationId,
     this.expiresInSeconds,
+    this.replyToMessageId,
+    this.replyToText,
+    this.replyToName,
+    this.reactions = const {},
+    this.myReaction,
+    this.forwardedFromMessageId,
+    this.forwardedFromUserId,
+    this.forwardedFromName,
   });
 
   bool get isOptimistic => clientId != null && id <= 0;
+
+  bool get isForwarded =>
+      (forwardedFromName != null && forwardedFromName!.trim().isNotEmpty) ||
+      (forwardedFromMessageId ?? 0) > 0 ||
+      (forwardedFromUserId ?? 0) > 0;
 
   /// Local placeholder shown before the API responds.
   factory Message.optimistic({
@@ -121,6 +151,10 @@ class Message {
     String? messageType,
     DateTime? createdAt,
     bool? isRead,
+    bool? isDelivered,
+    bool? isEdited,
+    DateTime? editedAt,
+    DateTime? deliveredAt,
     bool? isDeleted,
     String? attachmentUrl,
     Map<String, dynamic>? metadata,
@@ -140,6 +174,15 @@ class Message {
     int? mediaDuration,
     int? conversationId,
     int? expiresInSeconds,
+    int? replyToMessageId,
+    String? replyToText,
+    String? replyToName,
+    Map<String, int>? reactions,
+    String? myReaction,
+    bool clearMyReaction = false,
+    int? forwardedFromMessageId,
+    int? forwardedFromUserId,
+    String? forwardedFromName,
   }) {
     return Message(
       id: id ?? this.id,
@@ -149,6 +192,10 @@ class Message {
       messageType: messageType ?? this.messageType,
       createdAt: createdAt ?? this.createdAt,
       isRead: isRead ?? this.isRead,
+      isDelivered: isDelivered ?? this.isDelivered,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
       isDeleted: isDeleted ?? this.isDeleted,
       attachmentUrl: attachmentUrl ?? this.attachmentUrl,
       metadata: metadata ?? this.metadata,
@@ -167,6 +214,15 @@ class Message {
       mediaDuration: mediaDuration ?? this.mediaDuration,
       conversationId: conversationId ?? this.conversationId,
       expiresInSeconds: expiresInSeconds ?? this.expiresInSeconds,
+      replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+      replyToText: replyToText ?? this.replyToText,
+      replyToName: replyToName ?? this.replyToName,
+      reactions: reactions ?? this.reactions,
+      myReaction: clearMyReaction ? null : (myReaction ?? this.myReaction),
+      forwardedFromMessageId:
+          forwardedFromMessageId ?? this.forwardedFromMessageId,
+      forwardedFromUserId: forwardedFromUserId ?? this.forwardedFromUserId,
+      forwardedFromName: forwardedFromName ?? this.forwardedFromName,
     );
   }
 
@@ -185,14 +241,16 @@ class Message {
           'text',
       createdAt: _safeParseDateTime(json['created_at']) ?? DateTime.now(),
       isRead: _safeParseBool(json['is_read']),
+      isDelivered: _safeParseBool(json['is_delivered']) ||
+          json['delivered_at'] != null ||
+          _safeParseBool(json['is_read']),
+      isEdited: _safeParseBool(json['is_edited']) || json['edited_at'] != null,
+      editedAt: _safeParseDateTime(json['edited_at']),
+      deliveredAt: _safeParseDateTime(json['delivered_at']),
       isDeleted: _safeParseBool(json['is_deleted']),
       attachmentUrl: json['attachment_url']?.toString() ??
           json['media_url']?.toString(),
-      metadata: json['metadata'] != null && json['metadata'] is Map
-          ? Map<String, dynamic>.from(json['metadata'] as Map)
-          : (json['sticker'] is Map
-              ? Map<String, dynamic>.from(json['sticker'] as Map)
-              : null),
+      metadata: _metadataFromJson(json),
       isLocked: _safeParseBool(json['is_locked']),
       isBlurred: _safeParseBool(json['is_blurred']),
       clientId: json['client_id']?.toString(),
@@ -222,7 +280,43 @@ class Message {
       expiresInSeconds: json['expires_in_seconds'] != null
           ? _safeParseInt(json['expires_in_seconds'])
           : null,
+      replyToMessageId: json['reply_to_message_id'] != null
+          ? _safeParseInt(json['reply_to_message_id'])
+          : null,
+      replyToText: json['reply_to_text']?.toString() ??
+          json['reply_preview']?.toString(),
+      replyToName: json['reply_to_name']?.toString(),
+      reactions: ChatReactionSummary.parseCounts(json['reactions']),
+      myReaction: ChatReactionSummary.parseMine(json['my_reaction']),
+      forwardedFromMessageId: json['forwarded_from_message_id'] != null
+          ? _safeParseInt(json['forwarded_from_message_id'])
+          : null,
+      forwardedFromUserId: json['forwarded_from_user_id'] != null
+          ? _safeParseInt(json['forwarded_from_user_id'])
+          : null,
+      forwardedFromName: json['forwarded_from_name']?.toString(),
     );
+  }
+
+  static Map<String, dynamic>? _metadataFromJson(Map<String, dynamic> json) {
+    final metadata = <String, dynamic>{};
+    if (json['metadata'] is Map) {
+      metadata.addAll(Map<String, dynamic>.from(json['metadata'] as Map));
+    } else if (json['sticker'] is Map) {
+      metadata.addAll(Map<String, dynamic>.from(json['sticker'] as Map));
+    }
+    if (json['sender'] is Map) {
+      metadata['sender'] = Map<String, dynamic>.from(json['sender'] as Map);
+    }
+    final senderName = json['sender_name']?.toString().trim();
+    if (senderName != null && senderName.isNotEmpty) {
+      metadata['sender_name'] = senderName;
+    }
+    final senderAvatar = json['sender_avatar_url']?.toString().trim();
+    if (senderAvatar != null && senderAvatar.isNotEmpty) {
+      metadata['sender_avatar_url'] = senderAvatar;
+    }
+    return metadata.isEmpty ? null : metadata;
   }
 
   static MessageDeliveryStatus _parseDeliveryStatus(dynamic value) {
@@ -253,6 +347,10 @@ class Message {
       'message_type': messageType,
       'created_at': createdAt.toIso8601String(),
       'is_read': isRead,
+      'is_delivered': isDelivered,
+      'is_edited': isEdited,
+      if (editedAt != null) 'edited_at': editedAt!.toIso8601String(),
+      if (deliveredAt != null) 'delivered_at': deliveredAt!.toIso8601String(),
       'is_deleted': isDeleted,
       if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       if (metadata != null) 'metadata': metadata,

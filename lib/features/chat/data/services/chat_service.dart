@@ -3,9 +3,13 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/utils/app_date_time.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../utils/chat_delivered_ack_deduper.dart';
+import '../../utils/chat_link_detector.dart';
+import '../../utils/chat_reaction_summary.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
 import '../models/message_attachment.dart';
+import '../models/chat_forward_result.dart';
 
 /// Cursor for loading older messages (newest-first API).
 class ChatHistoryCursor {
@@ -34,6 +38,7 @@ class ChatHistoryResult {
   final int? otherUserId;
   final bool hasMore;
   final ChatHistoryCursor? nextCursor;
+  final int? nextAfterId;
 
   const ChatHistoryResult({
     required this.messages,
@@ -41,12 +46,14 @@ class ChatHistoryResult {
     this.otherUserId,
     this.hasMore = false,
     this.nextCursor,
+    this.nextAfterId,
   });
 }
 
 /// Chat service for messaging functionality
 class ChatService {
   final ApiService _apiService;
+  final ChatDeliveredAckDeduper _deliveredAckDeduper = ChatDeliveredAckDeduper();
 
   ChatService(this._apiService);
 
@@ -58,17 +65,22 @@ class ChatService {
     int? limit,
     int? beforeId,
     DateTime? beforeCreatedAt,
+    int? afterId,
     bool forceRefresh = false,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
       if (receiverId != null) queryParams['user_id'] = receiverId;
-      if (page != null) queryParams['page'] = page;
-      if (limit != null) queryParams['per_page'] = limit;
-      if (beforeId != null) queryParams['before_id'] = beforeId;
-      if (beforeCreatedAt != null) {
-        queryParams['before_created_at'] = beforeCreatedAt.toIso8601String();
+      if (afterId != null) {
+        queryParams['after_id'] = afterId;
+      } else {
+        if (page != null) queryParams['page'] = page;
+        if (beforeId != null) queryParams['before_id'] = beforeId;
+        if (beforeCreatedAt != null) {
+          queryParams['before_created_at'] = beforeCreatedAt.toIso8601String();
+        }
       }
+      if (limit != null) queryParams['per_page'] = limit;
 
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.chatHistory,
@@ -126,9 +138,14 @@ class ChatService {
 
     final hasMore = metaMap?['has_more'] == true || metaMap?['has_more'] == 1;
     ChatHistoryCursor? nextCursor;
+    int? nextAfterId;
     final cursorRaw = metaMap?['next_cursor'];
     if (cursorRaw is Map<String, dynamic>) {
-      nextCursor = ChatHistoryCursor.fromJson(cursorRaw);
+      nextAfterId = _parseInt(cursorRaw['after_id']);
+      final beforeId = _parseInt(cursorRaw['before_id']);
+      if (beforeId != null && beforeId > 0) {
+        nextCursor = ChatHistoryCursor.fromJson(cursorRaw);
+      }
     }
 
     return ChatHistoryResult(
@@ -137,6 +154,7 @@ class ChatService {
       otherUserId: otherUserId,
       hasMore: hasMore,
       nextCursor: nextCursor,
+      nextAfterId: nextAfterId,
     );
   }
 
@@ -200,12 +218,51 @@ class ChatService {
     return [];
   }
 
-  /// Delete a message
-  Future<void> deleteMessage(int messageId) async {
+  /// Edit an outbound text message.
+  Future<Message> editMessage(int messageId, String text) async {
+    final response = await _apiService.patch<Map<String, dynamic>>(
+      ApiEndpoints.chatMessage,
+      data: {
+        'message_id': messageId,
+        'message': text,
+      },
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+    return Message.fromJson(response.data!);
+  }
+
+  /// Ack inbound messages as delivered on this device.
+  Future<void> markMessagesDelivered(List<int> messageIds) async {
+    final ids = _deliveredAckDeduper.take(messageIds);
+    if (ids.isEmpty) return;
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.chatDelivered,
+        data: {'message_ids': ids},
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess) {
+        _deliveredAckDeduper.release(ids);
+        throw Exception(response.message);
+      }
+    } catch (e) {
+      _deliveredAckDeduper.release(ids);
+      rethrow;
+    }
+  }
+
+  /// Delete a message. [forEveryone] is the 24h unsend; false hides for this user.
+  Future<void> deleteMessage(int messageId, {bool forEveryone = false}) async {
     try {
       final response = await _apiService.delete<Map<String, dynamic>>(
         ApiEndpoints.chatMessage,
-        data: {'message_id': messageId},
+        data: {
+          'message_id': messageId,
+          'for_everyone': forEveryone,
+        },
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -250,6 +307,34 @@ class ChatService {
     final response = await _apiService.post<void>(
       ApiEndpoints.chatRead,
       data: {'sender_id': senderId},
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+  }
+
+  /// Preferred when the conversation id is known.
+  Future<void> markConversationAsRead(int conversationId) async {
+    final response = await _apiService.post<void>(
+      ApiEndpoints.chatConversationRead(conversationId),
+      data: const {},
+    );
+
+    if (!response.isSuccess) {
+      throw Exception(response.message);
+    }
+  }
+
+  /// Tell the server this conversation is open (`active: true`) or left (`false`).
+  Future<void> setConversationActive({
+    required int conversationId,
+    required bool active,
+  }) async {
+    final response = await _apiService.post<void>(
+      ApiEndpoints.chatConversationActive(conversationId),
+      data: {'active': active},
+      queueIfOffline: false,
     );
 
     if (!response.isSuccess) {
@@ -349,7 +434,11 @@ class ChatService {
   }
 
   /// POST /api/chat/{conversationId}/upload-image
-  Future<Map<String, dynamic>> uploadChatImage(int conversationId, File file) async {
+  Future<Map<String, dynamic>> uploadChatImage(
+    int conversationId,
+    File file, {
+    ProgressCallback? onSendProgress,
+  }) async {
     final fileName = file.path.split(Platform.pathSeparator).last;
     final formData = FormData.fromMap({
       'media': await MultipartFile.fromFile(file.path, filename: fileName),
@@ -359,6 +448,7 @@ class ChatService {
       ApiEndpoints.chatUploadImage(conversationId),
       data: formData,
       fromJson: (json) => json as Map<String, dynamic>,
+      onSendProgress: onSendProgress,
     );
 
     if (!response.isSuccess || response.data == null) {
@@ -389,6 +479,75 @@ class ChatService {
       return payload;
     }
     throw Exception('Invalid view response');
+  }
+
+  /// POST /api/chat/messages/{messageId}/screenshot-detected
+  Future<Map<String, dynamic>> reportScreenshot(int messageId) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.chatMessageScreenshotDetected(messageId),
+      data: const {},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+
+    final payload = response.data!['data'] ?? response.data!;
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+    throw Exception('Invalid screenshot report response');
+  }
+
+  /// POST /api/chat/messages/{messageId}/forward
+  Future<ChatForwardResult> forwardMessage({
+    required int messageId,
+    required List<int> recipientIds,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.chatMessageForward(messageId),
+      data: {'recipient_ids': recipientIds},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+
+    return ChatForwardResult.fromJson(response.data!);
+  }
+
+  /// POST /api/chat/messages/{messageId}/react — toggle an emoji reaction.
+  Future<ChatReactionResult> reactToMessage(int messageId, String emoji) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.chatMessageReact(messageId),
+      data: {'emoji': emoji},
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+
+    final payload = response.data!;
+    return ChatReactionResult.fromJson(payload);
+  }
+
+  /// GET /api/link-preview?url=
+  Future<ChatOgPreview> getLinkPreview(String url) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.linkPreview,
+      queryParameters: {'url': url},
+      fromJson: (json) => json as Map<String, dynamic>,
+      useCache: false,
+    );
+
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+
+    return ChatOgPreview.fromJson(response.data!);
   }
 
   /// POST /api/chat/{conversationId}/upload-voice
@@ -440,6 +599,8 @@ class ChatService {
     int? mediaWidth,
     int? mediaHeight,
     MessageAttachment? attachment, // Keep for backward compatibility
+    int? replyToMessageId,
+    String? clientId,
   }) async {
     try {
       // Use FormData for media uploads, regular JSON for text messages
@@ -451,6 +612,7 @@ class ChatService {
           mediaFile: mediaFile,
           mediaDuration: mediaDuration,
           expiresInSeconds: expiresInSeconds,
+          clientId: clientId,
         );
       }
       
@@ -467,6 +629,8 @@ class ChatService {
         if (mediaHeight != null) 'media_height': mediaHeight,
         if (expiresInSeconds != null) 'expires_in_seconds': expiresInSeconds,
         if (mediaDuration != null) 'media_duration': mediaDuration,
+        if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
+        if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
       };
 
       // Legacy attachment support (if attachment ID already exists)
@@ -484,9 +648,9 @@ class ChatService {
         // Handle nested data structure
         final messageData = response.data!['data'] ?? response.data!;
         if (messageData is Map<String, dynamic>) {
-          return Message.fromJson(messageData);
+          return _withClientId(Message.fromJson(messageData), clientId);
         }
-        return Message.fromJson(response.data!);
+        return _withClientId(Message.fromJson(response.data!), clientId);
       } else {
         throw Exception(response.message);
       }
@@ -511,6 +675,7 @@ class ChatService {
     required File mediaFile,
     int? mediaDuration,
     int? expiresInSeconds,
+    String? clientId,
   }) async {
     try {
       final fileName = mediaFile.path.split('/').last;
@@ -525,6 +690,7 @@ class ChatService {
         ),
         if (mediaDuration != null) 'media_duration': mediaDuration,
         if (expiresInSeconds != null) 'expires_in_seconds': expiresInSeconds,
+        if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
       });
 
       final response = await _apiService.postFormData<Map<String, dynamic>>(
@@ -536,9 +702,9 @@ class ChatService {
       if (response.isSuccess && response.data != null) {
         final messageData = response.data!['data'] ?? response.data!;
         if (messageData is Map<String, dynamic>) {
-          return Message.fromJson(messageData);
+          return _withClientId(Message.fromJson(messageData), clientId);
         }
-        return Message.fromJson(response.data!);
+        return _withClientId(Message.fromJson(response.data!), clientId);
       } else {
         throw Exception(response.message);
       }
@@ -607,8 +773,15 @@ class ChatService {
     List<dynamic>? list;
     if (response.data is Map<String, dynamic>) {
       final data = response.data as Map<String, dynamic>;
-      if (data['data'] != null && data['data'] is List) {
+      if (data['data'] is List) {
         list = data['data'] as List;
+      } else if (data['data'] is Map) {
+        final nested = Map<String, dynamic>.from(data['data'] as Map);
+        if (nested['messages'] is List) {
+          list = nested['messages'] as List;
+        }
+      } else if (data['messages'] is List) {
+        list = data['messages'] as List;
       }
     } else if (response.data is List) {
       list = response.data as List;
@@ -623,6 +796,7 @@ class ChatService {
   Future<List<Message>> searchMessages({
     required String query,
     int? userId,
+    int? conversationId,
     int? chatId,
     int limit = 20,
     int offset = 0,
@@ -633,7 +807,8 @@ class ChatService {
       'offset': offset,
     };
     if (userId != null) params['user_id'] = userId;
-    if (chatId != null) params['chat_id'] = chatId;
+    final threadId = conversationId ?? chatId;
+    if (threadId != null) params['conversation_id'] = threadId;
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.chatSearch,
       queryParameters: params,
@@ -641,8 +816,15 @@ class ChatService {
     List<dynamic>? list;
     if (response.data is Map<String, dynamic>) {
       final data = response.data as Map<String, dynamic>;
-      if (data['data'] != null && data['data'] is List) {
+      if (data['messages'] is List) {
+        list = data['messages'] as List;
+      } else if (data['data'] is List) {
         list = data['data'] as List;
+      } else if (data['data'] is Map<String, dynamic>) {
+        final inner = data['data'] as Map<String, dynamic>;
+        if (inner['messages'] is List) {
+          list = inner['messages'] as List;
+        }
       }
     } else if (response.data is List) {
       list = response.data as List;
@@ -681,6 +863,44 @@ class ChatService {
     );
     if (!response.isSuccess) return false;
     return response.data?['is_muted'] == true;
+  }
+
+  /// Pin a conversation to the top of the viewer's chat list.
+  Future<bool> pinConversation(int userId) async {
+    final response = await _apiService.put<Map<String, dynamic>>(
+      ApiEndpoints.chatPeerConversationPin(userId),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data?['is_pinned'] == true;
+  }
+
+  /// Unpin a conversation from the top of the viewer's chat list.
+  Future<bool> unpinConversation(int userId) async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiEndpoints.chatPeerConversationPin(userId),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+    return response.data?['is_pinned'] == true;
+  }
+
+  /// Get conversation pin status for a peer.
+  Future<bool> isConversationPinned(int userId) async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.chatPeerConversationPin(userId),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) return false;
+    return response.data?['is_pinned'] == true;
+  }
+
+  Message _withClientId(Message message, String? clientId) {
+    if (clientId == null || clientId.isEmpty) return message;
+    if (message.clientId != null && message.clientId!.isNotEmpty) {
+      return message;
+    }
+    return message.copyWith(clientId: clientId);
   }
 }
 

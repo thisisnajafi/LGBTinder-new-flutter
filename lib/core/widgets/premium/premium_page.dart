@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../responsive/responsive.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/spacing_constants.dart';
-import '../../utils/app_icons.dart';
 import '../../../routes/app_router.dart';
+import 'premium_hero_header.dart';
+import 'premium_layout.dart';
+import 'premium_refresh.dart';
 import 'premium_shell.dart';
 
-/// Premium header for main-tab screens (Settings, Notifications, Messenger).
+/// Premium header for main-tab and detail screens.
+/// Uses [PremiumHeroHeader] (same card as the profile hero).
 class PremiumPageHeader extends StatelessWidget {
   const PremiumPageHeader({
     super.key,
@@ -17,6 +20,7 @@ class PremiumPageHeader extends StatelessWidget {
     this.action,
     this.showBackButton = false,
     this.onBack,
+    this.coverImageUrl,
   });
 
   final String title;
@@ -24,8 +28,9 @@ class PremiumPageHeader extends StatelessWidget {
   final Widget? action;
   final bool showBackButton;
   final VoidCallback? onBack;
+  final String? coverImageUrl;
 
-  static const double horizontalPadding = AppSpacing.spacingLG;
+  static const double horizontalPadding = PremiumHeroHeader.horizontalPadding;
 
   static void defaultBack(BuildContext context) {
     if (Navigator.of(context).canPop()) {
@@ -48,65 +53,44 @@ class PremiumPageHeader extends StatelessWidget {
     final muted =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        showBackButton ? AppSpacing.spacingXS : horizontalPadding,
-        AppSpacing.spacingSM,
-        horizontalPadding,
-        0,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return PremiumHeroHeader(
+      onBack: showBackButton
+          ? (onBack ?? () => defaultBack(context))
+          : null,
+      coverImageUrl: coverImageUrl,
+      transparentSides: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (showBackButton)
-                IconButton(
-                  icon: AppSvgIcon(
-                    assetPath: AppIcons.arrowLeft,
-                    size: 24,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  title,
+                  style: (showBackButton
+                          ? theme.textTheme.titleLarge
+                          : theme.textTheme.headlineMedium)
+                      ?.copyWith(
+                    fontWeight: FontWeight.w800,
                     color: textColor,
+                    letterSpacing: -0.4,
+                    height: 1.15,
                   ),
-                  onPressed: onBack ?? () => defaultBack(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  maxLines: 2,
                 ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      title,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
-                        letterSpacing: -0.4,
-                      ),
-                      maxLines: 2,
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 4),
-                      AppText(
-                        subtitle!,
-                        style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (action != null) action!,
-            ],
-          ),
-          const SizedBox(height: AppSpacing.spacingMD),
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(99),
-              gradient: AppColors.brandGradient,
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  AppText(
+                    subtitle!,
+                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    maxLines: 2,
+                  ),
+                ],
+              ],
             ),
           ),
+          if (action != null) action!,
         ],
       ),
     );
@@ -121,24 +105,23 @@ class PremiumTabPageLayout extends StatelessWidget {
     this.subtitle,
     this.action,
     required this.body,
+    this.showTitleHeader = true,
+    this.onRefresh,
   });
 
   final String title;
   final String? subtitle;
   final Widget? action;
   final Widget body;
+  final bool showTitleHeader;
+  final RefreshCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: ResponsiveGrid.constrained(
-          context,
-          Column(
+    final header = showTitleHeader
+        ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               PremiumPageHeader(
@@ -146,11 +129,38 @@ class PremiumTabPageLayout extends StatelessWidget {
                 subtitle: subtitle,
                 action: action,
               ),
-              const SizedBox(height: AppSpacing.spacingMD),
-              Expanded(child: body),
+              const SizedBox(height: AppSpacing.spacingSM),
             ],
-          ),
-        ),
+          )
+        : null;
+
+    final Widget content;
+    if (onRefresh != null && header != null) {
+      content = PremiumRefreshScope(
+        onRefresh: onRefresh!,
+        header: header,
+        body: body,
+      );
+    } else if (onRefresh != null) {
+      content = PremiumRefreshIndicator(
+        onRefresh: onRefresh!,
+        notificationPredicate: PremiumRefreshIndicator.nested,
+        child: body,
+      );
+    } else {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (header != null) header,
+          Expanded(child: body),
+        ],
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: bg,
+      body: PremiumSafeArea(
+        child: ResponsiveGrid.constrained(context, content),
       ),
     );
   }
@@ -166,6 +176,9 @@ class PremiumDetailScaffold extends StatelessWidget {
     this.action,
     this.onBack,
     this.bottomNavigationBar,
+    this.floatingActionButton,
+    this.showBackButton = true,
+    this.onRefresh,
   });
 
   final String title;
@@ -174,33 +187,49 @@ class PremiumDetailScaffold extends StatelessWidget {
   final Widget? action;
   final VoidCallback? onBack;
   final Widget? bottomNavigationBar;
+  final Widget? floatingActionButton;
+  final bool showBackButton;
+  final RefreshCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PremiumPageHeader(
+          title: title,
+          subtitle: subtitle,
+          action: action,
+          showBackButton: showBackButton,
+          onBack: onBack,
+        ),
+        const SizedBox(height: AppSpacing.spacingSM),
+      ],
+    );
+
+    final content = onRefresh != null
+        ? PremiumRefreshScope(
+            onRefresh: onRefresh!,
+            header: header,
+            body: body,
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              header,
+              Expanded(child: body),
+            ],
+          );
 
     return Scaffold(
       backgroundColor: bg,
       bottomNavigationBar: bottomNavigationBar,
-      body: SafeArea(
-        child: ResponsiveGrid.constrained(
-          context,
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              PremiumPageHeader(
-                title: title,
-                subtitle: subtitle,
-                action: action,
-                showBackButton: true,
-                onBack: onBack,
-              ),
-              const SizedBox(height: AppSpacing.spacingSM),
-              Expanded(child: body),
-            ],
-          ),
-        ),
+      floatingActionButton: floatingActionButton,
+      body: PremiumSafeArea(
+        bottom: true,
+        child: ResponsiveGrid.constrained(context, content),
       ),
     );
   }
@@ -213,14 +242,18 @@ class PremiumCategoryChips extends StatelessWidget {
     required this.labels,
     required this.selectedIndex,
     required this.onSelected,
+    this.subtleSelection = false,
   });
 
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final bool subtleSelection;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
@@ -236,29 +269,28 @@ class PremiumCategoryChips extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(99),
-                  gradient: selectedIndex == i
+                  gradient: selectedIndex == i && !subtleSelection
                       ? AppColors.brandGradient
                       : null,
                   color: selectedIndex == i
-                      ? null
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.06),
+                      ? (subtleSelection
+                          ? primary.withValues(alpha: 0.15)
+                          : null)
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.06),
                   border: Border.all(
                     color: selectedIndex == i
-                        ? Colors.transparent
+                        ? (subtleSelection ? primary : Colors.transparent)
                         : AppColors.accentViolet.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Text(
                   labels[i],
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: selectedIndex == i
-                            ? Colors.white
-                            : AppColors.accentViolet,
-                      ),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: selectedIndex == i
+                        ? (subtleSelection ? primary : Colors.white)
+                        : AppColors.accentViolet,
+                  ),
                 ),
               ),
             ),

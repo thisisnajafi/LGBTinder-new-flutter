@@ -7,6 +7,7 @@ import '../../core/widgets/app_action_bottom_sheet.dart';
 import '../../features/reference_data/data/models/reference_item.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/widgets/premium/premium_design_system.dart';
 
 /// Reusable bottom sheet for single and multi-select dropdowns
 class SelectionBottomSheet {
@@ -236,12 +237,7 @@ class _SingleSelectBottomSheetState<T>
                                 maxLines: 2,
                               ),
                             ),
-                            if (isSelected)
-                              AppSvgIcon(
-                                assetPath: AppIcons.checkCircle,
-                                size: 24,
-                                color: AppColors.accentPurple,
-                              ),
+                            PremiumCheckbox(selected: isSelected),
                           ],
                         ),
                       ),

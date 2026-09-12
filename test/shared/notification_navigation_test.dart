@@ -72,6 +72,30 @@ void main() {
       );
     });
 
+    test('incoming_call opens the live call page not chat', () {
+      final route = NotificationNavigation.resolveDestination(
+        type: 'incoming_call',
+        data: {
+          'call_id': 77,
+          'caller_id': 12,
+          'caller_name': 'Alex',
+          'call_type': 'video',
+        },
+      );
+      expect(route, startsWith(AppRoutes.outgoingCall));
+      expect(route, contains('callId=77'));
+      expect(route, contains('recipientId=12'));
+      expect(route, contains('callee=1'));
+      expect(route, isNot(contains(AppRoutes.chat)));
+    });
+
+    test('incoming_call without payload goes home not chat', () {
+      expect(
+        NotificationNavigation.resolveDestination(type: 'incoming_call'),
+        AppRoutes.home,
+      );
+    });
+
     test('message push payload opens chat', () {
       expect(
         NotificationNavigation.resolveDestination(
@@ -117,6 +141,60 @@ void main() {
       );
       expect(parsed?['type'], 'match');
       expect(parsed?['user_id'], 8);
+    });
+
+    test('profile visit aliases open the peer profile', () {
+      for (final type in ['view', 'visit', 'profile_visit', 'profile_view']) {
+        expect(
+          NotificationNavigation.resolveDestination(
+            type: type,
+            peerUserId: 9,
+          ),
+          Uri(path: AppRoutes.profileDetail, queryParameters: {'userId': '9'})
+              .toString(),
+        );
+      }
+    });
+
+    test('missed call opens peer call history', () {
+      expect(
+        NotificationNavigation.resolveDestination(
+          type: 'missed_call',
+          peerUserId: 4,
+        ),
+        Uri(path: AppRoutes.peerCallHistory, queryParameters: {'userId': '4'})
+            .toString(),
+      );
+    });
+
+    test('plan and verification types have explicit destinations', () {
+      expect(
+        NotificationNavigation.resolveDestination(type: 'plan_downgraded'),
+        AppRoutes.subscriptionManagement,
+      );
+      expect(
+        NotificationNavigation.resolveDestination(type: 'superlike_pack_purchased'),
+        AppRoutes.superlikePacks,
+      );
+      expect(
+        NotificationNavigation.resolveDestination(type: 'verification_approved'),
+        AppRoutes.profileVerification,
+      );
+      expect(
+        NotificationNavigation.resolveDestination(type: 'safety_alert'),
+        '${AppRoutes.home}/safety-center',
+      );
+      expect(
+        NotificationNavigation.resolveDestination(type: 'promo'),
+        AppRoutes.subscriptionPlans,
+      );
+    });
+
+    test('unknown type opens the notifications tab', () {
+      expect(
+        NotificationNavigation.resolveDestination(type: 'totally_unknown'),
+        '${AppRoutes.home}/notifications',
+      );
     });
   });
 }

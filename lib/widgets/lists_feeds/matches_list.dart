@@ -12,6 +12,7 @@ import '../error_handling/empty_state.dart';
 import '../loading/skeleton_loader.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/widgets/app_list_view.dart';
 
 /// Matches list widget
 /// Displays a list of matched users
@@ -40,7 +41,7 @@ class MatchesList extends ConsumerWidget {
     final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
 
     if (isLoading) {
-      return ListView.builder(
+      return AppListView.builder(
         itemCount: 5,
         itemBuilder: (context, index) {
           return Container(
@@ -66,7 +67,7 @@ class MatchesList extends ConsumerWidget {
       );
     }
 
-    return ListView.builder(
+    return AppListView.builder(
       itemCount: matches.length,
       itemBuilder: (context, index) {
         final match = matches[index];

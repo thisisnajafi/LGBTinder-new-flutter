@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'typography.dart';
+import '../widgets/premium/premium_text_field.dart';
 
 /// Main theme configuration for LGBTFinder app
 /// Supports both light and dark modes
 class AppTheme {
+  /// Android 14+ predictive back (PERF-ROUTE-004).
+  static final PageTransitionsTheme pageTransitionsTheme = PageTransitionsTheme(
+    builders: {
+      TargetPlatform.android: const PredictiveBackPageTransitionsBuilder(),
+    },
+  );
+
   // Dark Theme
   static ThemeData get darkTheme {
     return ThemeData(
@@ -24,6 +32,8 @@ class AppTheme {
         onError: Colors.white,
       ),
       textTheme: AppTypography.textThemeDark,
+      inputDecorationTheme: premiumInputDecorationTheme(isDark: true),
+      pageTransitionsTheme: pageTransitionsTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -51,6 +61,8 @@ class AppTheme {
         onError: Colors.white,
       ),
       textTheme: AppTypography.textThemeLight,
+      inputDecorationTheme: premiumInputDecorationTheme(isDark: false),
+      pageTransitionsTheme: pageTransitionsTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,

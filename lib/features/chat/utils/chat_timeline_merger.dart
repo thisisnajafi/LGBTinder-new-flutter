@@ -1,3 +1,5 @@
+import 'chat_message_dedup.dart';
+
 /// Merge chat messages and call log entries into a single chronological timeline.
 class ChatTimelineMerger {
   ChatTimelineMerger._();
@@ -11,17 +13,45 @@ class ChatTimelineMerger {
       ...calls.map((c) => {...c, 'kind': 'call'}),
     ];
 
-    final seenCallIds = <int>{};
-    final deduped = merged.where((item) {
-      if (item['kind'] != 'call') return true;
-      final parsed = _numericId(item['call_id']);
-      if (parsed <= 0) return true;
-      if (seenCallIds.contains(parsed)) return false;
-      seenCallIds.add(parsed);
-      return true;
-    }).toList();
+    return sortChronologically(ChatMessageDedup.fold(merged));
+  }
 
-    return sortChronologically(deduped);
+  /// Keep sending/failed/queued rows that the server history has not replaced yet.
+  static List<Map<String, dynamic>> withInFlightOptimistic({
+    required List<Map<String, dynamic>> serverTimeline,
+    required List<Map<String, dynamic>> previous,
+  }) {
+    final kept = <Map<String, dynamic>>[];
+    final serverClientIds = <String>{};
+    for (final item in serverTimeline) {
+      if (item['kind'] == 'call') continue;
+      if (_numericId(item['id']) <= 0) continue;
+      final clientId = item['client_id']?.toString();
+      if (clientId != null && clientId.isNotEmpty) {
+        serverClientIds.add(clientId);
+      }
+    }
+    for (final row in previous) {
+      if (!_isInFlight(row)) continue;
+      final clientId = row['client_id']?.toString();
+      if (clientId != null &&
+          clientId.isNotEmpty &&
+          serverClientIds.contains(clientId)) {
+        continue;
+      }
+      kept.add(row);
+    }
+    if (kept.isEmpty) return serverTimeline;
+    return sortChronologically(
+      ChatMessageDedup.fold([...serverTimeline, ...kept]),
+    );
+  }
+
+  static bool _isInFlight(Map<String, dynamic> msg) {
+    if (msg['kind'] == 'call') return false;
+    final raw = msg['delivery_status'];
+    final name = raw is Enum ? raw.name : raw?.toString();
+    return name == 'sending' || name == 'failed' || name == 'queued';
   }
 
   /// Oldest → newest. Same-second messages use server id so rapid sends stay in order.

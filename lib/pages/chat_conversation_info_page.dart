@@ -6,18 +6,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:photo_view/photo_view.dart';
 
+import '../core/cache/cache_providers.dart';
+import '../core/cache/image_cache_service.dart';
 import '../core/theme/app_colors.dart';
 import '../core/responsive/responsive.dart';
 import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
 import '../core/utils/app_icons.dart';
-import '../features/chat/data/models/message.dart';
+import '../core/utils/media_url.dart';
+import '../core/services/app_logger.dart';
+import '../features/chat/data/local/chat_info_cache.dart';
+import '../features/chat/data/models/shared_media_item.dart';
 import '../features/chat/data/services/chat_service.dart';
 import '../features/chat/providers/chat_providers.dart';
+import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../features/chat/providers/conversation_mute_cache_provider.dart';
+import '../features/chat/providers/conversation_pin_cache_provider.dart';
+import '../features/chat/providers/pinned_count_provider.dart';
+import '../features/chat/utils/chat_visual_media.dart';
+import '../widgets/chat/chat_video_viewer.dart';
 import '../features/profile/data/models/user_profile.dart';
 import '../features/profile/providers/profile_providers.dart';
+import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../features/safety/presentation/screens/report_user_screen.dart';
 import '../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../routes/app_router.dart';
@@ -25,8 +36,9 @@ import '../shared/models/api_error.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/profile_image_widget.dart';
 import '../widgets/buttons/gradient_button.dart';
+import '../widgets/chat/last_seen_widget.dart';
 
-/// Full-screen chat peer details: profile summary, shared media, view profile.
+/// Chat-only conversation details: identity, media, mute, safety.
 class ChatConversationInfoPage extends ConsumerStatefulWidget {
   const ChatConversationInfoPage({
     super.key,
@@ -46,40 +58,48 @@ class ChatConversationInfoPage extends ConsumerStatefulWidget {
       _ChatConversationInfoPageState();
 }
 
-class _SharedMediaItem {
-  const _SharedMediaItem({
-    required this.url,
-    required this.isVideo,
-    this.messageId,
-  });
-
-  final String url;
-  final bool isVideo;
-  final int? messageId;
-}
-
 class _ChatConversationInfoPageState
     extends ConsumerState<ChatConversationInfoPage> {
   UserProfile? _profile;
-  List<_SharedMediaItem> _sharedMedia = const [];
+  List<SharedMediaItem> _sharedMedia = const [];
   bool _isLoading = true;
   bool _isLoadingMedia = true;
   String? _error;
   bool _isMuted = false;
   bool _isMuting = false;
+  bool _isPinned = false;
+  bool _isPinning = false;
 
   @override
   void initState() {
     super.initState();
+    final cached =
+        ref.read(chatInfoCacheProvider.notifier).snapshotFor(widget.userId);
+    if (cached.media.isNotEmpty) {
+      _sharedMedia = cached.media;
+      _isLoadingMedia = false;
+    }
+    if (widget.userName.trim().isNotEmpty) {
+      _isLoading = false;
+    }
+    _isPinned = ref.read(conversationPinCacheProvider).contains(widget.userId);
     _loadData();
   }
 
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _isLoadingMedia = true;
-      _error = null;
-    });
+    final cached = ref.read(chatInfoCacheProvider.notifier).snapshotFor(
+          widget.userId,
+        );
+    final hadCachedMedia = cached.media.isNotEmpty || _sharedMedia.isNotEmpty;
+    if (mounted && hadCachedMedia) {
+      setState(() {
+        if (cached.media.isNotEmpty) {
+          _sharedMedia = cached.media;
+        }
+        _isLoadingMedia = false;
+        _error = null;
+      });
+    }
 
     try {
       final chatService = ref.read(chatServiceProvider);
@@ -87,29 +107,76 @@ class _ChatConversationInfoPageState
       final results = await Future.wait([
         profileService.getUserProfile(widget.userId),
         chatService.isConversationMuted(widget.userId),
+        chatService.isConversationPinned(widget.userId),
       ]);
 
       if (!mounted) return;
       setState(() {
         _profile = results[0] as UserProfile;
         _isMuted = results[1] as bool;
+        _isPinned = results[2] as bool;
         _isLoading = false;
       });
-      unawaited(_loadSharedMedia());
+      final avatar = primaryProfileImage(_profile?.images)?.avatarDisplayUrl ??
+          primaryProfileImage(_profile?.images)?.imageUrl;
+      if (avatar != null && avatar.isNotEmpty) {
+        ref.read(chatListPreviewProvider.notifier).updatePeerAppearance(
+              widget.userId,
+              avatarUrl: avatar,
+            );
+      }
+      unawaited(_loadSharedMedia(forceSpinner: !hadCachedMedia));
+      unawaited(_refreshPinnedCount());
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = _sharedMedia.isEmpty ? e.toString() : null;
         _isLoading = false;
-        _isLoadingMedia = false;
+        if (_sharedMedia.isEmpty) _isLoadingMedia = false;
       });
     }
   }
 
-  Future<void> _loadSharedMedia() async {
+  Future<void> _refreshPinnedCount() async {
     try {
+      final count = await ref
+          .read(chatServiceProvider)
+          .getPinnedMessagesCount(widget.userId);
+      await ref
+          .read(chatInfoCacheProvider.notifier)
+          .savePinnedCount(widget.userId, count);
+      ref.invalidate(pinnedCountProvider(widget.userId));
+    } catch (e) {
+      AppLogger.warning(
+        'Pinned count refresh failed',
+        tag: 'Chat',
+        error: e,
+      );
+    }
+  }
+
+  Future<void> _loadSharedMedia({bool forceSpinner = true}) async {
+    if (forceSpinner && mounted && _sharedMedia.isEmpty) {
+      setState(() => _isLoadingMedia = true);
+    }
+
+    try {
+      final localRepo = ref.read(chatLocalRepositoryProvider);
       final chatService = ref.read(chatServiceProvider);
-      final collected = <_SharedMediaItem>[];
+      final fromLocal = ChatVisualMedia.sharedFromMessages(
+        await localRepo.getAllMessagesForOtherUser(widget.userId),
+      );
+      if (fromLocal.isNotEmpty && mounted) {
+        setState(() {
+          _sharedMedia = fromLocal;
+          _isLoadingMedia = false;
+        });
+        unawaited(
+          ChatVisualMedia.prefetchUrlsList(fromLocal.map((item) => item.url)),
+        );
+      }
+
+      final collected = <SharedMediaItem>[];
       final seen = <String>{};
       ChatHistoryCursor? cursor;
       var hasMore = true;
@@ -122,9 +189,11 @@ class _ChatConversationInfoPageState
           beforeId: cursor?.beforeId,
           beforeCreatedAt: cursor?.beforeCreatedAt,
         );
+        await localRepo.upsertMessages(result.messages, widget.userId);
+        unawaited(ChatVisualMedia.prefetchMessages(result.messages));
 
         for (final message in result.messages) {
-          final item = _mediaFromMessage(message);
+          final item = ChatVisualMedia.sharedItem(message);
           if (item != null && seen.add(item.url)) {
             collected.add(item);
           }
@@ -140,38 +209,19 @@ class _ChatConversationInfoPageState
         _sharedMedia = collected;
         _isLoadingMedia = false;
       });
-    } catch (_) {
+      await ref.read(chatInfoCacheProvider.notifier).saveMedia(
+            widget.userId,
+            collected,
+          );
+    } catch (e) {
+      AppLogger.warning(
+        'Shared media load failed',
+        tag: 'Chat',
+        error: e,
+      );
       if (!mounted) return;
       setState(() => _isLoadingMedia = false);
     }
-  }
-
-  bool _isSelfDestructMedia(Message message) {
-    final type = message.messageType.toLowerCase();
-    return message.isExpired ||
-        message.expiresInSeconds != null ||
-        message.remainingSeconds != null ||
-        type == 'self_destruct' ||
-        type.startsWith('disappearing_');
-  }
-
-  _SharedMediaItem? _mediaFromMessage(Message message) {
-    if (_isSelfDestructMedia(message)) return null;
-    final type = message.messageType.toLowerCase();
-    final isImage = type == 'image';
-    final isVideo = type == 'video';
-    if (!isImage && !isVideo) return null;
-
-    final url = message.attachmentUrl ??
-        message.secureMediaUrl ??
-        message.mediaThumbnailUrl;
-    if (url == null || url.isEmpty) return null;
-
-    return _SharedMediaItem(
-      url: url,
-      isVideo: isVideo,
-      messageId: message.id > 0 ? message.id : null,
-    );
   }
 
   String get _displayName {
@@ -184,43 +234,13 @@ class _ChatConversationInfoPageState
   }
 
   String? get _displayAvatar {
-    final images = _profile?.images;
-    if (images != null && images.isNotEmpty) {
-      return images.first.imageUrl;
-    }
+    final primary = primaryProfileImage(_profile?.images);
+    final url = primary?.avatarDisplayUrl ?? primary?.imageUrl;
+    if (url != null && url.isNotEmpty) return url;
     return widget.avatarUrl;
   }
 
-  List<String> _interestLabels(UserProfile profile) {
-    if (profile.interestTitles != null && profile.interestTitles!.isNotEmpty) {
-      return profile.interestTitles!.take(12).toList();
-    }
-    final raw = profile.additionalData?['interests'];
-    if (raw is! List) return const [];
-    return raw
-        .map((item) {
-          if (item is Map) return item['title']?.toString() ?? '';
-          return item.toString();
-        })
-        .where((label) => label.isNotEmpty)
-        .take(12)
-        .toList();
-  }
-
-  String? _locationLabel(UserProfile profile) {
-    final distance = profile.additionalData?['distance'];
-    if (distance != null) {
-      final km = distance is num ? distance.toDouble() : double.tryParse('$distance');
-      if (km != null) return '${km.toStringAsFixed(1)} km away';
-    }
-    if (profile.city != null && profile.city!.isNotEmpty) {
-      return profile.city;
-    }
-    if (profile.country != null && profile.country!.isNotEmpty) {
-      return profile.country;
-    }
-    return null;
-  }
+  bool get _isOnline => widget.isOnline || _profile?.isOnline == true;
 
   void _openProfile() {
     final target = Uri(
@@ -286,12 +306,51 @@ class _ChatConversationInfoPageState
     }
   }
 
+  Future<void> _togglePin() async {
+    setState(() => _isPinning = true);
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      final pinned = _isPinned
+          ? await chatService.unpinConversation(widget.userId)
+          : await chatService.pinConversation(widget.userId);
+
+      if (!mounted) return;
+      ref.read(conversationPinCacheProvider.notifier).setPinned(widget.userId, pinned);
+      setState(() {
+        _isPinned = pinned;
+        _isPinning = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isPinned ? 'Conversation pinned' : 'Conversation unpinned'),
+        ),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() => _isPinning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isPinning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update pin: $e')),
+      );
+    }
+  }
+
   void _openMediaViewer(int initialIndex) {
+    if (initialIndex < 0 || initialIndex >= _sharedMedia.length) return;
+    final tapped = _sharedMedia[initialIndex];
+    if (tapped.isVideo) {
+      unawaited(ChatVideoViewer.open(context, videoUrl: tapped.url));
+      return;
+    }
+
     final items = _sharedMedia.where((e) => !e.isVideo).toList();
     if (items.isEmpty) return;
     var index = initialIndex.clamp(0, items.length - 1);
-    final tapped = _sharedMedia[initialIndex];
-    if (tapped.isVideo) return;
     final imageOnlyIndex = items.indexWhere((e) => e.url == tapped.url);
     if (imageOnlyIndex >= 0) index = imageOnlyIndex;
 
@@ -305,12 +364,29 @@ class _ChatConversationInfoPageState
             iconTheme: const IconThemeData(color: Colors.white),
           ),
           body: PhotoView(
-            imageProvider: NetworkImage(items[index].url),
+            imageProvider: lgbtfinderCachedImageProvider(items[index].url),
             minScale: PhotoViewComputedScale.contained,
             maxScale: PhotoViewComputedScale.covered * 3,
           ),
         ),
       ),
+    );
+  }
+
+  EdgeInsets _listPadding(BuildContext context) {
+    return EdgeInsets.fromLTRB(
+      AppBreakpoints.value(
+        context,
+        phone: PremiumPageHeader.horizontalPadding,
+        tablet: AppSpacing.spacingXL,
+      ),
+      AppSpacing.spacingMD,
+      AppBreakpoints.value(
+        context,
+        phone: PremiumPageHeader.horizontalPadding,
+        tablet: AppSpacing.spacingXL,
+      ),
+      AppSpacing.spacingXXL,
     );
   }
 
@@ -324,10 +400,19 @@ class _ChatConversationInfoPageState
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final borderColor =
         isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final cachedInfo = ref.watch(
+      chatInfoCacheProvider.select(
+        (cache) => cache[widget.userId] ?? const ChatInfoCacheSnapshot(),
+      ),
+    );
+    final pinnedCount = cachedInfo.pinnedCount > 0
+        ? cachedInfo.pinnedCount
+        : (ref.watch(pinnedCountProvider(widget.userId)).valueOrNull ?? 0);
 
     return PremiumDetailScaffold(
       title: 'Chat info',
       onBack: () => context.pop(),
+      onRefresh: _isLoading || _error != null ? null : _loadData,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -354,23 +439,9 @@ class _ChatConversationInfoPageState
                     ),
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      AppBreakpoints.value(
-                        context,
-                        phone: PremiumPageHeader.horizontalPadding,
-                        tablet: AppSpacing.spacingXL,
-                      ),
-                      AppSpacing.spacingMD,
-                      AppBreakpoints.value(
-                        context,
-                        phone: PremiumPageHeader.horizontalPadding,
-                        tablet: AppSpacing.spacingXL,
-                      ),
-                      AppSpacing.spacingXXL,
-                    ),
+              : ListView(
+                    physics: AppScroll.bouncing,
+                    padding: _listPadding(context),
                     children: [
                       PremiumShell(
                         margin: EdgeInsets.zero,
@@ -378,7 +449,8 @@ class _ChatConversationInfoPageState
                           children: [
                             _InfoAvatar(
                               imageUrl: _displayAvatar,
-                              isOnline: widget.isOnline,
+                              userId: widget.userId,
+                              isOnline: _isOnline,
                             ),
                             const SizedBox(height: AppSpacing.spacingMD),
                             AppText(
@@ -387,194 +459,35 @@ class _ChatConversationInfoPageState
                               textAlign: TextAlign.center,
                               maxLines: 2,
                             ),
-                            if (_profile != null &&
-                                _locationLabel(_profile!) != null) ...[
-                              const SizedBox(height: AppSpacing.spacingXS),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  AppSvgIcon(
-                                    assetPath: AppIcons.location,
-                                    size: 16,
-                                    color: secondaryTextColor,
-                                  ),
-                                  const SizedBox(width: AppSpacing.spacingXS),
-                                  Flexible(
-                                    child: AppText(
-                                      _locationLabel(_profile!)!,
-                                      style: AppTypography.caption
-                                          .copyWith(color: secondaryTextColor),
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: AppSpacing.spacingXS),
+                            Center(
+                              child: LastSeenWidget(
+                                isOnline: _isOnline,
+                                lastSeenAt: _profile?.lastSeen,
                               ),
-                            ],
+                            ),
+                            const SizedBox(height: AppSpacing.spacingLG),
+                            GradientButton(
+                              text: 'View profile',
+                              iconPath: AppIcons.user,
+                              onPressed: _openProfile,
+                            ),
                           ],
                         ),
                       ),
-                      if (_profile != null) ...[
-                        if (_profile!.profileBio != null &&
-                            _profile!.profileBio!.trim().isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.spacingLG),
-                          PremiumShell(
-                            margin: EdgeInsets.zero,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                PremiumSectionHeader(title: 'About'),
-                                const SizedBox(height: AppSpacing.spacingSM),
-                                AppText(
-                                  _profile!.profileBio!.trim(),
-                                  style: AppTypography.body
-                                      .copyWith(color: secondaryTextColor),
-                                  maxLines: 8,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        if (_interestLabels(_profile!).isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.spacingLG),
-                          PremiumShell(
-                            margin: EdgeInsets.zero,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                PremiumSectionHeader(title: 'Interests'),
-                                const SizedBox(height: AppSpacing.spacingSM),
-                                Wrap(
-                                  spacing: AppSpacing.spacingSM,
-                                  runSpacing: AppSpacing.spacingSM,
-                                  children: _interestLabels(_profile!)
-                                      .map(
-                                        (label) => Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: AppSpacing.spacingMD,
-                                            vertical: AppSpacing.spacingXS,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.accentViolet
-                                                .withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(
-                                              AppRadius.radiusRound,
-                                            ),
-                                            border: Border.all(
-                                              color: AppColors.accentViolet
-                                                  .withValues(alpha: 0.28),
-                                            ),
-                                          ),
-                                          child: AppText(
-                                            label,
-                                            style: AppTypography.caption.copyWith(
-                                              color: AppColors.accentViolet,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                            maxLines: 1,
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                      const SizedBox(height: AppSpacing.spacingXL),
-                      GradientButton(
-                        text: 'View profile',
-                        iconPath: AppIcons.user,
-                        onPressed: _openProfile,
-                      ),
-                      const SizedBox(height: AppSpacing.spacingXL),
-                      PremiumSectionHeader(title: 'Shared media'),
-                      const SizedBox(height: AppSpacing.spacingMD),
-                      if (_isLoadingMedia)
-                        const Padding(
-                          padding: EdgeInsets.all(AppSpacing.spacingXL),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (_sharedMedia.isEmpty)
-                        PremiumShell(
-                          margin: EdgeInsets.zero,
-                          child: Text(
-                            'No photos or videos shared yet',
-                            style: AppTypography.bodySmall
-                                .copyWith(color: secondaryTextColor),
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      else
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _sharedMedia.length,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: ResponsiveGrid.photoColumns(context),
-                            mainAxisSpacing: AppSpacing.spacingSM,
-                            crossAxisSpacing: AppSpacing.spacingSM,
-                          ),
-                          itemBuilder: (context, index) {
-                            final item = _sharedMedia[index];
-                            return PremiumTapScale(
-                              onTap: () => _openMediaViewer(index),
-                              semanticLabel: 'Open shared media',
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.radiusSM,
-                                ),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    CachedNetworkImage(
-                                      imageUrl: item.url,
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, __) => Container(
-                                        color: borderColor,
-                                      ),
-                                      errorWidget: (_, __, ___) => Container(
-                                        color: borderColor,
-                                        child: AppSvgIcon(
-                                          assetPath: AppIcons.gallery,
-                                          size: 28,
-                                          color: secondaryTextColor,
-                                        ),
-                                      ),
-                                    ),
-                                    if (item.isVideo)
-                                      Container(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.35),
-                                        child: Center(
-                                          child: AppSvgIcon(
-                                            assetPath: AppIcons.playCircle,
-                                            size: 32,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      const SizedBox(height: AppSpacing.spacingXL),
+                      const SizedBox(height: AppSpacing.spacingLG),
                       PremiumSettingsGroup(
-                        title: 'Actions',
+                        title: 'Chat',
+                        subtitle: 'This conversation',
                         margin: EdgeInsets.zero,
                         children: [
                           PremiumSettingsTile(
-                            iconPath:
-                                _isMuted ? AppIcons.bellSlash : AppIcons.bell,
-                            title: _isMuted
-                                ? 'Unmute notifications'
-                                : 'Mute notifications',
-                            onTap: _isMuting ? () {} : _toggleMute,
-                            trailing: _isMuting
+                            iconPath: AppIcons.bell,
+                            title: 'Notifications on',
+                            subtitle: 'Get alerts from this chat',
+                            selected: !_isMuted,
+                            onTap: _isMuting || !_isMuted ? () {} : _toggleMute,
+                            trailing: _isMuting && _isMuted
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
@@ -584,6 +497,165 @@ class _ChatConversationInfoPageState
                                   )
                                 : null,
                           ),
+                          PremiumSettingsTile(
+                            iconPath: AppIcons.bellSlash,
+                            title: 'Notifications muted',
+                            subtitle: 'You will not get alerts from this chat',
+                            selected: _isMuted,
+                            onTap: _isMuting || _isMuted ? () {} : _toggleMute,
+                            trailing: _isMuting && !_isMuted
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          PremiumSettingsTile(
+                            iconPath: _isPinned
+                                ? AppIcons.bookmark2
+                                : AppIcons.bookmark,
+                            title: _isPinned
+                                ? 'Pinned to top'
+                                : 'Pin conversation',
+                            subtitle: _isPinned
+                                ? 'This chat stays at the top of your list'
+                                : 'Keep this chat at the top of your list',
+                            selected: _isPinned,
+                            onTap: _isPinning ? () {} : _togglePin,
+                            trailing: _isPinning
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          PremiumSettingsTile(
+                            iconPath: AppIcons.gallery,
+                            title: 'Shared media',
+                            subtitle: _isLoadingMedia
+                                ? 'Loading…'
+                                : _sharedMedia.isEmpty
+                                    ? 'No photos or videos yet'
+                                    : '${_sharedMedia.length} item${_sharedMedia.length == 1 ? '' : 's'}',
+                            onTap: () {},
+                            trailing: const SizedBox.shrink(),
+                          ),
+                          PremiumSettingsTile(
+                            iconPath: AppIcons.getIconPath('bookmark'),
+                            title: 'Pinned messages',
+                            subtitle: pinnedCount == 0
+                                ? 'None pinned'
+                                : '$pinnedCount pinned',
+                            onTap: () {},
+                            trailing: const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.spacingLG),
+                      PremiumShell(
+                        margin: EdgeInsets.zero,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            PremiumSectionHeader(
+                              title: 'Shared media',
+                              subtitle: _isLoadingMedia
+                                  ? 'From this chat'
+                                  : '${_sharedMedia.length} in this chat',
+                            ),
+                            const SizedBox(height: AppSpacing.spacingMD),
+                            if (_isLoadingMedia)
+                              const Padding(
+                                padding: EdgeInsets.all(AppSpacing.spacingXL),
+                                child: Center(child: CircularProgressIndicator()),
+                              )
+                            else if (_sharedMedia.isEmpty)
+                              AppText(
+                                'Photos and videos you send here will show up in this chat.',
+                                style: AppTypography.bodySmall
+                                    .copyWith(color: secondaryTextColor),
+                                maxLines: 3,
+                                textAlign: TextAlign.start,
+                              )
+                            else
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _sharedMedia.length,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount:
+                                      ResponsiveGrid.photoColumns(context),
+                                  mainAxisSpacing: AppSpacing.spacingSM,
+                                  crossAxisSpacing: AppSpacing.spacingSM,
+                                ),
+                                itemBuilder: (context, index) {
+                                  final item = _sharedMedia[index];
+                                  return PremiumTapScale(
+                                    onTap: () => _openMediaViewer(index),
+                                    semanticLabel: 'Open shared media',
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.radiusSM,
+                                      ),
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          CachedNetworkImage(
+                                            imageUrl: item.url,
+                                            cacheManager: ref.read(
+                                              imageCacheServiceProvider,
+                                            ),
+                                            cacheKey: MediaUrl.cacheKey(
+                                              url: item.url,
+                                            ),
+                                            fit: BoxFit.cover,
+                                            placeholder: (_, __) => Container(
+                                              color: borderColor,
+                                            ),
+                                            errorWidget: (_, __, ___) =>
+                                                Container(
+                                              color: borderColor,
+                                              child: AppSvgIcon(
+                                                assetPath: AppIcons.gallery,
+                                                size: 28,
+                                                color: secondaryTextColor,
+                                              ),
+                                            ),
+                                          ),
+                                          if (item.isVideo)
+                                            Container(
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.35),
+                                              child: Center(
+                                                child: AppSvgIcon(
+                                                  assetPath: AppIcons.playCircle,
+                                                  size: 32,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.spacingLG),
+                      PremiumSettingsGroup(
+                        title: 'Safety',
+                        subtitle: 'This conversation',
+                        margin: EdgeInsets.zero,
+                        children: [
                           PremiumSettingsTile(
                             iconPath: AppIcons.report,
                             title: 'Report user',
@@ -600,7 +672,6 @@ class _ChatConversationInfoPageState
                       ),
                     ],
                   ),
-                ),
     );
   }
 }
@@ -608,10 +679,12 @@ class _ChatConversationInfoPageState
 class _InfoAvatar extends ConsumerWidget {
   const _InfoAvatar({
     required this.imageUrl,
+    required this.userId,
     required this.isOnline,
   });
 
   final String? imageUrl;
+  final int userId;
   final bool isOnline;
 
   @override
@@ -644,6 +717,7 @@ class _InfoAvatar extends ConsumerWidget {
             child: ClipOval(
               child: ProfileImageWidget(
                 imageUrl: imageUrl,
+                userId: userId,
                 width: 82,
                 height: 82,
                 fit: BoxFit.cover,

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/app_logger.dart';
 import '../../core/services/startup_cache_service.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/notifications/providers/notification_preferences_provider.dart';
 
 /// Primes session caches after auth and on foreground resume (>5 min).
 class StartupCacheListener extends ConsumerStatefulWidget {
@@ -74,6 +75,7 @@ class _StartupCacheListenerState extends ConsumerState<StartupCacheListener> {
 
     final auth = ref.watch(authProvider);
     if (auth.isAuthenticated && !auth.isLoading) {
+      ref.watch(notificationPreferencesProvider);
       WidgetsBinding.instance.addPostFrameCallback((_) => _maybePrime());
     }
 

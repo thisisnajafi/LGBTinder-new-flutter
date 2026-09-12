@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import '../../../core/cache/image_cache_service.dart';
 import '../data/models/discovery_profile.dart';
 
@@ -87,6 +89,37 @@ class DiscoveryImagePrefetch {
       if (urls.isNotEmpty) {
         await prefetchUrl(urls.first, cacheManager: cache);
       }
+    }
+  }
+
+  /// First photo URL for each of the next [nextCount] cards behind the front.
+  @visibleForTesting
+  static List<String> nextCardPreviewUrls(
+    List<DiscoveryProfile> stack, {
+    int nextCount = 2,
+  }) {
+    final urls = <String>[];
+    for (var i = 1; i <= nextCount && i < stack.length; i++) {
+      final found = urlsFromProfile(stack[i]);
+      if (found.isNotEmpty) urls.add(found.first);
+    }
+    return urls;
+  }
+
+  /// Decode the next two stack photos into Flutter's image cache
+  /// (PERF-PAGE-DISCOVERY-002).
+  static Future<void> precacheNextTwo(
+    BuildContext context,
+    List<DiscoveryProfile> stack,
+  ) async {
+    if (!context.mounted) return;
+    for (final url in nextCardPreviewUrls(stack)) {
+      try {
+        await precacheImage(lgbtfinderCachedImageProvider(url), context);
+      } catch (_) {
+        // Non-fatal — the card still loads via CachedNetworkImage.
+      }
+      if (!context.mounted) return;
     }
   }
 

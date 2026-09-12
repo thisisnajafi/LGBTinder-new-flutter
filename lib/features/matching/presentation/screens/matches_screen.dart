@@ -114,7 +114,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             );
           }
 
-          return RefreshIndicator(
+          return PremiumRefreshIndicator(
             onRefresh: () async {
               await ref.read(appCacheManagerProvider).revalidateAll();
               await _refreshMatches();
@@ -185,6 +185,7 @@ class _MatchRow extends StatelessWidget {
               ClipOval(
                 child: ProfileImageWidget(
                   imageUrl: match.primaryImageUrl,
+                  userId: match.userId,
                   width: 52,
                   height: 52,
                   fit: BoxFit.cover,

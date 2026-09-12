@@ -16,6 +16,7 @@ class DiscoverEmptyState extends StatelessWidget {
     this.title = "You've seen everyone nearby",
     this.subtitle =
         'Check back soon or expand your filters to see more people',
+    this.iconPath,
     this.primaryActionLabel = 'Adjust filters',
     this.onPrimaryAction,
     this.secondaryActionLabel,
@@ -26,6 +27,7 @@ class DiscoverEmptyState extends StatelessWidget {
 
   final String title;
   final String subtitle;
+  final String? iconPath;
   final String primaryActionLabel;
   final VoidCallback? onPrimaryAction;
   final String? secondaryActionLabel;
@@ -52,7 +54,10 @@ class DiscoverEmptyState extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _EmptyIllustration(animate: !reduceMotion),
+                _EmptyIllustration(
+                  animate: !reduceMotion,
+                  iconPath: iconPath ?? AppIcons.search,
+                ),
                 const SizedBox(height: AppSpacing.spacingXL),
                 AppText(
                   title,
@@ -157,9 +162,13 @@ class DiscoverEmptyState extends StatelessWidget {
 }
 
 class _EmptyIllustration extends StatefulWidget {
-  const _EmptyIllustration({required this.animate});
+  const _EmptyIllustration({
+    required this.animate,
+    required this.iconPath,
+  });
 
   final bool animate;
+  final String iconPath;
 
   @override
   State<_EmptyIllustration> createState() => _EmptyIllustrationState();
@@ -229,7 +238,7 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
             ),
             child: Center(
               child: AppSvgIcon(
-                assetPath: AppIcons.search,
+                assetPath: widget.iconPath,
                 size: 28,
                 color: Colors.white,
               ),

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
-import '../images/optimized_image.dart';
+import '../../core/widgets/optimized_image.dart';
 
 /// Media viewer widget
 /// Full-screen viewer for images and videos

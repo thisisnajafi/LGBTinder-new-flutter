@@ -5,15 +5,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/app_date_time.dart';
+import '../../core/cache/peer_avatar_cache.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/utils/media_url.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
-import '../../core/providers/subscription_provider.dart';
+import '../../features/chat/providers/conversation_mute_cache_provider.dart';
+import '../../features/chat/providers/conversation_pin_cache_provider.dart';
+import '../../features/chat/providers/user_presence_cache_provider.dart';
+import '../../features/chat/providers/chat_thread_providers.dart';
 import '../../features/chat/utils/chat_message_preview.dart';
+import '../../features/chat/utils/chat_presence_copy.dart';
 import 'typing_indicator.dart';
+import 'message_status_indicator.dart';
+import 'chat_search_highlight_text.dart';
+import 'chat_unread_badge.dart';
+import 'chat_online_dot.dart';
+import '../../features/chat/data/models/message_delivery_status.dart';
 import '../../core/responsive/responsive.dart';
 
 /// Single conversation row in the messenger list.
@@ -28,7 +39,18 @@ class ChatListItem extends ConsumerWidget {
   final bool isOnline;
   final bool isTyping;
   final bool isMuted;
+  final bool isPinned;
+  final bool lastMessageFromMe;
+  final bool lastMessageIsRead;
+  final bool lastMessageIsDelivered;
+  final DateTime? lastSeenAt;
+  final String highlightQuery;
+  final bool hasPlan;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  static const pinIconKey = ValueKey('chat-list-pin-icon');
+  static const previewLockKey = ValueKey('chat-list-preview-lock');
 
   const ChatListItem({
     super.key,
@@ -42,19 +64,53 @@ class ChatListItem extends ConsumerWidget {
     this.isOnline = false,
     this.isTyping = false,
     this.isMuted = false,
+    this.isPinned = false,
+    this.lastMessageFromMe = false,
+    this.lastMessageIsRead = false,
+    this.lastMessageIsDelivered = false,
+    this.lastSeenAt,
+    this.highlightQuery = '',
+    required this.hasPlan,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isLocked = !ref.watch(isPremiumProvider);
+    final isLocked = !hasPlan;
+    final cacheMuted = ref.watch(
+      conversationMuteCacheProvider.select((ids) => ids.contains(userId)),
+    );
+    final muted = cacheMuted || isMuted;
+    final cachePinned = ref.watch(
+      conversationPinCacheProvider.select((ids) => ids.contains(userId)),
+    );
+    final pinned = cachePinned || isPinned;
     final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final displayName = name.trim().isNotEmpty ? name.trim() : 'User';
+    final cachedAvatar = ref.watch(
+      peerAvatarCacheProvider.select((avatars) => avatars[userId]),
+    );
+    final resolvedAvatar = MediaUrl.pick(
+      userId: userId,
+      incoming: avatarUrl,
+      cached: cachedAvatar,
+    );
+    final presence = ref.watch(
+      userPresenceCacheProvider.select((map) => map[userId]),
+    );
+    final liveOnline = presence?.isOnline ?? isOnline;
+    final seenAt = presence?.lastSeenAt ?? lastSeenAt;
+    final liveTyping = ref.watch(
+      chatTypingUsersProvider.select((m) => m[userId] == true),
+    );
+    final typing = liveTyping || isTyping;
 
     return PremiumTapScale(
       onTap: onTap ?? () {},
+      onLongPress: onLongPress,
       semanticLabel: 'Chat with $displayName',
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -65,12 +121,19 @@ class ChatListItem extends ConsumerWidget {
           color: isDark
               ? AppColors.cardBackgroundDark
               : AppColors.cardBackgroundLight,
-          borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+          borderRadius: BorderRadius.circular(AppRadius.radiusMD),
           border: Border.all(
             color: unreadCount > 0
                 ? AppColors.accentPink.withValues(alpha: 0.25)
                 : AppColors.accentViolet.withValues(alpha: isDark ? 0.1 : 0.08),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -79,27 +142,21 @@ class ChatListItem extends ConsumerWidget {
                   children: [
                     ClipOval(
                       child: ProfileImageWidget(
-                        imageUrl: avatarUrl,
+                        imageUrl: resolvedAvatar,
+                        userId: userId,
                         width: 52,
                         height: 52,
                         fit: BoxFit.cover,
                       ),
                     ),
-                    if (isOnline)
+                    if (liveOnline)
                       Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: AppColors.onlineGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: theme.scaffoldBackgroundColor,
-                              width: 1.5,
-                            ),
-                          ),
+                        right: -1,
+                        bottom: -1,
+                        child: ChatOnlineDot(
+                          ringColor: isDark
+                              ? AppColors.cardBackgroundDark
+                              : AppColors.cardBackgroundLight,
                         ),
                       ),
                   ],
@@ -110,21 +167,50 @@ class ChatListItem extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      AppText(
-                        displayName,
-                        maxLines: 1,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChatSearchHighlightText(
+                              text: displayName,
+                              query: highlightQuery,
+                              maxLines: 1,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          if (pinned)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: AppSvgIcon(
+                                key: ChatListItem.pinIconKey,
+                                assetPath: AppIcons.bookmark,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          if (muted)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.bellSlash,
+                                size: 14,
+                                color: mutedColor,
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: AppSpacing.spacingXS),
                       _MessagePreview(
-                        isTyping: isTyping,
+                        isTyping: typing,
                         lastMessage: lastMessage,
                         lastMessageType: lastMessageType,
+                        isOnline: liveOnline,
+                        lastSeenAt: seenAt,
                         isLocked: isLocked,
                         mutedColor: mutedColor,
+                        highlightQuery: highlightQuery,
                       ),
                     ],
                   ),
@@ -135,34 +221,32 @@ class ChatListItem extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (lastMessageTime != null)
-                      AppText(
-                        _formatTime(lastMessageTime!),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: mutedColor,
-                        ),
-                        maxLines: 1,
-                      ),
-                    if (unreadCount > 0) ...[
-                      const SizedBox(height: AppSpacing.spacingXS),
-                      Container(
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        alignment: Alignment.center,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            unreadCount > 99 ? '99+' : '$unreadCount',
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (lastMessageFromMe && unreadCount == 0) ...[
+                            MessageStatusIndicator(
+                              isRead: lastMessageIsRead,
+                              isDelivered: lastMessageIsDelivered,
+                              deliveryStatus: MessageDeliveryStatus.sent,
+                              messageId: 1,
+                              sentColor: mutedColor,
+                              readColor: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          AppText(
+                            _formatTime(lastMessageTime!),
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onPrimary,
+                              color: mutedColor,
                             ),
                             maxLines: 1,
                           ),
-                        ),
+                        ],
                       ),
+                    if (unreadCount > 0) ...[
+                      const SizedBox(height: AppSpacing.spacingXS),
+                      ChatUnreadBadge(count: unreadCount),
                     ],
                   ],
                 ),
@@ -192,15 +276,21 @@ class _MessagePreview extends StatelessWidget {
   final bool isTyping;
   final String? lastMessage;
   final String? lastMessageType;
+  final bool isOnline;
+  final DateTime? lastSeenAt;
   final bool isLocked;
   final Color mutedColor;
+  final String highlightQuery;
 
   const _MessagePreview({
     required this.isTyping,
     required this.lastMessage,
     this.lastMessageType,
+    required this.isOnline,
+    this.lastSeenAt,
     required this.isLocked,
     required this.mutedColor,
+    this.highlightQuery = '',
   });
 
   @override
@@ -211,7 +301,12 @@ class _MessagePreview extends StatelessWidget {
       return const TypingIndicator();
     }
 
-    final previewText = lastMessage ?? 'No messages yet';
+    final previewText = ChatPresenceCopy.hasLastMessage(lastMessage)
+        ? lastMessage!.trim()
+        : ChatPresenceCopy.emptyPreview(
+            isOnline: isOnline,
+            lastSeenAt: lastSeenAt,
+          );
     final textStyle = theme.textTheme.bodySmall?.copyWith(color: mutedColor);
     final isVoice = isVoiceMessagePreview(lastMessageType);
 
@@ -225,16 +320,18 @@ class _MessagePreview extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.spacingXS),
               Expanded(
-                child: AppText(
-                  previewText,
+                child: ChatSearchHighlightText(
+                  text: previewText,
+                  query: highlightQuery,
                   maxLines: 1,
                   style: textStyle,
                 ),
               ),
             ],
           )
-        : AppText(
-            previewText,
+        : ChatSearchHighlightText(
+            text: previewText,
+            query: highlightQuery,
             maxLines: 1,
             style: textStyle,
           );
@@ -257,6 +354,7 @@ class _MessagePreview extends StatelessWidget {
           top: 0,
           bottom: 0,
           child: AppSvgIcon(
+            key: ChatListItem.previewLockKey,
             assetPath: AppIcons.lock,
             size: 14,
             color: theme.colorScheme.onSurface.withValues(alpha: 0.4),

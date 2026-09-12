@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/app_logger.dart';
@@ -8,8 +10,11 @@ import '../../features/chat/providers/chat_outbound_sync_provider.dart';
 import '../../features/chat/providers/chat_pusher_providers.dart';
 import '../../features/chat/providers/chat_typing_providers.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
+import '../../features/chat/providers/conversation_pin_cache_provider.dart';
 import '../../features/calls/providers/incoming_call_provider.dart';
+import '../../features/chat/providers/chat_list_preview_provider.dart';
 import '../../features/settings/providers/sound_preferences_provider.dart';
+import '../../features/chat/providers/in_app_chat_banner_provider.dart';
 import '../cache/match_realtime_sync.dart';
 import '../providers/startup_flow_provider.dart';
 import '../services/presence_service.dart';
@@ -66,17 +71,27 @@ final fcmDeviceRegistrationProvider = Provider<void>((ref) {
 final sessionServicesProvider = Provider<void>((ref) {
   final startupComplete = ref.watch(startupFlowCompleteProvider);
   final auth = ref.watch(authProvider);
-  if (!startupComplete || auth.isLoading || !auth.isAuthenticated) return;
+  if (!startupComplete || auth.isLoading || !auth.isAuthenticated) {
+    if (!auth.isAuthenticated && !auth.isLoading) {
+      unawaited(ref.read(pusherWebSocketServiceProvider).disconnect());
+    }
+    return;
+  }
 
   ref.watch(deviceSessionRegistrationProvider);
   ref.watch(fcmDeviceRegistrationProvider);
   ref.watch(matchRealtimeSyncProvider);
+  ref.watch(newLikeRealtimeSyncProvider);
   ref.watch(chatPusherLifecycleProvider);
   ref.watch(chatTypingSyncProvider);
   ref.watch(incomingCallListenerProvider);
+  ref.watch(chatListSyncProvider);
   ref.watch(messageSoundListenerProvider);
+  ref.watch(inAppChatBannerSyncProvider);
   ref.watch(soundPreferencesProvider);
   ref.watch(chatOutboundSyncProvider);
   ref.watch(conversationMuteCacheProvider);
+  ref.watch(conversationMuteSeedProvider);
+  ref.watch(conversationPinCacheProvider);
   ref.watch(chatLocalSyncProvider);
 });

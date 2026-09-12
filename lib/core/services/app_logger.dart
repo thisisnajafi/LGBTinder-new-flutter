@@ -13,7 +13,33 @@ class AppLogger {
   /// General app logs below this level are suppressed in debug console.
   static const LogLevel _minLevel = LogLevel.error;
 
+  /// Per-tag floor. Agora, CallSignaling, and ChatPusher event logs must
+  /// be visible in debug even though the global floor is [LogLevel.error].
+  /// Verbose (quality, RTC stats, speaking ticks) still stays quiet unless
+  /// this is lowered.
+  static const Map<String, LogLevel> _tagMinLevel = {
+    'Agora': LogLevel.info,
+    'CallSignaling': LogLevel.info,
+    'Chat': LogLevel.warning,
+    'ChatPage': LogLevel.warning,
+    'chat_page': LogLevel.warning,
+    'ChatListPreview': LogLevel.warning,
+    'ChatPusher': LogLevel.info,
+    'ChatOutbox': LogLevel.info,
+    'Pusher': LogLevel.warning,
+    'Notifications': LogLevel.warning,
+  };
+
   static const bool _apiLogging = true;
+
+  /// Effective minimum for [tag]. Used by tests and [_log].
+  @visibleForTesting
+  static LogLevel minLevelFor(String? tag) {
+    if (tag != null && _tagMinLevel.containsKey(tag)) {
+      return _tagMinLevel[tag]!;
+    }
+    return _minLevel;
+  }
 
   static const String _reset = '\x1B[0m';
   static const String _grey = '\x1B[90m';
@@ -105,7 +131,7 @@ class AppLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    if (!_enabled || level.index < _minLevel.index) return;
+    if (!_enabled || level.index < minLevelFor(tag).index) return;
 
     final time = DateTime.now().toIso8601String().substring(11, 23);
     final prefix = _prefix(level);

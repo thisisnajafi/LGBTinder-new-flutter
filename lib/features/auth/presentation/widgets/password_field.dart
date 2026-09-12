@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/premium/premium_text_field.dart';
 import '../../../../core/responsive/responsive.dart';
 
 /// Password field widget with validation and strength indicator
@@ -69,7 +70,6 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
     return Column(
@@ -82,42 +82,16 @@ class _PasswordFieldState extends ConsumerState<PasswordField> {
           autofocus: widget.autofocus,
           obscureText: _obscureText,
           style: AppTypography.bodyLarge.copyWith(color: textColor),
-          decoration: InputDecoration(
-            labelText: widget.labelText,
+          decoration: premiumInputDecoration(
+            context,
             hintText: widget.hintText ?? 'Enter your password',
-            hintStyle: AppTypography.bodyMedium.copyWith(
-              color: textColor.withValues(alpha: 0.6),
-            ),
-            labelStyle: AppTypography.bodyMedium.copyWith(color: textColor),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: AppColors.feedbackError, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-              borderSide: BorderSide(color: AppColors.feedbackError, width: 2),
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingMD,
-              vertical: AppSpacing.spacingMD,
-            ),
+            prefixIconPath: AppIcons.lock,
             suffixIcon: IconButton(
-              icon: Icon(
-                _obscureText ? Icons.visibility : Icons.visibility_off,
+              padding: const EdgeInsets.all(12),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              icon: AppSvgIcon(
+                assetPath: _obscureText ? AppIcons.visibility : AppIcons.visibilityOff,
+                size: 20,
                 color: textColor.withValues(alpha: 0.6),
               ),
               onPressed: () {

@@ -36,7 +36,7 @@ class FeatureLockedScreen extends StatelessWidget {
   }
 
   static FeatureLockedScreen fromQueryParams(Map<String, String> qp) {
-    final title = qp['title']?.trim();
+    final title = (qp['feature'] ?? qp['title'])?.trim();
     final description = qp['desc']?.trim();
     final min = _parseTier(qp['minTier']);
     return FeatureLockedScreen(
@@ -44,6 +44,23 @@ class FeatureLockedScreen extends StatelessWidget {
       featureDescription: description?.isNotEmpty == true ? description : null,
       minTier: min,
     );
+  }
+
+  /// Canonical upsell route for locked profile / hub surfaces.
+  static String location({
+    required String title,
+    String? description,
+    required UserTier minTier,
+  }) {
+    return Uri(
+      path: AppRoutes.featureLocked,
+      queryParameters: {
+        'title': title,
+        if (description != null && description.trim().isNotEmpty)
+          'desc': description.trim(),
+        'minTier': minTier.key,
+      },
+    ).toString();
   }
 
   @override
@@ -170,7 +187,7 @@ class FeatureLockedScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 GradientButton(
-                  text: 'View plans',
+                  text: 'Upgrade Now',
                   iconPath: AppIcons.crown,
                   onPressed: () {
                     ref.read(appEventTrackerProvider).track(
@@ -221,7 +238,7 @@ class FeatureLockedScreen extends StatelessWidget {
                     context.pop();
                   },
                   child: Text(
-                    'Not now',
+                    'Maybe later',
                     style: AppTypography.button.copyWith(
                       color: secondaryTextColor,
                       fontWeight: FontWeight.w600,

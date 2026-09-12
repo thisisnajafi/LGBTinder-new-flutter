@@ -55,36 +55,36 @@
 - [x] **PERF-INFRA-003** Wire Pusher events → DB insert/update (not `setState` on pages)
 - [x] **PERF-INFRA-004** Migrate `ChatOutboundQueueService` from `SharedPreferences` to SQLite outbox table
 - [ ] **PERF-INFRA-005** Add notification list local cache (optional Phase 2)
-- [ ] **PERF-INFRA-006** Move heavy `jsonDecode` in `UserCacheService` / `AppCacheManager` to `compute()` isolate
-- [ ] **PERF-INFRA-007** Replace `_profilesEqual` string comparison with `Equatable` on models
+- [x] **PERF-INFRA-006** Move heavy `jsonDecode` in `UserCacheService` / `AppCacheManager` to `compute()` isolate
+- [x] **PERF-INFRA-007** Replace `_profilesEqual` string comparison with `Equatable` on models
 
 ### 0.2 State management patterns
 
-- [ ] **PERF-INFRA-010** Add project rule: list screens must use `ref.watch(provider.select(...))` or isolated `Consumer` widgets
-- [ ] **PERF-INFRA-011** Create `MessageRow` widget watching `chatMessageProvider(messageId)` for per-bubble updates
-- [ ] **PERF-INFRA-012** Create `ServiceLifecycleHost` widget — move 7+ `ref.watch` calls out of `MyApp.build`
-- [ ] **PERF-INFRA-013** Standardize on `chatProvider` / feature providers; deprecate page-level `List<Map>` state
+- [x] **PERF-INFRA-010** Add project rule: list screens must use `ref.watch(provider.select(...))` or isolated `Consumer` widgets — `.cursor/rules/riverpod-list-select.mdc`; chat list typing moved onto `ChatListItem.select`
+- [x] **PERF-INFRA-011** Create `MessageRow` widget watching `chatMessageProvider(messageId)` for per-bubble updates — `MessageRow` = `ChatMessageListTile`; `chatMessageProvider(ChatThreadRowId)`
+- [x] **PERF-INFRA-012** Create `ServiceLifecycleHost` widget — move 7+ `ref.watch` calls out of `MyApp.build` — host is a `MaterialApp.router` builder child; also `PERF-MAIN-001`
+- [x] **PERF-INFRA-013** Standardize on `chatProvider` / feature providers; deprecate page-level `List<Map>` state — `ChatListPage` reads `chatListPreviewProvider` only; thread maps stay on `chatThreadMessagesProvider` (`ChatPage._messages` is a facade)
 
 ### 0.3 Rendering & scroll defaults
 
-- [ ] **PERF-INFRA-020** Add shared `AppListView` wrapper: `cacheExtent: 400`, `addRepaintBoundaries: true`, `addAutomaticKeepAlives: false`
-- [ ] **PERF-INFRA-021** Add shared `ChatListView` wrapper: `reverse: true`, stable `ValueKey(messageId)` policy
-- [ ] **PERF-INFRA-022** Document when to use `RepaintBoundary` (list rows, avatars, nav bar, video PiP)
-- [ ] **PERF-INFRA-023** Add `ScrollBehavior` / physics audit — prefer `ClampingScrollPhysics` on Android for chat
+- [x] **PERF-INFRA-020** Add shared `AppListView` wrapper: `cacheExtent: 400`, `addRepaintBoundaries: true`, `addAutomaticKeepAlives: false` — `lib/core/widgets/app_list_view.dart`; wired into chat list, calls list, matches, notifications, `LazyLoadList`
+- [x] **PERF-INFRA-021** Add shared `ChatListView` wrapper: `reverse: true`, stable `ValueKey(messageId)` policy — `typedef ChatListView = ChatThreadListView`; keys are `ValueKey(slot.key)` / `ChatTimelineSlots.rowKey`
+- [x] **PERF-INFRA-022** Document when to use `RepaintBoundary` (list rows, avatars, nav bar, video PiP) — `.cursor/rules/repaint-boundary.mdc`
+- [x] **PERF-INFRA-023** Add `ScrollBehavior` / physics audit — prefer `ClampingScrollPhysics` on Android for chat — `AppScroll.forChat` / `forPlatform`
 
 ### 0.4 Assets & build
 
-- [ ] **PERF-INFRA-030** Reduce fonts to **Inter** (primary) + optional **Nunito** (display only); remove Urbanist/Poppins from `pubspec.yaml`
-- [ ] **PERF-INFRA-031** Consolidate duplicate `OptimizedImage` (`widgets/images/` vs `widgets/common/`) → single `core/widgets/optimized_image.dart`
-- [ ] **PERF-INFRA-032** Merge duplicate `MessageBubble` (`widgets/chat/` + `features/chat/presentation/widgets/`)
-- [ ] **PERF-INFRA-033** Remove or gate dead screens: `features/chat/presentation/screens/chat_screen.dart` (stub), unused duplicate routes
-- [ ] **PERF-INFRA-034** Verify Impeller enabled on Android release builds
-- [ ] **PERF-INFRA-035** Add release signing config (currently debug keys in `android/app/build.gradle.kts`)
+- [x] **PERF-INFRA-030** Reduce fonts to **Inter** (primary) + optional **Nunito** (display only); remove Urbanist/Poppins from `pubspec.yaml` — Inter 4 weights only; Nunito/Urbanist/Poppins files deleted from `assets/fonts/`
+- [x] **PERF-INFRA-031** Consolidate duplicate `OptimizedImage` (`widgets/images/` vs `widgets/common/`) → single `core/widgets/optimized_image.dart`
+- [x] **PERF-INFRA-032** Merge duplicate `MessageBubble` (`widgets/chat/` + `features/chat/presentation/widgets/`) — live bubble is `widgets/chat/message_bubble.dart`; feature copy already gone
+- [x] **PERF-INFRA-033** Remove or gate dead screens: `features/chat/presentation/screens/chat_screen.dart` (stub), unused duplicate routes — stub/screens folder already gone; unused feature `typing_indicator` deleted
+- [x] **PERF-INFRA-034** Verify Impeller enabled on Android release builds — removed `flutter.experimental.impeller=false`; `EnableImpeller=true` under `<application>`
+- [x] **PERF-INFRA-035** Add release signing config (currently debug keys in `android/app/build.gradle.kts`) — `key.properties` + release `signingConfig`; debug keys are rejected if the keystore is missing
 
 ### 0.5 Search & input
 
-- [ ] **PERF-INFRA-040** Add shared `DebouncedSearchField` (300ms) for all search inputs
-- [ ] **PERF-INFRA-041** Apply debounce to: `chat_list_page`, `search_page`, `message_search_screen`, `share_profile_sheet`, `discovery/search_screen`
+- [x] **PERF-INFRA-040** Add shared `DebouncedSearchField` (300ms) for all search inputs — `lib/core/widgets/debounced_search_field.dart` + `AppSearchDebounce` (`AppAnimations.searchDebounce`)
+- [x] **PERF-INFRA-041** Apply debounce to: `chat_list_page` (`ChatListSearchField`), `message_search_screen`, `share_profile_sheet`. `search_page.dart` and `discovery/search_screen.dart` are not in the tree (no routes); shared field is ready when they return.
 
 ---
 
@@ -97,9 +97,9 @@
 | State | `ConsumerStatefulWidget`; watches 7 lifecycle providers in `build` |
 | Issue | Any sync tick rebuilds entire `MaterialApp.router` subtree |
 
-- [ ] **PERF-MAIN-001** Extract lifecycle watches to `ServiceLifecycleHost` child of `MaterialApp`
-- [ ] **PERF-MAIN-002** Use `ref.listen` for one-shot side effects (401 redirect, call kit) instead of `ref.watch`
-- [ ] **PERF-MAIN-003** Keep deferred push init; consider reducing 12s delay after local DB makes home instant
+- [x] **PERF-MAIN-001** Extract lifecycle watches to `ServiceLifecycleHost` child of `MaterialApp`
+- [x] **PERF-MAIN-002** Use `ref.listen` for one-shot side effects (401 redirect, call kit) instead of `ref.watch` — `SessionSideEffectsHost` (listen + one-shot wire); `MyApp.build` only watches router + theme
+- [x] **PERF-MAIN-003** Keep deferred push init; consider reducing 12s delay after local DB makes home instant — delay is now `deferredPushInitDelay` (3s after first frame)
 
 ### `lib/routes/app_router.dart`
 
@@ -108,10 +108,10 @@
 | Transitions | `slideFadePage` on most routes (~300ms) |
 | Issue | Heavy transitions on high-frequency navigations (chat ↔ list) |
 
-- [ ] **PERF-ROUTE-001** Use `noTransitionPage` for home tab child routes (`discovery`, `chat-list`, etc.)
-- [ ] **PERF-ROUTE-002** Use `noTransitionPage` or shorter duration for `AppRoutes.chat` push
-- [ ] **PERF-ROUTE-003** Cache auth stage in memory to avoid secure-storage reads on every redirect
-- [ ] **PERF-ROUTE-004** Add predictive back support (Android 14+) for chat and profile detail
+- [x] **PERF-ROUTE-001** Use `noTransitionPage` for home tab child routes (`discovery`, `chat-list`, etc.) — home shell uses a stable `ValueKey('home-shell')` + `noTransitionPage` so `?tab=` does not slide the whole `HomePage`; child tab paths remain redirects
+- [x] **PERF-ROUTE-002** Use `noTransitionPage` or shorter duration for `AppRoutes.chat` push — `platformPredictivePage` (`MaterialPage`) so chat opens with the platform transition (no 300ms custom slide)
+- [x] **PERF-ROUTE-003** Cache auth stage in memory to avoid secure-storage reads on every redirect — `resolveAuthStageCached` keyed by `TokenStorageService.authRevision`
+- [x] **PERF-ROUTE-004** Add predictive back support (Android 14+) for chat and profile detail — `PredictiveBackPageTransitionsBuilder` in `AppTheme`; chat + profile-detail use `MaterialPage`; manifest already has `enableOnBackInvokedCallback`
 
 ---
 
@@ -125,8 +125,8 @@
 | Good | Post-frame auth check, timeouts, `RepaintBoundary` on logo |
 | Issue | Sequential async checks; 400ms forced delay |
 
-- [ ] **PERF-PAGE-SPLASH-001** Parallelize `hasSeenIntro` + token check where safe
-- [ ] **PERF-PAGE-SPLASH-002** Skip or shorten `_splashDelay` when cached auth session exists
+- [x] **PERF-PAGE-SPLASH-001** Parallelize `hasSeenIntro` + token check where safe — `splashLoadGate` (`Future.wait`)
+- [x] **PERF-PAGE-SPLASH-002** Skip or shorten `_splashDelay` when cached auth session exists — `splashBrandingDelay` is `Duration.zero` when a token is already on disk; 400ms branding only when logged out
 - [~] **PERF-PAGE-SPLASH-003** Logo animation — acceptable; respect reduce-motion (already via theme)
 
 ### `home_page.dart`
@@ -137,11 +137,11 @@
 | Pattern | `PageView` + `_KeepAliveTab` (all 5 tabs alive) |
 | Issue | `ref.watch(unreadNotificationCountProvider)` rebuilds full shell |
 
-- [ ] **PERF-PAGE-HOME-001** Replace always-alive `PageView` with lazy `IndexedStack` (mount tab on first visit)
-- [ ] **PERF-PAGE-HOME-002** Wrap `BottomNavbar` in isolated `Consumer`; pass badge count via `.select`
-- [ ] **PERF-PAGE-HOME-003** Add `RepaintBoundary` around tab body and navbar
-- [ ] **PERF-PAGE-HOME-004** Optionally dispose Settings/Notifications tab after idle timeout
-- [ ] **PERF-PAGE-HOME-005** Avoid rebuilding `_buildPages` when only notification count changes
+- [x] **PERF-PAGE-HOME-001** Replace always-alive `PageView` with lazy `IndexedStack` (mount tab on first visit)
+- [x] **PERF-PAGE-HOME-002** Wrap `BottomNavbar` in isolated `Consumer`; pass badge count via `.select` — `_HomeBottomNavHost` watches unread chat + `unreadNotificationCountProvider.select`
+- [x] **PERF-PAGE-HOME-003** Add `RepaintBoundary` around tab body and navbar
+- [x] **PERF-PAGE-HOME-004** Optionally dispose Settings/Notifications tab after idle timeout — 5 minutes; `homeTabsAfterIdleDispose`
+- [x] **PERF-PAGE-HOME-005** Avoid rebuilding `_buildPages` when only notification count changes — badge watches live in `_HomeBottomNavHost`, not `HomePage.build`
 
 ### `discovery_page.dart`
 
@@ -151,11 +151,11 @@
 | Pattern | `CardStackManager` + swipe gestures |
 | Issue | Full page rebuild on stack change; `Icons.person` instead of SVG |
 
-- [ ] **PERF-PAGE-DISCOVERY-001** Use `.select` on discover provider — watch stack length + current card only
-- [ ] **PERF-PAGE-DISCOVERY-002** Preload images for next 2 cards in stack via `precacheImage`
-- [ ] **PERF-PAGE-DISCOVERY-003** `RepaintBoundary` on action buttons row and top avatar strip
-- [ ] **PERF-PAGE-DISCOVERY-004** Replace `Icons.person` placeholder with `AppSvgIcon` per project rules
-- [ ] **PERF-PAGE-DISCOVERY-005** Debounce filter apply; avoid full refresh on minor filter toggles
+- [x] **PERF-PAGE-DISCOVERY-001** Use `.select` on discover provider — watch stack length + current card only — `DiscoverFeedSlice` (ids + load flag); rewind uses `lastSwipedUserId` select on the action row
+- [x] **PERF-PAGE-DISCOVERY-002** Preload images for next 2 cards in stack via `precacheImage` — `DiscoveryImagePrefetch.precacheNextTwo`
+- [x] **PERF-PAGE-DISCOVERY-003** `RepaintBoundary` on action buttons row and top avatar strip — greeting + swipe actions
+- [x] **PERF-PAGE-DISCOVERY-004** Replace `Icons.person` placeholder with `AppSvgIcon` per project rules — live cards already use `AppIcons.userOutline`; leftover `Icons.star` on unused `profile_card.dart` swapped to SVG
+- [x] **PERF-PAGE-DISCOVERY-005** Debounce filter apply; avoid full refresh on minor filter toggles — 300ms debounce; skip when query maps are equal
 
 ### `chat_list_page.dart`
 
@@ -168,7 +168,7 @@
 - [ ] **PERF-PAGE-CHATLIST-001** Migrate to `chatProvider` / local DB — show cached chats instantly
 - [ ] **PERF-PAGE-CHATLIST-002** Remove per-row `planLimitsProvider` watch from `ChatListItem`; pass `hasPlan` from parent
 - [ ] **PERF-PAGE-CHATLIST-003** Limit `StaggeredListItem` to first 3 rows or remove after first session
-- [ ] **PERF-PAGE-CHATLIST-004** Add `cacheExtent: 400` and `RepaintBoundary` per `ChatListItem`
+- [x] **PERF-PAGE-CHATLIST-004** Add `cacheExtent: 400` and `RepaintBoundary` per `ChatListItem` — `ChatListReorderList` → `AppListView`; row already has `RepaintBoundary`
 - [ ] **PERF-PAGE-CHATLIST-005** Isolate `AppBarCustom` notification badge in `Consumer`
 - [ ] **PERF-PAGE-CHATLIST-006** Debounce search in `ChatListHeader`
 - [ ] **PERF-PAGE-CHATLIST-007** Prefetch top 20 avatars after list load
@@ -543,7 +543,7 @@
 | Component | Tasks |
 |-----------|-------|
 | `optimized_image.dart` | **PERF-COMP-IMG-001** Add blurhash support; **002** no fade on list scroll (fade only detail) |
-| `optimized_image.dart` (duplicate) | **PERF-COMP-IMG-003** Remove duplicate export |
+| `optimized_image.dart` (duplicate) | **[x]** **PERF-COMP-IMG-003** Removed duplicate export — canonical is `core/widgets/optimized_image.dart` |
 | `avatar_widget.dart` | **PERF-COMP-IMG-004** Always thumbnail mem cache |
 | `splash_arc_loader.dart` | **PERF-COMP-IMG-005** Respect reduce-motion |
 
@@ -646,7 +646,7 @@ Reduce maintenance and double rebuild paths:
 | `pages/discovery_page.dart` | `features/discover/.../discover_screen.dart` |
 | `pages/profile_page.dart` | `features/profile/.../profile_screen.dart` |
 | `widgets/chat/message_bubble.dart` | `features/chat/.../message_bubble.dart` |
-| `widgets/images/optimized_image.dart` | `widgets/common/optimized_image.dart` |
+| `core/widgets/optimized_image.dart` | `widgets/images/` and `widgets/common/optimized_image.dart` |
 | `widgets/cards/card_stack_manager.dart` | `features/discover/.../swipeable_card_stack.dart` |
 | `screens/settings_screen.dart` OR `features/settings/.../settings_screen.dart` | Pick one |
 
@@ -734,4 +734,4 @@ flutter build apk --release
 
 ---
 
-*Last updated: 2026-05-25*
+*Last updated: 2026-09-12*

@@ -33,7 +33,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
   bool _isLoading = false;
   bool _rememberMe = false;
   bool _trackedView = false;
@@ -331,16 +330,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _passwordController,
                   labelText: 'Password',
                   hintText: 'Enter your password',
-                  obscureText: _obscurePassword,
+                  obscureText: true,
                   prefixIconPath: AppIcons.lockOutlined,
-                  suffixIcon: AuthVisibilityToggle(
-                    obscure: _obscurePassword,
-                    onToggle: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';

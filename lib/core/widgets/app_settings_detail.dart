@@ -53,6 +53,7 @@ class AppSettingsDetailScaffold extends StatelessWidget {
   final Widget? action;
   final VoidCallback? onBack;
   final String? subtitle;
+  final RefreshCallback? onRefresh;
 
   const AppSettingsDetailScaffold({
     super.key,
@@ -61,6 +62,7 @@ class AppSettingsDetailScaffold extends StatelessWidget {
     this.action,
     this.onBack,
     this.subtitle,
+    this.onRefresh,
   });
 
   @override
@@ -70,6 +72,7 @@ class AppSettingsDetailScaffold extends StatelessWidget {
       subtitle: subtitle,
       action: action,
       onBack: onBack,
+      onRefresh: onRefresh,
       body: body,
     );
   }
@@ -78,16 +81,24 @@ class AppSettingsDetailScaffold extends StatelessWidget {
 /// Scrollable body for settings detail pages.
 class AppSettingsDetailList extends StatelessWidget {
   final List<Widget> children;
+  final RefreshCallback? onRefresh;
 
-  const AppSettingsDetailList({super.key, required this.children});
+  const AppSettingsDetailList({
+    super.key,
+    required this.children,
+    this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
+    final list = ListView(
+      physics: AppScroll.bouncing,
       padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
       children: children,
     );
+
+    if (onRefresh == null) return list;
+    return PremiumRefreshIndicator(onRefresh: onRefresh!, child: list);
   }
 }
 
@@ -169,13 +180,7 @@ class AppSettingsOptionSection extends StatelessWidget {
                     ? AppColors.accentPink
                     : AppColors.accentViolet,
                 onTap: onChanged == null ? () {} : () => onChanged!(options[i].key),
-                trailing: value == options[i].key
-                    ? AppSvgIcon(
-                        assetPath: AppIcons.checkCircle,
-                        size: 20,
-                        color: AppColors.accentPink,
-                      )
-                    : null,
+                selected: value == options[i].key,
               ),
           ],
         ),

@@ -7,6 +7,7 @@ import '../data/models/matching_preferences.dart';
 import '../data/models/settings_summary.dart';
 import '../data/services/matching_preferences_service.dart';
 import '../data/services/settings_summary_service.dart';
+import '../data/services/settings_service.dart';
 import '../domain/use_cases/get_settings_use_case.dart';
 import '../domain/use_cases/update_settings_use_case.dart';
 import '../domain/use_cases/change_password_use_case.dart';
@@ -128,6 +129,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         error: e.toString(),
       );
     }
+  }
+
+  void hydratePrivacy(PrivacySettings settings) {
+    state = state.copyWith(privacySettings: settings);
   }
 
   /// Update user settings
@@ -302,21 +307,25 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   }
 }
 
-// Use case providers
-final getSettingsUseCaseProvider = Provider<GetSettingsUseCase>((ref) {
-  throw UnimplementedError('GetSettingsUseCase must be overridden in the provider scope');
-});
-
-final updateSettingsUseCaseProvider = Provider<UpdateSettingsUseCase>((ref) {
-  throw UnimplementedError('UpdateSettingsUseCase must be overridden in the provider scope');
-});
-
-final changePasswordUseCaseProvider = Provider<ChangePasswordUseCase>((ref) {
-  throw UnimplementedError('ChangePasswordUseCase must be overridden in the provider scope');
+// Use case / repository wiring (real implementations — not override stubs)
+final settingsServiceProvider = Provider<SettingsService>((ref) {
+  return SettingsService(ref.watch(apiServiceProvider));
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  throw UnimplementedError('SettingsRepository must be overridden in the provider scope');
+  return SettingsRepository(ref.watch(settingsServiceProvider));
+});
+
+final getSettingsUseCaseProvider = Provider<GetSettingsUseCase>((ref) {
+  return GetSettingsUseCase(ref.watch(settingsRepositoryProvider));
+});
+
+final updateSettingsUseCaseProvider = Provider<UpdateSettingsUseCase>((ref) {
+  return UpdateSettingsUseCase(ref.watch(settingsRepositoryProvider));
+});
+
+final changePasswordUseCaseProvider = Provider<ChangePasswordUseCase>((ref) {
+  return ChangePasswordUseCase(ref.watch(settingsRepositoryProvider));
 });
 
 /// Matching preferences service (GET/PUT /api/preferences/matching)

@@ -68,7 +68,24 @@ class NotificationPreferences {
           : [],
       customPreferences: json['custom_preferences'] != null && json['custom_preferences'] is Map
           ? Map<String, bool>.from((json['custom_preferences'] as Map).map((k, v) => MapEntry(k.toString(), v == true || v == 1)))
-          : {},
+          : {
+              if (json['top_picks'] != null)
+                'top_picks': json['top_picks'] == true || json['top_picks'] == 1,
+              if (json['boosts'] != null)
+                'boosts': json['boosts'] == true || json['boosts'] == 1,
+              if (json['message_likes'] != null)
+                'message_likes':
+                    json['message_likes'] == true || json['message_likes'] == 1,
+              if (json['email_matches'] != null)
+                'email_matches':
+                    json['email_matches'] == true || json['email_matches'] == 1,
+              if (json['email_messages'] != null)
+                'email_messages':
+                    json['email_messages'] == true || json['email_messages'] == 1,
+              if (json['sound_enabled'] != null)
+                'sound_enabled':
+                    json['sound_enabled'] == true || json['sound_enabled'] == 1,
+            },
     );
   }
 
@@ -96,8 +113,10 @@ class NotificationPreferences {
 
   /// Check if notifications are allowed for a specific type during current time
   bool isNotificationAllowed(String type) {
-    // Check if notification type is enabled
-    switch (type) {
+    if (!pushEnabled) return false;
+
+    final normalized = type.toLowerCase().trim();
+    switch (normalized) {
       case 'like':
         if (!likes) return false;
         break;
@@ -105,36 +124,90 @@ class NotificationPreferences {
         if (!matches) return false;
         break;
       case 'message':
+      case 'chat':
         if (!messages) return false;
         break;
       case 'superlike':
+      case 'superlike_sent':
+      case 'superlike_received':
         if (!superlikes) return false;
         break;
       case 'profile_view':
+      case 'view':
+      case 'visit':
+      case 'profile_visit':
+      case 'profile':
         if (!profileViews) return false;
         break;
       case 'premium':
+      case 'plan_purchased':
+      case 'plan_granted':
+      case 'plan_upgraded':
+      case 'plan_downgraded':
+      case 'subscription_renewed':
+      case 'subscription_canceled':
+      case 'subscription_cancelled':
+      case 'subscription_expired':
+      case 'subscription_reminder':
+      case 'renewal_reminder':
+      case 'payment_success':
+      case 'payment_failed':
+      case 'premium_feature':
         if (!premiumFeatures) return false;
         break;
     }
 
-    // Check quiet hours
-    if (quietHoursEnabled && _isInQuietHours()) {
+    if (quietHoursEnabled && isInQuietHours()) {
       return false;
     }
 
-    return pushEnabled;
+    return true;
   }
 
-  bool _isInQuietHours() {
+  bool isMutedUser(dynamic userId) {
+    if (userId == null) return false;
+    final id = userId.toString();
+    if (id.isEmpty) return false;
+    return mutedUsers.contains(id);
+  }
+
+  bool shouldSuppressForegroundPush({
+    required String type,
+    dynamic fromUserId,
+  }) {
+    if (isMutedUser(fromUserId)) return true;
+    return !isNotificationAllowed(type);
+  }
+
+  bool isInQuietHours([DateTime? now]) {
     if (quietHoursStart == null || quietHoursEnd == null) return false;
 
-    final now = DateTime.now();
-    final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final clock = now ?? DateTime.now();
+    final currentTime =
+        '${clock.hour.toString().padLeft(2, '0')}:${clock.minute.toString().padLeft(2, '0')}';
+    final start = quietHoursStart!;
+    final end = quietHoursEnd!;
 
-    // Simple time comparison (assuming same day)
-    return currentTime.compareTo(quietHoursStart!) >= 0 &&
-           currentTime.compareTo(quietHoursEnd!) <= 0;
+    if (start.compareTo(end) <= 0) {
+      return currentTime.compareTo(start) >= 0 && currentTime.compareTo(end) <= 0;
+    }
+    return currentTime.compareTo(start) >= 0 || currentTime.compareTo(end) <= 0;
+  }
+
+  bool get topPicks => customPreferences['top_picks'] ?? false;
+  bool get boosts => customPreferences['boosts'] ?? false;
+  bool get messageLikes => customPreferences['message_likes'] ?? true;
+  bool get emailMatches => customPreferences['email_matches'] ?? false;
+  bool get emailMessages => customPreferences['email_messages'] ?? false;
+  bool get soundEnabled => customPreferences['sound_enabled'] ?? true;
+
+  NotificationPreferences withCustomFlag(String key, bool value) {
+    return copyWith(
+      customPreferences: {
+        ...customPreferences,
+        key: value,
+      },
+    );
   }
 
   /// Create a copy with updated preferences
@@ -186,6 +259,6 @@ class UpdateNotificationPreferencesRequest {
   UpdateNotificationPreferencesRequest({required this.preferences});
 
   Map<String, dynamic> toJson() {
-    return {'preferences': preferences.toJson()};
+    return preferences.toJson();
   }
 }

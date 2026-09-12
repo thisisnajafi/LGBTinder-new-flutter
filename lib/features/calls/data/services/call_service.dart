@@ -1,5 +1,6 @@
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../utils/call_signaling_log.dart';
 import '../models/call.dart';
 import '../models/call_action_request.dart';
 import '../models/call_statistics.dart';
@@ -20,11 +21,17 @@ class CallService {
       );
 
       if (response.isSuccess && response.data != null) {
-        return Call.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
+        final call = Call.fromJson(response.data!);
+        CallSignalingLog.logHttpOk('initiate', call.callId);
+        return call;
       }
+      throw Exception(response.message);
     } catch (e) {
+      CallSignalingLog.logHttpError(
+        'initiate',
+        'receiver=${request.receiverId}',
+        e,
+      );
       rethrow;
     }
   }
@@ -38,11 +45,13 @@ class CallService {
       );
 
       if (response.isSuccess && response.data != null) {
-        return Call.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
+        final call = Call.fromJson(response.data!);
+        CallSignalingLog.logHttpOk('accept', request.callId);
+        return call;
       }
+      throw Exception(response.message);
     } catch (e) {
+      CallSignalingLog.logHttpError('accept', request.callId, e);
       rethrow;
     }
   }
@@ -58,7 +67,26 @@ class CallService {
       if (!response.isSuccess) {
         throw Exception(response.message);
       }
+      CallSignalingLog.logHttpOk('reject', request.callId);
     } catch (e) {
+      CallSignalingLog.logHttpError('reject', request.callId, e);
+      rethrow;
+    }
+  }
+
+  /// Decline an incoming call because this device is already on a call.
+  Future<void> markBusy(String callId) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.callsBusy(callId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess) {
+        throw Exception(response.message);
+      }
+      CallSignalingLog.logHttpOk('busy', callId);
+    } catch (e) {
+      CallSignalingLog.logHttpError('busy', callId, e);
       rethrow;
     }
   }
@@ -74,11 +102,13 @@ class CallService {
       );
 
       if (response.isSuccess && response.data != null) {
-        return Call.fromJson(response.data!);
-      } else {
-        throw Exception(response.message);
+        final call = Call.fromJson(response.data!);
+        CallSignalingLog.logHttpOk('end', request.callId);
+        return call;
       }
+      throw Exception(response.message);
     } catch (e) {
+      CallSignalingLog.logHttpError('end', request.callId, e);
       rethrow;
     }
   }
@@ -226,25 +256,39 @@ class CallService {
   }
 
   /// Check if user can call another user
-  Future<CallEligibility> checkCallEligibility(int targetUserId) async {
+  Future<CallEligibility> checkCallEligibility(
+    int targetUserId, {
+    String callType = 'audio',
+  }) async {
     try {
+      final type = callType == 'voice' ? 'audio' : callType;
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.callsEligibility(targetUserId),
+        queryParameters: {'call_type': type},
         fromJson: (json) => json as Map<String, dynamic>,
+        useCache: false,
+        forceRefresh: true,
       );
 
       if (response.isSuccess && response.data != null) {
         final raw = response.data!;
-        final Map<String, dynamic> payload = raw is Map<String, dynamic>
-            ? (raw['data'] is Map<String, dynamic>
-                ? Map<String, dynamic>.from(raw['data'] as Map)
-                : raw)
-            : <String, dynamic>{};
+        final Map<String, dynamic> payload = raw['data'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(raw['data'] as Map)
+            : raw;
         return CallEligibility.fromJson(payload);
       }
-      return CallEligibility(canCall: false, reason: 'Unable to verify eligibility');
+      return CallEligibility(
+        canCall: false,
+        reason: response.message.isNotEmpty
+            ? response.message
+            : 'Unable to verify eligibility',
+      );
     } catch (e) {
-      return CallEligibility(canCall: false, reason: 'Network error');
+      final message = e.toString().replaceFirst('Exception: ', '');
+      return CallEligibility(
+        canCall: false,
+        reason: message.isNotEmpty ? message : 'Unable to verify eligibility',
+      );
     }
   }
 

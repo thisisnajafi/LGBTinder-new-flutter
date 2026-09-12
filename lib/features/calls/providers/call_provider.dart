@@ -59,32 +59,42 @@ class CallState {
     this.callDuration = Duration.zero,
   }) : callSettings = callSettings ?? CallSettings();
 
+  static const Object _unset = Object();
+
+  /// Nullables use a sentinel so `copyWith(activeCall: null)` actually clears.
+  /// Live call duration is owned by the live-call UI providers, not [callDuration].
   CallState copyWith({
-    Call? activeCall,
+    Object? activeCall = _unset,
     List<Call>? callHistory,
     CallSettings? callSettings,
-    CallStatistics? statistics,
+    Object? statistics = _unset,
     bool? isLoading,
     bool? isInitiatingCall,
     bool? isAcceptingCall,
     bool? isEndingCall,
     bool? isLoadingHistory,
-    String? error,
-    String? incomingCallId,
+    Object? error = _unset,
+    Object? incomingCallId = _unset,
     Duration? callDuration,
   }) {
     return CallState(
-      activeCall: activeCall ?? this.activeCall,
+      activeCall: identical(activeCall, _unset)
+          ? this.activeCall
+          : activeCall as Call?,
       callHistory: callHistory ?? this.callHistory,
       callSettings: callSettings ?? this.callSettings,
-      statistics: statistics ?? this.statistics,
+      statistics: identical(statistics, _unset)
+          ? this.statistics
+          : statistics as CallStatistics?,
       isLoading: isLoading ?? this.isLoading,
       isInitiatingCall: isInitiatingCall ?? this.isInitiatingCall,
       isAcceptingCall: isAcceptingCall ?? this.isAcceptingCall,
       isEndingCall: isEndingCall ?? this.isEndingCall,
       isLoadingHistory: isLoadingHistory ?? this.isLoadingHistory,
-      error: error ?? this.error,
-      incomingCallId: incomingCallId ?? this.incomingCallId,
+      error: identical(error, _unset) ? this.error : error as String?,
+      incomingCallId: identical(incomingCallId, _unset)
+          ? this.incomingCallId
+          : incomingCallId as String?,
       callDuration: callDuration ?? this.callDuration,
     );
   }
@@ -130,7 +140,7 @@ class CallNotifier extends StateNotifier<CallState> {
         isInitiatingCall: false,
         error: e.toString(),
       );
-      return null;
+      rethrow;
     }
   }
 

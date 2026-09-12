@@ -8,12 +8,14 @@ import '../../../../../routes/app_router.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../chat/providers/chat_providers.dart';
 import '../../../data/models/user_profile.dart';
+import '../../../domain/profile_plan_resolver.dart';
 import '../../../../reference_data/data/models/reference_item.dart';
 import '../../../../reference_data/providers/reference_data_providers.dart';
 import '../../../providers/profile_page_cache_provider.dart';
 import '../own_profile/profile_details_sections.dart';
 import '../own_profile/profile_hero_section.dart';
 import '../own_profile/profile_photo_utils.dart';
+import '../own_profile/profile_premium_shell.dart';
 import '../profile_photo_gallery_viewer.dart';
 import 'other_user_profile_sections.dart';
 
@@ -244,13 +246,11 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
 
     return ResponsiveGrid.constrained(
       context,
-      RefreshIndicator(
+      PremiumRefreshIndicator(
         onRefresh: widget.onRefresh ?? () async {},
         edgeOffset: MediaQuery.paddingOf(context).top,
         child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
+        physics: AppScroll.bouncing,
         slivers: [
           SliverToBoxAdapter(
             child: Column(
@@ -263,6 +263,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                   age: _age,
                   isVerified: widget.profile.isVerified == true,
                   tier: _tier,
+                  planLabel: planBadgeLabelFromUserProfile(widget.profile),
                   locationLabel: _locationDisplay,
                   isOnline: widget.profile.isOnline == true,
                   viewsCount: widget.profile.viewsCount ?? 0,
@@ -329,24 +330,6 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
       ),
     );
   }
-}
-
-/// Resolve another user's plan tier from profile payload (not the viewer's tier).
-UserTier tierFromUserProfile(UserProfile profile) {
-  final data = profile.additionalData;
-  final planName = data?['plan_name']?.toString() ??
-      data?['plan_title']?.toString() ??
-      data?['subscription_plan']?.toString();
-  final rawPlanId = data?['plan_id'];
-  final planId = rawPlanId is int
-      ? rawPlanId
-      : int.tryParse(rawPlanId?.toString() ?? '');
-
-  if (planName != null || planId != null) {
-    return userTierFromPlan(planId: planId, planName: planName);
-  }
-  if (profile.isPremium == true) return UserTier.silder;
-  return UserTier.basid;
 }
 
 /// Shared label resolver for profile reference IDs.

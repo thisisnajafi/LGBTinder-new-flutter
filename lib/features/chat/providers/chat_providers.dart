@@ -4,7 +4,6 @@ export '../data/local/chat_database_provider.dart';
 import '../data/local/chat_database_provider.dart';
 import '../data/repositories/chat_repository.dart';
 import '../data/services/chat_service.dart';
-import '../data/services/websocket_service.dart';
 import '../data/services/chat_outbound_queue_service.dart';
 import '../domain/use_cases/delete_message_use_case.dart';
 import '../domain/use_cases/get_chat_history_use_case.dart';
@@ -32,12 +31,6 @@ final chatOutboundQueueServiceProvider = Provider<ChatOutboundQueueService>((ref
 final chatServiceProvider = Provider<ChatService>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   return ChatService(apiService);
-});
-
-/// WebSocket Service Provider
-final webSocketServiceProvider = Provider<WebSocketService>((ref) {
-  final tokenStorage = ref.watch(tokenStorageServiceProvider);
-  return WebSocketService(tokenStorage);
 });
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {

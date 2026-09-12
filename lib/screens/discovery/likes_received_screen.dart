@@ -1,4 +1,6 @@
 // Screen: LikesReceivedScreen
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,10 @@ import '../../core/widgets/app_settings_detail.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
+import '../../features/matching/providers/likes_providers.dart';
 import '../../features/profile/widgets/tier_badge.dart';
+import '../../features/matching/data/models/match.dart' as match_models;
+import '../../features/matching/widgets/match_celebration_launcher.dart';
 import '../../routes/app_router.dart';
 import '../../shared/utils/plan_guard.dart';
 import '../../widgets/badges/verification_badge.dart';
@@ -134,6 +139,13 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
 
   Future<void> _handleLike(int likeId) async {
     try {
+      Map<String, dynamic>? liked;
+      for (final item in _likes) {
+        if (item['id'] == likeId) {
+          liked = item;
+          break;
+        }
+      }
       final apiService = ref.read(apiServiceProvider);
       final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.likesRespond,
@@ -145,12 +157,27 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
 
       if (response.isSuccess) {
         setState(() => _likes.removeWhere((like) => like['id'] == likeId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('It\'s a match!'),
-            backgroundColor: AppColors.onlineGreen,
-          ),
-        );
+        final data = response.data ?? const <String, dynamic>{};
+        final matchRaw = data['match'];
+        final matchJson = matchRaw is Map
+            ? Map<String, dynamic>.from(matchRaw)
+            : <String, dynamic>{
+                'id': data['match_id'] ?? likeId,
+                'user_id': liked?['user_id'] ?? data['user_id'],
+                'first_name': liked?['name'] ?? data['first_name'] ?? 'Match',
+                'primary_image_url': liked?['avatar_url'],
+              };
+        if (data['is_match'] == true ||
+            data['is_match'] == 1 ||
+            matchRaw is Map ||
+            liked != null) {
+          await MatchCelebrationLauncher.show(
+            context,
+            ref,
+            match: match_models.Match.fromJson(matchJson),
+            matchedAvatarUrl: liked?['avatar_url']?.toString(),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -224,6 +251,11 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(likesReceivedEpochProvider, (previous, next) {
+      if (previous != next) {
+        unawaited(_loadLikes());
+      }
+    });
     final theme = Theme.of(context);
 
     return AppSettingsDetailScaffold(
@@ -270,7 +302,7 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
       );
     }
 
-    return RefreshIndicator(
+    return PremiumRefreshIndicator(
       onRefresh: _loadLikes,
       child: AppSettingsDetailList(
         children: [

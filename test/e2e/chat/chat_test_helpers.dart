@@ -9,7 +9,6 @@ import 'package:lgbtindernew/core/utils/app_icons.dart';
 import 'package:lgbtindernew/features/chat/data/models/chat.dart';
 import 'package:lgbtindernew/features/chat/data/models/message.dart';
 import 'package:lgbtindernew/features/chat/data/services/chat_service.dart';
-import 'package:lgbtindernew/features/chat/data/services/websocket_service.dart';
 import 'package:lgbtindernew/features/chat/providers/chat_providers.dart';
 import 'package:lgbtindernew/features/notifications/providers/notification_providers.dart';
 import 'package:lgbtindernew/features/payments/data/services/plan_limits_service.dart';
@@ -29,8 +28,6 @@ import '../helpers/mock_services.dart';
 class MockChatService extends Mock implements ChatService {}
 
 class MockUserService extends Mock implements UserService {}
-
-class MockWebSocketService extends Mock implements WebSocketService {}
 
 Chat sampleChat({
   int id = 10,
@@ -100,33 +97,23 @@ void stubChatThread(
       page: any(named: 'page'),
       limit: any(named: 'limit'),
     ),
-  ).thenAnswer((_) async => history);
+  ).thenAnswer((_) async => ChatHistoryResult(messages: history));
+  when(
+    () => chat.getChatHistory(
+      receiverId: peerUserId,
+      page: any(named: 'page'),
+      limit: any(named: 'limit'),
+      forceRefresh: any(named: 'forceRefresh'),
+    ),
+  ).thenAnswer((_) async => ChatHistoryResult(messages: history));
   when(() => chat.markAsRead(peerUserId)).thenAnswer((_) async {});
+  when(() => chat.markMessagesDelivered(any())).thenAnswer((_) async {});
   when(() => chat.getPinnedMessagesCount(peerUserId)).thenAnswer((_) async => pinnedCount);
   when(() => chat.getPinnedMessages(peerUserId)).thenAnswer((_) async => pinned);
 }
 
 void stubCurrentUser(MockUserService user, {int id = 1}) {
   when(() => user.getUserInfo()).thenAnswer((_) async => sampleCurrentUser(id: id));
-}
-
-MockWebSocketService stubWebSocket({Stream<Message>? messageStream}) {
-  final ws = MockWebSocketService();
-  final controller = StreamController<Message>.broadcast();
-
-  when(() => ws.isConnected).thenReturn(true);
-  when(() => ws.messageStream).thenAnswer((_) => messageStream ?? controller.stream);
-  when(() => ws.typingStream).thenAnswer((_) => const Stream<Map<String, dynamic>>.empty());
-  when(() => ws.onlineStatusStream)
-      .thenAnswer((_) => const Stream<Map<String, dynamic>>.empty());
-  when(() => ws.connectionStream).thenAnswer((_) => const Stream<bool>.empty());
-  when(() => ws.connect()).thenAnswer((_) async {});
-  when(() => ws.joinChat(any())).thenReturn(null);
-  when(() => ws.leaveChat(any())).thenReturn(null);
-  when(() => ws.sendTypingStatus(any(), any())).thenReturn(null);
-  when(() => ws.disconnect()).thenReturn(null);
-
-  return ws;
 }
 
 List<Override> chatListOverrides({
@@ -146,7 +133,6 @@ List<Override> chatListOverrides({
 List<Override> chatThreadOverrides({
   required MockChatService chat,
   MockUserService? user,
-  MockWebSocketService? webSocket,
   MockPlanLimitsService? planLimits,
   String tier = 'basid',
 }) {
@@ -158,7 +144,6 @@ List<Override> chatThreadOverrides({
   return [
     chatServiceProvider.overrideWithValue(chat),
     userServiceProvider.overrideWithValue(userService),
-    if (webSocket != null) webSocketServiceProvider.overrideWithValue(webSocket),
     planLimitsServiceProvider.overrideWithValue(plan),
   ];
 }
@@ -207,7 +192,6 @@ Future<void> pumpChatPage(
   List<Message> history = const [],
   int pinnedCount = 0,
   List<Message> pinned = const [],
-  MockWebSocketService? webSocket,
   MockPlanLimitsService? planLimits,
   String tier = 'basid',
   List<Override> extraOverrides = const [],
@@ -220,14 +204,11 @@ Future<void> pumpChatPage(
     pinned: pinned,
   );
 
-  final ws = webSocket ?? stubWebSocket();
-
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         ...chatThreadOverrides(
           chat: chat,
-          webSocket: ws,
           planLimits: planLimits,
           tier: tier,
         ),

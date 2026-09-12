@@ -43,12 +43,14 @@ class ChatRepository {
   Future<Message> sendMessage(int receiverId, String message, {
     String messageType = 'text',
     MessageAttachment? attachment,
+    String? clientId,
   }) async {
     return await _chatService.sendMessage(
       receiverId,
       message,
       messageType: messageType,
       attachment: attachment,
+      clientId: clientId,
     );
   }
 
@@ -58,8 +60,11 @@ class ChatRepository {
   }
 
   /// Delete a message
-  Future<void> deleteMessage(int messageId) async {
-    return await _chatService.deleteMessage(messageId);
+  Future<void> deleteMessage(int messageId, {bool forEveryone = false}) async {
+    return await _chatService.deleteMessage(
+      messageId,
+      forEveryone: forEveryone,
+    );
   }
 
   /// Set typing status

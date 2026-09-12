@@ -9,11 +9,20 @@
 -keep class io.agora.** { *; }
 -keepattributes Signature
 -keepattributes *Annotation*
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
 
 # Flutter / plugins
 -keep class io.flutter.** { *; }
 -keep class com.google.firebase.** { *; }
 -keep class androidx.lifecycle.** { *; }
+
+# audioplayers
+-keep class xyz.luan.audioplayers.** { *; }
+-dontwarn xyz.luan.audioplayers.**
+
+# CallKit incoming
+-keep class com.hiennv.flutter_callkit_incoming.** { *; }
 
 # Flutter deferred components reference Play Core (optional; not used in this app)
 -dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication

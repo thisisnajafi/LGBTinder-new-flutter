@@ -10,28 +10,31 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/calls/data/services/call_kit_service.dart';
 import 'features/calls/presentation/widgets/incoming_call_banner.dart';
-import 'features/calls/providers/incoming_call_provider.dart';
+import 'widgets/chat/in_app_chat_banner.dart';
 import 'core/constants/api_endpoints.dart';
 import 'core/theme/app_theme.dart';
-import 'core/auth/banned_handler.dart';
-import 'core/auth/unauthorized_handler.dart';
 import 'core/services/app_logger.dart';
 import 'core/services/connectivity_service.dart';
 import 'routes/app_router.dart';
 import 'widgets/error_handling/error_boundary.dart';
+import 'widgets/error_handling/app_framework_error_view.dart';
 import 'shared/services/push_notification_service.dart';
 import 'shared/services/fcm_background_handler.dart';
 import 'shared/services/incoming_call_handler.dart';
-import 'shared/services/deep_linking_service.dart';
 import 'core/providers/feature_flags_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
-import 'features/auth/providers/auth_provider.dart';
 import 'core/cache/cache_lifecycle_listener.dart';
+import 'core/cache/image_cache_service.dart';
 import 'core/widgets/startup_cache_listener.dart';
-import 'core/providers/session_services_provider.dart';
-import 'features/payments/providers/payment_providers.dart';
-import 'core/utils/app_logger.dart' show startupLog, authLog;
-import 'core/responsive/responsive.dart';
+import 'core/widgets/service_lifecycle_host.dart';
+import 'core/widgets/session_side_effects_host.dart';
+import 'core/widgets/plan_updated_host.dart';
+import 'core/utils/app_logger.dart' show startupLog;
+
+/// Push FCM init after first paint so home (local DB) is not blocked.
+/// Was 12s; local chat cache makes first home paint cheap, so 3s is enough
+/// to stay off the ANR path (PERF-MAIN-003).
+const Duration deferredPushInitDelay = Duration(seconds: 3);
 
 /// Riverpod observer — logs every provider error
 class _AppProviderObserver extends ProviderObserver {
@@ -77,7 +80,19 @@ Future<void> _bootstrap() async {
       error: details.exception,
       stackTrace: details.stack,
     );
-    if (kDebugMode) FlutterError.presentError(details);
+    if (kDebugMode) {
+      FlutterError.dumpErrorToConsole(details, forceReport: true);
+    }
+  };
+
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    AppLogger.error(
+      'ErrorWidget builder invoked',
+      tag: 'FlutterError',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
+    return AppFrameworkErrorView(details: details);
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
@@ -91,8 +106,10 @@ Future<void> _bootstrap() async {
   };
 
   WidgetsFlutterBinding.ensureInitialized();
+  ImageCacheService.applyMemoryLimits();
   ConnectivityService.instance.initialize();
   startupLog('2. Flutter bindings initialized');
+  unawaited(CallKitService.instance.startListening());
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -161,7 +178,7 @@ Future<void> _bootstrap() async {
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
     startupLog('9. Post-frame callback fired (first frame painted)');
-    Future.delayed(const Duration(seconds: 12), () {
+    Future.delayed(deferredPushInitDelay, () {
       _initializePushInBackground();
     });
   });
@@ -169,7 +186,7 @@ Future<void> _bootstrap() async {
 
 /// Runs after first frame; must not block the UI thread.
 Future<void> _initializePushInBackground() async {
-  startupLog('10. Push notification init started (12s after first frame)');
+  startupLog('10. Push notification init started (${deferredPushInitDelay.inSeconds}s after first frame)');
   await Future.delayed(Duration.zero);
   try {
     await PushNotificationService().initialize();
@@ -193,8 +210,6 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
-  bool _servicesWired = false;
-
   @override
   void initState() {
     super.initState();
@@ -217,125 +232,38 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     startupLog('MyApp.build()');
     final router = ref.watch(appRouterProvider);
-    ref.watch(sessionServicesProvider);
-
-    if (!_servicesWired) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _servicesWired) return;
-        _servicesWired = true;
-        DeepLinkingService().initialize(router);
-        PushNotificationService().setPremiumAccessChangeHandler(() async {
-          await ref
-              .read(subscriptionSyncProvider)
-              .onSubscriptionChangeNotification();
-        });
-        BannedHandler.setCallback(() {
-          authLog('403 Banned: redirecting to banned screen');
-          router.go(AppRoutes.accountBanned);
-        });
-        UnauthorizedHandler.setCallback(() {
-          authLog('401 Unauthorized: redirecting to welcome');
-          try {
-            router.go(AppRoutes.welcome);
-            Future.microtask(() async {
-              try {
-                await ref.read(authProvider.notifier).logout(silent: true);
-              } catch (e, stack) {
-                AppLogger.warning(
-                  'Silent logout after 401 failed',
-                  tag: 'Auth',
-                  error: e,
-                );
-                AppLogger.debug('Logout stack: $stack', tag: 'Auth');
-              }
-            });
-          } catch (e, stack) {
-            AppLogger.error(
-              'UnauthorizedHandler callback error',
-              tag: 'Auth',
-              error: e,
-              stackTrace: stack,
-            );
-          }
-        });
-        unawaited(CallKitService.instance.initialize(
-          onAccept: (callId) =>
-              ref.read(incomingCallProvider.notifier).acceptFromCallKit(callId),
-          onDecline: (callId) =>
-              ref.read(incomingCallProvider.notifier).rejectFromCallKit(callId),
-        ));
-      });
-    }
 
     return ErrorBoundary(
-      child: StartupCacheListener(
-        child: CacheLifecycleListener(
-          child: MaterialApp.router(
-          title: 'LGBTFinder',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ref.watch(themeModeProvider),
-          routerConfig: router,
-          builder: (context, child) {
-            if (IncomingCallHandler.hasPendingCall()) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                IncomingCallHandler.processPendingCallIfAvailable(context);
-              });
-            }
+      child: MaterialApp.router(
+        title: 'LGBTFinder',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ref.watch(themeModeProvider),
+        routerConfig: router,
+        builder: (context, child) {
+          if (IncomingCallHandler.hasPendingCall()) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              IncomingCallHandler.processPendingCallIfAvailable(context);
+            });
+          }
 
-            ErrorWidget.builder = (FlutterErrorDetails details) {
-              AppLogger.error(
-                'ErrorWidget builder invoked',
-                tag: 'FlutterError',
-                error: details.exception,
-                stackTrace: details.stack,
-              );
-              return Material(
-                color: Colors.transparent,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: Colors.redAccent,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Something went wrong',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        AppText(
-                          details.exceptionAsString(),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 4,
-                        ),
-                      ],
+          return SessionSideEffectsHost(
+            child: ServiceLifecycleHost(
+              child: StartupCacheListener(
+                child: CacheLifecycleListener(
+                  child: IncomingCallHost(
+                    child: InAppChatBannerHost(
+                      child: PlanUpdatedHost(
+                        child: child ?? const SizedBox.shrink(),
+                      ),
                     ),
                   ),
                 ),
-              );
-            };
-            return IncomingCallHost(
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
-        ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

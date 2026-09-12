@@ -3,7 +3,7 @@ import 'package:lgbtindernew/routes/app_router.dart';
 
 void main() {
   group('evaluateGuardDecision', () {
-    test('redirects splash to welcome after startup already left', () {
+    test('redirects splash to welcome after startup when unauthenticated', () {
       final decision = evaluateGuardDecision(
         location: AppRoutes.splash,
         hasLeftStartupFlow: true,
@@ -16,6 +16,19 @@ void main() {
       expect(decision.redirectTo, AppRoutes.welcome);
     });
 
+    test('redirects splash to home after startup when authenticated', () {
+      final decision = evaluateGuardDecision(
+        location: AppRoutes.splash,
+        hasLeftStartupFlow: true,
+        authStage: AuthStage.authenticated,
+        isPublicRoute: true,
+        isAuthEntryRoute: false,
+        isProtectedRoute: false,
+        hasPendingProtectedRoute: false,
+      );
+      expect(decision.redirectTo, AppRoutes.home);
+    });
+
     test('stores pending and redirects unauthenticated protected route', () {
       final decision = evaluateGuardDecision(
         location: AppRoutes.chat,
@@ -26,7 +39,7 @@ void main() {
         isProtectedRoute: true,
         hasPendingProtectedRoute: false,
       );
-      expect(decision.redirectTo, AppRoutes.login);
+      expect(decision.redirectTo, AppRoutes.welcome);
       expect(decision.storePending, isTrue);
     });
 

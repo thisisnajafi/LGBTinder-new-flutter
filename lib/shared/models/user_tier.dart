@@ -12,9 +12,10 @@ extension UserTierX on UserTier {
       };
 
   /// User-facing label for badges and UI.
+  /// Matches PlanSeeder titles: Basic, Premium, Golden.
   String get displayLabel => switch (this) {
         UserTier.basid => 'Basic',
-        UserTier.silder => 'Silder',
+        UserTier.silder => 'Silver',
         UserTier.golden => 'Golden',
       };
 

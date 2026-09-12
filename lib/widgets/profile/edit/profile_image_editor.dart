@@ -6,7 +6,7 @@ import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/border_radius_constants.dart';
-import '../../images/optimized_image.dart';
+import '../../../core/widgets/optimized_image.dart';
 import '../../buttons/icon_button_circle.dart';
 import '../../../core/utils/app_icons.dart';
 
