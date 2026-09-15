@@ -40,29 +40,44 @@ class MessageAttachmentViewer extends ConsumerStatefulWidget {
 class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewer> {
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
+  int _videoEpoch = 0;
 
   @override
   void initState() {
     super.initState();
     if (widget.attachment.isVideo) {
-      _initializeVideoPlayer();
+      unawaited(_initializeVideoPlayer());
     }
   }
 
   @override
   void dispose() {
-    _videoController?.dispose();
+    _videoEpoch++;
+    final controller = _videoController;
+    _videoController = null;
+    unawaited(controller?.dispose() ?? Future<void>.value());
     super.dispose();
   }
 
   Future<void> _initializeVideoPlayer() async {
-    _videoController = VideoPlayerController.network(widget.attachment.url);
-    await _videoController!.initialize();
+    final epoch = ++_videoEpoch;
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.attachment.url),
+    );
+    _videoController = controller;
+    await controller.initialize();
+    if (!mounted || epoch != _videoEpoch) {
+      await controller.dispose();
+      if (identical(_videoController, controller)) {
+        _videoController = null;
+      }
+      return;
+    }
     setState(() => _isVideoInitialized = true);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: widget.isInteractive

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:confetti/confetti.dart';
 
+import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/badge_model.dart';
 import 'badge_display.dart';
+import 'badge_popup_queue.dart';
 
 /// Badge achievement popup widget
 /// Shows animated celebration when user earns a badge
@@ -23,23 +25,45 @@ class BadgeAchievementPopup extends ConsumerStatefulWidget {
     this.onShare,
   }) : super(key: key);
 
-  /// Shows the achievement popup as a dialog
+  /// Shows the achievement popup as a dialog. Queued — one at a time.
   static Future<void> show(
     BuildContext context,
     BadgeModel badge, {
     VoidCallback? onClaimReward,
     VoidCallback? onShare,
   }) {
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => BadgeAchievementPopup(
-        badge: badge,
-        onDismiss: () => Navigator.of(context).pop(),
+    return BadgePopupQueue.enqueue(() {
+      if (!context.mounted) return Future.value();
+      return showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black54,
+        builder: (dialogContext) => BadgeAchievementPopup(
+          badge: badge,
+          onDismiss: () => Navigator.of(dialogContext).pop(),
+          onClaimReward: onClaimReward,
+          onShare: onShare,
+        ),
+      );
+    });
+  }
+
+  /// Presents each badge in sequence (PERF-COMP-MKT-002).
+  static Future<void> showQueued(
+    BuildContext context,
+    List<BadgeModel> badges, {
+    VoidCallback? onClaimReward,
+    VoidCallback? onShare,
+  }) async {
+    for (final badge in badges) {
+      if (!context.mounted) return;
+      await show(
+        context,
+        badge,
         onClaimReward: onClaimReward,
         onShare: onShare,
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -57,6 +81,7 @@ class _BadgeAchievementPopupState extends ConsumerState<BadgeAchievementPopup>
   late Animation<double> _scaleAnimation;
   late Animation<double> _bounceAnimation;
   late Animation<double> _glowAnimation;
+  bool _motionStarted = false;
 
   @override
   void initState() {
@@ -105,8 +130,17 @@ class _BadgeAchievementPopupState extends ConsumerState<BadgeAchievementPopup>
         curve: Curves.easeInOut,
       ),
     );
+  }
 
-    // Start animations
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_motionStarted) return;
+    _motionStarted = true;
+    if (!AppAnimations.animationsEnabled(context)) {
+      _scaleController.value = 1;
+      return;
+    }
     _scaleController.forward();
     _bounceController.repeat(reverse: true);
     _glowController.repeat(reverse: true);
@@ -141,29 +175,31 @@ class _BadgeAchievementPopupState extends ConsumerState<BadgeAchievementPopup>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final animate = AppAnimations.animationsEnabled(context);
+
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.85),
+      backgroundColor: AppColors.textPrimaryLight.withValues(alpha: 0.85),
       body: Stack(
         children: [
-          // Confetti
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
-              numberOfParticles: 30,
-              gravity: 0.2,
-              emissionFrequency: 0.05,
-              colors: [
-                _badgeColor,
-                AppColors.accentPurple,
-                AppColors.accentGradientEnd,
-                Colors.yellow,
-                Colors.pink,
-              ],
+          if (animate)
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                numberOfParticles: 20,
+                gravity: 0.2,
+                emissionFrequency: 0.05,
+                colors: [
+                  _badgeColor,
+                  AppColors.accentPurple,
+                  AppColors.accentGradientEnd,
+                  AppColors.accentYellow,
+                  AppColors.accentPink,
+                ],
+              ),
             ),
-          ),
 
           // Main content
           Center(
@@ -423,20 +459,7 @@ class MultipleBadgeAchievementPopup extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   static Future<void> show(BuildContext context, List<BadgeModel> badges) {
-    if (badges.isEmpty) return Future.value();
-
-    if (badges.length == 1) {
-      return BadgeAchievementPopup.show(context, badges.first);
-    }
-
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => MultipleBadgeAchievementPopup(
-        badges: badges,
-        onDismiss: () => Navigator.of(context).pop(),
-      ),
-    );
+    return BadgeAchievementPopup.showQueued(context, badges);
   }
 
   @override
@@ -449,6 +472,7 @@ class _MultipleBadgeAchievementPopupState
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  bool _motionStarted = false;
 
   @override
   void initState() {
@@ -461,6 +485,17 @@ class _MultipleBadgeAchievementPopupState
       parent: _controller,
       curve: Curves.elasticOut,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_motionStarted) return;
+    _motionStarted = true;
+    if (!AppAnimations.animationsEnabled(context)) {
+      _controller.value = 1;
+      return;
+    }
     _controller.forward();
   }
 

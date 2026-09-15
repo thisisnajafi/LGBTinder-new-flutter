@@ -10,6 +10,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/utils/app_icons.dart';
 
 /// Animated snackbar widget
 /// Custom snackbar with slide-in animation and gradient background
@@ -21,13 +22,13 @@ class AnimatedSnackbar extends ConsumerWidget {
   final String? actionLabel;
 
   const AnimatedSnackbar({
-    Key? key,
+    super.key,
     required this.message,
     this.type = SnackbarType.info,
     this.duration = const Duration(seconds: 3),
     this.onAction,
     this.actionLabel,
-  }) : super(key: key);
+  });
 
   static void show(
     BuildContext context, {
@@ -38,26 +39,25 @@ class AnimatedSnackbar extends ConsumerWidget {
     String? actionLabel,
   }) {
     final overlay = Overlay.of(context);
+    final animate = AppAnimations.animationsEnabled(context);
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (context) => _SnackbarOverlay(
         entry: entry,
         displayDuration: duration,
+        animate: animate,
         child: SafeArea(
           top: false,
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.spacingLG),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: AnimatedSnackbar(
-                  message: message,
-                  type: type,
-                  duration: duration,
-                  onAction: onAction,
-                  actionLabel: actionLabel,
-                ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: AnimatedSnackbar(
+                message: message,
+                type: type,
+                duration: duration,
+                onAction: onAction,
+                actionLabel: actionLabel,
               ),
             ),
           ),
@@ -69,9 +69,7 @@ class AnimatedSnackbar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = Colors.white;
+    const textColor = Colors.white;
 
     Color getBackgroundColor() {
       switch (type) {
@@ -82,22 +80,20 @@ class AnimatedSnackbar extends ConsumerWidget {
         case SnackbarType.warning:
           return AppColors.warningYellow;
         case SnackbarType.info:
-        default:
           return AppColors.accentPurple;
       }
     }
 
-    IconData getIcon() {
+    String getIconPath() {
       switch (type) {
         case SnackbarType.success:
-          return Icons.check_circle;
+          return AppIcons.checkCircle;
         case SnackbarType.error:
-          return Icons.error;
+          return AppIcons.danger;
         case SnackbarType.warning:
-          return Icons.warning;
+          return AppIcons.warning;
         case SnackbarType.info:
-        default:
-          return Icons.info;
+          return AppIcons.infoCircle;
       }
     }
 
@@ -109,13 +105,13 @@ class AnimatedSnackbar extends ConsumerWidget {
             : LinearGradient(
                 colors: [
                   getBackgroundColor(),
-                  getBackgroundColor().withOpacity(0.8),
+                  getBackgroundColor().withValues(alpha: 0.8),
                 ],
               ),
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -123,10 +119,10 @@ class AnimatedSnackbar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            getIcon(),
+          AppSvgIcon(
+            assetPath: getIconPath(),
             color: textColor,
-            size: 24,
+            size: AppSpacing.spacingXL,
           ),
           SizedBox(width: AppSpacing.spacingMD),
           Expanded(
@@ -166,11 +162,13 @@ enum SnackbarType {
 class _SnackbarOverlay extends StatefulWidget {
   final OverlayEntry entry;
   final Duration displayDuration;
+  final bool animate;
   final Widget child;
 
   const _SnackbarOverlay({
     required this.entry,
     required this.displayDuration,
+    required this.animate,
     required this.child,
   });
 
@@ -209,6 +207,13 @@ class _SnackbarOverlayState extends State<_SnackbarOverlay>
     // Start after first frame so context is valid and we don't block build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (!widget.animate) {
+        _controller.value = 1;
+        _holdTimer = Timer(widget.displayDuration, () {
+          if (mounted) widget.entry.remove();
+        });
+        return;
+      }
       _controller.forward();
       _holdTimer = Timer(widget.displayDuration, () {
         if (mounted) _controller.reverse();
@@ -225,20 +230,23 @@ class _SnackbarOverlayState extends State<_SnackbarOverlay>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(child: const SizedBox.expand()),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: SlideTransition(
+    final bar = widget.animate
+        ? SlideTransition(
             position: _slide,
             child: FadeTransition(
               opacity: _fade,
               child: widget.child,
             ),
-          ),
+          )
+        : widget.child;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: bar,
         ),
       ],
     );

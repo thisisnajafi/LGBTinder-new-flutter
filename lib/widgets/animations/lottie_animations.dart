@@ -1,13 +1,39 @@
-// Widget: LottieAnimations
-// Lottie wrapper with safe fallback when assets are missing (prevents startup hangs).
+// Lottie wrapper: lazy mount, one composition at a time, Reduce Motion fallback.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 
-/// Theme-aware Lottie animation with [CircularProgressIndicator] fallback.
-class ThemeAwareLottie extends StatelessWidget {
+/// Caps how many Lottie files decode/play at once (PERF-COMP-ANIM-002).
+class LottiePlaybackLimiter {
+  LottiePlaybackLimiter._();
+
+  static const int maxConcurrent = 1;
+  static int _active = 0;
+
+  static bool tryAcquire() {
+    if (_active >= maxConcurrent) return false;
+    _active++;
+    return true;
+  }
+
+  static void release() {
+    if (_active > 0) _active--;
+  }
+
+  @visibleForTesting
+  static int get debugActiveCount => _active;
+
+  @visibleForTesting
+  static void debugReset() {
+    _active = 0;
+  }
+}
+
+/// Theme-aware Lottie. Composition is not mounted until after the first frame
+/// (PERF-COMP-ANIM-001), and only if a [LottiePlaybackLimiter] slot is free.
+class ThemeAwareLottie extends StatefulWidget {
   final String assetPath;
   final double? width;
   final double? height;
@@ -29,7 +55,15 @@ class ThemeAwareLottie extends StatelessWidget {
     this.alignment = Alignment.center,
   });
 
-  double get _fallbackSize => width ?? height ?? 48;
+  @override
+  State<ThemeAwareLottie> createState() => _ThemeAwareLottieState();
+}
+
+class _ThemeAwareLottieState extends State<ThemeAwareLottie> {
+  bool _holdsSlot = false;
+  bool _showLottie = false;
+
+  double get _fallbackSize => widget.width ?? widget.height ?? 48;
 
   Widget _fallbackSpinner() {
     return SizedBox(
@@ -42,22 +76,71 @@ class ThemeAwareLottie extends StatelessWidget {
     );
   }
 
-  Widget _resolvedFallback() => fallback ?? _fallbackSpinner();
+  Widget _resolvedFallback() => widget.fallback ?? _fallbackSpinner();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncPlayback());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncPlayback());
+  }
+
+  @override
+  void didUpdateWidget(covariant ThemeAwareLottie oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.assetPath != widget.assetPath ||
+        oldWidget.animate != widget.animate) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncPlayback());
+    }
+  }
+
+  void _syncPlayback() {
+    if (!mounted) return;
+    final allow = widget.animate &&
+        AppAnimations.animationsEnabled(context) &&
+        TickerMode.valuesOf(context).enabled;
+    if (!allow) {
+      _releaseSlot();
+      if (_showLottie) {
+        setState(() => _showLottie = false);
+      }
+      return;
+    }
+    if (_showLottie) return;
+    if (!_holdsSlot && !LottiePlaybackLimiter.tryAcquire()) return;
+    _holdsSlot = true;
+    setState(() => _showLottie = true);
+  }
+
+  void _releaseSlot() {
+    if (!_holdsSlot) return;
+    LottiePlaybackLimiter.release();
+    _holdsSlot = false;
+  }
+
+  @override
+  void dispose() {
+    _releaseSlot();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!AppAnimations.animationsEnabled(context)) {
-      return _resolvedFallback();
-    }
+    if (!_showLottie) return _resolvedFallback();
 
     return Lottie.asset(
-      assetPath,
-      width: width,
-      height: height,
-      repeat: loop,
-      animate: animate,
-      fit: fit,
-      alignment: alignment,
+      widget.assetPath,
+      width: widget.width,
+      height: widget.height,
+      repeat: widget.loop,
+      animate: widget.animate,
+      fit: widget.fit,
+      alignment: widget.alignment,
       frameBuilder: (context, child, composition) {
         if (composition == null) {
           return _resolvedFallback();

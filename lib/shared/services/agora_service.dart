@@ -38,6 +38,10 @@ typedef AgoraFirstRemoteVideoCallback = void Function(
 );
 
 /// Agora WebRTC service for video/voice calling.
+///
+/// Native RTC stays on the **main isolate** (Agora JNI). Callbacks hop onto
+/// the UI via [_emitUi] so setState / Riverpod writes never run mid-frame
+/// (PERF-ANDROID-005). Do not move this service into `compute()`.
 class AgoraService {
   static const _tag = 'Agora';
 
@@ -436,6 +440,8 @@ class AgoraService {
     return a > b ? a : b;
   }
 
+  /// Run [action] on the UI frame boundary. Agora JNI can fire while Flutter
+  /// is painting; mutating providers mid-frame janks and risks ANR traces.
   void _emitUi(void Function() action) {
     final binding = WidgetsBinding.instance;
     final phase = binding.schedulerPhase;

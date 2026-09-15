@@ -1,34 +1,41 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../providers/admin_provider.dart';
 import '../widgets/analytics_card.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 
-/// Admin dashboard screen
-/// Main dashboard for administrators with key metrics and system status
+/// Admin dashboard — excluded from release (PERF-FEAT-ADMIN-001).
 class AdminDashboardScreen extends ConsumerStatefulWidget {
-  const AdminDashboardScreen({Key? key}) : super(key: key);
+  const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Load dashboard data when screen opens
+    if (kReleaseMode) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(adminProvider.notifier).loadDashboardData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (kReleaseMode) {
+      return const SizedBox.shrink();
+    }
+
     final adminState = ref.watch(adminProvider);
     final adminNotifier = ref.read(adminProvider.notifier);
 
@@ -40,8 +47,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             onPressed: () => adminNotifier.refreshDashboard(),
-            icon: const Icon(Icons.refresh),
+            icon: AppSvgIcon(
+              assetPath: AppIcons.refreshCircle,
+              size: 22,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
           PopupMenuButton<String>(
             onSelected: (value) {

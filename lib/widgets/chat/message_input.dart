@@ -41,7 +41,7 @@ class MessageInput extends ConsumerStatefulWidget {
   final int? peerUserId;
 
   const MessageInput({
-    Key? key,
+    super.key,
     this.onSend,
     this.celebrateSend = true,
     this.onTextChanged,
@@ -55,7 +55,7 @@ class MessageInput extends ConsumerStatefulWidget {
     this.enabled = true,
     this.isEditing = false,
     this.peerUserId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<MessageInput> createState() => _MessageInputState();
@@ -65,8 +65,6 @@ class _MessageInputState extends ConsumerState<MessageInput>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  Timer? _recordingTimer;
-  int _recordingSeconds = 0;
   bool _isHoldingToRecord = false;
   bool _isRecordingLocked = false;
   bool _didCancelRecordingBySlide = false;
@@ -136,7 +134,6 @@ class _MessageInputState extends ConsumerState<MessageInput>
   @override
   void dispose() {
     _micPulseController.dispose();
-    _recordingTimer?.cancel();
     _controller.removeListener(_onControllerChanged);
     _focusNode.removeListener(_onFocusChange);
     _controller.dispose();
@@ -163,8 +160,6 @@ class _MessageInputState extends ConsumerState<MessageInput>
   }
 
   void _resetRecordingUi() {
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
     _micPulseController.stop();
     _micPulseController.reset();
     if (mounted) {
@@ -172,7 +167,6 @@ class _MessageInputState extends ConsumerState<MessageInput>
         _isHoldingToRecord = false;
         _isRecordingLocked = false;
         _didCancelRecordingBySlide = false;
-        _recordingSeconds = 0;
       });
     }
   }
@@ -200,18 +194,12 @@ class _MessageInputState extends ConsumerState<MessageInput>
     if (!mounted) return;
     setState(() {
       _isHoldingToRecord = true;
-      _recordingSeconds = 0;
     });
     if (AppAnimations.animationsEnabled(context)) {
       _micPulseController.repeat(reverse: true);
     } else {
       _micPulseController.value = 1;
     }
-    _recordingTimer?.cancel();
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || !_isHoldingToRecord) return;
-      setState(() => _recordingSeconds++);
-    });
   }
 
   Future<void> _sendRecording() async {
@@ -348,7 +336,6 @@ class _MessageInputState extends ConsumerState<MessageInput>
                             key: const ValueKey('recording'),
                             builder: (context, constraints) {
                               return ChatVoiceRecordBar(
-                                seconds: _recordingSeconds,
                                 locked: _isRecordingLocked,
                                 compact: constraints.maxWidth < 300,
                                 onDiscard: () =>

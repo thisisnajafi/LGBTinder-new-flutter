@@ -1,15 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/incoming_call_data.dart';
-import '../../providers/incoming_call_provider.dart';
+import '../../features/calls/data/models/incoming_call_data.dart';
+import '../../features/calls/providers/incoming_call_provider.dart';
 
-export '../../data/models/incoming_call_data.dart';
+export '../../features/calls/data/models/incoming_call_data.dart';
 
-/// DEAD UI (CALL-PERF-006). Canonical incoming UI:
-/// `lib/features/calls/presentation/widgets/incoming_call_banner.dart`.
+/// DEAD UI (CALL-PERF-006 / PERF-COMP-SHARED-004). Canonical incoming UI:
+/// `IncomingCallBanner` via `IncomingCallHost` in `main.dart` (root overlay
+/// sibling so the navigator child does not rebuild).
 /// @deprecated Use [IncomingCallBridge] + [incomingCallProvider].
 class IncomingCallManager {
   static void showIncomingCall(BuildContext context, IncomingCallData callData) {

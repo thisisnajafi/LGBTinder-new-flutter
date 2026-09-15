@@ -31,6 +31,7 @@ import 'core/widgets/service_lifecycle_host.dart';
 import 'core/widgets/session_side_effects_host.dart';
 import 'core/widgets/plan_updated_host.dart';
 import 'core/utils/app_logger.dart' show startupLog;
+import 'core/utils/display_refresh.dart';
 
 /// Push FCM init after first paint so home (local DB) is not blocked.
 /// Was 12s; local chat cache makes first home paint cheap, so 3s is enough
@@ -180,6 +181,10 @@ Future<void> _bootstrap() async {
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
     startupLog('9. Post-frame callback fired (first frame painted)');
+    AppLogger.info(
+      'display.refreshRate=${displayRefreshRateHz()}Hz',
+      tag: 'Perf',
+    );
     Future.delayed(deferredPushInitDelay, () {
       _initializePushInBackground();
     });

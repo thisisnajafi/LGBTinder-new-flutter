@@ -1,17 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/cache/image_cache_service.dart';
+import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/optimized_image.dart';
 import '../../data/models/daily_reward_model.dart';
 import '../../providers/marketing_providers.dart';
-import '../../data/services/daily_rewards_service.dart';
 import '../../../../core/responsive/responsive.dart';
 
 /// Daily rewards dialog widget
 /// Shows 7-day calendar with streak progress and claim button
 /// Part of the Marketing System Implementation (Task 3.4.2)
 class DailyRewardsDialog extends ConsumerStatefulWidget {
-  const DailyRewardsDialog({Key? key}) : super(key: key);
+  const DailyRewardsDialog({super.key});
+
+  /// Only today's cell loads artwork (PERF-COMP-MKT-003).
+  @visibleForTesting
+  static bool shouldShowRewardArtwork({required bool isToday}) => isToday;
+
+  @visibleForTesting
+  static bool isNetworkIcon(String? icon) =>
+      icon != null &&
+      (icon.startsWith('http://') || icon.startsWith('https://'));
 
   static Future<void> show(BuildContext context) {
     return showDialog(
@@ -34,6 +47,8 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
   bool _isClaiming = false;
   ClaimResult? _claimResult;
   bool _showRewardAnimation = false;
+  bool _motionStarted = false;
+  bool _preloadedTodayIcon = false;
 
   @override
   void initState() {
@@ -50,7 +65,17 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
+  }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_motionStarted) return;
+    _motionStarted = true;
+    if (!AppAnimations.animationsEnabled(context)) {
+      _animationController.value = 1;
+      return;
+    }
     _animationController.forward();
   }
 
@@ -72,7 +97,7 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
       setState(() {
         _claimResult = result;
         if (result.success) {
-          _showRewardAnimation = true;
+          _showRewardAnimation = AppAnimations.animationsEnabled(context);
         }
       });
 
@@ -95,6 +120,7 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
     final theme = Theme.of(context);
     final statusAsync = ref.watch(dailyRewardStatusProvider);
     final configAsync = ref.watch(dailyRewardsConfigProvider);
+    statusAsync.whenData(_preloadTodayIcon);
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -317,6 +343,7 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
       final dayConfig = config.firstWhere(
         (c) => c.dayNumber == dayNumber,
         orElse: () => DailyRewardConfig(
+          id: 0,
           dayNumber: dayNumber,
           rewardType: 'coins',
           rewardAmount: dayNumber * 10,
@@ -338,6 +365,14 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
     );
   }
 
+  void _preloadTodayIcon(DailyRewardStatus status) {
+    if (_preloadedTodayIcon) return;
+    final icon = status.todayReward?.icon;
+    if (!DailyRewardsDialog.isNetworkIcon(icon)) return;
+    _preloadedTodayIcon = true;
+    precacheImage(lgbtfinderCachedImageProvider(icon!), context);
+  }
+
   Widget _buildDayCard(
     ThemeData theme,
     DailyRewardConfig config,
@@ -345,17 +380,18 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
     bool isToday,
     bool isFuture,
   ) {
-    final iconData = _getRewardIcon(config.rewardType);
     final color = isClaimed
         ? AppColors.onlineGreen
         : isToday
             ? AppColors.accentPurple
-            : theme.colorScheme.onSurface.withOpacity(0.3);
+            : theme.colorScheme.onSurface.withValues(alpha: 0.3);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: AppAnimations.animationsEnabled(context)
+          ? AppAnimations.feedbackShort
+          : Duration.zero,
       width: 72,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(AppSpacing.spacingSM),
       decoration: BoxDecoration(
         color: isToday
             ? AppColors.accentPurple.withOpacity(0.1)
@@ -381,18 +417,13 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
               fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-          const SizedBox(height: 4),
-          Icon(
-            isClaimed ? Icons.check_circle : iconData,
-            color: color,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.spacingXS),
+          _buildDayArtwork(config, isClaimed, isToday, color),
+          const SizedBox(height: AppSpacing.spacingXS),
           AppText(
             _getRewardLabel(config),
             style: theme.textTheme.labelSmall?.copyWith(
               color: color,
-              fontSize: 10,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -402,20 +433,65 @@ class _DailyRewardsDialogState extends ConsumerState<DailyRewardsDialog>
     );
   }
 
-  IconData _getRewardIcon(String type) {
+  Widget _buildDayArtwork(
+    DailyRewardConfig config,
+    bool isClaimed,
+    bool isToday,
+    Color color,
+  ) {
+    if (isClaimed) {
+      return AppSvgIcon(
+        assetPath: AppIcons.tickCircle,
+        size: 24,
+        color: color,
+      );
+    }
+    if (!DailyRewardsDialog.shouldShowRewardArtwork(isToday: isToday)) {
+      return SizedBox(
+        width: 24,
+        height: 24,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color),
+          ),
+        ),
+      );
+    }
+    if (DailyRewardsDialog.isNetworkIcon(config.icon)) {
+      return OptimizedImage(
+        imageUrl: config.icon!,
+        width: 24,
+        height: 24,
+        size: ImageSize.thumbnail,
+        errorWidget: AppSvgIcon(
+          assetPath: _rewardIconPath(config.rewardType),
+          size: 24,
+          color: color,
+        ),
+      );
+    }
+    return AppSvgIcon(
+      assetPath: _rewardIconPath(config.rewardType),
+      size: 24,
+      color: color,
+    );
+  }
+
+  String _rewardIconPath(String type) {
     switch (type) {
       case 'superlikes':
-        return Icons.star;
+        return AppIcons.star;
       case 'profile_views':
-        return Icons.visibility;
+        return AppIcons.eye;
       case 'boosts':
-        return Icons.bolt;
+        return AppIcons.flash;
       case 'premium_days':
-        return Icons.diamond;
+        return AppIcons.crown;
       case 'combo':
-        return Icons.card_giftcard;
+        return AppIcons.gift;
       default:
-        return Icons.monetization_on;
+        return AppIcons.coin;
     }
   }
 

@@ -1,13 +1,17 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../core/cache/cache_providers.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/cache/cache_providers.dart';
+import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/optimized_image.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../data/models/banner_model.dart';
 import '../../providers/marketing_providers.dart';
-import '../../../../core/responsive/responsive.dart';
 
 /// Promotional banner widget
 /// Supports hero, interstitial, sticky, and popup banner types
@@ -18,11 +22,11 @@ class PromotionalBanner extends ConsumerStatefulWidget {
   final VoidCallback? onAction;
 
   const PromotionalBanner({
-    Key? key,
+    super.key,
     required this.banner,
     this.onDismiss,
     this.onAction,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<PromotionalBanner> createState() => _PromotionalBannerState();
@@ -34,12 +38,13 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   bool _hasTrackedImpression = false;
+  bool _motionStarted = false;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: AppAnimations.transitionModal,
       vsync: this,
     );
 
@@ -54,8 +59,19 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
-    _animationController.forward();
     _trackImpression();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_motionStarted) return;
+    _motionStarted = true;
+    if (!AppAnimations.animationsEnabled(context)) {
+      _animationController.value = 1;
+      return;
+    }
+    _animationController.forward();
   }
 
   @override
@@ -121,7 +137,9 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
   }
 
   Future<void> _handleDismiss() async {
-    await _animationController.reverse();
+    if (AppAnimations.animationsEnabled(context)) {
+      await _animationController.reverse();
+    }
 
     try {
       final bannerService = ref.read(bannerServiceProvider);
@@ -151,26 +169,32 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
 
   Widget _buildHeroBanner(BuildContext context) {
     final theme = Theme.of(context);
+    final imageUrl = widget.banner.imageUrl;
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
 
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
         child: Container(
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.all(AppSpacing.spacingLG),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                AppColors.accentPurple,
-                AppColors.accentGradientEnd,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            // Static image preferred over gradient (PERF-COMP-MKT-001).
+            color: hasImage ? theme.colorScheme.surface : null,
+            gradient: hasImage
+                ? null
+                : const LinearGradient(
+                    colors: [
+                      AppColors.accentPurple,
+                      AppColors.accentGradientEnd,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.accentPurple.withOpacity(0.3),
+                color: AppColors.accentPurple.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -183,18 +207,15 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
               borderRadius: BorderRadius.circular(16),
               child: Stack(
                 children: [
-                  // Background image if present
-                  if (widget.banner.imageUrl != null)
+                  if (hasImage)
                     Positioned.fill(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: CachedNetworkImage(
-                          imageUrl: widget.banner.imageUrl!,
-                          cacheManager: ref.watch(imageCacheServiceProvider),
-                          fadeInDuration: const Duration(milliseconds: 200),
+                        child: OptimizedImage(
+                          imageUrl: imageUrl,
                           fit: BoxFit.cover,
-                          errorWidget: (context, url, error) =>
-                              const SizedBox.shrink(),
+                          size: ImageSize.medium,
+                          errorWidget: const SizedBox.shrink(),
                         ),
                       ),
                     ),
@@ -252,7 +273,11 @@ class _PromotionalBannerState extends ConsumerState<PromotionalBanner>
                       right: 8,
                       child: IconButton(
                         onPressed: _handleDismiss,
-                        icon: const Icon(Icons.close, color: Colors.white),
+                        icon: AppSvgIcon(
+                          assetPath: AppIcons.close,
+                          size: 20,
+                          color: Colors.white,
+                        ),
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.black.withOpacity(0.3),
                         ),

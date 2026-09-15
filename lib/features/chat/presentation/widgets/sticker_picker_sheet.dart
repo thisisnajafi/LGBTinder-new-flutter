@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/responsive/responsive.dart';
@@ -8,6 +9,7 @@ import '../../../../core/constants/animation_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/widgets/app_action_bottom_sheet.dart';
+import '../../../../core/widgets/premium/premium_layout.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -192,6 +194,11 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
                           height: 56,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
+                            addAutomaticKeepAlives: false,
+                            addRepaintBoundaries: true,
+                            scrollCacheExtent: const ScrollCacheExtent.pixels(
+                              AppScroll.listCacheExtentPixels,
+                            ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.spacingLG,
                             ),
@@ -338,6 +345,11 @@ class _StickerGrid extends ConsumerWidget {
       data: (stickers) {
         return GridView.builder(
           padding: const EdgeInsets.all(AppSpacing.spacingLG),
+          addAutomaticKeepAlives: false,
+          addRepaintBoundaries: true,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(
+            AppScroll.listCacheExtentPixels,
+          ),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: AppBreakpoints.value(
               context,

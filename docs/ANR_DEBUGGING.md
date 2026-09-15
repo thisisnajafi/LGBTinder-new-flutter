@@ -17,9 +17,9 @@ The handler passed to `FirebaseMessaging.onBackgroundMessage` runs in a **separa
 | **No heavy JSON parsing** | Large or complex parsing can block the background isolate and delay main-thread work if the platform bridges back. |
 | **No Firebase APIs that require main isolate** | Most Firebase calls in the handler are isolate-safe; avoid anything that touches plugins that assume main thread. |
 
-**Current project:** The handler in `lib/main.dart` is a single top-level function that only logs the message ID. No UI, no context, no navigation, no heavy work. If you add logic there, keep it to minimal, isolate-safe work (e.g. small JSON, enqueue for main isolate later).
+**Current project:** The handler lives in `lib/shared/services/fcm_background_handler.dart` (`firebaseMessagingBackgroundHandler`, `@pragma('vm:entry-point')`). It initializes Firebase in **that isolate**, then either shows a CallKit incoming UI via `CallKitService.showIncomingFromIsolate` or a local notification. It must not use `BuildContext`, `GoRouter`, or `ProviderScope`. SharedPreferences used for chat-banner suppress is async-only (`ActiveChatPeerBridge`).
 
-**Registration:** `onBackgroundMessage` must be **registered before `runApp()`** (Firebase requirement). In this project, `Firebase.initializeApp()` and `FirebaseMessaging.onBackgroundMessage(...)` are called in `main()` before `runApp()`. Only `PushNotificationService().initialize()` is deferred to `addPostFrameCallback` so the first frame can paint quickly.
+**Registration:** `onBackgroundMessage` must be **registered before `runApp()`** (Firebase requirement). In this project, `Firebase.initializeApp()` and `FirebaseMessaging.onBackgroundMessage(...)` are called in `_bootstrap()` before `runApp()`. Only `PushNotificationService().initialize()` is deferred (`deferredPushInitDelay`, currently 3s after first frame) so the first frame can paint quickly.
 
 ---
 
@@ -190,5 +190,21 @@ Use this when you need to fix or verify something yourself.
 - **`android/app/build.gradle.kts`** — Applied `com.google.gms.google-services`.  
 - **`lib/main.dart`** — Firebase.initializeApp() and FirebaseMessaging.onBackgroundMessage(handler) run **before** runApp() (required by Firebase). Push init runs **2 seconds after** first frame via `Future.delayed(2, _initializePushInBackground)` so the UI stays responsive when the FCM background service starts.
 - **`lib/shared/services/push_notification_service.dart`** — Removed duplicate handler; `initialize()` yields between steps (`Future.delayed(Duration.zero)`) so the main thread is not blocked for long.
+- **`lib/shared/services/fcm_background_handler.dart`** — FCM background isolate entry (`firebaseMessagingBackgroundHandler`).
+- **`lib/shared/services/agora_service.dart`** — RTC stays on the main isolate; UI writes go through `_emitUi`.
 
 If you add a new `google-services.json` or change the package name, run through the checklist above and then clean and rebuild.
+
+---
+
+## 10. Agora + Firebase main-thread audit (PERF-ANDROID-005)
+
+| Surface | Isolate / thread | Rule in this app |
+|---------|------------------|------------------|
+| `firebaseMessagingBackgroundHandler` | FCM **background isolate** | Top-level, `@pragma('vm:entry-point')`. No `BuildContext`, navigation, or `ProviderScope`. CallKit / local notifications only. |
+| Handler registration | Main isolate, **before** `runApp()` | `FirebaseMessaging.onBackgroundMessage` in `_bootstrap()`. |
+| Push token / permissions | Main isolate, **after** first frame | `deferredPushInitDelay` (3s) then `_initializePushInBackground()`. |
+| `AgoraService` | **Main isolate only** | Native Agora JNI. Do not wrap in `compute()`. |
+| Agora `RtcEngineEventHandler` | JNI → Dart | `_emitUi` runs the callback immediately only in `idle` / `postFrameCallbacks`; otherwise `addPostFrameCallback`. |
+
+Do not move Agora engine creation, join/leave, or `AgoraVideoView` controllers onto a worker isolate.

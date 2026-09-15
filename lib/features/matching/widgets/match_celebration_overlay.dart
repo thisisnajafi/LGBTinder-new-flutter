@@ -68,10 +68,10 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
     super.didChangeDependencies();
     if (_animationStarted) return;
     _animationStarted = true;
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.value = 1.0;
-    } else {
+    if (AppAnimations.animationsEnabled(context)) {
       _controller.forward();
+    } else {
+      _controller.value = 1.0;
     }
   }
 
@@ -108,10 +108,14 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final size = MediaQuery.sizeOf(context);
     final heartCenter = Offset(size.width / 2, size.height * 0.42);
+    final animate = AppAnimations.animationsEnabled(context);
 
     final bgOpacity = _interval(0, 400);
     final avatarProgress = _interval(200, 800);
@@ -124,11 +128,14 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
         ? Curves.elasticOut.transform(heartProgress / 0.55) * 1.3
         : 1.0 + (1.0 - Curves.easeOut.transform((heartProgress - 0.55) / 0.45)) * 0.3;
 
-    final particles = ParticleBurstPainter.computeBurst(
-      center: heartCenter,
-      t: particleProgress,
-      palette: _particlePalette(context),
-    );
+    final particles = (!animate || particleProgress <= 0)
+        ? const <ParticleState>[]
+        : ParticleBurstPainter.computeBurst(
+            center: heartCenter,
+            t: particleProgress,
+            palette: _particlePalette(context),
+            count: ParticleBurstPainter.maxParticleCount,
+          );
 
     final slideOffset = (1.0 - Curves.elasticOut.transform(avatarProgress)) * 120;
     final avatarGap = AppBreakpoints.value(context, phone: AppSpacing.spacingLG, tablet: AppSpacing.spacingXL);
@@ -159,9 +166,11 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
           ),
 
           // Phase 4 — particle burst
-          CustomPaint(
-            painter: ParticleBurstPainter(particles: particles),
-            size: size,
+          RepaintBoundary(
+            child: CustomPaint(
+              painter: ParticleBurstPainter(particles: particles),
+              size: size,
+            ),
           ),
 
           // Phase 2–3 — avatars + heart
@@ -336,6 +345,8 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
         ),
         ],
       ),
+    );
+      },
     );
   }
 }

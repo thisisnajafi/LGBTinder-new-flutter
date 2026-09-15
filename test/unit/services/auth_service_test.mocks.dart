@@ -4,16 +4,17 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
-import 'dart:io' as _i6;
+import 'dart:io' as _i7;
 
 import 'package:dio/dio.dart' as _i3;
-import 'package:lgbtindernew/core/network/dio_client.dart' as _i10;
+import 'package:lgbtindernew/core/network/dio_client.dart' as _i11;
 import 'package:lgbtindernew/features/auth/data/models/login_response.dart'
-    as _i8;
+    as _i9;
 import 'package:lgbtindernew/shared/models/api_response.dart' as _i2;
-import 'package:lgbtindernew/shared/models/stored_user_session.dart' as _i9;
+import 'package:lgbtindernew/shared/models/stored_user_session.dart' as _i10;
 import 'package:lgbtindernew/shared/services/api_service.dart' as _i4;
-import 'package:lgbtindernew/shared/services/token_storage_service.dart' as _i7;
+import 'package:lgbtindernew/shared/services/retry_service.dart' as _i6;
+import 'package:lgbtindernew/shared/services/token_storage_service.dart' as _i8;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -98,6 +99,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
     _i3.Options? options,
     bool? queueIfOffline = true,
     bool? deduplicateIdempotent = false,
+    _i6.RetryConfig? retryConfig,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -109,6 +111,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
                 #options: options,
                 #queueIfOffline: queueIfOffline,
                 #deduplicateIdempotent: deduplicateIdempotent,
+                #retryConfig: retryConfig,
               },
             ),
             returnValue: _i5.Future<_i2.ApiResponse<T>>.value(
@@ -123,6 +126,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
                     #options: options,
                     #queueIfOffline: queueIfOffline,
                     #deduplicateIdempotent: deduplicateIdempotent,
+                    #retryConfig: retryConfig,
                   },
                 ),
               ),
@@ -284,7 +288,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
   @override
   _i5.Future<_i2.ApiResponse<T>> uploadFile<T>(
     String? endpoint,
-    _i6.File? file, {
+    _i7.File? file, {
     String? fieldName = 'image',
     Map<String, dynamic>? fields,
     T Function(dynamic)? fromJson,
@@ -325,7 +329,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
   @override
   _i5.Future<_i2.ApiResponse<T>> uploadFiles<T>(
     String? endpoint,
-    List<_i6.File>? files, {
+    List<_i7.File>? files, {
     String? fieldName = 'images',
     Map<String, dynamic>? fields,
     T Function(dynamic)? fromJson,
@@ -368,10 +372,21 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockTokenStorageService extends _i1.Mock
-    implements _i7.TokenStorageService {
+    implements _i8.TokenStorageService {
   MockTokenStorageService() {
     _i1.throwOnMissingStub(this);
   }
+
+  @override
+  int get authRevision =>
+      (super.noSuchMethod(Invocation.getter(#authRevision), returnValue: 0)
+          as int);
+
+  @override
+  void bumpAuthRevision() => super.noSuchMethod(
+    Invocation.method(#bumpAuthRevision, []),
+    returnValueForMissingStub: null,
+  );
 
   @override
   _i5.Future<void> saveAuthToken(String? token) =>
@@ -426,7 +441,7 @@ class MockTokenStorageService extends _i1.Mock
 
   @override
   _i5.Future<void> saveUserSession({
-    required _i8.UserData? user,
+    required _i9.UserData? user,
     bool? profileCompleted = false,
     String? userState,
   }) =>
@@ -442,12 +457,12 @@ class MockTokenStorageService extends _i1.Mock
           as _i5.Future<void>);
 
   @override
-  _i5.Future<_i9.StoredUserSession?> getUserSession() =>
+  _i5.Future<_i10.StoredUserSession?> getUserSession() =>
       (super.noSuchMethod(
             Invocation.method(#getUserSession, []),
-            returnValue: _i5.Future<_i9.StoredUserSession?>.value(),
+            returnValue: _i5.Future<_i10.StoredUserSession?>.value(),
           )
-          as _i5.Future<_i9.StoredUserSession?>);
+          as _i5.Future<_i10.StoredUserSession?>);
 
   @override
   _i5.Future<void> clearUserSession() =>
@@ -497,7 +512,7 @@ class MockTokenStorageService extends _i1.Mock
 /// A class which mocks [DioClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockDioClient extends _i1.Mock implements _i10.DioClient {
+class MockDioClient extends _i1.Mock implements _i11.DioClient {
   MockDioClient() {
     _i1.throwOnMissingStub(this);
   }

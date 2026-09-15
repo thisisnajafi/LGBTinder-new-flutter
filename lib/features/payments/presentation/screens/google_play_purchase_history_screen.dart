@@ -1,40 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/theme/typography.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/premium/premium_design_system.dart';
+import '../../../../shared/widgets/lazy_load_list.dart';
+import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../data/models/google_play_purchase_history.dart';
-import '../../data/services/payment_service.dart';
 import '../../providers/payment_providers.dart';
-import '../widgets/purchase_history_item.dart';
 import '../widgets/purchase_filter_chip.dart';
+import '../widgets/purchase_history_item.dart';
 import 'purchase_details_screen.dart';
-import '../../../../core/widgets/premium/premium_design_system.dart';
 
-/// Google Play Purchase History Screen
-/// Displays user's Google Play purchases with filtering options
+/// Google Play purchase history with filter chips and paginated lazy list
+/// (PERF-FEAT-PAY-003).
 class GooglePlayPurchaseHistoryScreen extends ConsumerStatefulWidget {
-  const GooglePlayPurchaseHistoryScreen({Key? key}) : super(key: key);
+  const GooglePlayPurchaseHistoryScreen({super.key});
 
   @override
-  ConsumerState<GooglePlayPurchaseHistoryScreen> createState() => _GooglePlayPurchaseHistoryScreenState();
+  ConsumerState<GooglePlayPurchaseHistoryScreen> createState() =>
+      _GooglePlayPurchaseHistoryScreenState();
 }
 
-class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurchaseHistoryScreen> {
-  List<GooglePlayPurchaseHistory> _purchases = [];
-  bool _isLoading = false;
+class _GooglePlayPurchaseHistoryScreenState
+    extends ConsumerState<GooglePlayPurchaseHistoryScreen> {
+  List<GooglePlayPurchaseHistory> _purchases = const [];
+  bool _isLoading = true;
   bool _hasError = false;
   String? _errorMessage;
-  
-  String? _selectedType; // 'subscription', 'one_time', or null for all
-  String? _selectedStatus; // 'completed', 'pending', 'cancelled', 'refunded', or null for all
+
+  String? _selectedType;
+  String? _selectedStatus;
   int _currentPage = 1;
   final int _pageSize = 20;
   bool _hasMore = true;
@@ -42,22 +44,22 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
   @override
   void initState() {
     super.initState();
-    _loadPurchases();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadPurchases(refresh: true);
+    });
   }
 
   Future<void> _loadPurchases({bool refresh = false}) async {
     if (refresh) {
-      setState(() {
-        _currentPage = 1;
-        _purchases = [];
-        _hasMore = true;
-      });
+      _currentPage = 1;
+      _hasMore = true;
     }
 
     setState(() {
       _isLoading = true;
       _hasError = false;
       _errorMessage = null;
+      if (refresh) _purchases = const [];
     });
 
     try {
@@ -69,35 +71,27 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
         limit: _pageSize,
       );
 
-      if (mounted) {
-        setState(() {
-          if (refresh) {
-            _purchases = purchases;
-          } else {
-            _purchases.addAll(purchases);
-          }
-          _hasMore = purchases.length == _pageSize;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _purchases = refresh ? purchases : [..._purchases, ...purchases];
+        _hasMore = purchases.length == _pageSize;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _hasError = true;
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
-  void _loadMore() {
-    if (!_isLoading && _hasMore) {
-      setState(() {
-        _currentPage++;
-      });
-      _loadPurchases();
-    }
+  Future<bool> _loadMore() async {
+    if (_isLoading || !_hasMore) return false;
+    _currentPage++;
+    await _loadPurchases();
+    return _hasMore;
   }
 
   void _onFilterChanged(String? type, String? status) {
@@ -112,27 +106,32 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
     return AppPageScaffold(
       title: 'Purchase History',
       showBackButton: true,
       backgroundColor: backgroundColor,
       action: IconButton(
-        icon: Icon(
-          Icons.refresh,
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        tooltip: 'Refresh',
+        onPressed: _isLoading ? null : () => _loadPurchases(refresh: true),
+        icon: AppSvgIcon(
+          assetPath: AppIcons.refreshCircle,
+          size: 22,
+          color: theme.colorScheme.onSurface,
         ),
-        onPressed: () => _loadPurchases(refresh: true),
       ),
       body: Column(
         children: [
-          // Filter Chips
           Container(
-            padding: EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.spacingMD,
               vertical: AppSpacing.spacingSM,
             ),
@@ -147,7 +146,7 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: AppSpacing.spacingSM),
+                const SizedBox(height: AppSpacing.spacingSM),
                 Wrap(
                   spacing: AppSpacing.spacingSM,
                   runSpacing: AppSpacing.spacingSM,
@@ -155,17 +154,20 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
                     PurchaseFilterChip(
                       label: 'All Types',
                       isSelected: _selectedType == null,
-                      onSelected: () => _onFilterChanged(null, _selectedStatus),
+                      onSelected: () =>
+                          _onFilterChanged(null, _selectedStatus),
                     ),
                     PurchaseFilterChip(
                       label: 'Subscriptions',
                       isSelected: _selectedType == 'subscription',
-                      onSelected: () => _onFilterChanged('subscription', _selectedStatus),
+                      onSelected: () =>
+                          _onFilterChanged('subscription', _selectedStatus),
                     ),
                     PurchaseFilterChip(
                       label: 'One-time',
                       isSelected: _selectedType == 'one_time',
-                      onSelected: () => _onFilterChanged('one_time', _selectedStatus),
+                      onSelected: () =>
+                          _onFilterChanged('one_time', _selectedStatus),
                     ),
                     PurchaseFilterChip(
                       label: 'All Status',
@@ -175,64 +177,64 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
                     PurchaseFilterChip(
                       label: 'Active',
                       isSelected: _selectedStatus == 'completed',
-                      onSelected: () => _onFilterChanged(_selectedType, 'completed'),
+                      onSelected: () =>
+                          _onFilterChanged(_selectedType, 'completed'),
                     ),
                     PurchaseFilterChip(
                       label: 'Cancelled',
                       isSelected: _selectedStatus == 'cancelled',
-                      onSelected: () => _onFilterChanged(_selectedType, 'cancelled'),
+                      onSelected: () =>
+                          _onFilterChanged(_selectedType, 'cancelled'),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-
-          // Purchases List
           Expanded(
             child: _isLoading && _purchases.isEmpty
-                ? SkeletonLoading()
+                ? const SkeletonLoading()
                 : _hasError && _purchases.isEmpty
                     ? ErrorDisplayWidget(
-                        errorMessage: _errorMessage ?? 'Failed to load purchases',
+                        errorMessage:
+                            _errorMessage ?? 'Failed to load purchases',
                         onRetry: () => _loadPurchases(refresh: true),
                       )
-                    : _purchases.isEmpty
-                        ? _buildEmptyState(textColor, secondaryTextColor)
-                        : PremiumRefreshIndicator(
-                            onRefresh: () => _loadPurchases(refresh: true),
-                            child: ListView.builder(
-                              padding: EdgeInsets.all(AppSpacing.spacingMD),
-                              itemCount: _purchases.length + (_hasMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == _purchases.length) {
-                                  // Load more indicator
-                                  _loadMore();
-                                  return Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(AppSpacing.spacingMD),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  );
-                                }
-
-                                final purchase = _purchases[index];
-                                return PurchaseHistoryItem(
-                                  purchase: purchase,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => PurchaseDetailsScreen(
-                                          purchaseId: purchase.id,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
+                    : LazyLoadList<GooglePlayPurchaseHistory>(
+                        items: _purchases,
+                        isLoading: _isLoading,
+                        hasMore: _hasMore,
+                        hasError: _hasError && _purchases.isEmpty,
+                        onLoadMore: _loadMore,
+                        onRefresh: () => _loadPurchases(refresh: true),
+                        padding: const EdgeInsets.all(AppSpacing.spacingMD),
+                        physics: AppScroll.bouncing,
+                        emptyWidget: _buildEmptyState(
+                          textColor,
+                          secondaryTextColor,
+                        ),
+                        errorWidget: ErrorDisplayWidget(
+                          errorMessage:
+                              _errorMessage ?? 'Failed to load purchases',
+                          onRetry: () => _loadPurchases(refresh: true),
+                        ),
+                        itemBuilder: (context, purchase, _) {
+                          return PurchaseHistoryItem(
+                            purchase: purchase,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PurchaseDetailsScreen(
+                                    purchaseId: purchase.id,
+                                    initialPurchase: purchase,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
           ),
         ],
       ),
@@ -248,42 +250,35 @@ class _GooglePlayPurchaseHistoryScreenState extends ConsumerState<GooglePlayPurc
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.shopping_bag_outlined,
+              AppSvgIcon(
+                assetPath: AppIcons.receipt,
                 size: 64,
                 color: secondaryTextColor,
               ),
-              SizedBox(height: AppSpacing.spacingLG),
+              const SizedBox(height: AppSpacing.spacingLG),
               AppText(
                 'No Purchases Found',
                 style: AppTypography.h2.copyWith(color: textColor),
                 textAlign: TextAlign.center,
                 maxLines: 2,
               ),
-              SizedBox(height: AppSpacing.spacingSM),
+              const SizedBox(height: AppSpacing.spacingSM),
               AppText(
-                'You haven\'t made any Google Play purchases yet.',
+                "You haven't made any Google Play purchases yet.",
                 style: AppTypography.body.copyWith(color: secondaryTextColor),
                 textAlign: TextAlign.center,
                 maxLines: 3,
               ),
-            SizedBox(height: AppSpacing.spacingLG),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: Icon(Icons.explore),
-              label: Text('Browse Plans'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingLG,
-                  vertical: AppSpacing.spacingMD,
-                ),
+              const SizedBox(height: AppSpacing.spacingLG),
+              GradientButton(
+                text: 'Browse Plans',
+                iconPath: AppIcons.discover,
+                isFullWidth: false,
+                onPressed: () => Navigator.pop(context),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

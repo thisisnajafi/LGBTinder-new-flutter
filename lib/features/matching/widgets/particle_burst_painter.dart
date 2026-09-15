@@ -19,6 +19,9 @@ class ParticleState {
 
 /// Radiating particle burst drawn with [Canvas.drawCircle].
 class ParticleBurstPainter extends CustomPainter {
+  /// Hard cap for match-celebration confetti (vs package defaults of ~50).
+  static const int maxParticleCount = 14;
+
   ParticleBurstPainter({required this.particles});
 
   final List<ParticleState> particles;
@@ -55,12 +58,15 @@ class ParticleBurstPainter extends CustomPainter {
     required Offset center,
     required double t,
     required List<Color> palette,
-    int count = 14,
+    int count = maxParticleCount,
     double maxDistance = 72,
   }) {
+    final capped = count < 0
+        ? 0
+        : (count > maxParticleCount ? maxParticleCount : count);
     final particles = <ParticleState>[];
-    for (var i = 0; i < count; i++) {
-      final angle = (i / count) * 2 * math.pi;
+    for (var i = 0; i < capped; i++) {
+      final angle = (i / capped) * 2 * math.pi;
       final distance = maxDistance * Curves.easeOut.transform(t);
       final position = center + Offset(math.cos(angle), math.sin(angle)) * distance;
       final opacity = (1.0 - t).clamp(0.0, 1.0);

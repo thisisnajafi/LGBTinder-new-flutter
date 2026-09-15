@@ -1,4 +1,5 @@
-﻿// Widget: ProfileBio — collapsible about section
+﻿// Unused. Live bio is ExpandableProfileBio on PremiumPersonalitySection.
+// Widget: ProfileBio — collapsible about section
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/animation_constants.dart';

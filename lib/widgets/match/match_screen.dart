@@ -1,7 +1,7 @@
 // Widget: MatchScreen
-// Match celebration screen with animations
+// Unused after ProfilePage / ProfileDetailScreen switched to MatchCelebrationLauncher.
+// Live celebration: MatchCelebrationOverlay on MatchFoundPage (one AnimationController).
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
@@ -11,6 +11,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../features/matching/data/models/match.dart';
+import '../../core/utils/app_haptics.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/avatar_widget.dart';
 import '../../core/constants/animation_constants.dart';
@@ -23,68 +24,62 @@ class MatchScreen extends ConsumerStatefulWidget {
   final VoidCallback? onKeepSwiping;
 
   const MatchScreen({
-    Key? key,
+    super.key,
     required this.match,
     this.onSendMessage,
     this.onKeepSwiping,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<MatchScreen> createState() => _MatchScreenState();
 }
 
 class _MatchScreenState extends ConsumerState<MatchScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _heartController;
-  late AnimationController _confettiController;
-  late AnimationController _scaleController;
-  late Animation<double> _heartAnimation;
-  late Animation<double> _confettiAnimation;
-  late Animation<double> _scaleAnimation;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _heartAnimation;
+  late final Animation<double> _confettiAnimation;
+  late final Animation<double> _scaleAnimation;
+  var _started = false;
 
   @override
   void initState() {
     super.initState();
-    
-    // Haptic feedback
-    HapticFeedback.mediumImpact();
-    
-    // Short celebration burst (~1–1.2 s total), minimal — no bounce
-    _heartController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _heartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _heartController, curve: AppAnimations.curveDefault),
-    );
+    AppHaptics.medium();
 
-    _confettiController = AnimationController(
+    _controller = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _confettiAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _confettiController, curve: AppAnimations.curveDefault),
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0, 0.55, curve: AppAnimations.curveDefault),
     );
+    _confettiAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0, 0.7, curve: AppAnimations.curveDefault),
+    );
+    _heartAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.15, 1, curve: AppAnimations.curveDefault),
+    );
+  }
 
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 350),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleController, curve: AppAnimations.curveDefault),
-    );
-    
-    // Start animations
-    _heartController.forward();
-    _confettiController.forward();
-    _scaleController.forward();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (AppAnimations.animationsEnabled(context)) {
+      _controller.forward();
+    } else {
+      _controller.value = 1;
+    }
   }
 
   @override
   void dispose() {
-    _heartController.dispose();
-    _confettiController.dispose();
-    _scaleController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 

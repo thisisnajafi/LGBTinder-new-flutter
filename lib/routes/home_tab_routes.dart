@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'app_router.dart';
 
 /// Main shell tab indices and URL helpers for [HomePage].
+///
+/// Canonical widgets (PERF-DEDUP-002): DiscoveryPage, ChatListPage,
+/// NotificationsScreen, ProfilePage, SettingsPage.
 class HomeTabRoutes {
   HomeTabRoutes._();
 

@@ -25,7 +25,7 @@ import '../../core/cache/cache_manager.dart' show notifyNewMatch;
 import '../../features/matching/providers/likes_providers.dart';
 import '../../features/matching/providers/matching_provider.dart';
 import '../../features/matching/data/models/match.dart' as match_models;
-import '../../widgets/match/match_screen.dart';
+import '../../features/matching/widgets/match_celebration_launcher.dart';
 
 class ProfileDetailScreen extends ConsumerStatefulWidget {
   final int userId;
@@ -180,21 +180,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
     );
   }
 
-  void _showMatchDialog(match_models.Match? match) {
+  Future<void> _showMatchDialog(match_models.Match? match) async {
     if (match == null) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: AppColors.backgroundDark.withValues(alpha: 0.87),
-      builder: (context) => MatchScreen(
-        match: match,
-        onSendMessage: () {
-          Navigator.pop(context);
-          _handleMessage();
-        },
-        onKeepSwiping: () => Navigator.pop(context),
-      ),
-    );
+    await MatchCelebrationLauncher.show(context, ref, match: match);
   }
 
   String _fullName(UserProfile profile) {

@@ -62,6 +62,25 @@ class BadgeModel {
   /// Check if badge has been earned
   bool get isEarned => earnedAt != null;
 
+  /// Alias used by badge UI widgets.
+  String? get iconUrl => icon;
+
+  /// Alias used by badge UI widgets.
+  bool get rewardClaimed => isRewardClaimed;
+
+  /// Optional reward payload nested under [criteria].
+  Map<String, dynamic>? get reward {
+    final raw = criteria?['reward'];
+    if (raw is Map<String, dynamic>) return raw;
+    return null;
+  }
+
+  double? get progressPercentage {
+    final raw = criteria?['percentage'] ?? criteria?['progress_percentage'];
+    if (raw is num) return raw.toDouble();
+    return null;
+  }
+
   /// Get rarity color (for UI)
   String get rarityColorHex {
     switch (rarity) {

@@ -4,7 +4,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../data/models/google_play_purchase_history.dart';
+import '../../utils/purchase_status_style.dart';
 import '../../../../core/responsive/responsive.dart';
 
 /// Widget to display a single purchase history item
@@ -13,10 +15,10 @@ class PurchaseHistoryItem extends StatelessWidget {
   final VoidCallback? onTap;
 
   const PurchaseHistoryItem({
-    Key? key,
+    super.key,
     required this.purchase,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -50,12 +52,14 @@ class PurchaseHistoryItem extends StatelessWidget {
                     padding: EdgeInsets.all(AppSpacing.spacingSM),
                     decoration: BoxDecoration(
                       color: purchase.isSubscription
-                          ? AppColors.accentPurple.withOpacity(0.2)
-                          : AppColors.accentViolet.withOpacity(0.2),
+                          ? AppColors.accentPurple.withValues(alpha: 0.2)
+                          : AppColors.accentViolet.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                     ),
-                    child: Icon(
-                      purchase.isSubscription ? Icons.sync : Icons.star,
+                    child: AppSvgIcon(
+                      assetPath: purchase.isSubscription
+                          ? AppIcons.refreshCircle
+                          : AppIcons.star,
                       color: purchase.isSubscription
                           ? AppColors.accentPurple
                           : AppColors.accentViolet,
@@ -170,14 +174,16 @@ class PurchaseHistoryItem extends StatelessWidget {
                   padding: EdgeInsets.all(AppSpacing.spacingSM),
                   decoration: BoxDecoration(
                     color: purchase.isActive
-                        ? AppColors.onlineGreen.withOpacity(0.1)
-                        : AppColors.accentRed.withOpacity(0.1),
+                        ? AppColors.onlineGreen.withValues(alpha: 0.1)
+                        : AppColors.accentRed.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        purchase.isActive ? Icons.check_circle : Icons.cancel,
+                      AppSvgIcon(
+                        assetPath: purchase.isActive
+                            ? AppIcons.checkCircle
+                            : AppIcons.close,
                         size: 16,
                         color: purchase.isActive
                             ? AppColors.onlineGreen
@@ -203,7 +209,7 @@ class PurchaseHistoryItem extends StatelessWidget {
                             vertical: AppSpacing.spacingXS,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.onlineGreen.withOpacity(0.2),
+                            color: AppColors.onlineGreen.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                           ),
                           child: Text(
@@ -226,50 +232,21 @@ class PurchaseHistoryItem extends StatelessWidget {
   }
 
   Widget _buildStatusBadge() {
-    Color badgeColor;
-    Color textColor;
-    String statusText;
-
-    switch (purchase.status.toLowerCase()) {
-      case 'completed':
-        badgeColor = AppColors.onlineGreen;
-        textColor = Colors.white;
-        statusText = 'Completed';
-        break;
-      case 'pending':
-        badgeColor = Colors.orange;
-        textColor = Colors.white;
-        statusText = 'Pending';
-        break;
-      case 'cancelled':
-        badgeColor = Colors.grey;
-        textColor = Colors.white;
-        statusText = 'Cancelled';
-        break;
-      case 'refunded':
-        badgeColor = AppColors.accentRed;
-        textColor = Colors.white;
-        statusText = 'Refunded';
-        break;
-      default:
-        badgeColor = Colors.grey;
-        textColor = Colors.white;
-        statusText = purchase.status;
-    }
+    final style = PurchaseStatusStyle.fromStatus(purchase.status);
 
     return Container(
-      padding: EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.spacingSM,
         vertical: AppSpacing.spacingXS,
       ),
       decoration: BoxDecoration(
-        color: badgeColor,
+        color: style.badgeColor,
         borderRadius: BorderRadius.circular(AppRadius.radiusSM),
       ),
       child: Text(
-        statusText,
+        style.label,
         style: AppTypography.caption.copyWith(
-          color: textColor,
+          color: style.foregroundColor,
           fontWeight: FontWeight.bold,
         ),
       ),

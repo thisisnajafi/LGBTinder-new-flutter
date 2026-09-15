@@ -8,6 +8,7 @@ import '../models/message.dart';
 import '../models/message_delivery_status.dart';
 import '../services/chat_outbound_queue_service.dart';
 import '../services/chat_service.dart';
+import '../../utils/chat_message_search.dart';
 import '../../utils/chat_reaction_summary.dart';
 import '../../utils/chat_visual_media.dart';
 import 'app_database.dart';
@@ -357,6 +358,48 @@ class ChatLocalRepository {
           ..limit(limit))
         .get();
     return rows.map(_messageFromLocal).toList();
+  }
+
+  /// Local-first keyword search over cached message bodies (PERF-FEAT-CHAT-004).
+  Future<List<ChatMessageSearchHit>> searchMessagesLocal({
+    required String query,
+    int? otherUserId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final needle = query.trim();
+    if (needle.length < 2) return const [];
+
+    final escaped = escapeChatSearchLike(needle);
+    final rows = await (_db.select(_db.localMessages)
+          ..where((t) {
+            var expr = t.isDeleted.equals(false) &
+                t.message.like('%$escaped%', escapeChar: r'\');
+            if (otherUserId != null && otherUserId > 0) {
+              expr = expr & t.otherUserId.equals(otherUserId);
+            }
+            return expr;
+          })
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit, offset: offset))
+        .get();
+    if (rows.isEmpty) return const [];
+
+    final conversations = {
+      for (final chat in await getConversations()) chat.userId: chat,
+    };
+
+    return [
+      for (final row in rows)
+        if (row.message.trim().isNotEmpty)
+          ChatMessageSearchHit(
+            otherUserId: row.otherUserId,
+            name: conversations[row.otherUserId]?.displayName ?? 'User',
+            avatarUrl: conversations[row.otherUserId]?.primaryImageUrl,
+            preview: row.message,
+            createdAt: row.createdAt,
+          ),
+    ];
   }
 
   /// All cached messages for a peer, oldest first.

@@ -1,3 +1,5 @@
+// Unused. Live count badge is lib/widgets/badges/notification_badge.dart
+// (scale only on count change). This wrapper is not dual-maintained.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';

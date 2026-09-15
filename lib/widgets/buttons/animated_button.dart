@@ -23,7 +23,7 @@ class AnimatedButton extends ConsumerStatefulWidget {
   final bool isFullWidth;
 
   const AnimatedButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -32,7 +32,7 @@ class AnimatedButton extends ConsumerStatefulWidget {
     this.textColor,
     this.useGradient = false,
     this.isFullWidth = true,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AnimatedButton> createState() => _AnimatedButtonState();
@@ -50,9 +50,13 @@ class _AnimatedButtonState extends ConsumerState<AnimatedButton>
       duration: AppAnimations.tapDuration,
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: AppAnimations.buttonPressScale).animate(
-      CurvedAnimation(parent: _controller, curve: AppAnimations.curveDefault),
-    );
+    _scaleAnimation =
+        Tween<double>(begin: 1.0, end: AppAnimations.buttonPressScale).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: AppAnimations.curveDefault,
+          ),
+        );
   }
 
   @override
@@ -66,86 +70,89 @@ class _AnimatedButtonState extends ConsumerState<AnimatedButton>
   }
 
   void _handleTapUp(TapUpDetails details) {
-    _controller.reverse();
+    if (AppAnimations.animationsEnabled(context)) {
+      _controller.reverse();
+    }
     if (widget.onPressed != null && !widget.isLoading) {
       widget.onPressed!();
     }
   }
 
   void _handleTapCancel() {
-    _controller.reverse();
+    if (AppAnimations.animationsEnabled(context)) {
+      _controller.reverse();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final bgColor = widget.backgroundColor ?? AppColors.accentPurple;
     final textColor = widget.textColor ?? Colors.white;
     final isDisabled = widget.onPressed == null || widget.isLoading;
+    final animatePress =
+        !isDisabled && AppAnimations.animationsEnabled(context);
+
+    Widget button = Container(
+      width: widget.isFullWidth ? double.infinity : null,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.spacingXL,
+        vertical: AppSpacing.spacingMD,
+      ),
+      decoration: BoxDecoration(
+        gradient: widget.useGradient && !isDisabled
+            ? AppTheme.accentGradient
+            : null,
+        color: widget.useGradient
+            ? null
+            : (isDisabled ? bgColor.withValues(alpha: 0.5) : bgColor),
+        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+        boxShadow: isDisabled
+            ? null
+            : [
+                BoxShadow(
+                  color: bgColor.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: widget.isLoading
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(textColor),
+              ),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, color: textColor, size: 20),
+                  SizedBox(width: AppSpacing.spacingSM),
+                ],
+                Flexible(
+                  child: AppText(
+                    widget.text,
+                    style: AppTypography.button.copyWith(color: textColor),
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
+    );
+
+    if (animatePress) {
+      button = ScaleTransition(scale: _scaleAnimation, child: button);
+    }
 
     return GestureDetector(
-      onTapDown: isDisabled ? null : _handleTapDown,
+      onTapDown: animatePress ? _handleTapDown : null,
       onTapUp: isDisabled ? null : _handleTapUp,
-      onTapCancel: isDisabled ? null : _handleTapCancel,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Container(
-          width: widget.isFullWidth ? double.infinity : null,
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.spacingXL,
-            vertical: AppSpacing.spacingMD,
-          ),
-          decoration: BoxDecoration(
-            gradient: widget.useGradient && !isDisabled
-                ? AppTheme.accentGradient
-                : null,
-            color: widget.useGradient
-                ? null
-                : (isDisabled ? bgColor.withOpacity(0.5) : bgColor),
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            boxShadow: isDisabled
-                ? null
-                : [
-                    BoxShadow(
-                      color: bgColor.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-          ),
-          child: widget.isLoading
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (widget.icon != null) ...[
-                      Icon(
-                        widget.icon,
-                        color: textColor,
-                        size: 20,
-                      ),
-                      SizedBox(width: AppSpacing.spacingSM),
-                    ],
-                    Flexible(
-                      child: AppText(
-                        widget.text,
-                        style: AppTypography.button.copyWith(color: textColor),
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+      onTapCancel: animatePress ? _handleTapCancel : null,
+      child: button,
     );
   }
 }

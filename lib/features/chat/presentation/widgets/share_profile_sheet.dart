@@ -1,15 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/responsive/responsive.dart';
+import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/app_action_bottom_sheet.dart';
-import '../../../../core/widgets/debounced_search_field.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/app_action_bottom_sheet.dart';
+import '../../../../core/widgets/app_list_view.dart';
 import '../../../../core/widgets/avatar_widget.dart';
+import '../../../../core/widgets/debounced_search_field.dart';
+import '../../providers/chat_list_preview_provider.dart';
 import '../../providers/chat_providers.dart';
-import '../../data/models/chat.dart';
-import '../../../../core/responsive/responsive.dart';
 
 /// Bottom sheet to pick a match and share their profile in chat.
 class ShareProfileSheet extends ConsumerStatefulWidget {
@@ -22,7 +27,8 @@ class ShareProfileSheet extends ConsumerStatefulWidget {
 
   static Future<void> show(
     BuildContext context, {
-    required void Function(int profileUserId, String displayName) onProfileSelected,
+    required void Function(int profileUserId, String displayName)
+        onProfileSelected,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -42,6 +48,15 @@ class ShareProfileSheet extends ConsumerStatefulWidget {
 class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  bool _loadingList = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_ensureChats());
+    });
+  }
 
   @override
   void dispose() {
@@ -49,10 +64,36 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
     super.dispose();
   }
 
+  Future<void> _ensureChats() async {
+    final preview = ref.read(chatListPreviewProvider);
+    if (preview.isSeeded && preview.items.isNotEmpty) return;
+    setState(() => _loadingList = true);
+    try {
+      final chats =
+          await ref.read(chatServiceProvider).getChatUsers(forceRefresh: true);
+      if (!mounted) return;
+      ref.read(chatListPreviewProvider.notifier).seedFromChats(chats);
+    } catch (e) {
+      AppLogger.warning(
+        'Share profile sheet failed to load chats',
+        tag: 'Chat',
+        error: e,
+      );
+    }
+    if (mounted) setState(() => _loadingList = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final items = ref.watch(chatListPreviewProvider).items;
+    final visible = _query.isEmpty
+        ? items
+        : items
+            .where((item) => item.name.toLowerCase().contains(_query))
+            .toList();
+
     return AppBottomSheetListBody(
       title: 'Share a profile',
       maxHeightFactor: 0.55,
@@ -84,88 +125,59 @@ class _ShareProfileSheetState extends ConsumerState<ShareProfileSheet> {
               setState(() => _query = value.trim().toLowerCase()),
         ),
       ),
-      child: FutureBuilder<List<Chat>>(
-                future: ref.read(chatServiceProvider).getChatUsers(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Could not load matches',
-                        style: AppTypography.body.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    );
-                  }
-
-                  final chats = (snapshot.data ?? []).where((chat) {
-                    if (_query.isEmpty) return true;
-                    return chat.firstName.toLowerCase().contains(_query);
-                  }).toList();
-
-                  if (chats.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No matches found',
-                        style: AppTypography.body.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.spacingMD,
+      child: _loadingList
+          ? const Center(child: CircularProgressIndicator())
+          : visible.isEmpty
+              ? Center(
+                  child: Text(
+                    'No matches found',
+                    style: AppTypography.body.copyWith(
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
-                    itemCount: chats.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.spacingSM),
-                    itemBuilder: (context, index) {
-                      final chat = chats[index];
-                      return Semantics(
-                        label: 'Share profile of ${chat.firstName}',
-                        button: true,
-                        child: ListTile(
-                          leading: AvatarWidget(
-                            imageUrl: chat.primaryImageUrl,
-                            radius: 22,
-                            fallbackInitial: chat.firstName,
-                          ),
-                          title: AppText(
-                            chat.firstName,
-                            maxLines: 1,
-                          ),
-                          trailing: AppSvgIcon(
-                            assetPath: AppIcons.share,
-                            size: 20,
-                            color: AppColors.primaryLight,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppBottomSheetStyle.cornerRadius,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            widget.onProfileSelected(
-                              chat.userId,
-                              chat.firstName,
-                            );
-                          },
+                  ),
+                )
+              : AppListView.separated(
+                  itemCount: visible.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.spacingSM),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.spacingMD,
+                  ),
+                  itemBuilder: (context, index) {
+                    final item = visible[index];
+                    return Semantics(
+                      label: 'Share profile of ${item.name}',
+                      button: true,
+                      child: ListTile(
+                        leading: AvatarWidget(
+                          imageUrl: item.avatarUrl,
+                          radius: 22,
+                          fallbackInitial: item.name,
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
+                        title: AppText(
+                          item.name,
+                          maxLines: 1,
+                        ),
+                        trailing: AppSvgIcon(
+                          assetPath: AppIcons.share,
+                          size: 20,
+                          color: AppColors.primaryLight,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppBottomSheetStyle.cornerRadius,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          widget.onProfileSelected(item.id, item.name);
+                        },
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

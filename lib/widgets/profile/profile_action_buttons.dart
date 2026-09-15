@@ -1,4 +1,5 @@
-﻿// Widget: ProfileActionButtons — sticky frosted action bar
+﻿// Unused. Live bar is OtherUserProfileActionBar (solid, no BackdropFilter).
+// Widget: ProfileActionButtons — sticky frosted action bar
 import 'dart:ui';
 
 import 'package:flutter/material.dart';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/animation_constants.dart';
 import '../../profile/data/models/user_profile.dart';
 import '../widgets/match_celebration_overlay.dart';
 
@@ -51,6 +52,7 @@ class MatchFoundPage extends StatelessWidget {
           );
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          if (!AppAnimations.animationsEnabled(context)) return child;
           return FadeTransition(opacity: animation, child: child);
         },
       ),

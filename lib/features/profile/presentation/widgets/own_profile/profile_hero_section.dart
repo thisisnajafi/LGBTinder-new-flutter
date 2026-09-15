@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +22,7 @@ import '../../../../../shared/models/user_tier.dart';
 import '../../../widgets/tier_badge.dart';
 import 'profile_photo_utils.dart';
 import '../../../../../core/responsive/responsive.dart';
+import '../../../utils/profile_image_prefetch.dart';
 
 /// Premium profile hero — identity, status, stats, and quick actions.
 class ProfileHeroSection extends ConsumerStatefulWidget {
@@ -90,7 +90,9 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
     super.initState();
     _initPhotoController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_loadEngagementStats());
+      if (!mounted) return;
+      unawaited(_loadEngagementStats());
+      unawaited(_prefetchAdjacentPhotos());
     });
   }
 
@@ -101,6 +103,9 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
       _photoIndex = 0;
       _photoController?.dispose();
       _initPhotoController();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_prefetchAdjacentPhotos());
+      });
     }
   }
 
@@ -124,6 +129,22 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   void dispose() {
     _photoController?.dispose();
     super.dispose();
+  }
+
+  List<String> _carouselUrls() {
+    return uniqueProfilePhotoUrls(
+      widget.photoUrls.isNotEmpty
+          ? widget.photoUrls
+          : (widget.avatarUrl != null ? [widget.avatarUrl!] : const <String>[]),
+    );
+  }
+
+  Future<void> _prefetchAdjacentPhotos() {
+    return ProfileImagePrefetch.prefetchAdjacent(
+      context,
+      _carouselUrls(),
+      _photoIndex,
+    );
   }
 
   Future<void> _loadEngagementStats() async {
@@ -205,11 +226,7 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
   }
 
   Widget _buildPhotoCard(BuildContext context, double size, bool isDark) {
-    final urls = uniqueProfilePhotoUrls(
-      widget.photoUrls.isNotEmpty
-          ? widget.photoUrls
-          : (widget.avatarUrl != null ? [widget.avatarUrl!] : const <String>[]),
-    );
+    final urls = _carouselUrls();
     final hasMultiple = urls.length > 1;
 
     final photoStack = SizedBox(
@@ -244,20 +261,18 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
           ),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.surfaceDark.withValues(alpha: 0.55)
-                      : Colors.white.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.22),
-                  ),
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.surfaceDark.withValues(alpha: 0.55)
+                    : Colors.white.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.22),
                 ),
+              ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.radiusLG - 2),
                   child: RepaintBoundary(
@@ -270,6 +285,7 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                             onPageChanged: (index) {
                               if (!mounted) return;
                               setState(() => _photoIndex = index);
+                              unawaited(_prefetchAdjacentPhotos());
                             },
                             itemCount: urls.length,
                             itemBuilder: (context, index) {
@@ -307,7 +323,6 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
                 ),
               ),
             ),
-          ),
           if (hasMultiple)
             Positioned(
               bottom: 6,

@@ -11,12 +11,16 @@ import 'shimmer_effect.dart';
 const Color _skeletonBaseDark = Color(0xFF252528);
 
 /// Skeleton loader widget
-/// Displays skeleton placeholders while content loads
+/// Displays skeleton placeholders while content loads.
+///
+/// Shimmer is skipped when Reduce Motion is on (Appearance) or the OS
+/// disable-animations flag is set (PERF-COMP-LOAD-006 / PERF-SCR-SKEL-001).
 class SkeletonLoader extends ConsumerWidget {
   final double? width;
   final double? height;
   final BorderRadius? borderRadius;
   final Widget? child;
+
   /// Optional override for shimmer highlight (e.g. soft pride tint on discovery).
   final Color? highlightColorOverride;
 
@@ -35,7 +39,8 @@ class SkeletonLoader extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     // Dark: use a visibly lighter gray so skeleton is clear on black/near-black background
     final baseColor = isDark ? _skeletonBaseDark : AppColors.surfaceLight;
-    final highlightColor = highlightColorOverride ??
+    final highlightColor =
+        highlightColorOverride ??
         (isDark
             ? Colors.white.withValues(alpha: 0.2)
             : AppColors.surfaceElevatedLight);

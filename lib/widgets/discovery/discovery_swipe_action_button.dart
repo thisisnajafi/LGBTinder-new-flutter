@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_haptics.dart';
 import '../../core/utils/app_icons.dart';
 
 /// Dislike, superlike, like, or rewind action on the discover screen.
-enum DiscoverySwipeActionType {
-  rewind,
-  dislike,
-  superlike,
-  like,
-}
+enum DiscoverySwipeActionType { rewind, dislike, superlike, like }
 
 /// Circular discover action button with gradient fill, border, and glow.
 class DiscoverySwipeActionButton extends StatefulWidget {
@@ -53,15 +49,17 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
     );
     _rotation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 0.1).chain(
-          CurveTween(curve: Curves.easeOutBack),
-        ),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 0.1,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 120,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.1, end: 0.0).chain(
-          CurveTween(curve: Curves.easeOutBack),
-        ),
+        tween: Tween<double>(
+          begin: 0.1,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 130,
       ),
     ]).animate(_controller);
@@ -86,7 +84,8 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
   }
 
   Future<void> _animateSuperlikePulse(bool disableAnimations) async {
-    if (disableAnimations || widget.type != DiscoverySwipeActionType.superlike) {
+    if (disableAnimations ||
+        widget.type != DiscoverySwipeActionType.superlike) {
       return;
     }
     _controller.duration = AppAnimations.transitionModal;
@@ -149,84 +148,85 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
       button: true,
       enabled: widget.onPressed != null,
       label: visuals.semanticLabel,
-      child: SizedBox(
-        width: touchSize,
-        height: touchSize,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => _animatePressDown(disableAnimations),
-          onTapCancel: () => _animateRelease(disableAnimations),
-          onTapUp: (_) => _animateRelease(disableAnimations),
-          onTap: widget.onPressed == null
-              ? null
-              : () async {
-                  await _animateSuperlikePulse(disableAnimations);
-                  widget.onPressed?.call();
-                },
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              final scale = disableAnimations ? 1.0 : _scale.value;
-              return Transform.scale(scale: scale, child: child);
-            },
+      child: RepaintBoundary(
+        child: SizedBox(
+          width: touchSize,
+          height: touchSize,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) => _animatePressDown(disableAnimations),
+            onTapCancel: () => _animateRelease(disableAnimations),
+            onTapUp: (_) => _animateRelease(disableAnimations),
+            onTap: widget.onPressed == null
+                ? null
+                : () async {
+                    AppHaptics.light();
+                    await _animateSuperlikePulse(disableAnimations);
+                    widget.onPressed?.call();
+                  },
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
-                final turns = (widget.type == DiscoverySwipeActionType.superlike &&
-                        !disableAnimations)
-                    ? _rotation.value
-                    : 0.0;
-                return RotationTransition(
-                  turns: AlwaysStoppedAnimation<double>(turns),
-                  child: child,
-                );
+                final scale = disableAnimations ? 1.0 : _scale.value;
+                return Transform.scale(scale: scale, child: child);
               },
-              child: Container(
-                width: widget.size,
-                height: widget.size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: visuals.gradient,
-                  border: Border.all(
-                    color: visuals.borderColor,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: visuals.glowColor.withValues(alpha: 0.28),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: DecoratedBox(
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  final turns =
+                      (widget.type == DiscoverySwipeActionType.superlike &&
+                          !disableAnimations)
+                      ? _rotation.value
+                      : 0.0;
+                  return RotationTransition(
+                    turns: AlwaysStoppedAnimation<double>(turns),
+                    child: child,
+                  );
+                },
+                child: Container(
+                  width: widget.size,
+                  height: widget.size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      width: 1,
-                    ),
+                    gradient: visuals.gradient,
+                    border: Border.all(color: visuals.borderColor, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: visuals.glowColor.withValues(alpha: 0.28),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.28),
-                        Colors.white.withValues(alpha: 0.0),
-                      ],
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        width: 1,
+                      ),
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.28),
+                            Colors.white.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        child: AppSvgIcon(
+                          assetPath: visuals.iconPath,
+                          size: iconSize,
+                          color: visuals.iconColor,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Center(
-                    child: AppSvgIcon(
-                      assetPath: visuals.iconPath,
-                      size: iconSize,
-                      color: visuals.iconColor,
-                    ),
-                  ),
-                ),
                 ),
               ),
             ),

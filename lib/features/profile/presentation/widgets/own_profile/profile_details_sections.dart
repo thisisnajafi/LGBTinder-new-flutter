@@ -6,12 +6,13 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
-import '../../../../../core/widgets/profile_image_widget.dart';
+import '../../../../../core/widgets/optimized_image.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../../payments/data/models/subscription_plan.dart';
 import '../../../widgets/tier_badge.dart';
 import '../../../../../core/widgets/app_page_header.dart';
 import '../../../../../core/widgets/premium/premium_design_system.dart';
+import '../expandable_profile_bio.dart';
 
 /// Shared horizontal inset for profile scroll content (own + other user).
 abstract final class ProfileContentLayout {
@@ -102,14 +103,16 @@ class PremiumPhotosSection extends StatelessWidget {
                 separatorBuilder: (_, __) =>
                     const SizedBox(width: AppSpacing.spacingSM),
                 itemBuilder: (context, index) {
-                  return PremiumTapScale(
-                    onTap: () => onPhotoTap(index),
-                    semanticLabel: 'View photo ${index + 1}',
-                    child: SizedBox(
-                      width: 108,
-                      child: _PhotoTile(
-                        url: imageUrls[index],
-                        isPrimary: index == 0,
+                  return RepaintBoundary(
+                    child: PremiumTapScale(
+                      onTap: () => onPhotoTap(index),
+                      semanticLabel: 'View photo ${index + 1}',
+                      child: SizedBox(
+                        width: 108,
+                        child: _PhotoTile(
+                          url: imageUrls[index],
+                          isPrimary: index == 0,
+                        ),
                       ),
                     ),
                   );
@@ -132,10 +135,12 @@ class PremiumPhotosSection extends StatelessWidget {
                 return _AddPhotoTile(onTap: allowAdd ? onAdd : () {});
               }
               if (index < display.length) {
-                return PremiumTapScale(
-                  onTap: () => onPhotoTap(index),
-                  semanticLabel: 'Photo ${index + 1}',
-                  child: _PhotoTile(url: display[index], isPrimary: false),
+                return RepaintBoundary(
+                  child: PremiumTapScale(
+                    onTap: () => onPhotoTap(index),
+                    semanticLabel: 'Photo ${index + 1}',
+                    child: _PhotoTile(url: display[index], isPrimary: false),
+                  ),
                 );
               }
               if (showAddTile) {
@@ -174,7 +179,15 @@ class _PhotoTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(
             isPrimary ? AppRadius.radiusLG - 2 : AppRadius.radiusLG,
           ),
-          child: ProfileImageWidget(imageUrl: url, fit: BoxFit.cover),
+          child: RepaintBoundary(
+            child: OptimizedImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              size: ImageSize.small,
+            ),
+          ),
         ),
       ),
     );
@@ -286,8 +299,9 @@ class PremiumPersonalitySection extends StatelessWidget {
                 ),
               ),
               child: hasBio
-                  ? AppText(
-                      quoteBio ? '"$trimmed"' : trimmed,
+                  ? ExpandableProfileBio(
+                      text: trimmed,
+                      quote: quoteBio,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         height: 1.55,
                         fontWeight: FontWeight.w500,

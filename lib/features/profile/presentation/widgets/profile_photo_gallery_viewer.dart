@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -5,7 +7,9 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../../../../core/cache/image_cache_service.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../utils/profile_image_prefetch.dart';
 
 /// Full-screen, pinch-zoom, swipeable profile photo gallery.
 class ProfilePhotoGalleryViewer extends StatefulWidget {
@@ -50,6 +54,16 @@ class _ProfilePhotoGalleryViewerState extends State<ProfilePhotoGalleryViewer> {
     super.initState();
     _index = widget.initialIndex;
     _pageController = PageController(initialPage: _index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ProfileImagePrefetch.prefetchAdjacent(
+          context,
+          widget.imageUrls,
+          _index,
+        ),
+      );
+    });
   }
 
   @override
@@ -68,27 +82,37 @@ class _ProfilePhotoGalleryViewerState extends State<ProfilePhotoGalleryViewer> {
         leading: IconButton(
           icon: AppSvgIcon(
             assetPath: AppIcons.close,
-            size: 24,
-            color: Colors.white,
+            size: AppSpacing.spacingXL,
+            color: AppColors.textPrimaryDark,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: AppText(
           '${_index + 1} / ${widget.imageUrls.length}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimaryDark,
+                fontWeight: FontWeight.w600,
+              ),
           maxLines: 1,
         ),
         centerTitle: true,
       ),
-      body: PhotoViewGallery.builder(
+      body: RepaintBoundary(
+        child: PhotoViewGallery.builder(
         itemCount: widget.imageUrls.length,
         pageController: _pageController,
         scrollPhysics: const BouncingScrollPhysics(),
         backgroundDecoration: const BoxDecoration(color: Colors.black),
-        onPageChanged: (index) => setState(() => _index = index),
+        onPageChanged: (index) {
+          setState(() => _index = index);
+          unawaited(
+            ProfileImagePrefetch.prefetchAdjacent(
+              context,
+              widget.imageUrls,
+              index,
+            ),
+          );
+        },
         builder: (context, index) {
           return PhotoViewGalleryPageOptions(
             imageProvider: lgbtfinderCachedImageProvider(widget.imageUrls[index]),
@@ -109,6 +133,7 @@ class _ProfilePhotoGalleryViewerState extends State<ProfilePhotoGalleryViewer> {
               color: AppColors.textPrimaryDark,
             ),
           ),
+        ),
         ),
       ),
     );

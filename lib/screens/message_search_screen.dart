@@ -19,6 +19,8 @@ import '../widgets/error_handling/empty_state.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/services/app_logger.dart';
+import '../features/chat/data/local/chat_database_provider.dart';
+import '../features/chat/utils/chat_message_search.dart';
 import '../pages/chat_page.dart';
 
 /// Message search screen - Search messages
@@ -40,7 +42,11 @@ class MessageSearchScreen extends ConsumerStatefulWidget {
 class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
-  List<Map<String, dynamic>> _searchResults = [];
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _offset = 0;
+  int _searchEpoch = 0;
+  List<ChatMessageSearchHit> _hits = [];
   List<Map<String, dynamic>> _recentSearches = [];
   SharedPreferences? _prefs;
   static const String _recentSearchesKey = 'message_recent_searches';
@@ -87,8 +93,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     final query = raw.trim();
     if (query.isEmpty) {
       setState(() {
-        _searchResults = [];
+        _hits = [];
         _isLoading = false;
+        _loadingMore = false;
+        _hasMore = false;
+        _offset = 0;
       });
       return;
     }
@@ -96,23 +105,67 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     unawaited(_performSearch(query));
   }
 
-  Future<void> _performSearch(String query) async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _performSearch(String query, {bool loadMore = false}) async {
+    final trimmed = query.trim();
+    if (trimmed.length < 2) return;
+    if (loadMore && (_loadingMore || !_hasMore || _isLoading)) return;
+
+    final epoch = loadMore ? _searchEpoch : ++_searchEpoch;
+    final repo = ref.read(chatLocalRepositoryProvider);
+
+    if (loadMore) {
+      setState(() => _loadingMore = true);
+    } else {
+      setState(() {
+        _isLoading = _hits.isEmpty;
+        _offset = 0;
+        _hasMore = false;
+      });
+    }
+
+    int? peerId;
+    final conversationId = widget.conversationId;
+    if (conversationId != null && conversationId > 0) {
+      peerId = await repo.otherUserIdForConversation(conversationId) ??
+          conversationId;
+    }
+
+    if (!loadMore) {
+      try {
+        final localHits = await repo.searchMessagesLocal(
+          query: trimmed,
+          otherUserId: peerId,
+        );
+        if (!mounted || epoch != _searchEpoch) return;
+        setState(() {
+          _hits = groupMessageSearchHits(localHits);
+          _isLoading = _hits.isEmpty;
+        });
+      } catch (e) {
+        AppLogger.warning(
+          'Local message search failed',
+          tag: 'Chat',
+          error: e,
+        );
+      }
+    }
 
     try {
       final apiService = ref.read(apiServiceProvider);
+      final offset = loadMore ? _offset : 0;
       final response = await apiService.get<Map<String, dynamic>>(
         ApiEndpoints.chatSearch,
         queryParameters: {
-          'query': query,
+          'query': trimmed,
           'limit': 20,
+          'offset': offset,
           if (widget.conversationId != null)
             'conversation_id': widget.conversationId,
         },
         fromJson: (json) => json as Map<String, dynamic>,
       );
+
+      if (!mounted || epoch != _searchEpoch) return;
 
       if (response.isSuccess && response.data != null) {
         final payload = response.data!;
@@ -120,44 +173,30 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
             ? payload['data'] as Map<String, dynamic>
             : payload;
         final messages = data['messages'] as List<dynamic>? ?? [];
-
-        final groupedResults = <Map<String, dynamic>>[];
-        final chatMap = <int, Map<String, dynamic>>{};
-
+        final remoteHits = <ChatMessageSearchHit>[];
         for (final message in messages) {
-          final messageData = message as Map<String, dynamic>;
-          final otherUser = messageData['other_user'] as Map<String, dynamic>;
-          final threadId = _threadIdFromSearchHit(messageData) ??
-              (otherUser['id'] as num?)?.toInt();
-          if (threadId == null) continue;
-
-          if (!chatMap.containsKey(threadId)) {
-            chatMap[threadId] = {
-              'id': otherUser['id'],
-              'name': otherUser['name'],
-              'avatar_url': otherUser['avatar_url'],
-              'last_message': messageData['message'],
-              'last_message_time': DateTime.parse(messageData['created_at']),
-              'unread_count': 0,
-              'is_online': false,
-              'is_verified': false,
-              'is_premium': false,
-              'conversation_id': threadId,
-            };
-            groupedResults.add(chatMap[threadId]!);
-          }
+          if (message is! Map) continue;
+          final hit = chatMessageSearchHitFromApi(
+            Map<String, dynamic>.from(message),
+          );
+          if (hit != null) remoteHits.add(hit);
         }
 
         setState(() {
-          _searchResults = groupedResults;
+          _hits = groupMessageSearchHits([..._hits, ...remoteHits]);
+          _offset = offset + messages.length;
+          _hasMore = messageSearchPageHasMore(messages.length);
           _isLoading = false;
+          _loadingMore = false;
         });
 
-        await _saveRecentSearch(query);
+        if (!loadMore) await _saveRecentSearch(trimmed);
       } else {
         setState(() {
-          _searchResults = [];
+          if (!loadMore && _hits.isEmpty) _hits = [];
           _isLoading = false;
+          _loadingMore = false;
+          _hasMore = false;
         });
       }
     } catch (e) {
@@ -166,8 +205,10 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         tag: 'Chat',
         error: e,
       );
+      if (!mounted || epoch != _searchEpoch) return;
       setState(() {
         _isLoading = false;
+        _loadingMore = false;
       });
     }
   }
@@ -260,12 +301,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     }
   }
 
-  int? _threadIdFromSearchHit(Map<String, dynamic> messageData) {
-    final raw = messageData['conversation_id'] ?? messageData['chat_id'];
-    if (raw is int) return raw;
-    return int.tryParse(raw?.toString() ?? '');
-  }
-
   void _handleChatTap(int userId) {
     Navigator.push(
       context,
@@ -278,7 +313,10 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   void _clearSearch() {
     _searchController.clear();
     setState(() {
-      _searchResults = [];
+      _hits = [];
+      _hasMore = false;
+      _offset = 0;
+      _loadingMore = false;
     });
   }
 
@@ -362,7 +400,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
+            child: _isLoading && _hits.isEmpty
                 ? AppListView.builder(
                     physics: AppScroll.bouncing,
                     itemCount: 5,
@@ -499,7 +537,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                               ),
                             ],
                           )
-                    : _searchResults.isEmpty
+                    : _hits.isEmpty
                         ? EmptyState(
                             title: 'No Results',
                             message: 'Try a different search term',
@@ -510,25 +548,38 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                             padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.spacingSM,
                             ),
-                            itemCount: _searchResults.length,
+                            itemCount: _hits.length + (_hasMore ? 1 : 0),
                             itemBuilder: (context, index) {
-                              final result = _searchResults[index];
+                              if (index >= _hits.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.spacingMD,
+                                  ),
+                                  child: Center(
+                                    child: _loadingMore
+                                        ? const CircularProgressIndicator()
+                                        : TextButton(
+                                            onPressed: () => _performSearch(
+                                              _searchController.text,
+                                              loadMore: true,
+                                            ),
+                                            child: const Text('Load more'),
+                                          ),
+                                  ),
+                                );
+                              }
+                              final result = _hits[index];
                               return RepaintBoundary(
                                 child: ChatListItem(
-                                  userId: (result['id'] as num).toInt(),
-                                  name: result['name'] as String? ?? 'User',
-                                  avatarUrl: result['avatar_url'] as String?,
-                                  lastMessage: result['last_message'] as String?,
-                                  lastMessageTime:
-                                      result['last_message_time'] as DateTime?,
-                                  unreadCount:
-                                      (result['unread_count'] as num?)?.toInt() ??
-                                          0,
-                                  isOnline: result['is_online'] == true,
+                                  userId: result.otherUserId,
+                                  name: result.name,
+                                  avatarUrl: result.avatarUrl,
+                                  lastMessage: result.preview,
+                                  lastMessageTime: result.createdAt,
+                                  unreadCount: 0,
+                                  isOnline: false,
                                   hasPlan: hasPlan,
-                                  onTap: () => _handleChatTap(
-                                    (result['id'] as num).toInt(),
-                                  ),
+                                  onTap: () => _handleChatTap(result.otherUserId),
                                 ),
                               );
                             },

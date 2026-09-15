@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import 'subscription_management_screen.dart';
 import 'google_play_purchase_history_screen.dart';
@@ -21,7 +22,7 @@ class PurchaseConfirmationScreen extends StatelessWidget {
   final DateTime? expiryDate;
 
   const PurchaseConfirmationScreen({
-    Key? key,
+    super.key,
     required this.productName,
     this.price,
     this.currency,
@@ -29,7 +30,7 @@ class PurchaseConfirmationScreen extends StatelessWidget {
     this.isSubscription = false,
     this.planName,
     this.expiryDate,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,13 +58,15 @@ class PurchaseConfirmationScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppColors.onlineGreen.withOpacity(0.2),
+                  color: AppColors.onlineGreen.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.check_circle,
-                  size: 60,
-                  color: AppColors.onlineGreen,
+                child: const Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.tickCircle,
+                    size: 60,
+                    color: AppColors.onlineGreen,
+                  ),
                 ),
               ),
 
@@ -118,7 +121,7 @@ class PurchaseConfirmationScreen extends StatelessWidget {
                     if (price != null)
                       _buildDetailRow(
                         'Price',
-                        '${_formatPrice(price!, currency ?? 'USD')}',
+                        _formatPrice(price!, currency ?? 'USD'),
                         textColor,
                         secondaryTextColor,
                       ),
@@ -251,14 +254,14 @@ class PurchaseErrorScreen extends StatelessWidget {
   final VoidCallback? onContactSupport;
 
   const PurchaseErrorScreen({
-    Key? key,
+    super.key,
     this.errorMessage,
     this.userMessage,
     this.suggestedAction,
     this.retryable = false,
     this.onRetry,
     this.onContactSupport,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -286,13 +289,15 @@ class PurchaseErrorScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppColors.accentRed.withOpacity(0.2),
+                  color: AppColors.accentRed.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.error_outline,
-                  size: 60,
-                  color: AppColors.accentRed,
+                child: const Center(
+                  child: AppSvgIcon(
+                    assetPath: AppIcons.error,
+                    size: 60,
+                    color: AppColors.accentRed,
+                  ),
                 ),
               ),
 
@@ -332,8 +337,8 @@ class PurchaseErrorScreen extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.lightbulb_outline,
+                      const AppSvgIcon(
+                        assetPath: AppIcons.warningTriangle,
                         color: AppColors.accentYellow,
                         size: 20,
                       ),

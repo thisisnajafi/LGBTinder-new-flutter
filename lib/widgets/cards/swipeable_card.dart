@@ -2,18 +2,17 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/cache/cache_providers.dart';
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/match_percentage_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/widgets/optimized_image.dart';
 import '../../shared/models/match_reason.dart';
 import '../ui/distance_tag.dart';
 import '../../core/responsive/responsive.dart';
@@ -264,7 +263,8 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
               ),
             );
           },
-          child: _DiscoveryCardFrame(
+          child: RepaintBoundary(
+            child: _DiscoveryCardFrame(
             matchPct: matchPct,
             isBackgroundPreview: widget.isBackgroundPreview,
             child: ClipRRect(
@@ -274,8 +274,8 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
               children: [
                 _PhotoLayer(
                   currentImage: currentImage,
-                  images: images,
                   disableAnimations: disableAnimations,
+                  isBackgroundPreview: widget.isBackgroundPreview,
                 ),
                 const Positioned.fill(
                   child: IgnorePointer(
@@ -384,6 +384,7 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
               ],
             ),
             ),
+            ),
           ),
         );
       },
@@ -443,19 +444,9 @@ class _DiscoveryCardFrame extends StatelessWidget {
             : AppColors.brandGradient,
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentPurple.withValues(alpha: 0.20),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: AppColors.accentRose.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.10),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -476,21 +467,20 @@ class _DiscoveryCardFrame extends StatelessWidget {
   }
 }
 
-class _PhotoLayer extends ConsumerWidget {
+class _PhotoLayer extends StatelessWidget {
   const _PhotoLayer({
     required this.currentImage,
-    required this.images,
     required this.disableAnimations,
+    required this.isBackgroundPreview,
   });
 
   final String? currentImage;
-  final List<String> images;
   final bool disableAnimations;
+  final bool isBackgroundPreview;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cacheManager = ref.watch(imageCacheServiceProvider);
     final memCacheWidth = SwipeableCard.photoDecodeWidth(context);
 
     return Stack(
@@ -509,21 +499,21 @@ class _PhotoLayer extends ConsumerWidget {
             );
           },
           child: currentImage != null
-              ? CachedNetworkImage(
+              ? OptimizedImage(
                   key: ValueKey<String>(currentImage!),
                   imageUrl: currentImage!,
-                  cacheManager: cacheManager,
-                  cacheKey: currentImage,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
-                  memCacheWidth: memCacheWidth,
-                  fadeInDuration: Duration.zero,
-                  fadeOutDuration: Duration.zero,
-                  placeholder: (context, url) => ColoredBox(
+                  size: isBackgroundPreview
+                      ? ImageSize.small
+                      : ImageSize.large,
+                  memoryCacheWidth: memCacheWidth,
+                  showDownloadProgress: false,
+                  placeholder: ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest,
                   ),
-                  errorWidget: (context, url, error) => ColoredBox(
+                  errorWidget: ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest,
                     child: Center(
                       child: AppSvgIcon(

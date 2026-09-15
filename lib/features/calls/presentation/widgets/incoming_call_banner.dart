@@ -265,52 +265,33 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost> {
 
   @override
   Widget build(BuildContext context) {
-    final incoming = ref.watch(incomingCallProvider);
-    final startupDone = ref.watch(startupFlowCompleteProvider);
-    final minimized = ref.watch(activeCallSessionProvider);
-    final notifier = ref.read(incomingCallProvider.notifier);
-    final pending = notifier.hasPendingNavigation;
-    if (pending && startupDone) {
+    ref.listen(startupFlowCompleteProvider, (previous, next) {
+      if (!next) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ref.read(incomingCallProvider.notifier).consumePendingNavigation(context);
       });
-    }
-    if (notifier.hasBlockedPermission &&
-        startupDone &&
-        !_showingPermissionSheet) {
+    });
+    ref.listen(incomingCallProvider, (previous, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(_showBlockedPermissionSheet());
+        if (!mounted) return;
+        final notifier = ref.read(incomingCallProvider.notifier);
+        if (notifier.hasPendingNavigation &&
+            ref.read(startupFlowCompleteProvider)) {
+          notifier.consumePendingNavigation(context);
+        }
+        if (notifier.hasBlockedPermission &&
+            ref.read(startupFlowCompleteProvider) &&
+            !_showingPermissionSheet) {
+          unawaited(_showBlockedPermissionSheet());
+        }
       });
-    }
+    });
 
     return Stack(
       children: [
         widget.child,
-        if (incoming != null && notifier.isAppForeground)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IncomingCallBanner(callData: incoming),
-          )
-        else if (minimized != null && minimized.minimized)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: MinimizedCallReturnBanner(
-                peerName: minimized.peerName,
-                isVideo: minimized.isVideo,
-                onTap: () => restoreActiveCallRoute(
-                  GoRouter.of(context),
-                  minimized,
-                ),
-              ),
-            ),
-          ),
+        const _IncomingCallForegroundLayer(),
       ],
     );
   }
@@ -332,6 +313,49 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost> {
     } else {
       _showingPermissionSheet = false;
     }
+  }
+}
+
+/// Overlay sibling of the app child so incoming state does not rebuild the
+/// navigator tree (PERF-COMP-CALL-005 / PERF-COMP-SHARED-004).
+class _IncomingCallForegroundLayer extends ConsumerWidget {
+  const _IncomingCallForegroundLayer();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final incoming = ref.watch(incomingCallProvider);
+    final notifier = ref.read(incomingCallProvider.notifier);
+    final minimized = ref.watch(activeCallSessionProvider);
+
+    if (incoming != null && notifier.isAppForeground) {
+      return Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: RepaintBoundary(
+          child: IncomingCallBanner(callData: incoming),
+        ),
+      );
+    }
+    if (minimized != null && minimized.minimized) {
+      return Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SafeArea(
+          bottom: false,
+          child: MinimizedCallReturnBanner(
+            peerName: minimized.peerName,
+            isVideo: minimized.isVideo,
+            onTap: () => restoreActiveCallRoute(
+              GoRouter.of(context),
+              minimized,
+            ),
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 

@@ -12,13 +12,16 @@ class AppMotionPreferences {
 
   static const reduceMotionKey = 'app_reduce_motion';
   static const hapticsEnabledKey = 'app_haptics_enabled';
+  static const solidNavBarKey = 'app_solid_nav_bar';
 
   static bool reduceMotion = false;
   static bool hapticsEnabled = true;
+  static bool solidNavBar = false;
 
   static void hydrate(SharedPreferences? prefs) {
     reduceMotion = prefs?.getBool(reduceMotionKey) ?? false;
     hapticsEnabled = prefs?.getBool(hapticsEnabledKey) ?? true;
+    solidNavBar = prefs?.getBool(solidNavBarKey) ?? false;
   }
 }
 
@@ -26,26 +29,30 @@ class AppMotionPrefsState {
   const AppMotionPrefsState({
     this.reduceMotion = false,
     this.hapticsEnabled = true,
+    this.solidNavBar = false,
   });
 
   final bool reduceMotion;
   final bool hapticsEnabled;
+  final bool solidNavBar;
 
   AppMotionPrefsState copyWith({
     bool? reduceMotion,
     bool? hapticsEnabled,
+    bool? solidNavBar,
   }) {
     return AppMotionPrefsState(
       reduceMotion: reduceMotion ?? this.reduceMotion,
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
+      solidNavBar: solidNavBar ?? this.solidNavBar,
     );
   }
 }
 
 final appMotionPrefsProvider =
     NotifierProvider<AppMotionPrefsNotifier, AppMotionPrefsState>(
-  AppMotionPrefsNotifier.new,
-);
+      AppMotionPrefsNotifier.new,
+    );
 
 class AppMotionPrefsNotifier extends Notifier<AppMotionPrefsState> {
   @override
@@ -55,6 +62,7 @@ class AppMotionPrefsNotifier extends Notifier<AppMotionPrefsState> {
     return AppMotionPrefsState(
       reduceMotion: AppMotionPreferences.reduceMotion,
       hapticsEnabled: AppMotionPreferences.hapticsEnabled,
+      solidNavBar: AppMotionPreferences.solidNavBar,
     );
   }
 
@@ -72,5 +80,13 @@ class AppMotionPrefsNotifier extends Notifier<AppMotionPrefsState> {
     await ref
         .read(sharedPreferencesProvider)
         ?.setBool(AppMotionPreferences.hapticsEnabledKey, value);
+  }
+
+  Future<void> setSolidNavBar(bool value) async {
+    AppMotionPreferences.solidNavBar = value;
+    state = state.copyWith(solidNavBar: value);
+    await ref
+        .read(sharedPreferencesProvider)
+        ?.setBool(AppMotionPreferences.solidNavBarKey, value);
   }
 }

@@ -9,7 +9,7 @@ import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
 import '../../../../../core/widgets/profile_age_badge.dart';
-import '../../../../../core/widgets/profile_image_widget.dart';
+import '../../../../../core/widgets/optimized_image.dart';
 import '../../../../../shared/models/user_tier.dart';
 import '../../../widgets/tier_badge.dart';
 import '../../../data/models/user_profile.dart';
@@ -1165,12 +1165,20 @@ class PremiumViewerPhotosSection extends StatelessWidget {
             itemCount: extra.length,
             itemBuilder: (context, index) {
               final url = extra[index];
-              return PremiumTapScale(
-                onTap: onPhotoTap == null ? () {} : () => onPhotoTap!(index + 1),
-                semanticLabel: 'Photo ${index + 2}',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-                  child: ProfileImageWidget(imageUrl: url, fit: BoxFit.cover),
+              return RepaintBoundary(
+                child: PremiumTapScale(
+                  onTap: onPhotoTap == null ? () {} : () => onPhotoTap!(index + 1),
+                  semanticLabel: 'Photo ${index + 2}',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+                    child: OptimizedImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      size: ImageSize.small,
+                    ),
+                  ),
                 ),
               );
             },

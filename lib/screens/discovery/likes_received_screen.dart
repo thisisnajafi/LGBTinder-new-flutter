@@ -326,14 +326,16 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
             );
           }
           final like = _likes[index - 1];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-            child: LikesReceivedCard(
-              like: like,
-              formatTime: _formatTime,
-              onProfileTap: () => _handleProfileTap(like['user_id'] as int),
-              onPass: () => _handleDislike(like['id'] as int),
-              onAccept: () => _handleLike(like['id'] as int),
+          return RepaintBoundary(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+              child: LikesReceivedCard(
+                like: like,
+                formatTime: _formatTime,
+                onProfileTap: () => _handleProfileTap(like['user_id'] as int),
+                onPass: () => _handleDislike(like['id'] as int),
+                onAccept: () => _handleLike(like['id'] as int),
+              ),
             ),
           );
         },

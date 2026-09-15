@@ -1,59 +1,60 @@
 import 'package:flutter/material.dart';
-import '../../core/responsive/responsive.dart';
-import '../../core/theme/app_colors.dart';
+
 import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../core/responsive/responsive.dart';
+import '../../core/widgets/app_list_view.dart';
+import '../../core/widgets/premium/premium_layout.dart';
+import '../../features/chat/utils/chat_thread_scroll.dart';
+import '../chat/message_bubble.dart';
 import 'skeleton_loader.dart';
 
-/// Skeleton loader for chat page
+/// Skeleton loader for the live chat thread ([MessageBubble] geometry).
 class SkeletonChat extends StatelessWidget {
-  const SkeletonChat({Key? key}) : super(key: key);
+  const SkeletonChat({super.key});
+
+  static const int _itemCount = 6;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: EdgeInsets.all(AppSpacing.spacingMD),
-      itemCount: 6,
+    final line =
+        (AppTypography.body.fontSize ?? 14) *
+        (AppTypography.body.height ?? 1.4);
+    final meta =
+        AppSpacing.spacingXS +
+        (AppTypography.labelSmall.fontSize ?? 11) *
+            (AppTypography.labelSmall.height ?? 1.3);
+    final pad = AppSpacing.spacingMD * 2;
+    final oneLine = pad + line + meta;
+    final twoLine = pad + line * 2 + AppSpacing.spacingXS + meta;
+    final threeLine = pad + line * 3 + AppSpacing.spacingSM + meta;
+
+    return AppListView.builder(
+      reverse: ChatThreadScroll.reversed,
+      physics: AppScroll.forChat(context),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.spacingSM),
+      itemCount: _itemCount,
       itemBuilder: (context, index) {
-        final isSent = index % 2 == 0;
-        final bubbleWidth = ResponsiveGrid.chatBubbleMaxWidth(
-          context,
-          fraction: 0.65,
-        ).clamp(120.0, 240.0);
-        return Container(
-          margin: EdgeInsets.only(bottom: AppSpacing.spacingMD),
-          child: Row(
-            mainAxisAlignment: isSent ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!isSent) ...[
-                SkeletonLoader(
-                  width: 32,
-                  height: 32,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                ),
-                SizedBox(width: AppSpacing.spacingSM),
-              ],
-              Flexible(
-                child: SkeletonLoader(
-                  width: bubbleWidth,
-                  height: 50,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-                ),
-              ),
-              if (isSent) ...[
-                SizedBox(width: AppSpacing.spacingSM),
-                SkeletonLoader(
-                  width: 32,
-                  height: 32,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                ),
-              ],
-            ],
+        final isSent = index.isEven;
+        final maxWidth = ResponsiveGrid.chatBubbleMaxWidth(context);
+        final widthFactor = 0.42 + (index % 3) * 0.14;
+        final height = switch (index % 3) {
+          0 => oneLine,
+          1 => twoLine,
+          _ => threeLine,
+        };
+        return Align(
+          alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+          child: Padding(
+            padding: MessageBubbleChrome.margin(isSent: isSent),
+            child: SkeletonLoader(
+              width: maxWidth * widthFactor,
+              height: height,
+              borderRadius: MessageBubbleChrome.radius(isSent: isSent),
+            ),
           ),
         );
       },
     );
   }
 }
-

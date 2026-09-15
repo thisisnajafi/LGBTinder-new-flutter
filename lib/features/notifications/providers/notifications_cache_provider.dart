@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/api_providers.dart';
 import '../../../core/services/app_logger.dart';
+import '../../../features/chat/data/local/chat_database_provider.dart';
 import '../../../shared/models/api_error.dart';
 import '../../../shared/services/cache_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../data/local/notifications_local_repository.dart';
 import '../data/models/notification.dart' as app_models;
 import '../data/services/notification_service.dart';
 import 'notification_providers.dart';
+
+export '../data/local/notifications_list_snapshot.dart';
 
 /// Cached notifications list with pagination metadata.
 class NotificationsCacheState {
@@ -60,15 +64,10 @@ class NotificationsCacheState {
   }
 }
 
-const int kNotificationsPageSize = 20;
-
-List<app_models.Notification> _withoutChatMessageNotifications(
-  List<app_models.Notification> items,
-) {
-  return items
-      .where((n) => n.type.toLowerCase() != 'message')
-      .toList(growable: false);
-}
+final notificationsLocalRepositoryProvider =
+    Provider<NotificationsLocalRepository>((ref) {
+  return NotificationsLocalRepository(ref.watch(appDatabaseProvider));
+});
 
 /// Cache-first notifications feed with infinite scroll pagination.
 final notificationsCacheProvider =
@@ -78,6 +77,7 @@ final notificationsCacheProvider =
       ref,
       ref.read(notificationServiceProvider),
       ref.read(cacheServiceProvider),
+      ref.read(notificationsLocalRepositoryProvider),
     );
   },
 );
@@ -87,6 +87,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     this._ref,
     this._notificationService,
     this._cacheService,
+    this._localRepository,
   ) : super(const NotificationsCacheState()) {
     _init();
   }
@@ -94,11 +95,12 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
   final Ref _ref;
   final NotificationService _notificationService;
   final CacheService _cacheService;
+  final NotificationsLocalRepository _localRepository;
 
   bool _fetchInProgress = false;
   int _badgeEpoch = 0;
 
-  static const Duration _listCacheDuration = Duration(hours: 24);
+  static const Duration _legacyPrefsCacheDuration = Duration(hours: 24);
 
   void _init() {
     Future.microtask(() async {
@@ -109,62 +111,39 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
 
   int? get _userId => _ref.read(authProvider).user?.id;
 
-  String? _cacheKey() {
+  String? _legacyCacheKey() {
     final userId = _userId;
     if (userId == null || userId <= 0) return null;
     return CacheKeys.userNotifications(userId);
   }
 
   Future<void> loadFromCache() async {
-    final key = _cacheKey();
-    if (key == null) return;
+    final userId = _userId;
+    if (userId == null || userId <= 0) return;
 
     try {
+      final local = await _localRepository.load(userId);
+      if (local != null && local.notifications.isNotEmpty) {
+        _applySnapshot(local);
+        return;
+      }
+
+      final key = _legacyCacheKey();
+      if (key == null) return;
       final cached = await _cacheService.getCached<Map<String, dynamic>>(
         key,
         (json) => Map<String, dynamic>.from(json),
-        customExpiry: _listCacheDuration,
+        customExpiry: _legacyPrefsCacheDuration,
       );
       if (cached == null) return;
 
-      final rawList = cached['notifications'];
-      if (rawList is! List || rawList.isEmpty) return;
+      final snapshot = NotificationsLocalSnapshot.fromCacheMap(cached);
+      if (snapshot == null) return;
 
-      final notifications = <app_models.Notification>[];
-      for (final item in rawList) {
-        if (item is Map<String, dynamic>) {
-          try {
-            notifications.add(app_models.Notification.fromJson(item));
-          } catch (e) {
-            AppLogger.warning(
-              'Skipping malformed cached notification',
-              tag: 'Notifications',
-              error: e,
-            );
-          }
-        }
-      }
-      if (notifications.isEmpty) return;
-
-      final filtered = _withoutChatMessageNotifications(notifications);
-      if (filtered.isEmpty) return;
-
-      final currentPage = cached['current_page'] is int
-          ? cached['current_page'] as int
-          : 2;
-      final hasMore = cached['has_more'] is bool
-          ? cached['has_more'] as bool
-          : filtered.length >= kNotificationsPageSize;
-
-      state = state.copyWith(
-        notifications: filtered,
-        currentPage: currentPage,
-        hasMore: hasMore,
-        initialLoadComplete: true,
-        clearError: true,
-      );
+      _applySnapshot(snapshot);
+      unawaited(_persistLocal(unreadCount: snapshot.unreadCount));
       AppLogger.debug(
-        'Loaded ${notifications.length} notifications from cache',
+        'Migrated ${snapshot.notifications.length} notifications from prefs cache',
         tag: 'NotificationsCache',
       );
     } catch (e, stack) {
@@ -177,19 +156,34 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     }
   }
 
-  Future<void> _persistCache() async {
-    final key = _cacheKey();
-    if (key == null || state.notifications.isEmpty) return;
+  void _applySnapshot(NotificationsLocalSnapshot snapshot) {
+    state = state.copyWith(
+      notifications: snapshot.notifications,
+      currentPage: snapshot.currentPage,
+      hasMore: snapshot.hasMore,
+      initialLoadComplete: true,
+      clearError: true,
+    );
+    final unread = snapshot.unreadCount ??
+        snapshot.notifications.where((n) => !n.isRead).length;
+    _syncUnreadBadge(unread, epoch: _badgeEpoch);
+    AppLogger.debug(
+      'Loaded ${snapshot.notifications.length} notifications from local cache',
+      tag: 'NotificationsCache',
+    );
+  }
 
-    await _cacheService.cacheData(
-      key,
-      {
-        'notifications':
-            state.notifications.map((n) => n.toJson()).toList(growable: false),
-        'current_page': state.currentPage,
-        'has_more': state.hasMore,
-      },
-      duration: _listCacheDuration,
+  Future<void> _persistLocal({int? unreadCount}) async {
+    final userId = _userId;
+    if (userId == null || userId <= 0) return;
+
+    await _localRepository.replace(
+      ownerUserId: userId,
+      notifications: state.notifications,
+      currentPage: state.currentPage,
+      hasMore: state.hasMore,
+      unreadCount: unreadCount ??
+          state.notifications.where((n) => !n.isRead).length,
     );
   }
 
@@ -208,7 +202,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       if (page == null) return;
 
       state = state.copyWith(
-        notifications: _withoutChatMessageNotifications(page.notifications),
+        notifications: withoutChatMessageNotifications(page.notifications),
         currentPage: page.hasMore ? 2 : 1,
         hasMore: page.hasMore,
         initialLoadComplete: true,
@@ -216,7 +210,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
         clearError: true,
       );
       _syncUnreadBadge(page.unreadCount, epoch: epoch);
-      unawaited(_persistCache());
+      unawaited(_persistLocal(unreadCount: page.unreadCount));
     } on ApiError catch (e) {
       state = state.copyWith(
         hasError: state.notifications.isEmpty,
@@ -258,7 +252,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       final existingIds = state.notifications.map((e) => e.id).toSet();
       final merged = [
         ...state.notifications,
-        ..._withoutChatMessageNotifications(page.notifications)
+        ...withoutChatMessageNotifications(page.notifications)
             .where((n) => !existingIds.contains(n.id)),
       ];
 
@@ -270,7 +264,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
         clearError: true,
       );
       _syncUnreadBadge(page.unreadCount, epoch: epoch);
-      unawaited(_persistCache());
+      unawaited(_persistLocal(unreadCount: page.unreadCount));
     } on ApiError catch (e) {
       AppLogger.warning(
         'Load more notifications failed',
@@ -318,7 +312,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           .map((n) => n.id == notificationId ? n.copyWith(isRead: true) : n)
           .toList(growable: false),
     );
-    unawaited(_persistCache());
+    unawaited(_persistLocal());
   }
 
   void markAllAsReadLocal() {
@@ -327,7 +321,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           .map((n) => n.copyWith(isRead: true))
           .toList(growable: false),
     );
-    unawaited(_persistCache());
+    unawaited(_persistLocal(unreadCount: 0));
   }
 
   void removeLocal(int notificationId) {
@@ -337,7 +331,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
           .toList(growable: false),
     );
     syncBadgeFromLocalList();
-    unawaited(_persistCache());
+    unawaited(_persistLocal());
   }
 
   void insertLocal(app_models.Notification notification, {int? index}) {
@@ -347,7 +341,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     next.insert(insertAt, notification);
     state = state.copyWith(notifications: next);
     syncBadgeFromLocalList();
-    unawaited(_persistCache());
+    unawaited(_persistLocal());
   }
 
   void clearAllLocal() {
@@ -359,7 +353,11 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
       clearError: true,
     );
     clearUnreadBadge();
-    final key = _cacheKey();
+    final userId = _userId;
+    if (userId != null && userId > 0) {
+      unawaited(_localRepository.clear(userId));
+    }
+    final key = _legacyCacheKey();
     if (key != null) {
       unawaited(_cacheService.clearCache(key));
     }

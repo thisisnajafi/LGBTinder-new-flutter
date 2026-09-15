@@ -39,11 +39,13 @@ class CallHistoryBubble extends StatelessWidget {
         ? AppIcons.callMissed
         : (_isVideo ? AppIcons.video : AppIcons.phone);
 
-    return ChatSystemMessage(
-      caption: label,
-      iconPath: iconPath,
-      color: textColor,
-      onTap: onTap,
+    return RepaintBoundary(
+      child: ChatSystemMessage(
+        caption: label,
+        iconPath: iconPath,
+        color: textColor,
+        onTap: onTap,
+      ),
     );
   }
 }

@@ -14,12 +14,12 @@ class ShimmerEffect extends ConsumerStatefulWidget {
   final Duration duration;
 
   const ShimmerEffect({
-    Key? key,
+    super.key,
     required this.child,
     this.baseColor,
     this.highlightColor,
     this.duration = AppAnimations.shimmerDuration,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<ShimmerEffect> createState() => _ShimmerEffectState();
@@ -33,13 +33,30 @@ class _ShimmerEffectState extends ConsumerState<ShimmerEffect>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: widget.duration,
-      vsync: this,
-    )..repeat();
+    _controller = AnimationController(duration: widget.duration, vsync: this);
     _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-      CurvedAnimation(parent: _controller, curve: AppAnimations.curveEmphasized),
+      CurvedAnimation(
+        parent: _controller,
+        curve: AppAnimations.curveEmphasized,
+      ),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncMotion();
+  }
+
+  void _syncMotion() {
+    if (!AppAnimations.animationsEnabled(context)) {
+      _controller.stop();
+      _controller.value = 0;
+      return;
+    }
+    if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override
@@ -52,38 +69,49 @@ class _ShimmerEffectState extends ConsumerState<ShimmerEffect>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final baseColor = widget.baseColor ??
+    final baseColor =
+        widget.baseColor ??
         (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
-    final highlightColor = widget.highlightColor ??
-        (isDark ? AppColors.surfaceElevatedDark : AppColors.surfaceElevatedLight);
+    final highlightColor =
+        widget.highlightColor ??
+        (isDark
+            ? AppColors.surfaceElevatedDark
+            : AppColors.surfaceElevatedLight);
 
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                baseColor,
-                baseColor,
-                highlightColor,
-                baseColor,
-                baseColor,
-              ],
-              stops: [
-                0.0,
-                (_animation.value - 0.3).clamp(0.0, 1.0),
-                _animation.value.clamp(0.0, 1.0),
-                (_animation.value + 0.3).clamp(0.0, 1.0),
-                1.0,
-              ],
-            ).createShader(bounds);
-          },
-          child: widget.child,
-        );
-      },
+    if (!AppAnimations.animationsEnabled(context)) {
+      return RepaintBoundary(child: widget.child);
+    }
+
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _animation,
+        child: widget.child,
+        builder: (context, child) {
+          return ShaderMask(
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  baseColor,
+                  baseColor,
+                  highlightColor,
+                  baseColor,
+                  baseColor,
+                ],
+                stops: [
+                  0.0,
+                  (_animation.value - 0.3).clamp(0.0, 1.0),
+                  _animation.value.clamp(0.0, 1.0),
+                  (_animation.value + 0.3).clamp(0.0, 1.0),
+                  1.0,
+                ],
+              ).createShader(bounds);
+            },
+            child: child,
+          );
+        },
+      ),
     );
   }
 }

@@ -6,8 +6,7 @@ import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 import '../../data/models/user_image.dart';
 
-/// Profile image carousel widget
-/// Displays profile images in a horizontal scrollable carousel
+/// Unused duplicate. Live photos are ProfileHeroSection + ProfileImageEditor.
 class ProfileImageCarousel extends ConsumerWidget {
   final List<UserImage> images;
   final bool isEditable;

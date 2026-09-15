@@ -15,8 +15,9 @@ void main() {
     expect(ChatImagePlaceholder.memCacheSize, 800);
   });
 
-  testWidgets('network bubble decodes near display size, not both 800 axes',
-      (tester) async {
+  testWidgets('network bubble decodes near display size, not both 800 axes', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -44,12 +45,13 @@ void main() {
     expect(photo.memoryCacheHeight, isNull);
     expect(photo.showDownloadProgress, isFalse);
 
-    final cached =
-        tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+    final cached = tester.widget<CachedNetworkImage>(
+      find.byType(CachedNetworkImage),
+    );
     expect(cached.memCacheWidth, expectedWidth);
     expect(cached.memCacheHeight, isNull);
-    expect(cached.fadeInDuration, AppAnimations.imageFadeIn);
-    expect(cached.fadeInDuration.inMilliseconds, lessThanOrEqualTo(200));
+    expect(cached.fadeInDuration, Duration.zero);
+    expect(cached.fadeOutDuration, Duration.zero);
 
     expect(tester.getSize(find.byType(ChatBubblePhoto)), const Size(240, 180));
   });
@@ -75,8 +77,9 @@ void main() {
     );
     await tester.pump();
 
-    final cached =
-        tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+    final cached = tester.widget<CachedNetworkImage>(
+      find.byType(CachedNetworkImage),
+    );
     expect(cached.fadeInDuration, Duration.zero);
     expect(cached.fadeOutDuration, Duration.zero);
     expect(tester.getSize(find.byType(ChatBubblePhoto)), const Size(240, 180));

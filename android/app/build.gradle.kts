@@ -108,6 +108,8 @@ kotlin {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("androidx.multidex:multidex:2.0.1")
+    // PERF-ANDROID-004: install baseline-prof.txt on first launch (Play/ART).
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 }
 
 flutter {

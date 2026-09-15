@@ -59,26 +59,28 @@ class _SplashArcLoaderState extends State<SplashArcLoader>
     return SizedBox(
       width: widget.size,
       height: widget.size,
-      child: disableAnimations
-          ? CustomPaint(
-              painter: _ArcLoaderPainter(
-                progress: 0.25,
-                strokeWidth: widget.strokeWidth,
-                color: widget.color,
+      child: RepaintBoundary(
+        child: disableAnimations
+            ? CustomPaint(
+                painter: _ArcLoaderPainter(
+                  progress: 0.25,
+                  strokeWidth: widget.strokeWidth,
+                  color: widget.color,
+                ),
+              )
+            : AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: _ArcLoaderPainter(
+                      progress: _controller.value,
+                      strokeWidth: widget.strokeWidth,
+                      color: widget.color,
+                    ),
+                  );
+                },
               ),
-            )
-          : AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: _ArcLoaderPainter(
-                    progress: _controller.value,
-                    strokeWidth: widget.strokeWidth,
-                    color: widget.color,
-                  ),
-                );
-              },
-            ),
+      ),
     );
   }
 }

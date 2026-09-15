@@ -91,20 +91,14 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-                  padding: EdgeInsets.all(AppSpacing.spacingLG),
+                  padding: const EdgeInsets.all(AppSpacing.spacingLG),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.warningYellow.withOpacity(0.25),
-                        AppColors.lgbtGradient[1].withOpacity(0.2),
-                        AppColors.accentPurple.withOpacity(0.15),
-                      ],
-                    ),
+                    color: isDark
+                        ? AppColors.surfaceElevatedDark
+                        : AppColors.surfaceElevatedLight,
                     borderRadius: BorderRadius.circular(AppRadius.radiusLG),
                     border: Border.all(
-                      color: AppColors.warningYellow.withOpacity(0.45),
+                      color: AppColors.warningYellow.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
@@ -114,18 +108,13 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                         height: 52,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.warningYellow,
-                              AppColors.lgbtGradient[1],
-                            ],
-                          ),
+                          color: AppColors.warningYellow.withValues(alpha: 0.18),
                         ),
                         child: const Center(
                           child: AppSvgIcon(
                             assetPath: AppIcons.star,
                             size: 26,
-                            color: Colors.white,
+                            color: AppColors.warningYellow,
                           ),
                         ),
                       ),
@@ -224,8 +213,8 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                           BorderRadius.circular(AppRadius.radiusMD),
                       borderSide: BorderSide(
                         color: isDark
-                            ? AppColors.borderMediumDark.withOpacity(0.5)
-                            : AppColors.borderMediumLight.withOpacity(0.5),
+                            ? AppColors.borderMediumDark.withValues(alpha: 0.5)
+                            : AppColors.borderMediumLight.withValues(alpha: 0.5),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -237,7 +226,6 @@ class _SuperlikeMessageSheetBodyState extends State<_SuperlikeMessageSheetBody> 
                       ),
                     ),
                   ),
-                  onChanged: (_) => setState(() {}),
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
                 if (canSuperlike)

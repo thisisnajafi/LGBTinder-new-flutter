@@ -166,7 +166,7 @@ class _MessageStatusIndicatorState extends State<MessageStatusIndicator>
               ? 'Message queued'
               : 'Sending message',
           child: AppSvgIcon(
-            assetPath: AppIcons.clock,
+            assetPath: MessageStatusIconPaths.sending,
             size: AppTypography.labelSmall.fontSize!,
             color: sent,
           ),
@@ -180,7 +180,7 @@ class _MessageStatusIndicatorState extends State<MessageStatusIndicator>
                 child: GestureDetector(
                   onTap: widget.onRetry,
                   child: AppSvgIcon(
-                    assetPath: AppIcons.refresh,
+                    assetPath: MessageStatusIconPaths.retry,
                     size: 14,
                     color: AppColors.feedbackError,
                   ),
@@ -222,6 +222,14 @@ class _MessageStatusIndicatorState extends State<MessageStatusIndicator>
       child: child,
     );
   }
+}
+
+/// Const SVG paths for status ticks (PERF-COMP-MSG-011).
+class MessageStatusIconPaths {
+  MessageStatusIconPaths._();
+
+  static const String sending = AppIcons.clock;
+  static const String retry = AppIcons.refresh;
 }
 
 /// Const-friendly tick colors (lerp cannot be a const).

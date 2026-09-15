@@ -4,8 +4,9 @@ import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../widgets/cards/swipeable_card.dart';
 import 'skeleton_loader.dart';
-import '../../core/responsive/responsive.dart';
 
 /// Animated skeleton loader for the discovery card stack.
 class SkeletonDiscovery extends StatefulWidget {
@@ -39,7 +40,8 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (AppAnimations.animationsEnabled(context) && _entryController.value == 0) {
+    if (AppAnimations.animationsEnabled(context) &&
+        _entryController.value == 0) {
       _entryController.forward();
     } else if (!AppAnimations.animationsEnabled(context)) {
       _entryController.value = 1;
@@ -52,207 +54,75 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
     super.dispose();
   }
 
-  static const double _maxCardWidth = 340;
-  static const double _maxCardHeight = 520;
-  static const double _minCardHeight = 240;
-  /// Space for dots, label, and vertical gaps below the card.
-  static const double _footerReservedHeight = 72;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF252528) : AppColors.backgroundLight;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxW = constraints.maxWidth;
-        final maxH = constraints.maxHeight;
-        final cardWidth = (maxW - AppSpacing.spacingLG * 2).clamp(0.0, _maxCardWidth);
-        final cardHeight = (maxH - _footerReservedHeight - AppSpacing.spacingLG * 2)
-            .clamp(_minCardHeight, _maxCardHeight);
-        final nameW = (cardWidth * 0.44).clamp(100.0, 150.0);
-        final subW = (cardWidth * 0.29).clamp(72.0, 100.0);
-        final bioLastW = (cardWidth * 0.59).clamp(120.0, 200.0);
+        final cardSize = SwipeableCard.fitSize(
+          maxWidth: constraints.maxWidth,
+          maxHeight: constraints.maxHeight,
+        );
+        final nameW = (cardSize.width * 0.44).clamp(100.0, 150.0);
+        final subW = (cardSize.width * 0.29).clamp(72.0, 100.0);
+        final nameH = AppTypography.h2.fontSize ?? 18;
+        final subH = AppTypography.body.fontSize ?? 14;
+
+        Widget card = SizedBox(
+          width: cardSize.width,
+          height: cardSize.height,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                SkeletonLoader(
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: BorderRadius.circular(SwipeableCard.cardRadius),
+                  highlightColorOverride: isDark
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : AppColors.lgbtGradient[4].withValues(alpha: 0.12),
+                ),
+                Positioned(
+                  left: AppSpacing.spacingLG,
+                  right: AppSpacing.spacingLG,
+                  bottom: AppSpacing.spacingLG,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SkeletonLoader(
+                        width: nameW,
+                        height: nameH,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                      ),
+                      const SizedBox(height: AppSpacing.spacingSM),
+                      SkeletonLoader(
+                        width: subW,
+                        height: subH,
+                        borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        if (!AppAnimations.animationsEnabled(context)) {
+          return Center(child: card);
+        }
 
         return FadeTransition(
           opacity: _opacity,
           child: ScaleTransition(
             scale: _scale,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.spacingLG),
-                    child: Center(
-                      child: SizedBox(
-                        width: cardWidth,
-                        height: cardHeight,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: cardColor,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.radiusXL),
-                            border: isDark
-                                ? Border.all(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                  )
-                                : null,
-                            boxShadow: [
-                              BoxShadow(
-                                color: isDark
-                                    ? Colors.black.withValues(alpha: 0.5)
-                                    : Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 16,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: SkeletonLoader(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft:
-                                        Radius.circular(AppRadius.radiusXL),
-                                    topRight:
-                                        Radius.circular(AppRadius.radiusXL),
-                                  ),
-                                  highlightColorOverride: isDark
-                                      ? Colors.white.withValues(alpha: 0.22)
-                                      : AppColors.lgbtGradient[4]
-                                          .withValues(alpha: 0.12),
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.all(AppSpacing.spacingLG),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SkeletonLoader(
-                                      width: nameW,
-                                      height: 20,
-                                      borderRadius: BorderRadius.circular(
-                                          AppRadius.radiusSM),
-                                    ),
-                                    const SizedBox(height: AppSpacing.spacingSM),
-                                    SkeletonLoader(
-                                      width: subW,
-                                      height: 16,
-                                      borderRadius: BorderRadius.circular(
-                                          AppRadius.radiusSM),
-                                    ),
-                                    const SizedBox(height: AppSpacing.spacingMD),
-                                    SkeletonLoader(
-                                      width: double.infinity,
-                                      height: 14,
-                                      borderRadius: BorderRadius.circular(
-                                          AppRadius.radiusSM),
-                                    ),
-                                    const SizedBox(height: AppSpacing.spacingSM),
-                                    SkeletonLoader(
-                                      width: bioLastW,
-                                      height: 14,
-                                      borderRadius: BorderRadius.circular(
-                                          AppRadius.radiusSM),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                _PulsingDots(color: theme.colorScheme.primary),
-                const SizedBox(height: AppSpacing.spacingSM),
-                AppText(
-                  'Finding your perfect matches...',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-              ],
-            ),
+            child: Center(child: card),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _PulsingDots extends StatefulWidget {
-  const _PulsingDots({required this.color});
-
-  final Color color;
-
-  @override
-  State<_PulsingDots> createState() => _PulsingDotsState();
-}
-
-class _PulsingDotsState extends State<_PulsingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (AppAnimations.animationsEnabled(context) && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!AppAnimations.animationsEnabled(context)) {
-      _controller.stop();
-      _controller.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(3, (index) {
-            final phase = (_controller.value + index * 0.2) % 1.0;
-            final opacity = (0.35 + (phase < 0.5 ? phase : 1 - phase) * 1.3)
-                .clamp(0.35, 1.0);
-            return Container(
-              width: 7,
-              height: 7,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.color.withValues(alpha: opacity),
-              ),
-            );
-          }),
         );
       },
     );

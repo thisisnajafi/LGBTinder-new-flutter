@@ -1,9 +1,13 @@
 // Router: AppRouter
 // go_router configuration for declarative routing
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/animation_constants.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/spacing_constants.dart';
+import '../core/utils/app_icons.dart';
 import '../pages/splash_page.dart';
 import '../pages/home_page.dart';
 import '../pages/onboarding_page.dart';
@@ -58,19 +62,16 @@ class AppRoutes {
   static const String profileWizard = '/profile-wizard';
   static const String onboarding = '/onboarding';
   static const String onboardingPreferences = '/onboarding-preferences';
+  /// Shell: [HomePage] tabs (Discovery / Chat list / Notifications / Profile /
+  /// Settings). Legacy `/home/<tab>` paths redirect via [HomeTabRoutes].
   static const String home = '/home';
-  static const String discovery = '/discovery';
-  static const String chatList = '/chat-list';
   static const String chat = '/chat';
   static const String outgoingCall = '/call/outgoing';
   static const String peerCallHistory = '/calls/history';
-  static const String profile = '/profile';
   static const String profileEdit = '/profile/edit';
   static const String profileVerification = '/profile/verification';
   static const String profileDetail = '/profile-detail';
   static const String billingHistory = '/billing-history';
-  static const String settings = '/settings';
-  static const String notifications = '/notifications';
   static const String blockedUsers = '/blocked-users';
   static const String safetyCenter = '/safety-center';
   static const String likesReceived = '/likes-received';
@@ -541,11 +542,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => slideFadePage(state, const MatchesScreen()),
           ),
 
-          // Google Play Billing Test (inherits auth from parent)
+          // Google Play Billing Test — debug/profile only (PERF-FEAT-PAY-009).
           GoRoute(
             path: 'google-play-billing-test',
             name: 'google-play-billing-test',
-            pageBuilder: (context, state) => slideFadePage(state, const GooglePlayBillingTestScreen()),
+            redirect: (context, state) =>
+                kReleaseMode ? AppRoutes.home : null,
+            pageBuilder: (context, state) => slideFadePage(
+              state,
+              kReleaseMode
+                  ? const SizedBox.shrink()
+                  : const GooglePlayBillingTestScreen(),
+            ),
           ),
         ],
       ),
@@ -738,22 +746,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
+            AppSvgIcon(
+              assetPath: AppIcons.errorOutline,
+              size: AppSpacing.spacingXXXL,
+              color: AppColors.feedbackError,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.spacingLG),
             Text(
               'Page not found',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.spacingSM),
             Text(
               state.error?.toString() ?? 'Unknown error',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.spacingXL),
             ElevatedButton(
               onPressed: () => context.go(AppRoutes.home),
               child: const Text('Go to Home'),

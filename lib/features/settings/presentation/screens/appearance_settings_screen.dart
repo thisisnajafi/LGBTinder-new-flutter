@@ -19,6 +19,9 @@ class AppearanceSettingsScreen extends ConsumerWidget {
     final reduceMotion = ref.watch(
       appMotionPrefsProvider.select((s) => s.reduceMotion),
     );
+    final solidNavBar = ref.watch(
+      appMotionPrefsProvider.select((s) => s.solidNavBar),
+    );
 
     return AppSettingsDetailScaffold(
       title: 'Appearance',
@@ -73,6 +76,22 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                 onChanged: (value) => ref
                     .read(appMotionPrefsProvider.notifier)
                     .setReduceMotion(value),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.spacingXL),
+          PremiumSettingsGroup(
+            title: 'Tab bar',
+            subtitle: 'A simpler bar is cheaper to paint while you swipe',
+            children: [
+              PremiumToggleRow(
+                title: 'Solid tab bar',
+                subtitle: 'Skip the gradient ring and blur',
+                value: solidNavBar,
+                iconPath: AppIcons.getIconPath('flash'),
+                onChanged: (value) => ref
+                    .read(appMotionPrefsProvider.notifier)
+                    .setSolidNavBar(value),
               ),
             ],
           ),

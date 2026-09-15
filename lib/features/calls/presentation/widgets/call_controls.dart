@@ -8,7 +8,8 @@ import '../../../../core/utils/app_icons.dart';
 import '../../providers/call_provider.dart';
 
 /// DEAD UI (CALL-PERF-006). Canonical live controls:
-/// `lib/features/calls/presentation/widgets/call_live_chrome.dart`.
+/// `lib/features/calls/presentation/widgets/call_live_chrome.dart`
+/// ([CallMuteButton], [CallEndButton], [CallFlipButton] — const constructors).
 /// Call controls widget
 /// Control buttons for active calls (mute, speaker, camera, etc.)
 class CallControls extends ConsumerWidget {

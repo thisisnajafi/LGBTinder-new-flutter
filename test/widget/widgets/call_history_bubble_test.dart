@@ -37,6 +37,7 @@ void main() {
     expect(find.textContaining('01:30'), findsOneWidget);
     expect(find.byType(InkWell), findsNothing);
     expect(find.byKey(ChatSystemMessage.barKey), findsOneWidget);
+    expect(find.byType(RepaintBoundary), findsWidgets);
     final label = tester.widget<AppText>(
       find.byWidgetPredicate(
         (widget) => widget is AppText && widget.text.contains('Voice call'),

@@ -15,13 +15,13 @@ class AnalyticsChart extends ConsumerWidget {
   final double height;
 
   const AnalyticsChart({
-    Key? key,
+    super.key,
     required this.title,
     required this.data,
     this.barColor,
     this.subtitle,
     this.height = 200,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +31,9 @@ class AnalyticsChart extends ConsumerWidget {
     final chartColor = barColor ?? AppColors.primaryLight;
 
     if (data.isEmpty) {
-      return Card(
+      return RepaintBoundary(
+        key: ValueKey('analytics_chart_${title}_empty'),
+        child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.radiusMD),
@@ -46,13 +48,16 @@ class AnalyticsChart extends ConsumerWidget {
             ),
           ),
         ),
+        ),
       );
     }
 
     final maxValue = data.values.reduce((a, b) => a > b ? a : b);
     final entries = data.entries.toList();
 
-    return Card(
+    return RepaintBoundary(
+      key: ValueKey('analytics_chart_$title'),
+      child: Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.radiusMD),
@@ -140,6 +145,7 @@ class AnalyticsChart extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

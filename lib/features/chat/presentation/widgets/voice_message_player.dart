@@ -40,12 +40,13 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   final List<StreamSubscription<dynamic>> _playerSubs = [];
   final _positionGate = ChatVoicePositionGate();
   Duration? _queuedPosition;
-  bool _isPlaying = false;
+  final _playing = ValueNotifier<bool>(false);
+  final _position = ValueNotifier<Duration>(Duration.zero);
   bool _notifiedListen = false;
   double _speed = 1.0;
-  Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   int _ownInterrupt = 0;
+  ScrollPosition? _scrollPosition;
 
   @override
   void initState() {
@@ -59,10 +60,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         if (!mounted) return;
         _positionGate.reset();
         _queuedPosition = null;
-        setState(() {
-          _isPlaying = false;
-          _position = Duration.zero;
-        });
+        _playing.value = false;
+        _position.value = Duration.zero;
       }),
     );
     _playerSubs.add(
@@ -81,31 +80,80 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = Scrollable.maybeOf(context)?.position;
+    if (!identical(_scrollPosition, next)) {
+      _scrollPosition?.removeListener(_onScrollForPlayback);
+      _scrollPosition = next;
+      _scrollPosition?.addListener(_onScrollForPlayback);
+    }
+  }
+
+  @override
+  void deactivate() {
+    _pausePlayback(updateUi: false);
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    _scrollPosition?.removeListener(_onScrollForPlayback);
     ChatMediaPlayback.interruptToken.removeListener(_onMediaInterrupt);
     for (final sub in _playerSubs) {
       unawaited(sub.cancel());
     }
     unawaited(_player.stop());
     unawaited(_player.dispose());
+    _playing.dispose();
+    _position.dispose();
     super.dispose();
   }
 
   void _onMediaInterrupt() {
-    if (!mounted || !_isPlaying) return;
+    if (!mounted || !_playing.value) return;
     if (ChatMediaPlayback.interruptToken.value == _ownInterrupt) return;
+    _pausePlayback();
+  }
+
+  void _onScrollForPlayback() {
+    if (!_playing.value) return;
+    if (_isRenderedOnScreen()) return;
+    _pausePlayback();
+  }
+
+  bool _isRenderedOnScreen() {
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.hasSize ||
+        !renderObject.attached) {
+      return false;
+    }
+    final offset = renderObject.localToGlobal(Offset.zero);
+    final rect = offset & renderObject.size;
+    final screen = Offset.zero & MediaQuery.sizeOf(context);
+    return rect.overlaps(screen);
+  }
+
+  void _pausePlayback({bool updateUi = true}) {
+    if (!_playing.value) return;
     unawaited(_player.pause());
+    if (!updateUi) {
+      _queuedPosition = null;
+      _playing.value = false;
+      return;
+    }
     _flushPosition();
-    setState(() => _isPlaying = false);
+    _playing.value = false;
   }
 
   Future<void> _togglePlay() async {
     AppHaptics.light();
 
-    if (_isPlaying) {
+    if (_playing.value) {
       await _player.pause();
       _flushPosition();
-      setState(() => _isPlaying = false);
+      _playing.value = false;
       return;
     }
 
@@ -113,7 +161,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     _ownInterrupt = ChatMediaPlayback.interruptToken.value;
     await _player.setPlaybackRate(_speed);
     await _player.play(UrlSource(widget.mediaUrl));
-    setState(() => _isPlaying = true);
+    _playing.value = true;
     if (!widget.isSent && !_notifiedListen) {
       _notifiedListen = true;
       widget.onListened?.call();
@@ -126,8 +174,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       return;
     }
     _queuedPosition = null;
-    if (!mounted || _position == position) return;
-    setState(() => _position = position);
+    if (!mounted || _position.value == position) return;
+    _position.value = position;
   }
 
   void _flushPosition() {
@@ -141,7 +189,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     AppHaptics.selection();
 
     setState(() => _speed = ChatVoiceBubbleLayout.nextSpeed(_speed));
-    if (_isPlaying) {
+    if (_playing.value) {
       await _player.setPlaybackRate(_speed);
     }
   }
@@ -153,9 +201,9 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 
-  double get _progress {
+  double _progressFor(Duration position) {
     if (_duration.inMilliseconds <= 0) return 0;
-    return (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
+    return (position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
   }
 
   String _speedLabel(double speed) => ChatVoiceBubbleLayout.speedLabel(speed);
@@ -177,9 +225,6 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         ? _duration
         : Duration(seconds: widget.durationSeconds ?? 0);
     final totalLabel = _formatDuration(displayDuration);
-    final timeLabel = _isPlaying
-        ? '${_formatDuration(_position)} / $totalLabel'
-        : totalLabel;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -195,87 +240,105 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         return SizedBox(
           width: width,
           child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Semantics(
-            label: _isPlaying ? 'Pause voice message' : 'Play voice message',
-            button: true,
-            child: Material(
-              color: playButtonFill,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                splashColor: accent.withValues(alpha: 0.12),
-                highlightColor: accent.withValues(alpha: 0.08),
-                onTap: _togglePlay,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Center(
-                    child: AnimatedSwitcher(
-                      duration: AppAnimations.animationsEnabled(context)
-                          ? AppAnimations.feedbackShort
-                          : Duration.zero,
-                      switchInCurve: AppAnimations.curveDefault,
-                      switchOutCurve: AppAnimations.curveDefault,
-                      transitionBuilder: (child, animation) {
-                        return ScaleTransition(
-                          scale: animation,
-                          child: child,
-                        );
-                      },
-                      child: AppSvgIcon(
-                        key: ValueKey(_isPlaying),
-                        assetPath: _isPlaying ? AppIcons.pause : AppIcons.play,
-                        size: 22,
-                        color: accent,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ValueListenableBuilder<bool>(
+                valueListenable: _playing,
+                builder: (context, isPlaying, _) {
+                  return Semantics(
+                    label: isPlaying
+                        ? 'Pause voice message'
+                        : 'Play voice message',
+                    button: true,
+                    child: Material(
+                      color: playButtonFill,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        splashColor: accent.withValues(alpha: 0.12),
+                        highlightColor: accent.withValues(alpha: 0.08),
+                        onTap: _togglePlay,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: AnimatedSwitcher(
+                              duration: AppAnimations.animationsEnabled(context)
+                                  ? AppAnimations.feedbackShort
+                                  : Duration.zero,
+                              switchInCurve: AppAnimations.curveDefault,
+                              switchOutCurve: AppAnimations.curveDefault,
+                              transitionBuilder: (child, animation) {
+                                return ScaleTransition(
+                                  scale: animation,
+                                  child: child,
+                                );
+                              },
+                              child: AppSvgIcon(
+                                key: ValueKey(isPlaying),
+                                assetPath:
+                                    isPlaying ? AppIcons.pause : AppIcons.play,
+                                size: 22,
+                                color: accent,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  );
+                },
+              ),
+              const SizedBox(width: AppSpacing.spacingMD),
+              Expanded(
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([_playing, _position]),
+                  builder: (context, _) {
+                    final position = _position.value;
+                    final isPlaying = _playing.value;
+                    final timeLabel = isPlaying
+                        ? '${_formatDuration(position)} / $totalLabel'
+                        : totalLabel;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        VoiceWaveformBars(
+                          active: isPlaying,
+                          color: accent,
+                          height: 28,
+                          progress: _progressFor(position),
+                        ),
+                        const SizedBox(height: AppSpacing.spacingSM),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppText(
+                                timeLabel,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: mutedAccent,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.15,
+                                ),
+                                maxLines: 1,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.spacingSM),
+                            _PlaybackSpeedChip(
+                              label: _speedLabel(_speed),
+                              foreground: accent,
+                              background: speedChipFill,
+                              onTap: _cycleSpeed,
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.spacingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                VoiceWaveformBars(
-                  active: _isPlaying,
-                  color: accent,
-                  height: 28,
-                  progress: _progress,
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppText(
-                        timeLabel,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: mutedAccent,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.15,
-                        ),
-                        maxLines: 1,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.spacingSM),
-                    _PlaybackSpeedChip(
-                      label: _speedLabel(_speed),
-                      foreground: accent,
-                      background: speedChipFill,
-                      onTap: _cycleSpeed,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
         );
       },
     );

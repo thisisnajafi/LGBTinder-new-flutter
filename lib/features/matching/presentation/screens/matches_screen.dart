@@ -121,20 +121,27 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             },
             child: AppSettingsDetailList(
               children: [
-                PremiumSettingsGroup(
-                  title: 'Your matches',
-                  subtitle:
-                      '${matches.length} ${matches.length == 1 ? 'match' : 'matches'}',
-                  margin: ResponsivePadding.horizontal(context),
-                  children: [
-                    for (var i = 0; i < matches.length; i++)
-                      _MatchRow(
-                        match: matches[i],
-                        formatDate: _formatDate,
-                        onTap: () => _openChat(matches[i]),
-                      ),
-                  ],
+                Padding(
+                  padding: ResponsivePadding.horizontal(context).add(
+                    const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+                  ),
+                  child: PremiumSectionHeader(
+                    title: 'Your matches',
+                    subtitle:
+                        '${matches.length} ${matches.length == 1 ? 'match' : 'matches'}',
+                  ),
                 ),
+                for (final match in matches)
+                  RepaintBoundary(
+                    child: Padding(
+                      padding: ResponsivePadding.horizontal(context),
+                      child: _MatchRow(
+                        match: match,
+                        formatDate: _formatDate,
+                        onTap: () => _openChat(match),
+                      ),
+                    ),
+                  ),
               ],
             ),
           );

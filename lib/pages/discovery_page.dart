@@ -37,7 +37,8 @@ import '../core/cache/session_cache_providers.dart';
 import '../features/notifications/providers/notification_providers.dart';
 import '../features/discover/data/models/discovery_filter_mapper.dart';
 import '../core/cache/cache_invalidator.dart';
-import '../core/cache/cache_manager.dart' show appCacheManagerProvider, notifyNewMatch;
+import '../core/cache/cache_manager.dart'
+    show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
 import '../features/discover/widgets/discover_active_filters_bar.dart';
 import '../features/discover/widgets/discover_swipe_limit_banner.dart';
@@ -95,7 +96,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     await runDiscoverLocationBootstrap(ref, context);
     if (!mounted) return;
     ref.read(profilePageCacheProvider.notifier).refresh();
-    ref.read(discoverCacheProvider.notifier).refresh(filters: _discoverQueryFilters());
+    ref
+        .read(discoverCacheProvider.notifier)
+        .refresh(filters: _discoverQueryFilters());
     _lastAppliedQueryFilters = _discoverQueryFilters();
   }
 
@@ -177,9 +180,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   void _logDiscoverySuperlike(String step, Map<String, Object?> fields) {
-    final details = fields.entries
-        .map((e) => '${e.key}=${e.value}')
-        .join(' ');
+    final details = fields.entries.map((e) => '${e.key}=${e.value}').join(' ');
     AppLogger.debug('$step $details', tag: 'DiscoverySuperlike');
   }
 
@@ -196,10 +197,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     });
     if (action == 'superlike') {
       _closeProfileSheet();
-      await _showSuperlikeBottomSheet(
-        userId,
-        source: 'profile_sheet',
-      );
+      await _showSuperlikeBottomSheet(userId, source: 'profile_sheet');
       return;
     }
     _closeProfileSheet();
@@ -265,18 +263,22 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   @override
   void didUpdateWidget(DiscoveryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final nowSelected = widget.selectedTabIndex != null &&
+    final nowSelected =
+        widget.selectedTabIndex != null &&
         widget.discoveryTabIndex != null &&
         widget.selectedTabIndex == widget.discoveryTabIndex;
-    final wasSelected = oldWidget.selectedTabIndex != null &&
+    final wasSelected =
+        oldWidget.selectedTabIndex != null &&
         oldWidget.discoveryTabIndex != null &&
         oldWidget.selectedTabIndex == oldWidget.discoveryTabIndex;
     if (nowSelected && !wasSelected) {
       unawaited(_bootstrapDiscoverLocationAndRefresh());
-      ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
-        threshold: kDiscoverStackBufferThreshold,
-        filters: _discoverQueryFilters(),
-      );
+      ref
+          .read(discoverCacheProvider.notifier)
+          .fetchMoreIfNeeded(
+            threshold: kDiscoverStackBufferThreshold,
+            filters: _discoverQueryFilters(),
+          );
     }
   }
 
@@ -547,53 +549,59 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     String? superlikeMessage,
     VoidCallback? onSuperlikeSent,
   }) {
-    ref.read(discoveryActedOnUserIdsProvider.notifier).update((s) => {...s, userId});
-    ref.read(discoverCacheProvider.notifier).recordSwipe(
-      userId,
-      action,
-      superlikeMessage: superlikeMessage,
-      onSuperlikeSent: onSuperlikeSent,
-      onMatch: (m) {
-        if (m != null) {
-          unawaited(notifyNewMatch(ref));
-          if (mounted) _showMatchDialog(m);
-        }
-      },
-      onLimitError: (e) {
-        if (!mounted) return;
-        _showLimitError(e, action);
-      },
-      onTheyLikedYou: () {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("They liked you — you passed."),
-              backgroundColor: AppColors.accentPurple,
-            ),
-          );
-        }
-      },
-      onLostMatch: () {
-        if (mounted) {
-          unawaited(LostMatchDialog.show(context));
-        }
-      },
-      onOfflineQueued: () {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Will send when reconnected'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-            backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-          ),
+    ref
+        .read(discoveryActedOnUserIdsProvider.notifier)
+        .update((s) => {...s, userId});
+    ref
+        .read(discoverCacheProvider.notifier)
+        .recordSwipe(
+          userId,
+          action,
+          superlikeMessage: superlikeMessage,
+          onSuperlikeSent: onSuperlikeSent,
+          onMatch: (m) {
+            if (m != null) {
+              unawaited(notifyNewMatch(ref));
+              if (mounted) _showMatchDialog(m);
+            }
+          },
+          onLimitError: (e) {
+            if (!mounted) return;
+            _showLimitError(e, action);
+          },
+          onTheyLikedYou: () {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("They liked you — you passed."),
+                  backgroundColor: AppColors.accentPurple,
+                ),
+              );
+            }
+          },
+          onLostMatch: () {
+            if (mounted) {
+              unawaited(LostMatchDialog.show(context));
+            }
+          },
+          onOfflineQueued: () {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Will send when reconnected'),
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 3),
+                backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+              ),
+            );
+          },
         );
-      },
-    );
-    ref.read(discoverCacheProvider.notifier).fetchMoreIfNeeded(
-      threshold: kDiscoverStackBufferThreshold,
-      filters: _discoverQueryFilters(),
-    );
+    ref
+        .read(discoverCacheProvider.notifier)
+        .fetchMoreIfNeeded(
+          threshold: kDiscoverStackBufferThreshold,
+          filters: _discoverQueryFilters(),
+        );
   }
 
   List<String> _profileImageUrls(DiscoveryProfile profile) {
@@ -604,6 +612,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       if (trimmed == null || trimmed.isEmpty || !seen.add(trimmed)) return;
       urls.add(trimmed);
     }
+
     for (final url in profile.imageUrls ?? const <String>[]) {
       add(url);
     }
@@ -746,9 +755,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (context) => FilterScreen(
-          initialFilters: ref.read(discoveryFiltersProvider),
-        ),
+        builder: (context) =>
+            FilterScreen(initialFilters: ref.read(discoveryFiltersProvider)),
       ),
     );
     if (result != null) {
@@ -775,7 +783,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     ref.read(discoveryFiltersProvider.notifier).setFilters(nextFilters);
     _applyDiscoverFilters(immediate: true);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Expanded distance to $expanded km and retrying...')),
+      SnackBar(
+        content: Text('Expanded distance to $expanded km and retrying...'),
+      ),
     );
   }
 
@@ -785,8 +795,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     if (discoveryFiltersEqual(next, _lastAppliedQueryFilters)) return;
     _filterApplyDebounce?.cancel();
     void commit() {
-      _lastAppliedQueryFilters =
-          next == null ? null : Map<String, dynamic>.from(next);
+      _lastAppliedQueryFilters = next == null
+          ? null
+          : Map<String, dynamic>.from(next);
       ref.read(cacheInvalidatorProvider).purgeDiscoveryCards();
       unawaited(
         ref.read(discoverCacheProvider.notifier).clearAndRefresh(filters: next),
@@ -854,8 +865,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             'Upgrade your plan for more daily likes, or come back tomorrow.',
         primaryLabel: 'Upgrade',
         onPrimary: () {
-          final cached = limits ??
-              ref.read(planLimitsServiceProvider).getCachedLimits();
+          final cached =
+              limits ?? ref.read(planLimitsServiceProvider).getCachedLimits();
           if (cached != null) {
             UpgradeDialog.showSwipeLimitDialog(
               context,
@@ -872,7 +883,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     }
 
     final remaining = ref.watch(superlikesRemainingProvider);
-    final superlikesOut = (remaining != null && remaining <= 0) ||
+    final superlikesOut =
+        (remaining != null && remaining <= 0) ||
         (limits?.hasReachedLimit('superlikes') ?? false);
     if (superlikesOut) {
       return _DiscoverEmptyConfig(
@@ -912,10 +924,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       context,
       permanentlyDenied: permanentlyDenied,
       onEnable: () async {
-        await ref.read(locationSyncServiceProvider).syncIfNeeded(
-              discoverOpen: true,
-              force: true,
-            );
+        await ref
+            .read(locationSyncServiceProvider)
+            .syncIfNeeded(discoverOpen: true, force: true);
         ref.invalidate(userLocationProvider);
         await _bootstrapDiscoverLocationAndRefresh();
       },
@@ -934,10 +945,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   }
 
   Future<void> _forceUpdateLocation() async {
-    await ref.read(locationSyncServiceProvider).syncIfNeeded(
-          discoverOpen: true,
-          force: true,
-        );
+    await ref
+        .read(locationSyncServiceProvider)
+        .syncIfNeeded(discoverOpen: true, force: true);
     ref.invalidate(userLocationProvider);
     await _bootstrapDiscoverLocationAndRefresh();
     if (!mounted) return;
@@ -950,18 +960,16 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     if (e is ApiError) {
       final errorCode = e.responseData?['error_code'] as String?;
       final data = e.responseData?['data'] as Map<String, dynamic>?;
-      final purchaseRequired = data?['purchase_required'] == true ||
+      final purchaseRequired =
+          data?['purchase_required'] == true ||
           e.responseData?['purchase_required'] == true;
 
-      if (action == 'superlike' &&
-          (purchaseRequired || e.code == 403)) {
+      if (action == 'superlike' && (purchaseRequired || e.code == 403)) {
         ref.read(planLimitsServiceProvider).clearCache();
         ref.read(planLimitsProvider.notifier).clearCache();
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const SuperlikePacksScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const SuperlikePacksScreen()),
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1036,9 +1044,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final changed = await context.push<bool>(AppRoutes.passport);
     if (!mounted || changed != true) return;
     ref.invalidate(userLocationProvider);
-    await ref.read(discoverCacheProvider.notifier).clearAndRefresh(
-          filters: _discoverQueryFilters(),
-        );
+    await ref
+        .read(discoverCacheProvider.notifier)
+        .clearAndRefresh(filters: _discoverQueryFilters());
   }
 
   Future<void> _returnFromPassport() async {
@@ -1048,19 +1056,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       await ref.read(passportControllerProvider).clear();
       if (!mounted) return;
       ref.invalidate(userLocationProvider);
-      await ref.read(discoverCacheProvider.notifier).clearAndRefresh(
-            filters: _discoverQueryFilters(),
-          );
+      await ref
+          .read(discoverCacheProvider.notifier)
+          .clearAndRefresh(filters: _discoverQueryFilters());
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: AppText(
-            e.toString(),
-            maxLines: 3,
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: AppText(e.toString(), maxLines: 3)));
     } finally {
       if (mounted) setState(() => _isClearingPassport = false);
     }
@@ -1085,15 +1088,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         ],
         Consumer(
           builder: (context, ref, child) {
-            final notificationCount =
-                ref.watch(unreadNotificationCountProvider).when(
-                      data: (count) => count,
-                      loading: () => null,
-                      error: (_, __) => null,
-                    );
-
-            final hasUnreadNotifications =
-                notificationCount != null && notificationCount > 0;
+            final hasUnreadNotifications = ref.watch(
+              unreadNotificationCountProvider.select(
+                (async) => (async.asData?.value ?? 0) > 0,
+              ),
+            );
             return _buildHeaderIconButton(
               context: context,
               iconPath: AppIcons.notification,
@@ -1156,15 +1155,17 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               Positioned(
                 top: 4,
                 right: 4,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentRose,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.colorScheme.surface,
-                      width: 1.5,
+                child: RepaintBoundary(
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentRose,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.colorScheme.surface,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -1183,7 +1184,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final stack = feed.stack;
     final cards = stack.map(_profileToCardMap).toList();
     final showSkeleton = !feed.initialLoadComplete && stack.isEmpty;
-    final precacheSignature = Object.hash(feed.nextUserId, feed.secondNextUserId);
+    final precacheSignature = Object.hash(
+      feed.nextUserId,
+      feed.secondNextUserId,
+    );
     if (precacheSignature != _precacheSignature) {
       _precacheSignature = precacheSignature;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1192,12 +1196,15 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       });
     }
 
-    final emptyConfig = ref.watch(userLocationProvider).when(
+    final emptyConfig = ref
+        .watch(userLocationProvider)
+        .when(
           data: _emptyStateConfig,
           loading: () => _emptyStateConfig(null),
           error: (_, __) => _emptyStateConfig(null),
         );
-    final showActionRow = !showSkeleton &&
+    final showActionRow =
+        !showSkeleton &&
         cards.isNotEmpty &&
         !_isProfileSheetOpen &&
         !emptyConfig.forceEmpty;
@@ -1206,116 +1213,117 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     return DiscoverAmbientBackground(
       child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Stack(
-          clipBehavior: Clip.none,
-          fit: StackFit.expand,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                PremiumPageHeader(
-                  title: 'Discover',
-                  subtitle: 'Swipe and connect with people nearby',
-                  action: _buildHeaderActions(context),
-                ),
-                const SizedBox(height: AppSpacing.spacingMD),
-                const RepaintBoundary(child: DiscoverGreetingWidget()),
-                DiscoverActiveFiltersBar(
-                  labels: DiscoverActiveFilterLabels.fromMap(
-                    ref.watch(discoveryFiltersProvider),
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.expand,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  PremiumPageHeader(
+                    title: 'Discover',
+                    subtitle: 'Swipe and connect with people nearby',
+                    action: _buildHeaderActions(context),
                   ),
-                  onEdit: _openFilters,
-                  onClear: _clearActiveFilters,
-                ),
-                DiscoverPassportBanner(
-                  passport: passport,
-                  isClearing: _isClearingPassport,
-                  onReturnHome: _returnFromPassport,
-                ),
-                _buildLimitIndicator(),
-                Expanded(
-                  child: ResponsiveGrid.constrainedTo(
-                    context,
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: showSkeleton
-                              ? Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    _kDiscoverHorizontalPadding,
-                                    AppSpacing.spacingXS,
-                                    _kDiscoverHorizontalPadding,
-                                    AppSpacing.spacingXS,
+                  const SizedBox(height: AppSpacing.spacingMD),
+                  const RepaintBoundary(child: DiscoverGreetingWidget()),
+                  DiscoverActiveFiltersBar(
+                    labels: DiscoverActiveFilterLabels.fromMap(
+                      ref.watch(discoveryFiltersProvider),
+                    ),
+                    onEdit: _openFilters,
+                    onClear: _clearActiveFilters,
+                  ),
+                  DiscoverPassportBanner(
+                    passport: passport,
+                    isClearing: _isClearingPassport,
+                    onReturnHome: _returnFromPassport,
+                  ),
+                  _buildLimitIndicator(),
+                  Expanded(
+                    child: ResponsiveGrid.constrainedTo(
+                      context,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: showSkeleton
+                                ? Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      _kDiscoverHorizontalPadding,
+                                      AppSpacing.spacingXS,
+                                      _kDiscoverHorizontalPadding,
+                                      AppSpacing.spacingXS,
+                                    ),
+                                    child: const SkeletonDiscovery(),
+                                  )
+                                : CardStackManager(
+                                    key: _cardStackKey,
+                                    cards: emptyConfig.forceEmpty
+                                        ? const <Map<String, dynamic>>[]
+                                        : cards,
+                                    onSwipe: _onCardStackSwipe,
+                                    onViewProfile: _handleCardTap,
+                                    isSheetOpen: _isProfileSheetOpen,
+                                    onSheetOpenChanged: _setProfileSheetOpen,
+                                    horizontalPadding:
+                                        _kDiscoverHorizontalPadding,
+                                    contentTopInset: AppSpacing.spacingSM,
+                                    contentBottomInset: AppSpacing.spacingSM,
+                                    isLoading: false,
+                                    onRefresh: () async {
+                                      await ref
+                                          .read(appCacheManagerProvider)
+                                          .revalidateAll();
+                                      await ref
+                                          .read(discoverCacheProvider.notifier)
+                                          .refresh(
+                                            filters: _discoverQueryFilters(),
+                                          );
+                                    },
+                                    emptyTitle: emptyConfig.title,
+                                    emptySubtitle: emptyConfig.subtitle,
+                                    emptyIconPath: emptyConfig.iconPath,
+                                    emptyActionLabel: emptyConfig.primaryLabel,
+                                    onEmptyAction: emptyConfig.onPrimary,
+                                    emptySecondaryActionLabel:
+                                        emptyConfig.secondaryLabel,
+                                    onEmptySecondaryAction:
+                                        emptyConfig.onSecondary,
+                                    emptyTertiaryActionLabel:
+                                        emptyConfig.tertiaryLabel,
+                                    onEmptyTertiaryAction:
+                                        emptyConfig.onTertiary,
                                   ),
-                                  child: const SkeletonDiscovery(),
-                                )
-                              : CardStackManager(
-                                  key: _cardStackKey,
-                                  cards: emptyConfig.forceEmpty
-                                      ? const <Map<String, dynamic>>[]
-                                      : cards,
-                                  onSwipe: _onCardStackSwipe,
-                                  onViewProfile: _handleCardTap,
-                                  isSheetOpen: _isProfileSheetOpen,
-                                  onSheetOpenChanged: _setProfileSheetOpen,
-                                  horizontalPadding: _kDiscoverHorizontalPadding,
-                                  contentTopInset: AppSpacing.spacingSM,
-                                  contentBottomInset: AppSpacing.spacingSM,
-                                  isLoading: false,
-                                  onRefresh: () async {
-                                    await ref
-                                        .read(appCacheManagerProvider)
-                                        .revalidateAll();
-                                    await ref
-                                        .read(discoverCacheProvider.notifier)
-                                        .refresh(
-                                          filters: _discoverQueryFilters(),
-                                        );
-                                  },
-                                  emptyTitle: emptyConfig.title,
-                                  emptySubtitle: emptyConfig.subtitle,
-                                  emptyIconPath: emptyConfig.iconPath,
-                                  emptyActionLabel: emptyConfig.primaryLabel,
-                                  onEmptyAction: emptyConfig.onPrimary,
-                                  emptySecondaryActionLabel:
-                                      emptyConfig.secondaryLabel,
-                                  onEmptySecondaryAction:
-                                      emptyConfig.onSecondary,
-                                  emptyTertiaryActionLabel:
-                                      emptyConfig.tertiaryLabel,
-                                  onEmptyTertiaryAction:
-                                      emptyConfig.onTertiary,
+                          ),
+                          if (showActionRow)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                _kDiscoverHorizontalPadding,
+                                AppSpacing.spacingSM,
+                                _kDiscoverHorizontalPadding,
+                                AppSpacing.spacingXS,
+                              ),
+                              child: RepaintBoundary(
+                                child: AnimatedOpacity(
+                                  opacity: _isSwipeInProgress ? 0.5 : 1.0,
+                                  duration: const Duration(milliseconds: 150),
+                                  child: _buildDiscoveryActionRow(),
                                 ),
-                        ),
-                        if (showActionRow)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              _kDiscoverHorizontalPadding,
-                              AppSpacing.spacingSM,
-                              _kDiscoverHorizontalPadding,
-                              AppSpacing.spacingXS,
-                            ),
-                            child: RepaintBoundary(
-                              child: AnimatedOpacity(
-                                opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                                duration: const Duration(milliseconds: 150),
-                                child: _buildDiscoveryActionRow(),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
+                      tablet: 420,
                     ),
-                    tablet: 420,
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1338,49 +1346,53 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             size: AppSpacing.spacingXXXL,
             onPressed:
                 _isSwipeInProgress || (rewindAllowed && lastSwipeId == null)
-                    ? null
-                    : _handleRewind,
+                ? null
+                : _handleRewind,
           ),
-      const SizedBox(width: AppSpacing.spacingLG),
-      DiscoverySwipeActionButton(
-        type: DiscoverySwipeActionType.dislike,
-        size: actionSize,
-        onPressed: _isSwipeInProgress ? null : () => _handleAction('dislike'),
-      ),
-      const SizedBox(width: AppSpacing.spacingXL),
-      DiscoverySwipeActionButton(
-        type: DiscoverySwipeActionType.superlike,
-        size: actionSize,
-        onPressed: _isSwipeInProgress ? null : () => _handleAction('superlike'),
-      ),
-      const SizedBox(width: AppSpacing.spacingXL),
-      DiscoverySwipeActionButton(
-        type: DiscoverySwipeActionType.like,
-        size: actionSize,
-        onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
-      ),
-    ];
+          const SizedBox(width: AppSpacing.spacingLG),
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.dislike,
+            size: actionSize,
+            onPressed: _isSwipeInProgress
+                ? null
+                : () => _handleAction('dislike'),
+          ),
+          const SizedBox(width: AppSpacing.spacingXL),
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.superlike,
+            size: actionSize,
+            onPressed: _isSwipeInProgress
+                ? null
+                : () => _handleAction('superlike'),
+          ),
+          const SizedBox(width: AppSpacing.spacingXL),
+          DiscoverySwipeActionButton(
+            type: DiscoverySwipeActionType.like,
+            size: actionSize,
+            onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
+          ),
+        ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final row = Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: buttons,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final row = Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: buttons,
+            );
+            if (constraints.maxWidth < 320) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: ResponsivePadding.horizontal(context),
+                child: row,
+              );
+            }
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: buttons,
+            );
+          },
         );
-        if (constraints.maxWidth < 320) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: ResponsivePadding.horizontal(context),
-            child: row,
-          );
-        }
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: buttons,
-        );
-      },
-    );
       },
     );
   }

@@ -1,5 +1,5 @@
+// Unused. Live header is ProfileHeroSection (OptimizedImage + disk/memory cache).
 // Widget: ProfileHeader
-// Profile header with avatar and name
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';

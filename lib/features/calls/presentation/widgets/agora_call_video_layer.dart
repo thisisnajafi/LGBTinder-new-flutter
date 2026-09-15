@@ -15,6 +15,10 @@ import '../../providers/live_call_ui_provider.dart';
 import 'call_speaking_ring.dart';
 import 'call_stage_placeholder.dart';
 
+/// Flutter TextureRegistry path (Android [SurfaceProducer] under Impeller).
+/// Platform-view Hybrid Composition is slower and can tear with Impeller.
+const bool kAgoraUseFlutterTexture = true;
+
 /// Full-screen call video:
 /// - ringing / no remote → local camera (or local profile if camera off)
 /// - answered → remote camera full screen, local as a corner PiP
@@ -59,13 +63,168 @@ class AgoraCallVideoLayer extends StatefulWidget {
   State<AgoraCallVideoLayer> createState() => _AgoraCallVideoLayerState();
 }
 
-class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer>
-    with SingleTickerProviderStateMixin {
+class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
   VideoViewController? _localController;
   VideoViewController? _remoteController;
   RtcEngine? _boundEngine;
   String? _boundChannel;
   int? _boundRemoteUid;
+
+  bool get _hasRemote => widget.remoteUid != null && widget.remoteUid! > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncControllers();
+  }
+
+  @override
+  void didUpdateWidget(AgoraCallVideoLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncControllers();
+  }
+
+  void _syncControllers() {
+    final engineChanged =
+        widget.engine != _boundEngine || widget.channelId != _boundChannel;
+    if (engineChanged) {
+      _disposeLocal();
+      _boundEngine = widget.engine;
+      _boundChannel = widget.channelId;
+      _localController = VideoViewController(
+        rtcEngine: widget.engine,
+        canvas: const VideoCanvas(
+          uid: 0,
+          renderMode: RenderModeType.renderModeHidden,
+          mirrorMode: VideoMirrorModeType.videoMirrorModeAuto,
+        ),
+        useFlutterTexture: kAgoraUseFlutterTexture,
+        useAndroidSurfaceView: false,
+      );
+    }
+
+    if (engineChanged || widget.remoteUid != _boundRemoteUid) {
+      _disposeRemote();
+      _boundRemoteUid = widget.remoteUid;
+      if (_hasRemote) {
+        _remoteController = VideoViewController.remote(
+          rtcEngine: widget.engine,
+          canvas: VideoCanvas(uid: widget.remoteUid),
+          connection: RtcConnection(channelId: widget.channelId),
+          useFlutterTexture: kAgoraUseFlutterTexture,
+          useAndroidSurfaceView: false,
+        );
+      }
+    }
+  }
+
+  void _disposeLocal() {
+    final local = _localController;
+    _localController = null;
+    if (local != null) unawaited(local.dispose());
+  }
+
+  void _disposeRemote() {
+    final remote = _remoteController;
+    _remoteController = null;
+    if (remote != null) unawaited(remote.dispose());
+  }
+
+  @override
+  void dispose() {
+    _disposeLocal();
+    _disposeRemote();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        RepaintBoundary(
+          key: const ValueKey('agora-main-stage'),
+          child: _buildMainStage(),
+        ),
+        if (widget.onStageTap != null)
+          Positioned.fill(
+            child: Semantics(
+              label: 'Show call controls',
+              button: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: widget.onStageTap,
+              ),
+            ),
+          ),
+        if (_hasRemote)
+          _DraggableLocalPip(
+            onFlipCamera: widget.onFlipCamera,
+            localStage: _buildLocalStage(compact: true),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMainStage() {
+    if (_hasRemote) {
+      if (widget.remoteCameraOn && _remoteController != null) {
+        return ColoredBox(
+          color: Colors.black,
+          child: RepaintBoundary(
+            key: const ValueKey('agora-remote-video'),
+            child: AgoraVideoView(controller: _remoteController!),
+          ),
+        );
+      }
+      return CallStagePlaceholder(
+        userId: widget.remoteUserId,
+        imageUrl: widget.remoteAvatarUrl,
+        caption: widget.remoteCameraCaption,
+        speakingTarget: CallSpeakingTarget.remote,
+      );
+    }
+    return _buildLocalStage(compact: false);
+  }
+
+  Widget _buildLocalStage({required bool compact}) {
+    if (widget.localCameraOn && _localController != null) {
+      return ColoredBox(
+        color: Colors.black,
+        child: RepaintBoundary(
+          key: const ValueKey('agora-local-video'),
+          child: AgoraVideoView(controller: _localController!),
+        ),
+      );
+    }
+    return CallStagePlaceholder(
+      userId: widget.localUserId,
+      imageUrl: widget.localAvatarUrl,
+      caption: widget.localCameraCaption,
+      compact: compact,
+      speakingTarget: CallSpeakingTarget.local,
+    );
+  }
+}
+
+/// PiP drag / snap lives in its own [State] so ticks do not rebuild Agora
+/// remote/local textures on the main stage (PERF-COMP-CALL-001).
+class _DraggableLocalPip extends StatefulWidget {
+  final VoidCallback? onFlipCamera;
+  final Widget localStage;
+
+  const _DraggableLocalPip({
+    required this.localStage,
+    this.onFlipCamera,
+  });
+
+  @override
+  State<_DraggableLocalPip> createState() => _DraggableLocalPipState();
+}
+
+class _DraggableLocalPipState extends State<_DraggableLocalPip>
+    with SingleTickerProviderStateMixin {
   Offset? _pipOffset;
   bool _pipLarge = false;
   bool _pipDragging = false;
@@ -74,8 +233,6 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer>
   Offset _snapFrom = Offset.zero;
   Offset _snapTo = Offset.zero;
   Curve _snapCurve = Curves.linear;
-
-  bool get _hasRemote => widget.remoteUid != null && widget.remoteUid! > 0;
 
   double _pipSmallWidth(BuildContext context) => AppBreakpoints.value(
         context,
@@ -150,7 +307,6 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer>
   @override
   void initState() {
     super.initState();
-    _syncControllers();
     _snapController = AnimationController(
       vsync: this,
       duration: AppAnimations.callPipSnap,
@@ -173,8 +329,7 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer>
     _snapFrom = _pipOffset ?? target;
     _snapTo = target;
     final reduced = !AppAnimations.animationsEnabled(context);
-    _snapCurve =
-        reduced ? Curves.linear : AppAnimations.callPipSnapCurve;
+    _snapCurve = reduced ? Curves.linear : AppAnimations.callPipSnapCurve;
     _snapController.duration = reduced
         ? AppAnimations.callPipSnapReduced
         : AppAnimations.callPipSnap;
@@ -182,58 +337,8 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer>
   }
 
   @override
-  void didUpdateWidget(AgoraCallVideoLayer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncControllers();
-  }
-
-  void _syncControllers() {
-    final engineChanged =
-        widget.engine != _boundEngine || widget.channelId != _boundChannel;
-    if (engineChanged) {
-      _disposeLocal();
-      _boundEngine = widget.engine;
-      _boundChannel = widget.channelId;
-      _localController = VideoViewController(
-        rtcEngine: widget.engine,
-        canvas: const VideoCanvas(
-          uid: 0,
-          renderMode: RenderModeType.renderModeHidden,
-          mirrorMode: VideoMirrorModeType.videoMirrorModeAuto,
-        ),
-      );
-    }
-
-    if (engineChanged || widget.remoteUid != _boundRemoteUid) {
-      _disposeRemote();
-      _boundRemoteUid = widget.remoteUid;
-      if (_hasRemote) {
-        _remoteController = VideoViewController.remote(
-          rtcEngine: widget.engine,
-          canvas: VideoCanvas(uid: widget.remoteUid),
-          connection: RtcConnection(channelId: widget.channelId),
-        );
-      }
-    }
-  }
-
-  void _disposeLocal() {
-    final local = _localController;
-    _localController = null;
-    if (local != null) unawaited(local.dispose());
-  }
-
-  void _disposeRemote() {
-    final remote = _remoteController;
-    _remoteController = null;
-    if (remote != null) unawaited(remote.dispose());
-  }
-
-  @override
   void dispose() {
     _snapController.dispose();
-    _disposeLocal();
-    _disposeRemote();
     super.dispose();
   }
 
@@ -245,131 +350,67 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer>
     final lift = _pipDragging ? AppAnimations.callPipLiftScale : 1.0;
     final animate = AppAnimations.animationsEnabled(context);
 
-    return Stack(
-      fit: StackFit.expand,
-      clipBehavior: Clip.none,
-      children: [
-        RepaintBoundary(
-          key: const ValueKey('agora-main-stage'),
-          child: _buildMainStage(),
-        ),
-        if (widget.onStageTap != null)
-          Positioned.fill(
-            child: Semantics(
-              label: 'Show call controls',
-              button: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: widget.onStageTap,
-              ),
-            ),
-          ),
-        if (_hasRemote)
-          Positioned(
-            left: pipOffset.dx,
-            top: pipOffset.dy,
-            child: RepaintBoundary(
-              key: const ValueKey('agora-local-pip'),
-              child: Semantics(
-                label: 'Local video preview',
-                hint: 'Tap to resize. Long press to flip camera. Drag to move.',
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() => _pipLarge = !_pipLarge);
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) _snapToCorner(_pipCorner);
-                    });
-                  },
-                  onLongPress: widget.onFlipCamera,
-                  onPanStart: (_) {
-                    _snapController.stop();
-                    setState(() => _pipDragging = true);
-                  },
-                  onPanUpdate: (details) {
-                    setState(() {
-                      final base = _pipOffset ??
-                          _cornerOffset(context, CallPipCorner.bottomRight);
-                      _pipOffset = _clampPip(context, base + details.delta);
-                    });
-                  },
-                  onPanEnd: (_) {
-                    setState(() => _pipDragging = false);
-                    final current = _pipOffset ??
-                        _cornerOffset(context, CallPipCorner.bottomRight);
-                    _snapToCorner(_nearestCorner(context, current));
-                  },
-                  onPanCancel: () {
-                    setState(() => _pipDragging = false);
-                  },
-                  child: _LocalPipSpeakingFrame(
-                    child: AnimatedScale(
-                      scale: lift,
-                      duration: animate
-                          ? AppAnimations.tapDuration
-                          : Duration.zero,
-                      curve: AppAnimations.curveDefault,
-                      child: Container(
-                        width: pipSize.width,
-                        height: pipSize.height,
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.radiusMD),
-                          border: Border.all(
-                            color: AppColors.textPrimaryDark
-                                .withValues(alpha: 0.24),
-                            width: 2,
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: _buildLocalStage(compact: true),
-                      ),
+    return Positioned(
+      left: pipOffset.dx,
+      top: pipOffset.dy,
+      child: RepaintBoundary(
+        key: const ValueKey('agora-local-pip'),
+        child: Semantics(
+          label: 'Local video preview',
+          hint: 'Tap to resize. Long press to flip camera. Drag to move.',
+          child: GestureDetector(
+            onTap: () {
+              setState(() => _pipLarge = !_pipLarge);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _snapToCorner(_pipCorner);
+              });
+            },
+            onLongPress: widget.onFlipCamera,
+            onPanStart: (_) {
+              _snapController.stop();
+              setState(() => _pipDragging = true);
+            },
+            onPanUpdate: (details) {
+              setState(() {
+                final base = _pipOffset ??
+                    _cornerOffset(context, CallPipCorner.bottomRight);
+                _pipOffset = _clampPip(context, base + details.delta);
+              });
+            },
+            onPanEnd: (_) {
+              setState(() => _pipDragging = false);
+              final current = _pipOffset ??
+                  _cornerOffset(context, CallPipCorner.bottomRight);
+              _snapToCorner(_nearestCorner(context, current));
+            },
+            onPanCancel: () {
+              setState(() => _pipDragging = false);
+            },
+            child: _LocalPipSpeakingFrame(
+              child: AnimatedScale(
+                scale: lift,
+                duration: animate
+                    ? AppAnimations.tapDuration
+                    : Duration.zero,
+                curve: AppAnimations.curveDefault,
+                child: Container(
+                  width: pipSize.width,
+                  height: pipSize.height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                    border: Border.all(
+                      color: AppColors.textPrimaryDark.withValues(alpha: 0.24),
+                      width: 2,
                     ),
                   ),
+                  clipBehavior: Clip.antiAlias,
+                  child: widget.localStage,
                 ),
               ),
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildMainStage() {
-    if (_hasRemote) {
-      if (widget.remoteCameraOn && _remoteController != null) {
-        return ColoredBox(
-          color: Colors.black,
-          child: RepaintBoundary(
-            key: const ValueKey('agora-remote-video'),
-            child: AgoraVideoView(controller: _remoteController!),
-          ),
-        );
-      }
-      return CallStagePlaceholder(
-        userId: widget.remoteUserId,
-        imageUrl: widget.remoteAvatarUrl,
-        caption: widget.remoteCameraCaption,
-        speakingTarget: CallSpeakingTarget.remote,
-      );
-    }
-    return _buildLocalStage(compact: false);
-  }
-
-  Widget _buildLocalStage({required bool compact}) {
-    if (widget.localCameraOn && _localController != null) {
-      return ColoredBox(
-        color: Colors.black,
-        child: RepaintBoundary(
-          key: const ValueKey('agora-local-video'),
-          child: AgoraVideoView(controller: _localController!),
         ),
-      );
-    }
-    return CallStagePlaceholder(
-      userId: widget.localUserId,
-      imageUrl: widget.localAvatarUrl,
-      caption: widget.localCameraCaption,
-      compact: compact,
-      speakingTarget: CallSpeakingTarget.local,
+      ),
     );
   }
 }

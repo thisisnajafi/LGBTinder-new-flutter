@@ -9,9 +9,11 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/providers/app_motion_prefs_provider.dart';
 import '../badges/notification_badge.dart';
 import '../buttons/scale_tap_feedback.dart';
 import '../../core/responsive/responsive.dart';
+import 'nav_bar_gradient_shell.dart';
 
 /// Floating glass bottom navigation — no pill behind active tab; icon + label only.
 class BottomNavbar extends ConsumerWidget {
@@ -39,13 +41,17 @@ class BottomNavbar extends ConsumerWidget {
     final horizontalInset = width < 360
         ? AppSpacing.spacingMD
         : width < 600
-            ? AppSpacing.spacingLG
-            : AppSpacing.spacingXL;
+        ? AppSpacing.spacingLG
+        : AppSpacing.spacingXL;
     final barHeight = width < 360 ? 62.0 : 68.0;
     final barRadius = barHeight / 2;
     final iconSize = width < 360 ? 22.0 : 24.0;
     final labelSize = width < 360 ? 9.0 : 10.0;
     final compactLabels = width < 380;
+    final solidNavBar = ref.watch(
+      appMotionPrefsProvider.select((s) => s.solidNavBar),
+    );
+    final blurNav = !solidNavBar && AppAnimations.animationsEnabled(context);
 
     final glassFill = isDark
         ? const Color(0xFF27272A).withValues(alpha: 0.65)
@@ -71,14 +77,18 @@ class BottomNavbar extends ConsumerWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: _maxBarWidth),
-                child: _RainbowGlassShell(
+                child: NavBarGradientShell(
                   borderRadius: barRadius,
                   borderWidth: _borderWidth,
                   isDark: isDark,
+                  solid: solidNavBar,
+                  style: NavBarGradientStyle.prideSweep,
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(barRadius - _borderWidth),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    borderRadius: BorderRadius.circular(
+                      barRadius - _borderWidth,
+                    ),
+                    child: _NavBarBlur(
+                      enabled: blurNav,
                       child: Container(
                         height: barHeight,
                         padding: EdgeInsets.symmetric(
@@ -86,12 +96,14 @@ class BottomNavbar extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           color: glassFill,
-                          borderRadius:
-                              BorderRadius.circular(barRadius - _borderWidth),
+                          borderRadius: BorderRadius.circular(
+                            barRadius - _borderWidth,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black
-                                  .withValues(alpha: isDark ? 0.3 : 0.1),
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.3 : 0.1,
+                              ),
                               blurRadius: 20,
                               offset: const Offset(0, 6),
                             ),
@@ -100,8 +112,11 @@ class BottomNavbar extends ConsumerWidget {
                         child: Row(
                           children: List.generate(itemCount, (index) {
                             final meta = AppIcons.mainNavItems[index];
-                            final label =
-                                _labelForIndex(index, meta.label, compactLabels);
+                            final label = _labelForIndex(
+                              index,
+                              meta.label,
+                              compactLabels,
+                            );
                             return Expanded(
                               child: _NavItem(
                                 label: label,
@@ -113,10 +128,13 @@ class BottomNavbar extends ConsumerWidget {
                                 activeColor: activeColor,
                                 inactiveIconColor: inactiveIcon,
                                 inactiveLabelColor: inactiveLabel,
-                                badge: index == 1 &&
+                                badge:
+                                    index == 1 &&
                                         notificationCount != null &&
                                         notificationCount! > 0
-                                    ? NotificationBadge(count: notificationCount!)
+                                    ? NotificationBadge(
+                                        count: notificationCount!,
+                                      )
                                     : null,
                                 onTap: () => onTap(index),
                               ),
@@ -154,47 +172,18 @@ class BottomNavbar extends ConsumerWidget {
   }
 }
 
-/// Pride-gradient outer ring.
-class _RainbowGlassShell extends StatelessWidget {
-  final Widget child;
-  final double borderRadius;
-  final double borderWidth;
-  final bool isDark;
+class _NavBarBlur extends StatelessWidget {
+  const _NavBarBlur({required this.enabled, required this.child});
 
-  const _RainbowGlassShell({
-    required this.child,
-    required this.borderRadius,
-    required this.borderWidth,
-    required this.isDark,
-  });
+  static final ImageFilter _blur = ImageFilter.blur(sigmaX: 10, sigmaY: 10);
+
+  final bool enabled;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        gradient: const SweepGradient(
-          colors: [
-            Color(0xFF2A9D8F),
-            Color(0xFFE9C46A),
-            Color(0xFFE76F51),
-            Color(0xFFD62828),
-            Color(0xFF6A4C93),
-            Color(0xFF457B9D),
-            Color(0xFF2A9D8F),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentPurple.withValues(alpha: isDark ? 0.2 : 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(borderWidth),
-      child: child,
-    );
+    if (!enabled) return child;
+    return BackdropFilter(filter: _blur, child: child);
   }
 }
 
@@ -249,11 +238,7 @@ class _NavItem extends StatelessWidget {
                     color: isActive ? activeColor : inactiveIconColor,
                   ),
                   if (badge != null)
-                    Positioned(
-                      top: -4,
-                      right: -10,
-                      child: badge!,
-                    ),
+                    Positioned(top: -4, right: -10, child: badge!),
                 ],
               ),
               SizedBox(height: AppSpacing.spacingXS),
@@ -266,11 +251,7 @@ class _NavItem extends StatelessWidget {
                   color: isActive ? activeColor : inactiveLabelColor,
                   height: 1.1,
                 ),
-                child: AppText(
-                  label,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                ),
+                child: AppText(label, maxLines: 1, textAlign: TextAlign.center),
               ),
             ],
           ),

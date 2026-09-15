@@ -18,7 +18,7 @@ import '../../../../features/chat/utils/self_destruct_send.dart';
 /// Full-screen self-destruct photo viewer (CHAT-SD-002 / CHAT-SD-003).
 ///
 /// View-only: no pinch, no share, no download. FLAG_SECURE on Android.
-/// Ring ticks every 100ms from server remaining time; fade-to-black at zero.
+/// Countdown ring is driven by [AnimationController] (not a setState timer).
 class SelfDestructViewer extends ConsumerStatefulWidget {
   final int messageId;
   final int? initialRemainingSeconds;
@@ -54,20 +54,19 @@ class SelfDestructViewer extends ConsumerStatefulWidget {
 }
 
 class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   String? _imageUrl;
   bool _isLoading = true;
   String? _error;
-  Timer? _countdownTimer;
   StreamSubscription<void>? _screenshotSub;
   bool _consumed = false;
   bool _showDisappearedCopy = false;
   bool _finishing = false;
   bool _popped = false;
 
-  final Stopwatch _stopwatch = Stopwatch();
   Duration _window = Duration.zero;
   late final AnimationController _fadeController;
+  late final AnimationController _countdownController;
 
   Duration get _totalDuration {
     final seconds = widget.totalSeconds ??
@@ -80,11 +79,6 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
     return total;
   }
 
-  Duration get _remaining {
-    final left = _window - _stopwatch.elapsed;
-    return left.isNegative ? Duration.zero : left;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -92,6 +86,8 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
       vsync: this,
       duration: SelfDestructCountdown.fadeToBlack,
     );
+    _countdownController = AnimationController(vsync: this);
+    _countdownController.addStatusListener(_onCountdownStatus);
     _enableScreenshotProtection();
     _screenshotSub = ScreenshotProtection.screenshots.listen((_) {
       unawaited(_onScreenshotTaken());
@@ -167,37 +163,26 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
     }
   }
 
-  void _startCountdown() {
-    _countdownTimer?.cancel();
-    _stopwatch
-      ..reset()
-      ..start();
+  void _onCountdownStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      unawaited(_finishExpired());
+    }
+  }
 
+  void _startCountdown() {
+    _countdownController.stop();
     if (_window <= Duration.zero) {
       unawaited(_finishExpired());
       return;
     }
-
-    _countdownTimer = Timer.periodic(SelfDestructCountdown.tickInterval, (
-      timer,
-    ) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {});
-      if (_remaining <= Duration.zero) {
-        timer.cancel();
-        unawaited(_finishExpired());
-      }
-    });
+    _countdownController.duration = _window;
+    _countdownController.forward(from: 0);
   }
 
   Future<void> _finishExpired() async {
     if (_finishing) return;
     _finishing = true;
-    _countdownTimer?.cancel();
-    _stopwatch.stop();
+    _countdownController.stop();
     if (!mounted) return;
 
     final animate = AppAnimations.animationsEnabled(context);
@@ -221,8 +206,8 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
   @override
   void dispose() {
     _screenshotSub?.cancel();
-    _countdownTimer?.cancel();
-    _stopwatch.stop();
+    _countdownController.removeStatusListener(_onCountdownStatus);
+    _countdownController.dispose();
     _fadeController.dispose();
     unawaited(_disableScreenshotProtection());
     super.dispose();
@@ -230,13 +215,6 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
 
   @override
   Widget build(BuildContext context) {
-    final remaining = _remaining;
-    final displaySeconds = SelfDestructCountdown.displaySeconds(remaining);
-    final progress = SelfDestructCountdown.ringProgress(
-      remaining: remaining,
-      total: _totalDuration,
-    );
-    final ringColor = SelfDestructCountdown.drainColor(progress);
     final textTheme = Theme.of(context).textTheme;
 
     return PopScope(
@@ -260,32 +238,14 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
             ),
           ),
           actions: [
-            if (displaySeconds > 0 && !_showDisappearedCopy)
+            if (!_showDisappearedCopy)
               Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.spacingMD),
                 child: Center(
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        painter: _CountdownRingPainter(
-                          progress: progress,
-                          color: ringColor,
-                          trackColor:
-                              AppColors.textPrimaryDark.withValues(alpha: 0.24),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$displaySeconds',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  child: _CountdownBadge(
+                    controller: _countdownController,
+                    total: _totalDuration,
+                    textTheme: textTheme,
                   ),
                 ),
               ),
@@ -379,6 +339,60 @@ class _SelfDestructViewerState extends ConsumerState<SelfDestructViewer>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CountdownBadge extends StatelessWidget {
+  const _CountdownBadge({
+    required this.controller,
+    required this.total,
+    required this.textTheme,
+  });
+
+  final AnimationController controller;
+  final Duration total;
+  final TextTheme textTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final duration = controller.duration ?? total;
+        final remainingMs =
+            (duration.inMilliseconds * (1 - controller.value)).round();
+        final remaining =
+            Duration(milliseconds: remainingMs < 0 ? 0 : remainingMs);
+        final displaySeconds = SelfDestructCountdown.displaySeconds(remaining);
+        if (displaySeconds <= 0) return const SizedBox.shrink();
+        final progress = SelfDestructCountdown.ringProgress(
+          remaining: remaining,
+          total: total,
+        );
+        return SizedBox(
+          width: 44,
+          height: 44,
+          child: RepaintBoundary(
+            child: CustomPaint(
+              painter: _CountdownRingPainter(
+                progress: progress,
+                color: SelfDestructCountdown.drainColor(progress),
+                trackColor: AppColors.textPrimaryDark.withValues(alpha: 0.24),
+              ),
+              child: Center(
+                child: Text(
+                  '$displaySeconds',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimaryDark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

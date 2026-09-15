@@ -240,6 +240,12 @@ class ClaimResult {
     this.newStreak = 0,
   });
 
+  int get rewardAmount =>
+      reward?.rewardAmount ?? bonusReward?.rewardAmount ?? 0;
+
+  String get rewardType =>
+      reward?.rewardType ?? bonusReward?.rewardType ?? '';
+
   factory ClaimResult.fromJson(Map<String, dynamic> json) {
     return ClaimResult(
       success: json['success'] == true,

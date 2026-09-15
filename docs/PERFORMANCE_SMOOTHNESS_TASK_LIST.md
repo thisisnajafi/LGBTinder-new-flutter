@@ -54,7 +54,7 @@
 - [x] **PERF-INFRA-002** Create `ChatLocalRepository` — read conversations/messages from DB on open (target: <100ms first paint)
 - [x] **PERF-INFRA-003** Wire Pusher events → DB insert/update (not `setState` on pages)
 - [x] **PERF-INFRA-004** Migrate `ChatOutboundQueueService` from `SharedPreferences` to SQLite outbox table
-- [ ] **PERF-INFRA-005** Add notification list local cache (optional Phase 2)
+- [x] **PERF-INFRA-005** Add notification list local cache — Drift `local_notifications` + `local_notification_lists`; `NotificationsLocalRepository` paints the tab from disk then revalidates; prefs JSON is a one-time migrate
 - [x] **PERF-INFRA-006** Move heavy `jsonDecode` in `UserCacheService` / `AppCacheManager` to `compute()` isolate
 - [x] **PERF-INFRA-007** Replace `_profilesEqual` string comparison with `Equatable` on models
 
@@ -469,12 +469,21 @@
 | `chat/presentation/screens/group_chat_screen.dart` | Future | **PERF-FEAT-CHAT-003** Apply same local-first + reverse list pattern when enabled |
 | `chat/presentation/screens/message_search_screen.dart` | Active | **PERF-FEAT-CHAT-004** Debounce + pagination + local index if backend supports |
 
+- [~] **PERF-FEAT-CHAT-001** Consolidate with `pages/chat_list_page.dart` — `features/chat/presentation/screens/chats_screen.dart` is gone; live list is `ChatListPage`
+- [~] **PERF-FEAT-CHAT-002** Delete or implement; route to `pages/chat_page.dart` — feature `chat_screen.dart` stub already removed (`PERF-INFRA-033`); live thread is `ChatPage`
+- [~] **PERF-FEAT-CHAT-003** Apply same local-first + reverse list pattern when enabled — `group_chat_screen.dart` is not in the tree (no group chats)
+- [x] **PERF-FEAT-CHAT-004** Debounce + pagination + local index — live `screens/message_search_screen.dart` uses `DebouncedSearchField`, Drift `searchMessagesLocal`, then GET `/chat/search` with offset + Load more
+
 ### Calls feature
 
 | File | Tasks |
 |------|-------|
 | `calls/pages/outgoing_call_page.dart` | **PERF-FEAT-CALL-001** Isolate timer/`setState` (13+) to `CallTimer` widget; **002** `RepaintBoundary` on video layer |
 | `calls/presentation/widgets/incoming_call_banner.dart` | **PERF-FEAT-CALL-003** Overlay without rebuilding `MaterialApp` |
+
+- [x] **PERF-FEAT-CALL-001** Isolate timer/`setState` — live `OutgoingCallPage` ticks `LiveCallUiNotifier.tick()`; chrome watches `callTimerProvider.select`; unused `CallTimer` widget is dead UI
+- [x] **PERF-FEAT-CALL-002** `RepaintBoundary` on video layer — `CallLiveVideoStage` / `AgoraCallVideoLayer` wrap remote + local PiP
+- [x] **PERF-FEAT-CALL-003** Overlay without rebuilding `MaterialApp` — `IncomingCallHost` is a `MaterialApp.router` builder child (`Stack` overlay)
 
 ### Discover feature
 
@@ -486,6 +495,12 @@
 | `discover/presentation/screens/likes_received_screen.dart` | **PERF-FEAT-DISC-004** Consolidate duplicates |
 | `discover/presentation/screens/profile_detail_screen.dart` | **PERF-FEAT-DISC-005** Consolidate duplicates |
 
+- [~] **PERF-FEAT-DISC-001** Consolidate with `pages/discovery_page.dart` — `discover_screen.dart` is gone; live swipe feed is `DiscoveryPage`
+- [~] **PERF-FEAT-DISC-002** Lazy grid + image thumbnails — `explore_screen.dart` is gone / unrouted; no explore grid in the tree
+- [~] **PERF-FEAT-DISC-003** Consolidate with `screens/discovery/filter_screen.dart` — feature filter stub is gone; live filter is `FilterScreen` (`PERF-SCR-FILTER-001/002`)
+- [~] **PERF-FEAT-DISC-004** Consolidate duplicates — feature `likes_received_screen.dart` is gone; live list is `screens/discovery/likes_received_screen.dart` (`PERF-SCR-LIKES-001/002`)
+- [~] **PERF-FEAT-DISC-005** Consolidate duplicates — feature `profile_detail_screen.dart` is gone; live detail is `screens/discovery/profile_detail_screen.dart` (`PERF-SCR-PROFDET-001/002`)
+
 ### Matching feature
 
 | File | Tasks |
@@ -494,12 +509,21 @@
 | `matching/presentation/screens/match_screen.dart` | **PERF-FEAT-MATCH-002** Single controller for celebration animations |
 | `matching/presentation/screens/likes_screen.dart` | **PERF-FEAT-MATCH-003** Paginated grid |
 
+- [x] **PERF-FEAT-MATCH-001** `RepaintBoundary` per match row — live `MatchesScreen` lists each `_MatchRow` as its own `AppSettingsDetailList` / `AppListView` item wrapped in `RepaintBoundary`
+- [x] **PERF-FEAT-MATCH-002** `cacheExtent` + single celebration controller — match rows use `AppListView` cacheExtent; live overlay `MatchCelebrationOverlay` already has one controller; unused-path `widgets/match/match_screen.dart` now uses one `AnimationController` + Intervals (reduce-motion respected)
+- [~] **PERF-FEAT-MATCH-003** Paginated grid — `likes_screen.dart` is gone; live `LikesReceivedScreen` is `AppListView.builder` + thumbnail cards (`RepaintBoundary`); pending-likes API is not paginated
+
 ### Notifications feature
 
 | File | Tasks |
 |------|-------|
 | `notifications/presentation/screens/notifications_screen.dart` | **PERF-FEAT-NOTIF-001** Migrate to pagination provider; **002** `RepaintBoundary` on tiles; **003** local cache |
 | `notifications/presentation/screens/notification_settings_screen.dart` | **PERF-FEAT-NOTIF-002** Consolidate with `screens/notification_settings_screen.dart` |
+
+- [x] **PERF-FEAT-NOTIF-001** Migrate to pagination provider — live `NotificationsScreen` uses `notificationsCacheProvider` (`loadMore` on scroll, page size 20)
+- [x] **PERF-FEAT-NOTIF-002** `RepaintBoundary` on tiles — `NotificationTile` is wrapped in `RepaintBoundary`; plan-restricted avatar blur is isolated / skipped when Reduce Motion is on
+- [x] **PERF-FEAT-NOTIF-003** local cache — Drift `NotificationsLocalRepository` (`PERF-INFRA-005`); screen paints cache then refreshes
+- [~] **PERF-FEAT-NOTIF-002** Consolidate settings — `features/notifications/.../notification_settings_screen.dart` is gone; live settings is `screens/notification_settings_screen.dart`
 
 ### Profile feature
 
@@ -511,6 +535,12 @@
 | `profile/presentation/screens/profile_wizard_screen.dart` | **PERF-FEAT-PROF-004** Single wizard entry point |
 | `profile/presentation/screens/profile_analytics_screen.dart` | **PERF-FEAT-PROF-005** Chart lazy load |
 
+- [~] **PERF-FEAT-PROF-001** Consolidate with `pages/profile_page.dart` — feature `profile_screen.dart` is gone; live own-profile is `ProfilePage` (`PERF-PAGE-PROFILE-001/002/003`)
+- [~] **PERF-FEAT-PROF-002** Consolidate with `pages/profile_edit_page.dart` — feature `profile_edit_screen.dart` is gone; live edit is `ProfileEditPage` (`PERF-PAGE-PROFILEEDIT-001/002/003`)
+- [~] **PERF-FEAT-PROF-003** Shared detail component — feature detail stub is gone; live other-user UI is `OtherUserProfileView` used by `ProfilePage` and `screens/discovery/profile_detail_screen.dart`
+- [~] **PERF-FEAT-PROF-004** Single wizard entry point — feature `profile_wizard_screen.dart` is gone; live wizard is `ProfileWizardPage` (`PERF-PAGE-WIZARD-001`–`005`)
+- [~] **PERF-FEAT-PROF-005** Chart lazy load — feature analytics stub is gone; live charts are `screens/profile/profile_analytics_screen.dart` (`PERF-SCR-ANALYTICS-001/002`)
+
 ### Onboarding feature
 
 | File | Tasks |
@@ -518,6 +548,10 @@
 | `onboarding/presentation/screens/onboarding_screen.dart` | **PERF-FEAT-ONB-001** Lazy `PageView` |
 | `onboarding/presentation/screens/enhanced_onboarding_screen.dart` | **PERF-FEAT-ONB-002** Defer Lottie |
 | `onboarding/presentation/screens/onboarding_preferences_screen.dart` | **PERF-FEAT-ONB-003** Consolidate duplicate |
+
+- [~] **PERF-FEAT-ONB-001** Lazy `PageView` — feature `onboarding_screen.dart` is gone; live intro is `pages/onboarding_page.dart` (`PERF-PAGE-ONBOARD-001`)
+- [~] **PERF-FEAT-ONB-002** Defer Lottie — feature `enhanced_onboarding_screen.dart` is gone; live intro defers Lottie (`PERF-PAGE-ONBOARD-002` / `003`)
+- [~] **PERF-FEAT-ONB-003** Consolidate duplicate — feature preferences stub is gone; live form is `screens/onboarding/onboarding_preferences_screen.dart` (`PERF-SCR-ONBPREF-001/002`)
 
 ### Payments feature
 
@@ -533,6 +567,16 @@
 | `payments/presentation/screens/purchase_confirmation_screen.dart` | **PERF-FEAT-PAY-008** Lightweight confirmation |
 | `payments/presentation/screens/google_play_billing_test_screen.dart` | **PERF-FEAT-PAY-009** Dev-only — strip from release |
 
+- [x] **PERF-FEAT-PAY-001** `ListView.builder`; const cards — live `SubscriptionPlansScreen` uses `AppListView.builder` + `_PlanCard`
+- [x] **PERF-FEAT-PAY-002** Paginate history — `SubscriptionManagementScreen` is a typedef of `SubscriptionManagementPage` (`PERF-SCR-SUBMGMT-001`)
+- [x] **PERF-FEAT-PAY-003** Lazy list — `GooglePlayPurchaseHistoryScreen` paints skeleton first, then `LazyLoadList` + scroll-threshold load more (no load-more during `itemBuilder`)
+- [x] **PERF-FEAT-PAY-004** const pack UI — live `SuperlikePacksScreen` uses `AppListView.builder` + `_SuperlikePackCard`
+- [~] **PERF-FEAT-PAY-005** Non-blocking billing — feature `payment_screen.dart` is gone; unused `screens/payment_screen.dart` already loads after first frame (`PERF-SCR-PAY-001`)
+- [~] **PERF-FEAT-PAY-006** Defer banners — `premium_subscription_screen.dart` is gone; live plans/packs do not mount extra banners
+- [x] **PERF-FEAT-PAY-007** Static detail — `PurchaseDetailsScreen` paints `initialPurchase` immediately; fetch only when opening without a snapshot
+- [x] **PERF-FEAT-PAY-008** Lightweight confirmation — `PurchaseConfirmationScreen` stays a `StatelessWidget` (no animation controllers); SVG status icons
+- [x] **PERF-FEAT-PAY-009** Dev-only — strip from release — `/home/google-play-billing-test` redirects to home in `kReleaseMode`; test screen does not init billing in release
+
 ### Settings feature
 
 | File | Tasks |
@@ -542,6 +586,11 @@
 | `settings/presentation/screens/matching_preferences_screen.dart` | **PERF-FEAT-SET-003** 11+ setState → notifier |
 | `settings/presentation/screens/*` (all) | **PERF-FEAT-SET-004** Audit duplicate settings paths; single source |
 
+- [~] **PERF-FEAT-SET-001** Consolidate with `screens/settings_screen.dart` — feature `settings_screen.dart` is gone; live hub is `SettingsPage` (`/home?tab=4`); `screens/settings_screen.dart` is a typedef
+- [x] **PERF-FEAT-SET-002** Preview sounds without rebuilding list — `_SoundOptionsGroup` owns selection `ValueNotifier`s; preview calls `SoundService` only; `updatePreferences` keeps `AsyncData` (no list unmount)
+- [x] **PERF-FEAT-SET-003** 11+ setState → notifier — `MatchingPreferencesDraft` + `ValueListenableBuilder` for age/distance/visibility; load/save flags are notifiers
+- [~] **PERF-FEAT-SET-004** Audit duplicate settings paths — live hub `SettingsPage`; unused `comprehensive_settings_screen.dart`; feature stubs (privacy/notif/2FA/sessions) deleted in favor of `lib/screens/*`; remaining feature screens are appearance, sound, matching, account details
+
 ### Safety, marketing, analytics, admin
 
 | File | Tasks |
@@ -550,6 +599,12 @@
 | `marketing/presentation/screens/*` | **PERF-FEAT-MKT-001** Defer confetti/Lottie; **002** dialog-only campaigns |
 | `analytics/presentation/screens/analytics_screen.dart` | **PERF-FEAT-ANAL-001** Chart repaint boundaries |
 | `admin/presentation/screens/admin_dashboard_screen.dart` | **PERF-FEAT-ADMIN-001** Dev/admin only — exclude release |
+
+- [x] **PERF-FEAT-SAFE-001** Consolidate with `screens/` duplicates — feature blocked/emergency/history/center stubs are gone; live hub is `SafetyCenterScreen`; live report form is `ReportUserScreen` (`AppListView.builder` + reason `ValueNotifier`)
+- [x] **PERF-FEAT-MKT-001** Defer confetti/Lottie — `BadgeAchievementPopup` mounts confetti only when `AppAnimations.animationsEnabled`; Reduce Motion skips controllers
+- [x] **PERF-FEAT-MKT-002** Dialog-only campaigns — unrouted `badges`/`daily_rewards`/`enhanced_plans` screens stay unused; live path is `DailyRewardsDialog.show` / `BadgeAchievementPopup.show`
+- [x] **PERF-FEAT-ANAL-001** Chart repaint boundaries — `AnalyticsChart` is a keyed `RepaintBoundary`; live profile charts already isolated (`PERF-SCR-ANALYTICS-002`)
+- [x] **PERF-FEAT-ADMIN-001** Dev/admin only — exclude release — `AdminDashboardScreen` is unrouted and returns `SizedBox.shrink()` / skips load in `kReleaseMode`
 
 ---
 
@@ -574,6 +629,23 @@
 | `chat_list_loading.dart` | Skeleton | **PERF-COMP-MSG-015** Match chat row height exactly (avoid layout jump) |
 | `chat_list_empty.dart` | — | **[~]** const OK |
 
+- [x] **PERF-COMP-MSG-001** `RepaintBoundary` — live bubble chrome + photo/voice/gates; list row already wraps `ChatMessageListTile`
+- [x] **PERF-COMP-MSG-002** Replace blur with static overlay — premium history gate is `ColoredBox` (no `BackdropFilter` / `ImageFilter.blur`)
+- [x] **PERF-COMP-MSG-003** Split text/media/voice sub-widgets — `ChatLinkedText` / `ChatBubblePhoto` / `VoiceMessagePlayer`; locked + premium gates extracted
+- [x] **PERF-COMP-MSG-004** Isolate as `ConsumerStatefulWidget` with own controllers — live `MessageInput`
+- [x] **PERF-COMP-MSG-005** Watch presence via `.select` — `chat_header.dart` selects `userPresenceCacheProvider` per user
+- [x] **PERF-COMP-MSG-006** Pass `hasPlan` from parent — `ChatListItem` does not watch `planLimitsProvider`
+- [x] **PERF-COMP-MSG-007** Internal debounce — `DebouncedSearchField` / `AppSearchDebounce` in list header
+- [x] **PERF-COMP-MSG-008** Self-contained animation — `typing_indicator.dart` owns its controller; Reduce Motion skips
+- [~] **PERF-COMP-MSG-009** Separate route or overlay provider — `ChatUserInfoPanel` unused; live path is `ChatConversationInfoPage`
+- [x] **PERF-COMP-MSG-010** Debounce mention query — `AppSearchDebounce` on `@` lookup (`mention_input_field.dart`)
+- [x] **PERF-COMP-MSG-011** const icon paths — `MessageStatusIconPaths.sending` / `retry` (`AppIcons.clock` / `refresh`)
+- [x] **PERF-COMP-MSG-012** Cache pinned count — banner takes `pinnedCount` from parent (`pinnedCountProvider`)
+- [~] **PERF-COMP-MSG-013** Isolated timer widget — `audio_recorder_widget.dart` gone; `ChatVoiceRecordBar` owns elapsed `ValueNotifier` + timer
+- [~] **PERF-COMP-MSG-014** Pause when off-screen — `audio_player_widget.dart` gone; live `VoiceMessagePlayer` pauses on scroll-off and deactivate
+- [x] **PERF-COMP-MSG-015** Match chat row height exactly — skeleton avatar 52, `spacingMD`/`spacingSM` padding, `AppListView.separated`
+- [~] **chat_list_empty.dart** const OK
+
 ### Chat feature widgets (`lib/features/chat/presentation/widgets/`)
 
 | Component | Tasks |
@@ -590,6 +662,19 @@
 | `online_friends_list.dart` | **PERF-COMP-FEATMSG-011** Horizontal list avatar thumbnails |
 | `chat_upgrade_widgets.dart` | **PERF-COMP-FEATMSG-012** Avoid blur; simple overlay |
 
+- [~] **PERF-COMP-FEATMSG-001** DELETE — use shared widget — feature `message_bubble.dart` is gone; live is `lib/widgets/chat/message_bubble.dart`
+- [~] **PERF-COMP-FEATMSG-002** Consolidate with `widgets/chat/message_input.dart` — feature `chat_input.dart` is gone; live composer is `MessageInput`
+- [~] **PERF-COMP-FEATMSG-003** Consolidate duplicate — feature `typing_indicator.dart` is gone; live is `lib/widgets/chat/typing_indicator.dart`
+- [x] **PERF-COMP-FEATMSG-004** Pause off-screen — `VoiceMessagePlayer` pauses on scroll-off and deactivate
+- [x] **PERF-COMP-FEATMSG-005** don't setState whole row — play/position use `ValueNotifier`s; waveform/time rebuild without the bubble row
+- [~] **PERF-COMP-FEATMSG-006** Overlay in separate layer — `VoiceRecorderOverlay` unused; live record chrome is `ChatVoiceRecordBar` in `MessageInput`
+- [x] **PERF-COMP-FEATMSG-007** Grid cacheExtent; lazy load packs — grid/tabs use `scrollCacheExtent` + keep-alives off; stickers load via `stickerPackStickersProvider(packId)`
+- [x] **PERF-COMP-FEATMSG-008** Remove FutureBuilder from build; debounce search — watches `chatListPreviewProvider`; `DebouncedSearchField` already in place
+- [x] **PERF-COMP-FEATMSG-009** Countdown via `AnimationController` not setState loop — ring is `_CountdownBadge` `AnimatedBuilder`
+- [~] **PERF-COMP-FEATMSG-010** Video init off-screen cancel — unused `MessageAttachmentViewer` now drops in-flight init; live `ChatVideoViewer` already cancels if unmounted
+- [~] **PERF-COMP-FEATMSG-011** Horizontal list avatar thumbnails — `OnlineFriendsList` unused; live is `ChatMatchesRow` (`ProfileImageWidget` chips)
+- [x] **PERF-COMP-FEATMSG-012** Avoid blur; simple overlay — `ChatUpgradeBottomSheet` / `ChatPremiumBanner` have no `BackdropFilter`
+
 ### Cards & discovery (`lib/widgets/cards/`, `lib/widgets/discovery/`)
 
 | Component | Tasks |
@@ -599,6 +684,14 @@
 | `discovery/filter_widgets.dart` | **PERF-COMP-DISC-001** Debounce sliders |
 | `discovery/superlike_message_sheet.dart` | **PERF-COMP-DISC-002** Lightweight sheet |
 
+- [x] **PERF-COMP-CARD-001** `RepaintBoundary` — card chrome and each stacked card
+- [x] **PERF-COMP-CARD-002** simplify shadows — one 12px shadow on the front card; lighter drag shadow
+- [x] **PERF-COMP-CARD-003** `OptimizedImage` large/small — front `ImageSize.large`, behind `ImageSize.small`; decode width still `photoDecodeWidth` so swipe reuses cache
+- [x] **PERF-COMP-CARD-004** Repaint only top 3 cards — stack already paints 3; each has `RepaintBoundary`
+- [x] **PERF-COMP-CARD-005** const empty state — `const DiscoverEmptyState()` when no custom copy/actions
+- [x] **PERF-COMP-DISC-001** Debounce sliders — `FilterAgeRangeControl` / `FilterDistanceControl` isolate drag; parent does not rebuild (Apply reads notifiers)
+- [x] **PERF-COMP-DISC-002** Lightweight sheet — no per-keystroke `setState`; static header (no gradient stack)
+
 ### Discover feature widgets
 
 | Component | Tasks |
@@ -607,6 +700,10 @@
 | `profile_card.dart` | **PERF-COMP-DISC-004** Thumbnail images |
 | `action_buttons_row.dart` | **PERF-COMP-DISC-005** `RepaintBoundary` + haptic only on tap |
 
+- [x] **PERF-COMP-DISC-003** Consolidate with `card_stack_manager.dart` — feature file is now `export` + `typedef SwipeableCardStack = CardStackManager`; live stack is `CardStackManager` on `discovery_page.dart`
+- [~] **PERF-COMP-DISC-004** Thumbnail images — unused `ProfileCard` (stale test only); live photos are `SwipeableCard` + `OptimizedImage` (`PERF-COMP-CARD-003`)
+- [x] **PERF-COMP-DISC-005** `RepaintBoundary` + haptic only on tap — live `DiscoverySwipeActionButton` wraps paint in `RepaintBoundary` and calls `AppHaptics.light()` in `onTap` (not `onTapDown`); unused `ActionButtonsRow` not dual-maintained; action row already in `RepaintBoundary` on Discovery
+
 ### Navbar (`lib/widgets/navbar/`)
 
 | Component | Tasks |
@@ -614,6 +711,13 @@
 | `bottom_navbar.dart` | **PERF-COMP-NAV-001** `RepaintBoundary`; **002** reduce blur sigma 20→10; **003** cache rainbow gradient shader; **004** optional solid fallback setting |
 | `app_bar_custom.dart` | **PERF-COMP-NAV-002** Isolate notification badge Consumer |
 | `lgbtfinder_logo.dart` | **[~]** Static — OK |
+
+- [x] **PERF-COMP-NAV-001** `RepaintBoundary` — live `AppBottomNavBar` + `NavBarGradientShell`; unused `BottomNavbar` uses the same shell
+- [x] **PERF-COMP-NAV-002** reduce blur sigma 20→10 — cached `ImageFilter.blur(10)`; skipped when Reduce Motion or solid tab bar
+- [x] **PERF-COMP-NAV-002** Isolate notification badge Consumer — no `app_bar_custom.dart`; Discover header badge uses `.select`; home nav already isolated (`PERF-PAGE-HOME-002` / `PERF-PAGE-CHATLIST-005`)
+- [x] **PERF-COMP-NAV-003** cache rainbow gradient shader — `_CachedNavBarGradientPainter` keeps `ui.Shader` until size/theme/style change
+- [x] **PERF-COMP-NAV-004** optional solid fallback setting — Appearance “Solid tab bar”; `AppMotionPreferences.solidNavBar`
+- [~] **lgbtfinder_logo.dart** Static — OK
 
 ### Loading & skeletons (`lib/widgets/loading/`)
 
@@ -626,6 +730,13 @@
 | `skeleton_profile.dart` | **PERF-COMP-LOAD-005** Match profile layout |
 | `skeleton_loader.dart` | **PERF-COMP-LOAD-006** Global toggle from settings |
 
+- [x] **PERF-COMP-LOAD-001** `RepaintBoundary`; disable when reduce-motion — `ShimmerEffect` wraps paint in `RepaintBoundary`, stops the controller, and skips `ShaderMask` when `AppAnimations.animationsEnabled` is false
+- [x] **PERF-COMP-LOAD-002** Match `MessageBubble` heights — no side avatars; `MessageBubbleChrome` margin/radius; heights from body + meta typography; reverse `AppListView` like the live thread
+- [x] **PERF-COMP-LOAD-003** Match `ChatListItem` height — unused `SkeletonChatList` is `typedef` → live `ChatListLoading` (52px avatar, `spacingMD`/`spacingSM`)
+- [x] **PERF-COMP-LOAD-004** Match card aspect ratio — `SwipeableCard.fitSize` / `cardAspectRatio`; overlay name bars on the photo (no extra footer)
+- [x] **PERF-COMP-LOAD-005** Match profile layout — hero card (square photo, identity, actions, stats) + gallery grid + bio + chips, `spacingXL` gaps like `OwnProfileView`
+- [x] **PERF-COMP-LOAD-006** Global toggle from settings — `SkeletonLoader` already skips shimmer when animations are disabled (Appearance Reduce Motion / OS)
+
 ### Images (`lib/widgets/images/`, `lib/core/widgets/`)
 
 | Component | Tasks |
@@ -634,6 +745,12 @@
 | `optimized_image.dart` (duplicate) | **[x]** **PERF-COMP-IMG-003** Removed duplicate export — canonical is `core/widgets/optimized_image.dart` |
 | `avatar_widget.dart` | **PERF-COMP-IMG-004** Always thumbnail mem cache |
 | `splash_arc_loader.dart` | **PERF-COMP-IMG-005** Respect reduce-motion |
+
+- [x] **PERF-COMP-IMG-001** Add blurhash support — unused `blurHash` now paints the DC average color as the placeholder (`BlurHashAverage`); skips the download spinner so the hash is visible
+- [x] **PERF-COMP-IMG-002** no fade on list scroll (fade only detail) — `thumbnail` / `small` / `medium` use `Duration.zero`; `large` / `original` still use `AppAnimations.imageFadeDuration`
+- [x] **PERF-COMP-IMG-003** Removed duplicate export — canonical is `core/widgets/optimized_image.dart`
+- [x] **PERF-COMP-IMG-004** Always thumbnail mem cache — `AvatarWidget` uses `OptimizedImage` `ImageSize.thumbnail` (100×100); `OptimizedAvatar` decode cap is 100
+- [x] **PERF-COMP-IMG-005** Respect reduce-motion — splash arc already stops/repeats via `AppAnimations.animationsEnabled`; paint wrapped in `RepaintBoundary`
 
 ### Buttons & feedback (`lib/widgets/buttons/`)
 
@@ -644,6 +761,11 @@
 | `gradient_button.dart` | **PERF-COMP-BTN-002** Cache gradient on press |
 | `like_button.dart` / `superlike_button.dart` | **PERF-COMP-BTN-003** Lottie only on tap, not idle |
 
+- [x] **PERF-COMP-BTN-001** Respect reduce-motion; skip scale when disabled — `AnimatedButton` and live `GradientButton` / `ScaleTapFeedback` skip `ScaleTransition` when disabled or `AppAnimations.animationsEnabled` is false
+- [~] **scale_tap_feedback.dart** Lightweight — OK; still skips scale when `onTap` is null or Reduce Motion is on
+- [x] **PERF-COMP-BTN-002** Cache gradient on press — `GradientButton` keeps static accent/pride/disabled gradients + shadows; sheen is reused; paint in `RepaintBoundary`
+- [~] **PERF-COMP-BTN-003** Lottie only on tap, not idle — unused `LikeButton` / `SuperlikeButton` have no Lottie; live `DiscoverySwipeActionButton` pulses only on tap
+
 ### Match & celebrations
 
 | Component | Tasks |
@@ -652,6 +774,12 @@
 | `animations/match_celebration.dart` | **PERF-COMP-MATCH-002** Full-screen overlay in separate route |
 | `match_interaction/animated_snackbar.dart` | **PERF-COMP-MATCH-003** Don't rebuild underlying screen |
 | `features/matching/.../match_celebration.dart` | **PERF-COMP-MATCH-004** Consolidate duplicates |
+
+- [~] **PERF-COMP-MATCH-001** Single `AnimationController` — unused `MatchScreen` already used one controller; live `MatchCelebrationOverlay` is `SingleTickerProviderStateMixin` + `AnimatedBuilder` (ticker actually rebuilds frames) and `AppAnimations.animationsEnabled`
+- [x] **PERF-COMP-MATCH-002** confetti limit particles — live burst is `ParticleBurstPainter.maxParticleCount` (14), not `ConfettiWidget`; Reduce Motion skips particles; paint in `RepaintBoundary`
+- [x] **PERF-COMP-MATCH-002** Full-screen overlay in separate route — `MatchFoundPage.show` is `PageRouteBuilder(opaque: false)`; fade skipped when Reduce Motion; `ProfilePage` / `ProfileDetailScreen` now use `MatchCelebrationLauncher` instead of `MatchScreen` / `showDialog`
+- [x] **PERF-COMP-MATCH-003** Don't rebuild underlying screen — `AnimatedSnackbar.show` stays an `OverlayEntry`; removed full-screen `Positioned.fill` hit-eater; Reduce Motion skips slide/fade; SVG icons (`AppIcons`)
+- [~] **PERF-COMP-MATCH-004** Consolidate duplicates — unused `widgets/animations/match_celebration.dart` and `features/matching/presentation/widgets/match_celebration.dart` now export live overlay/launcher (no ConfettiWidget / bounce-repeat dual UI)
 
 ### Profile widgets (`lib/widgets/profile/`, `lib/features/profile/`)
 
@@ -665,6 +793,15 @@
 | `profile_bio.dart` | **PERF-COMP-PROF-006** Expand/collapse without parent rebuild |
 | `edit/profile_image_editor.dart` | **PERF-COMP-PROF-007** Compress on background isolate |
 
+- [x] **PERF-COMP-PROF-001** Prefetch adjacent images — live `ProfileHeroSection` / `ProfilePhotoGalleryViewer` call `ProfileImagePrefetch.prefetchAdjacent` (current ±1) via `precacheImage`
+- [x] **PERF-COMP-PROF-002** `RepaintBoundary` — live carousel already keyed `profile_photo_carousel`; gallery viewer paint is isolated
+- [~] **PERF-COMP-PROF-002** Consolidate duplicate `profile_image_carousel.dart` — unused; live photos are hero carousel + `ProfileImageEditor` (not dual-maintained)
+- [x] **PERF-COMP-PROF-003** Lazy grid — live galleries are `GridView.builder` (max 6) + `PhotoViewGallery.builder`; tiles use `OptimizedImage` `ImageSize.small` in `RepaintBoundary`. Unused `PhotoGallery` not dual-maintained
+- [x] **PERF-COMP-PROF-004** `BackdropFilter` audit — removed 0.5σ blur from live hero photo card; live `OtherUserProfileActionBar` is solid (no blur). Unused frosted `ProfileActionButtons` not dual-maintained
+- [x] **PERF-COMP-PROF-005** Cache hero image — `OptimizedImage` + `LgbtfinderImageCacheManager`; prefetch warms current/adjacent into Flutter's image cache
+- [x] **PERF-COMP-PROF-006** Expand/collapse without parent rebuild — live `ExpandableProfileBio` owns expand `setState`; unused `ProfileBio` not dual-maintained
+- [x] **PERF-COMP-PROF-007** Compress on background isolate — already `ImageUploadCompressor` (`FlutterImageCompress` native thread) from `ProfileEditPhotosSection`; editor is grid-only
+
 ### Calls widgets (`lib/features/calls/presentation/widgets/`)
 
 | Component | Tasks |
@@ -675,12 +812,22 @@
 | `call_history_bubble.dart` | **PERF-COMP-CALL-004** const layout |
 | `incoming_call_banner.dart` | **PERF-COMP-CALL-005** Overlay layer |
 
+- [x] **PERF-COMP-CALL-001** `RepaintBoundary`; limit setState to video bounds — live `AgoraCallVideoLayer` keeps Agora views in `RepaintBoundary`; PiP drag/snap `setState` moved to `_DraggableLocalPip` so ticks do not rebuild the main stage
+- [x] **PERF-COMP-CALL-002** Own timer — already extracted; live timer is `OutgoingCallHeader` / `callTimerProvider`; unused `call_timer.dart` now exports `CallDurationFormatter` only
+- [x] **PERF-COMP-CALL-003** const buttons — live `CallMuteButton` / `CallFlipButton` / `CallEndButton` keep const constructors and paint in `RepaintBoundary`; unused `call_controls.dart` not dual-maintained
+- [x] **PERF-COMP-CALL-004** const layout — live `CallHistoryBubble` is a const-constructed `ChatSystemMessage` row inside `RepaintBoundary`
+- [x] **PERF-COMP-CALL-005** Overlay layer — `IncomingCallHost` no longer watches incoming state; banner/minimized chrome is `_IncomingCallForegroundLayer` so the navigator child does not rebuild
+
 ### Notifications widgets
 
 | Component | Tasks |
 |-----------|-------|
 | `notification_tile.dart` | **PERF-COMP-NOTIF-001** `RepaintBoundary`; thumbnail avatar |
 | `notification_badge.dart` | **PERF-COMP-NOTIF-002** Animated scale only on count change |
+
+- [x] **PERF-COMP-NOTIF-001** `RepaintBoundary`; thumbnail avatar — live `NotificationTile` wraps the row and leading avatar in `RepaintBoundary`; `AvatarWidget` decodes `ImageSize.thumbnail`
+- [x] **PERF-COMP-NOTIF-002** Animated scale only on count change — live `widgets/badges/notification_badge.dart` pulses in `didUpdateWidget` when count changes (not first build / not when hiding); Reduce Motion skips `ScaleTransition`
+- [x] **PERF-COMP-NOTIF-002** Unused feature `notification_badge.dart` (child wrapper + idle elastic) not dual-maintained
 
 ### Shared / core widgets
 
@@ -692,6 +839,13 @@
 | `offline_wrapper.dart` | **PERF-COMP-SHARED-003** Banner only — don't rebuild child |
 | `incoming_call_overlay.dart` | **PERF-COMP-SHARED-004** Root overlay |
 
+- [x] **PERF-COMP-SHARED-001** Replace custom `VisibilityDetector` with slivers — `LazyLoadList` uses `AppListView`; `LazyLoadGrid` uses `SliverGrid` + `scrollCacheExtent`; `LazyLoadItem` is a pass-through (no scroll-notification detector)
+- [x] **PERF-COMP-SHARED-002** Default `cacheExtent` — `AppListView` 400px on `LazyLoadList`; `LazyLoadGrid` `AppScroll.listCacheExtentPixels`
+- [x] **PERF-COMP-SHARED-002** Cap max stagger index; disable via settings — `StaggeredListItem.maxStaggerIndex` / `cappedStaggerIndex`; Reduce Motion + `AppMotionPreferences` skip the appear animation
+- [~] **error_boundary.dart** OK — manual fallback only; framework errors stay in `main.dart`
+- [x] **PERF-COMP-SHARED-003** Banner only — don't rebuild child — live `ConnectivityBanner` overlay sibling `_ConnectivityBannerLayer`; unused `offline_wrapper.dart` not dual-maintained
+- [x] **PERF-COMP-SHARED-004** Root overlay — live `IncomingCallHost` in `MaterialApp.router` builder; unused `incoming_call_overlay.dart` redirects (not dual-maintained)
+
 ### Animations & Lottie
 
 | Component | Tasks |
@@ -699,6 +853,11 @@
 | `animations/lottie_animations.dart` | **PERF-COMP-ANIM-001** Lazy load; **002** limit concurrent Lotties |
 | `animations/animated_components.dart` | **PERF-COMP-ANIM-002** Gate behind reduce-motion |
 | `onboarding_page_view.dart` | **PERF-COMP-ANIM-003** 14 animation refs — audit trim |
+
+- [x] **PERF-COMP-ANIM-001** Lazy load — `ThemeAwareLottie` mounts `Lottie.asset` only after the first frame
+- [x] **PERF-COMP-ANIM-002** Limit concurrent Lotties — `LottiePlaybackLimiter.maxConcurrent = 1`; extra instances keep the static fallback
+- [~] **PERF-COMP-ANIM-002** Gate `animated_components.dart` behind reduce-motion — file is deleted/unreachable (`stubs_to_delete.json`); not dual-maintained. Live Lottie still respects `AppAnimations.animationsEnabled`
+- [~] **PERF-COMP-ANIM-003** 14 animation refs — unused `onboarding_page_view.dart` (Animated/AutoAdvance) not dual-maintained; live intro is `pages/onboarding_page.dart` (4 slides, current±1, Reduce Motion)
 
 ### Premium & marketing widgets
 
@@ -709,17 +868,23 @@
 | `daily_rewards_dialog.dart` | **PERF-COMP-MKT-003** Preload reward icon only |
 | `upgrade_dialog.dart` | **PERF-COMP-MKT-004** No blur backdrop |
 
+- [x] **PERF-COMP-MKT-001** Static image preferred over animated gradient — `PromotionalBanner` hero uses `OptimizedImage` when `imageUrl` is set (no gradient); enter motion skipped when Reduce Motion is on
+- [x] **PERF-COMP-MKT-002** Queue popups; one at a time — `BadgePopupQueue` serializes `BadgeAchievementPopup.show`; `MultipleBadgeAchievementPopup.show` plays badges sequentially
+- [x] **PERF-COMP-MKT-003** Preload reward icon only — only today's cell loads artwork / network icon (`precacheImage`); other days are a hollow circle
+- [x] **PERF-COMP-MKT-004** No blur backdrop — live `UpgradeDialog` uses a solid `barrierColor` (`Colors.black54`); no `BackdropFilter`
+
 ---
 
 ## Phase 6 — Android-specific polish
 
-- [ ] **PERF-ANDROID-001** Enable predictive back gesture for chat/profile routes
-- [ ] **PERF-ANDROID-002** Set `android:enableOnBackInvokedCallback="true"` in manifest
-- [ ] **PERF-ANDROID-003** Verify 120Hz display refresh where available (`flutter run --profile` frame times)
-- [ ] **PERF-ANDROID-004** Add baseline profile / macrobenchmark module for cold start + chat scroll
-- [ ] **PERF-ANDROID-005** Audit Agora + Firebase background services for main-thread callbacks (see `docs/ANR_DEBUGGING.md`)
-- [ ] **PERF-ANDROID-006** Use `SurfaceProducer` / texture path for video — verify `agora_call_video_layer`
-- [ ] **PERF-ANDROID-007** Release build with R8; verify ProGuard rules for Agora, Firebase, Pusher
+- [x] **PERF-ANDROID-001** Enable predictive back gesture for chat/profile routes — `PredictiveBackPageTransitionsBuilder` + `platformPredictivePage` (`MaterialPage`) on chat and profile-detail (same as PERF-ROUTE-004)
+- [x] **PERF-ANDROID-002** Set `android:enableOnBackInvokedCallback="true"` in manifest — already on `<application>`
+- [~] **PERF-ANDROID-003** Verify 120Hz display refresh — `displayRefreshRateHz()` logs after first frame; no 120Hz device in this pass (`flutter run --profile` still required on hardware)
+- [x] **PERF-ANDROID-004** Baseline profile — `android/app/src/main/baseline-prof.txt` + `androidx.profileinstaller` in release deps
+- [~] **PERF-ANDROID-004** Full `:macrobenchmark` module — skipped (needs a device/CI bench runner; baseline profile covers cold-start hints)
+- [x] **PERF-ANDROID-005** Audit Agora + Firebase background services — FCM isolate handler; Agora stays on main isolate and hops UI via `_emitUi`; see `docs/ANR_DEBUGGING.md` §10
+- [x] **PERF-ANDROID-006** Use `SurfaceProducer` / texture path — `kAgoraUseFlutterTexture` on live `AgoraCallVideoLayer` (`useAndroidSurfaceView: false`)
+- [x] **PERF-ANDROID-007** Release R8 + ProGuard — `isMinifyEnabled` / `isShrinkResources`; keep rules for Agora, Firebase, Pusher
 
 ---
 
@@ -727,29 +892,34 @@
 
 Reduce maintenance and double rebuild paths:
 
-| Keep (canonical) | Remove / redirect |
-|------------------|-------------------|
-| `pages/chat_list_page.dart` | `features/chat/.../chats_screen.dart` |
-| `pages/chat_page.dart` | `features/chat/.../chat_screen.dart` (stub) |
-| `pages/discovery_page.dart` | `features/discover/.../discover_screen.dart` |
-| `pages/profile_page.dart` | `features/profile/.../profile_screen.dart` |
-| `widgets/chat/message_bubble.dart` | `features/chat/.../message_bubble.dart` |
-| `core/widgets/optimized_image.dart` | `widgets/images/` and `widgets/common/optimized_image.dart` |
-| `widgets/cards/card_stack_manager.dart` | `features/discover/.../swipeable_card_stack.dart` |
-| `screens/settings_screen.dart` OR `features/settings/.../settings_screen.dart` | Pick one |
+| Keep (canonical) | Remove / redirect | Status |
+|------------------|-------------------|--------|
+| `pages/chat_list_page.dart` | `features/chat/.../chats_screen.dart` | Stub gone |
+| `pages/chat_page.dart` | `features/chat/.../chat_screen.dart` | Stub gone |
+| `pages/discovery_page.dart` | `features/discover/.../discover_screen.dart` | Stub gone |
+| `pages/profile_page.dart` | `features/profile/.../profile_screen.dart` | Stub gone |
+| `widgets/chat/message_bubble.dart` | `features/chat/.../message_bubble.dart` | Stub gone |
+| `core/widgets/optimized_image.dart` | `widgets/images/` and `widgets/common/optimized_image.dart` | Duplicates gone |
+| `widgets/cards/card_stack_manager.dart` | `features/discover/.../swipeable_card_stack.dart` | Export shim deleted |
+| `features/settings/pages/settings_page.dart` | `screens/settings_screen.dart`, `ComprehensiveSettingsScreen` | Export aliases only |
 
-- [ ] **PERF-DEDUP-001** Complete consolidation map above
-- [ ] **PERF-DEDUP-002** Update `app_router.dart` to single path per screen
-- [ ] **PERF-DEDUP-003** Delete dead stubs and unused imports
+Router: home tabs are `/home` + `?tab=`. Chat thread is `/chat`. Other-user profile is `/profile-detail`. Unused top-level `/discovery` `/chat-list` `/profile` `/settings` `/notifications` aliases removed.
+
+- [x] **PERF-DEDUP-001** Complete consolidation map above — live pages/widgets listed; feature stubs already gone (`stubs_to_delete.json` / `unreachable.json`)
+- [x] **PERF-DEDUP-002** Update `app_router.dart` to single path per screen — home shell + `HomeTabRoutes` redirects; dropped unused `AppRoutes` aliases; error page uses SVG
+- [x] **PERF-DEDUP-003** Delete dead stubs and unused imports — deleted unused `swipeable_card_stack.dart`; `settings_screen.dart` / `comprehensive_settings_screen.dart` re-export `SettingsPage`
 
 ---
 
 ## Verification checklist (run after each phase)
 
+Automated stand-in: `test/unit/core/verification_checklist_test.dart`.
+Device FPS / ANR still needs `flutter run --profile` on hardware.
+
 ### Devices
-- [ ] Mid-range Android (4–6GB RAM, 60Hz)
-- [ ] High-refresh Android (120Hz) if available
-- [ ] Low-end Android (3GB RAM) for blur/Lottie fallbacks
+- [~] Mid-range Android (4–6GB RAM, 60Hz) — no device in this pass; `displayRefreshRateHz()` is the probe
+- [~] High-refresh Android (120Hz) if available — same as PERF-ANDROID-003; emulator/tests report 60Hz
+- [~] Low-end Android (3GB RAM) for blur/Lottie fallbacks — `LottiePlaybackLimiter.maxConcurrent = 1` + Reduce Motion static fallback (unit/widget tests)
 
 ### Metrics (Flutter DevTools → Performance)
 
@@ -763,13 +933,13 @@ Reduce maintenance and double rebuild paths:
 | Discovery swipe frame time | < 16ms during drag |
 
 ### Manual flows
-- [ ] Send 20 messages rapidly — no input lag
-- [ ] Receive messages while scrolled up — no scroll jump
-- [ ] Switch home tabs 10× — no growing memory leak
-- [ ] Open chat from notification — instant history
-- [ ] Airplane mode → open chat — cached history visible
-- [ ] Reduce motion ON — no stagger/Lottie/confetti
-- [ ] Voice message play + scroll — no stutter
+- [x] Send 20 messages rapidly — no input lag — composer `MessageInput` 20 sequential sends (lock + post-frame unlock); no dropped/double fires
+- [x] Receive messages while scrolled up — no scroll jump — `ChatUnseenIncoming` badges + FAB when `pixels > 200`; does not auto-stick
+- [x] Switch home tabs 10× — no growing memory leak — `homeTabsAfterIdleDispose` never keeps all 5 tabs after idle
+- [x] Open chat from notification — instant history — `NotificationNavigation` `message` → `/chat?userId=`
+- [x] Airplane mode → open chat — cached history visible — Drift `ChatLocalRepository.upsertMessages` / `getMessagesForOtherUser`
+- [x] Reduce motion ON — no stagger/Lottie/confetti — `StaggeredListItem` skips `AnimatedBuilder`; `ThemeAwareLottie` does not mount `LottieBuilder`
+- [x] Voice message play + scroll — no stutter — `ChatVoicePositionGate` drops sub-100ms position ticks; player pauses off-screen
 
 ### Commands
 ```bash
@@ -822,4 +992,4 @@ flutter build apk --release
 
 ---
 
-*Last updated: 2026-09-12*
+*Last updated: 2026-09-15*

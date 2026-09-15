@@ -397,13 +397,22 @@ class SoundPreferencesNotifier extends AsyncNotifier<SoundPreferences> {
   }
 
   Future<void> updatePreferences(SoundPreferences prefs) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    // PERF-FEAT-SET-002: keep prior data so the sound list does not unmount.
+    final previous = state.valueOrNull;
+    state = AsyncData(prefs);
+    try {
       final service = ref.read(soundPreferencesServiceProvider);
       final updated = await service.updatePreferences(prefs);
       await SoundService.instance.applyPreferences(updated);
-      return updated;
-    });
+      state = AsyncData(updated);
+    } catch (e, st) {
+      if (previous != null) {
+        state = AsyncData(previous);
+      } else {
+        state = AsyncError(e, st);
+      }
+      rethrow;
+    }
   }
 
   Future<void> refresh() async {

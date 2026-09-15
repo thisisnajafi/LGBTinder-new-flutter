@@ -10,10 +10,28 @@ import '../utils/app_icons.dart';
 
 /// Overlays a floating connectivity pill when offline or weak.
 /// [NetworkConnectionState.checking] runs silently — no UI is shown.
-class ConnectivityBanner extends ConsumerWidget {
+/// Banner state lives in a sibling layer so [child] does not rebuild
+/// (PERF-COMP-SHARED-003).
+class ConnectivityBanner extends StatelessWidget {
   final Widget child;
 
   const ConnectivityBanner({required this.child, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        const _ConnectivityBannerLayer(),
+      ],
+    );
+  }
+}
+
+class _ConnectivityBannerLayer extends ConsumerWidget {
+  const _ConnectivityBannerLayer();
 
   static bool _shouldShowBanner(NetworkConnectionState state) {
     return state == NetworkConnectionState.disconnected ||
@@ -26,45 +44,37 @@ class ConnectivityBanner extends ConsumerWidget {
     final connectivity = ref.watch(connectivityProvider);
 
     return connectivity.when(
-      loading: () => child,
-      error: (_, __) => child,
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
       data: (state) {
         final visible = _shouldShowBanner(state);
-
-        return Stack(
-          fit: StackFit.expand,
-          clipBehavior: Clip.none,
-          children: [
-            child,
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                ignoring: !visible,
-                child: AnimatedSlide(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic,
-                  offset: visible ? Offset.zero : const Offset(0, -1.2),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 250),
-                    opacity: visible ? 1 : 0,
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: ResponsivePadding.horizontal(context).copyWith(
-                          top: 8,
-                        ),
-                        child: visible
-                            ? _FloatingBanner(state: state)
-                            : const SizedBox.shrink(),
-                      ),
+        return Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            ignoring: !visible,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              offset: visible ? Offset.zero : const Offset(0, -1.2),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 250),
+                opacity: visible ? 1 : 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: ResponsivePadding.horizontal(context).copyWith(
+                      top: 8,
                     ),
+                    child: visible
+                        ? _FloatingBanner(state: state)
+                        : const SizedBox.shrink(),
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         );
       },
     );

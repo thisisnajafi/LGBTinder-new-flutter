@@ -1,14 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../cache/cache_providers.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_icons.dart';
 import '../../widgets/loading/skeleton_loader.dart';
+import 'optimized_image.dart';
 
-/// Circular avatar with custom image cache, shimmer placeholder, and SVG fallback.
-class AvatarWidget extends ConsumerWidget {
+/// Circular avatar with thumbnail decode cap, shimmer placeholder, and SVG fallback.
+class AvatarWidget extends StatelessWidget {
   final String? imageUrl;
   final double radius;
   final String? fallbackInitial;
@@ -21,38 +19,30 @@ class AvatarWidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final bgColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final cacheManager = ref.watch(imageCacheServiceProvider);
     final size = radius * 2;
 
     if (imageUrl == null || imageUrl!.isEmpty) {
       return _textOrIconFallback(isDark, bgColor);
     }
 
-    return CachedNetworkImage(
-      imageUrl: imageUrl!,
-      cacheManager: cacheManager,
-      fadeInDuration: const Duration(milliseconds: 200),
-      memCacheWidth: size.toInt(),
-      memCacheHeight: size.toInt(),
-      imageBuilder: (context, provider) => CircleAvatar(
-        radius: radius,
-        backgroundImage: provider,
-        backgroundColor: bgColor,
-      ),
-      placeholder: (_, __) => CircleAvatar(
-        radius: radius,
-        backgroundColor: bgColor,
-        child: SkeletonLoader(
+    return ClipOval(
+      child: OptimizedImage(
+        imageUrl: imageUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        size: ImageSize.thumbnail,
+        placeholder: SkeletonLoader(
           width: size,
           height: size,
           borderRadius: BorderRadius.circular(radius),
         ),
+        errorWidget: _textOrIconFallback(isDark, bgColor),
       ),
-      errorWidget: (_, __, ___) => _textOrIconFallback(isDark, bgColor),
     );
   }
 
@@ -79,7 +69,9 @@ class AvatarWidget extends ConsumerWidget {
       child: AppSvgIcon(
         assetPath: AppIcons.user,
         size: radius,
-        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+        color: isDark
+            ? AppColors.textSecondaryDark
+            : AppColors.textSecondaryLight,
       ),
     );
   }

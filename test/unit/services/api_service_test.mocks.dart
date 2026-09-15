@@ -75,6 +75,32 @@ class MockConnectivityService extends _i1.Mock
   }
 
   @override
+  _i4.Stream<_i5.NetworkConnectionState> get onStateChange =>
+      (super.noSuchMethod(
+            Invocation.getter(#onStateChange),
+            returnValue: _i4.Stream<_i5.NetworkConnectionState>.empty(),
+          )
+          as _i4.Stream<_i5.NetworkConnectionState>);
+
+  @override
+  _i5.NetworkConnectionState get current =>
+      (super.noSuchMethod(
+            Invocation.getter(#current),
+            returnValue: _i5.NetworkConnectionState.connected,
+          )
+          as _i5.NetworkConnectionState);
+
+  @override
+  bool get isConnected =>
+      (super.noSuchMethod(Invocation.getter(#isConnected), returnValue: false)
+          as bool);
+
+  @override
+  bool get isOnline =>
+      (super.noSuchMethod(Invocation.getter(#isOnline), returnValue: false)
+          as bool);
+
+  @override
   _i4.Stream<bool> get connectivityStream =>
       (super.noSuchMethod(
             Invocation.getter(#connectivityStream),
@@ -83,18 +109,32 @@ class MockConnectivityService extends _i1.Mock
           as _i4.Stream<bool>);
 
   @override
-  bool get isOnline =>
-      (super.noSuchMethod(Invocation.getter(#isOnline), returnValue: false)
-          as bool);
+  set onConnectionRestored(_i4.Future<void> Function()? value) =>
+      super.noSuchMethod(
+        Invocation.setter(#onConnectionRestored, value),
+        returnValueForMissingStub: null,
+      );
 
   @override
-  _i4.Future<void> initialize() =>
+  void initialize() => super.noSuchMethod(
+    Invocation.method(#initialize, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i4.Future<void> verifyConnection() =>
       (super.noSuchMethod(
-            Invocation.method(#initialize, []),
+            Invocation.method(#verifyConnection, []),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
           as _i4.Future<void>);
+
+  @override
+  void markWeakConnection() => super.noSuchMethod(
+    Invocation.method(#markWeakConnection, []),
+    returnValueForMissingStub: null,
+  );
 
   @override
   _i4.Future<bool> checkConnectivity() =>
@@ -168,6 +208,23 @@ class MockCacheService extends _i1.Mock implements _i6.CacheService {
   }) =>
       (super.noSuchMethod(
             Invocation.method(#cacheData, [key, data], {#duration: duration}),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> cacheEncodedJson(
+    String? key,
+    String? encodedJson, {
+    Duration? duration = const Duration(hours: 1),
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #cacheEncodedJson,
+              [key, encodedJson],
+              {#duration: duration},
+            ),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )

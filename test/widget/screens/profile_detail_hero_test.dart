@@ -40,6 +40,7 @@ void main() {
     expect(find.byKey(const ValueKey('profile_photo_carousel')), findsOneWidget);
     expect(find.byType(PageView), findsOneWidget);
     expect(find.byType(OptimizedImage), findsWidgets);
+    expect(find.byType(BackdropFilter), findsNothing);
     final image = tester.widget<OptimizedImage>(find.byType(OptimizedImage).first);
     expect(image.size, ImageSize.small);
   });

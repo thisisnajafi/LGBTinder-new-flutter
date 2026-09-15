@@ -24,6 +24,12 @@
 # CallKit incoming
 -keep class com.hiennv.flutter_callkit_incoming.** { *; }
 
+# Pusher Channels (Java client + Flutter plugin; Gson used for event payloads)
+-keep class com.pusher.** { *; }
+-keep class com.pusher.client.** { *; }
+-keep class com.pusher.channels_flutter.** { *; }
+-dontwarn com.pusher.**
+
 # Flutter deferred components reference Play Core (optional; not used in this app)
 -dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
 -dontwarn com.google.android.play.core.splitinstall.SplitInstallException

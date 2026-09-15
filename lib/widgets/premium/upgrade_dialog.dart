@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/typography.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/utils/app_icons.dart';
 
 /// Upgrade Dialog
 /// 
@@ -15,13 +15,13 @@ class UpgradeDialog extends StatelessWidget {
   final String? limitInfo;
 
   const UpgradeDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     required this.features,
     this.onUpgrade,
     this.limitInfo,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +60,8 @@ class UpgradeDialog extends StatelessWidget {
                 ),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.workspace_premium,
+              child: const AppSvgIcon(
+                assetPath: AppIcons.crown,
                 size: 40,
                 color: Colors.white,
               ),
@@ -95,19 +95,19 @@ class UpgradeDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? AppColors.backgroundDark.withOpacity(0.5)
-                      : AppColors.backgroundLight.withOpacity(0.5),
+                  color: isDark
+                      ? AppColors.backgroundDark.withValues(alpha: 0.5)
+                      : AppColors.backgroundLight.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.accentPurple.withOpacity(0.3),
+                    color: AppColors.accentPurple.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.info_outline,
+                    const AppSvgIcon(
+                      assetPath: AppIcons.infoCircle,
                       size: 20,
                       color: AppColors.accentPurple,
                     ),
@@ -134,10 +134,10 @@ class UpgradeDialog extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  const                   Icon(
-                    Icons.check_circle,
-                    color: AppColors.onlineGreen,
+                  const AppSvgIcon(
+                    assetPath: AppIcons.tickCircle,
                     size: 20,
+                    color: AppColors.onlineGreen,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -175,7 +175,11 @@ class UpgradeDialog extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.diamond, size: 20),
+                    const AppSvgIcon(
+                      assetPath: AppIcons.magicStar,
+                      size: 20,
+                      color: Colors.white,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Upgrade to Premium',
@@ -208,11 +212,20 @@ class UpgradeDialog extends StatelessWidget {
     );
   }
 
+  /// Solid scrim only — no BackdropFilter (PERF-COMP-MKT-004).
+  static Future<T?> _show<T>(BuildContext context, Widget dialog) {
+    return showDialog<T>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) => dialog,
+    );
+  }
+
   /// Show swipe limit dialog
   static void showSwipeLimitDialog(BuildContext context, int used, int limit) {
-    showDialog(
-      context: context,
-      builder: (context) => UpgradeDialog(
+    _show(
+      context,
+      UpgradeDialog(
         title: 'Daily Swipe Limit Reached',
         message: 'You\'ve used all your free swipes for today!',
         limitInfo: 'Used: $used/$limit swipes',
@@ -230,9 +243,9 @@ class UpgradeDialog extends StatelessWidget {
 
   /// Show like limit dialog (daily likes exhausted)
   static void showLikeLimitDialog(BuildContext context, int used, int limit) {
-    showDialog(
-      context: context,
-      builder: (context) => UpgradeDialog(
+    _show(
+      context,
+      UpgradeDialog(
         title: 'Daily Like Limit Reached',
         message: 'You\'ve used all your free likes for today!',
         limitInfo: 'Used: $used/$limit likes',
@@ -250,9 +263,9 @@ class UpgradeDialog extends StatelessWidget {
 
   /// Show superlike limit dialog
   static void showSuperlikeLimitDialog(BuildContext context, int used, int limit) {
-    showDialog(
-      context: context,
-      builder: (context) => UpgradeDialog(
+    _show(
+      context,
+      UpgradeDialog(
         title: 'Superlike Limit Reached',
         message: 'You\'ve used all your free superlikes for today!',
         limitInfo: 'Used: $used/$limit superlikes',
@@ -270,9 +283,9 @@ class UpgradeDialog extends StatelessWidget {
 
   /// Show message limit dialog
   static void showMessageLimitDialog(BuildContext context, int current, int limit) {
-    showDialog(
-      context: context,
-      builder: (context) => UpgradeDialog(
+    _show(
+      context,
+      UpgradeDialog(
         title: 'Conversation Limit Reached',
         message: 'You can only have $limit active conversations on the free plan.',
         limitInfo: 'Active conversations: $current/$limit',
@@ -290,9 +303,9 @@ class UpgradeDialog extends StatelessWidget {
 
   /// Show feature locked dialog
   static void showFeatureLockedDialog(BuildContext context, String featureName) {
-    showDialog(
-      context: context,
-      builder: (context) => UpgradeDialog(
+    _show(
+      context,
+      UpgradeDialog(
         title: 'Premium Feature',
         message: '$featureName is a premium feature.',
         features: const [

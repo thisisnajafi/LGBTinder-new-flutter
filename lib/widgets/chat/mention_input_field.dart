@@ -8,6 +8,7 @@ import '../../core/theme/typography.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/utils/app_search_debounce.dart';
 
 /// Mention input field widget
 /// Text field with @mention support and user suggestions
@@ -18,12 +19,12 @@ class MentionInputField extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>>? availableUsers;
 
   const MentionInputField({
-    Key? key,
+    super.key,
     this.hintText,
     this.onTextChanged,
     this.onMention,
     this.availableUsers,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<MentionInputField> createState() => _MentionInputFieldState();
@@ -31,11 +32,13 @@ class MentionInputField extends ConsumerStatefulWidget {
 
 class _MentionInputFieldState extends ConsumerState<MentionInputField> {
   final TextEditingController _controller = TextEditingController();
+  final AppSearchDebounce _mentionDebounce = AppSearchDebounce();
   bool _showSuggestions = false;
   List<Map<String, dynamic>> _filteredUsers = [];
 
   @override
   void dispose() {
+    _mentionDebounce.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -43,26 +46,35 @@ class _MentionInputFieldState extends ConsumerState<MentionInputField> {
   void _onTextChanged(String text) {
     widget.onTextChanged?.call(text);
 
-    // Check for @ mentions
     final mentionMatch = RegExp(r'@(\w*)$').firstMatch(text);
-    if (mentionMatch != null && widget.availableUsers != null) {
-      final query = mentionMatch.group(1)?.toLowerCase() ?? '';
-      setState(() {
-        _filteredUsers = widget.availableUsers!
-            .where((user) =>
-                (user['name'] as String?)
-                        ?.toLowerCase()
-                        .contains(query) ??
-                    false)
-            .take(5)
-            .toList();
-        _showSuggestions = _filteredUsers.isNotEmpty;
-      });
-    } else {
-      setState(() {
-        _showSuggestions = false;
-      });
+    if (mentionMatch == null || widget.availableUsers == null) {
+      _mentionDebounce.cancel();
+      if (_showSuggestions || _filteredUsers.isNotEmpty) {
+        setState(() {
+          _showSuggestions = false;
+          _filteredUsers = [];
+        });
+      }
+      return;
     }
+
+    _mentionDebounce.onText(mentionMatch.group(1) ?? '', _applyMentionQuery);
+  }
+
+  void _applyMentionQuery(String query) {
+    if (!mounted) return;
+    final users = widget.availableUsers;
+    if (users == null) return;
+    final needle = query.toLowerCase();
+    final filtered = users
+        .where((user) =>
+            (user['name'] as String?)?.toLowerCase().contains(needle) ?? false)
+        .take(5)
+        .toList();
+    setState(() {
+      _filteredUsers = filtered;
+      _showSuggestions = filtered.isNotEmpty;
+    });
   }
 
   void _selectMention(Map<String, dynamic> user) {
@@ -117,7 +129,7 @@ class _MentionInputFieldState extends ConsumerState<MentionInputField> {
               borderRadius: BorderRadius.circular(AppRadius.radiusRound),
               borderSide: BorderSide(color: AppColors.accentPurple, width: 2),
             ),
-            contentPadding: EdgeInsets.symmetric(
+            contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.spacingMD,
               vertical: AppSpacing.spacingMD,
             ),
@@ -125,14 +137,14 @@ class _MentionInputFieldState extends ConsumerState<MentionInputField> {
         ),
         if (_showSuggestions && _filteredUsers.isNotEmpty)
           Container(
-            margin: EdgeInsets.only(top: AppSpacing.spacingSM),
+            margin: const EdgeInsets.only(top: AppSpacing.spacingSM),
             decoration: BoxDecoration(
               color: surfaceColor,
               borderRadius: BorderRadius.circular(AppRadius.radiusMD),
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),

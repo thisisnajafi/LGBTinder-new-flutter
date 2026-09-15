@@ -1,59 +1,74 @@
 ﻿// Widget: ChatListLoading
 // Loading state for chat list
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/theme/typography.dart';
+import '../../core/widgets/app_list_view.dart';
 import '../loading/skeleton_loader.dart';
-import '../avatar/avatar_with_status.dart';
 
 /// Loading state for chat list widget
 /// Shows skeleton loaders while chat list is loading
-class ChatListLoading extends ConsumerWidget {
+class ChatListLoading extends StatelessWidget {
+  static const double _avatarSize = 52;
+
   final int itemCount;
 
   const ChatListLoading({
-    Key? key,
+    super.key,
     this.itemCount = 5,
-  }) : super(key: key);
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final nameHeight = AppTypography.body.fontSize!;
+    final previewHeight = AppTypography.bodySmall.fontSize!;
+    final timeHeight = AppTypography.labelSmall.fontSize!;
+
     return ResponsiveGrid.constrained(
       context,
-      ListView.builder(
+      AppListView.separated(
         itemCount: itemCount,
+        separatorBuilder: (_, __) =>
+            const SizedBox(height: AppSpacing.spacingXS),
         itemBuilder: (context, index) {
-          return Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingLG,
-              vertical: AppSpacing.spacingMD,
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.spacingMD,
+              vertical: AppSpacing.spacingSM,
             ),
             child: Row(
               children: [
                 SkeletonLoader(
-                  width: 56,
-                  height: 56,
+                  width: _avatarSize,
+                  height: _avatarSize,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                SizedBox(width: AppSpacing.spacingLG),
+                const SizedBox(width: AppSpacing.spacingMD),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SkeletonLoader(
                         width: double.infinity,
-                        height: 16,
+                        height: nameHeight,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      SizedBox(height: AppSpacing.spacingXS),
+                      const SizedBox(height: AppSpacing.spacingXS),
                       SkeletonLoader(
                         width: 150,
-                        height: 12,
+                        height: previewHeight,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: AppSpacing.spacingSM),
+                SkeletonLoader(
+                  width: 40,
+                  height: timeHeight,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ],
             ),

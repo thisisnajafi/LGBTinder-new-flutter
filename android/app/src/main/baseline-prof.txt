@@ -1,0 +1,25 @@
+# PERF-ANDROID-004: startup + chat/profile navigation hot methods.
+# Human-readable ART baseline profile compiled by AGP from src/main.
+# H = Hot, S = Startup, P = Post-startup
+# https://developer.android.com/topic/performance/baselineprofiles
+
+HSPLio/flutter/embedding/android/FlutterActivity;
+HSPLio/flutter/embedding/android/FlutterActivityAndFragmentDelegate;
+HSPLio/flutter/embedding/android/FlutterFragment;
+HSPLio/flutter/embedding/android/FlutterView;
+HSPLio/flutter/embedding/engine/FlutterEngine;
+HSPLio/flutter/embedding/engine/FlutterJNI;
+HSPLio/flutter/embedding/engine/loader/FlutterLoader;
+HSPLio/flutter/embedding/engine/renderer/FlutterRenderer;
+HSPLio/flutter/plugin/common/**
+HSPLio/flutter/plugin/platform/**
+HSPLandroidx/startup/**
+HSPLandroidx/profileinstaller/**
+HSPLandroidx/lifecycle/**
+HSPLandroidx/window/**
+HSPLandroidx/activity/**
+HSPLandroidx/fragment/app/**
+HSPLcom/lgbtfinder/**
+HSPLio/agora/**
+HSPLcom/google/firebase/messaging/**
+HSPLcom/pusher/**

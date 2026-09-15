@@ -247,14 +247,16 @@ class CallMuteButton extends ConsumerWidget {
     return Semantics(
       label: muted ? 'Unmute microphone' : 'Mute microphone',
       button: true,
-      child: _CallActionButton(
-        icon: muted ? AppIcons.microphoneSlash : AppIcons.microphone,
-        label: 'mute',
-        onTap: onTap,
-        isDark: true,
-        size: size,
-        overlayStyle: true,
-        isActive: muted,
+      child: RepaintBoundary(
+        child: _CallActionButton(
+          icon: muted ? AppIcons.microphoneSlash : AppIcons.microphone,
+          label: 'mute',
+          onTap: onTap,
+          isDark: true,
+          size: size,
+          overlayStyle: true,
+          isActive: muted,
+        ),
       ),
     );
   }
@@ -275,13 +277,15 @@ class CallFlipButton extends StatelessWidget {
     return Semantics(
       label: 'Flip camera',
       button: true,
-      child: _CallActionButton(
-        icon: AppIcons.getIconPath('rotate-right'),
-        label: 'flip',
-        onTap: onTap,
-        isDark: true,
-        size: size,
-        overlayStyle: true,
+      child: RepaintBoundary(
+        child: _CallActionButton(
+          icon: AppIcons.getIconPath('rotate-right'),
+          label: 'flip',
+          onTap: onTap,
+          isDark: true,
+          size: size,
+          overlayStyle: true,
+        ),
       ),
     );
   }
@@ -302,14 +306,16 @@ class CallEndButton extends StatelessWidget {
     return Semantics(
       label: 'End call',
       button: true,
-      child: _CallActionButton(
-        icon: AppIcons.close,
-        label: 'end',
-        onTap: onTap,
-        isDark: true,
-        isDestructive: true,
-        size: size,
-        overlayStyle: true,
+      child: RepaintBoundary(
+        child: _CallActionButton(
+          icon: AppIcons.close,
+          label: 'end',
+          onTap: onTap,
+          isDark: true,
+          isDestructive: true,
+          size: size,
+          overlayStyle: true,
+        ),
       ),
     );
   }

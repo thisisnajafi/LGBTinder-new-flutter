@@ -36,6 +36,17 @@ class MockTokenStorageService extends _i1.Mock
   }
 
   @override
+  int get authRevision =>
+      (super.noSuchMethod(Invocation.getter(#authRevision), returnValue: 0)
+          as int);
+
+  @override
+  void bumpAuthRevision() => super.noSuchMethod(
+    Invocation.method(#bumpAuthRevision, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
   _i3.Future<void> saveAuthToken(String? token) =>
       (super.noSuchMethod(
             Invocation.method(#saveAuthToken, [token]),

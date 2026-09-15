@@ -1,5 +1,6 @@
-﻿// Widget: PhotoGallery
-// Profile photo gallery
+﻿// Unused. Live grids are PremiumPhotosSection / PremiumViewerPhotosSection
+// (GridView.builder, max 6) and ProfilePhotoGalleryViewer (page builder).
+// Widget: PhotoGallery
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';

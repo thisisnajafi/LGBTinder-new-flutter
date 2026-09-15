@@ -10,6 +10,7 @@ void main() {
   tearDown(() {
     AppMotionPreferences.reduceMotion = false;
     AppMotionPreferences.hapticsEnabled = true;
+    AppMotionPreferences.solidNavBar = false;
   });
 
   testWidgets('in-app reduce motion disables AppAnimations', (tester) async {
@@ -53,11 +54,13 @@ void main() {
     SharedPreferences.setMockInitialValues({
       AppMotionPreferences.reduceMotionKey: true,
       AppMotionPreferences.hapticsEnabledKey: false,
+      AppMotionPreferences.solidNavBarKey: true,
     });
     final prefs = await SharedPreferences.getInstance();
     AppMotionPreferences.hydrate(prefs);
     expect(AppMotionPreferences.reduceMotion, isTrue);
     expect(AppMotionPreferences.hapticsEnabled, isFalse);
+    expect(AppMotionPreferences.solidNavBar, isTrue);
   });
 
   test('call settings draft notifies on toggle not duplicate busy', () {

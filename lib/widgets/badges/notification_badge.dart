@@ -1,32 +1,29 @@
 // Widget: NotificationBadge
-// Notification count badge — optional scale pulse when count changes
+// Notification count badge — scale pulse only when count changes
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/typography.dart';
-import '../../core/theme/spacing_constants.dart';
-import '../../core/theme/border_radius_constants.dart';
 import '../../core/constants/animation_constants.dart';
 
 /// Notification count badge widget
 /// Displays a red circular badge with notification count; brief scale pulse when count changes
-class NotificationBadge extends ConsumerStatefulWidget {
+class NotificationBadge extends StatefulWidget {
   final int count;
   final double? size;
   final bool showZero;
 
   const NotificationBadge({
-    Key? key,
+    super.key,
     required this.count,
     this.size,
     this.showZero = false,
-  }) : super(key: key);
+  });
 
   @override
-  ConsumerState<NotificationBadge> createState() => _NotificationBadgeState();
+  State<NotificationBadge> createState() => _NotificationBadgeState();
 }
 
-class _NotificationBadgeState extends ConsumerState<NotificationBadge>
+class _NotificationBadgeState extends State<NotificationBadge>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scale;
@@ -45,16 +42,15 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
       parent: _controller,
       curve: AppAnimations.curveDefault,
     ));
-    // Pulse only on count change (didUpdateWidget), not on first build — avoids extra tickers on load
   }
 
   @override
   void didUpdateWidget(NotificationBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.count != widget.count &&
-        AppAnimations.animationsEnabled(context)) {
-      _controller.forward(from: 0);
-    }
+    if (oldWidget.count == widget.count) return;
+    if (widget.count <= 0 && !widget.showZero) return;
+    if (!AppAnimations.animationsEnabled(context)) return;
+    _controller.forward(from: 0);
   }
 
   @override
@@ -65,8 +61,6 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final badgeSize = widget.size ?? 20.0;
     final count = widget.count;
 
@@ -88,7 +82,7 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.notificationRed.withOpacity(0.3),
+            color: AppColors.notificationRed.withValues(alpha: 0.3),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -100,8 +94,7 @@ class _NotificationBadgeState extends ConsumerState<NotificationBadge>
           child: Text(
             displayCount,
             style: AppTypography.caption.copyWith(
-              color: Colors.white,
-              fontSize: count > 99 ? 8 : 10,
+              color: AppColors.textPrimaryDark,
               fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,

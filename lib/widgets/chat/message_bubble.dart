@@ -1,6 +1,5 @@
 // Widget: MessageBubble
 // Chat message bubble
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -294,128 +293,21 @@ class MessageBubble extends ConsumerWidget {
 
     // Locked message: free user received message from non-match (e.g. superlike or ex-match)
     if (isLocked && !isSent) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          margin: bubbleMargin,
-          constraints: BoxConstraints(
-            maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context),
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.spacingLG,
-            vertical: AppSpacing.spacingMD,
-          ),
-          decoration: MessageBubbleChrome.locked(
-            isDark: isDark,
-            tailed: tailed,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppSvgIcon(
-                assetPath: AppIcons.lock,
-                size: 20,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              ),
-              SizedBox(width: AppSpacing.spacingSM),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'You have a new message',
-                      style: AppTypography.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      'Upgrade to read messages from people who aren\'t your match yet',
-                      style: AppTypography.caption.copyWith(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                        fontSize: 12,
-                      ),
-                    ),
-                    ChatBubbleMetaRow(
-                      timestamp: timestamp,
-                      isSent: false,
-                      color: MessageBubbleChrome.onBubbleMeta(
-                        isSent: false,
-                        isDark: isDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+      return _LockedIncomingPlaceholder(
+        margin: bubbleMargin,
+        isDark: isDark,
+        tailed: tailed,
+        timestamp: timestamp,
       );
     }
 
-    // Premium blur gate (basid — messages beyond visibility limit)
+    // Premium history gate (static overlay — no BackdropFilter blur)
     if (isBlurred && !isSent) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Semantics(
-          label: 'Premium message hidden. Tap to upgrade.',
-          button: true,
-          child: GestureDetector(
-            onTap: () => context.push(AppRoutes.subscriptionPlans),
-            child: Container(
-              margin: MessageBubbleChrome.margin(
-                isSent: false,
-                isFirstInGroup: isFirstInGroup,
-                isLastInGroup: isLastInGroup,
-              ),
-              padding: const EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: MessageBubbleChrome.premiumGate(isDark: isDark),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AppSvgIcon(
-                            assetPath: AppIcons.lock,
-                            size: 20,
-                            color: AppColors.accentViolet,
-                          ),
-                          const SizedBox(width: AppSpacing.spacingSM),
-                          Flexible(
-                            child: Text(
-                              'Upgrade to read older messages',
-                              style: AppTypography.bodySmall.copyWith(
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimaryLight,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  ChatBubbleMetaRow(
-                    timestamp: timestamp,
-                    isSent: false,
-                    color: MessageBubbleChrome.onBubbleMeta(
-                      isSent: false,
-                      isDark: isDark,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      return _PremiumHistoryGate(
+        isDark: isDark,
+        isFirstInGroup: isFirstInGroup,
+        isLastInGroup: isLastInGroup,
+        timestamp: timestamp,
       );
     }
 
@@ -514,7 +406,8 @@ class MessageBubble extends ConsumerWidget {
 
     return Align(
       alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
+      child: RepaintBoundary(
+        child: GestureDetector(
         onTap: isFailed ? onRetry : null,
         child: Container(
         margin: bubbleMargin,
@@ -545,7 +438,8 @@ class MessageBubble extends ConsumerWidget {
                 ),
               ),
             if (messageType == 'image' && mediaUrl != null && !isLocked)
-              GestureDetector(
+              RepaintBoundary(
+              child: GestureDetector(
                 onTap: deliveryStatus == MessageDeliveryStatus.sending ||
                         deliveryStatus == MessageDeliveryStatus.failed ||
                         ChatLocalMedia.isLocalPath(mediaUrl)
@@ -599,6 +493,7 @@ class MessageBubble extends ConsumerWidget {
                     ),
                   ),
                 ),
+              ),
               )
             else if (messageType == 'video' && mediaUrl != null)
               Semantics(
@@ -762,6 +657,7 @@ class MessageBubble extends ConsumerWidget {
           ],
         ),
       ),
+        ),
       ),
     );
   }
@@ -770,6 +666,181 @@ class MessageBubble extends ConsumerWidget {
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Locked incoming placeholder (no live message body).
+class _LockedIncomingPlaceholder extends StatelessWidget {
+  const _LockedIncomingPlaceholder({
+    required this.margin,
+    required this.isDark,
+    required this.tailed,
+    required this.timestamp,
+  });
+
+  final EdgeInsets margin;
+  final bool isDark;
+  final bool tailed;
+  final DateTime? timestamp;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: margin,
+          constraints: BoxConstraints(
+            maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.spacingLG,
+            vertical: AppSpacing.spacingMD,
+          ),
+          decoration: MessageBubbleChrome.locked(
+            isDark: isDark,
+            tailed: tailed,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppSvgIcon(
+                assetPath: AppIcons.lock,
+                size: 20,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+              const SizedBox(width: AppSpacing.spacingSM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'You have a new message',
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingXS),
+                    Text(
+                      'Upgrade to read messages from people who aren\'t your match yet',
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    ChatBubbleMetaRow(
+                      timestamp: timestamp,
+                      isSent: false,
+                      color: MessageBubbleChrome.onBubbleMeta(
+                        isSent: false,
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Premium history gate: static color overlay (no BackdropFilter).
+class _PremiumHistoryGate extends StatelessWidget {
+  const _PremiumHistoryGate({
+    required this.isDark,
+    required this.isFirstInGroup,
+    required this.isLastInGroup,
+    required this.timestamp,
+  });
+
+  final bool isDark;
+  final bool isFirstInGroup;
+  final bool isLastInGroup;
+  final DateTime? timestamp;
+
+  @override
+  Widget build(BuildContext context) {
+    final overlay = (isDark ? AppColors.surfaceDark : AppColors.surfaceLight)
+        .withValues(alpha: 0.78);
+
+    return RepaintBoundary(
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Semantics(
+          label: 'Premium message hidden. Tap to upgrade.',
+          button: true,
+          child: GestureDetector(
+            onTap: () => context.push(AppRoutes.subscriptionPlans),
+            child: Container(
+              margin: MessageBubbleChrome.margin(
+                isSent: false,
+                isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
+              ),
+              padding: const EdgeInsets.all(AppSpacing.spacingMD),
+              decoration: MessageBubbleChrome.premiumGate(isDark: isDark),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+                    child: ColoredBox(
+                      color: overlay,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingSM,
+                          vertical: AppSpacing.spacingXS,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppSvgIcon(
+                              assetPath: AppIcons.lock,
+                              size: 20,
+                              color: AppColors.accentViolet,
+                            ),
+                            const SizedBox(width: AppSpacing.spacingSM),
+                            Flexible(
+                              child: Text(
+                                'Upgrade to read older messages',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimaryLight,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  ChatBubbleMetaRow(
+                    timestamp: timestamp,
+                    isSent: false,
+                    color: MessageBubbleChrome.onBubbleMeta(
+                      isSent: false,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

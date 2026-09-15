@@ -157,10 +157,30 @@ class _NotificationTileState extends State<NotificationTile> {
         );
       }
       if (_restrictLikeIdentity) {
-        return ClipOval(
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: avatar,
+        if (!AppAnimations.animationsEnabled(context)) {
+          return Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: accent.withValues(alpha: 0.35)),
+            ),
+            child: Center(
+              child: AppSvgIcon(
+                assetPath: AppIcons.getIconPath('profile-circle'),
+                size: 24,
+                color: accent,
+              ),
+            ),
+          );
+        }
+        return RepaintBoundary(
+          child: ClipOval(
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: avatar,
+            ),
           ),
         );
       }
@@ -258,7 +278,8 @@ class _NotificationTileState extends State<NotificationTile> {
         ? AppAnimations.buttonPressScale
         : 1.0;
 
-    return Dismissible(
+    return RepaintBoundary(
+      child: Dismissible(
       key: ValueKey('notification_${notification.id}'),
       direction: DismissDirection.endToStart,
       dismissThresholds: const {
@@ -313,7 +334,7 @@ class _NotificationTileState extends State<NotificationTile> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLeadingIcon(context),
+                  RepaintBoundary(child: _buildLeadingIcon(context)),
                   const SizedBox(width: AppSpacing.spacingMD),
                   Expanded(
                     child: Column(
@@ -353,12 +374,12 @@ class _NotificationTileState extends State<NotificationTile> {
                           maxLines: 2,
                         ),
                         const SizedBox(height: AppSpacing.spacingXS),
-                        Text(
+                        AppText(
                           _formatTime(notification.createdAt),
                           style: AppTypography.caption.copyWith(
                             color: secondaryTextColor,
-                            fontSize: 11,
                           ),
+                          maxLines: 1,
                         ),
                       ],
                     ),
@@ -368,6 +389,7 @@ class _NotificationTileState extends State<NotificationTile> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

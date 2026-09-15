@@ -15,7 +15,8 @@ import '../features/profile/presentation/widgets/own_profile/profile_photo_utils
 import '../features/reference_data/providers/reference_data_providers.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_profile.dart';
-import '../widgets/match/match_screen.dart';
+import '../features/matching/data/models/match.dart' as match_models;
+import '../features/matching/widgets/match_celebration_launcher.dart';
 import '../core/utils/app_media_picker.dart';
 import '../core/constants/app_constants.dart';
 import '../core/cache/cache_invalidator.dart';
@@ -205,26 +206,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _showMatchDialog(dynamic match) {
-    // Navigate to match screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => MatchScreen(
-          match: match,
-          onSendMessage: () {
-            Navigator.pop(context); // Close match screen
-            // Navigate to chat
-            context.push('/chat/${match.userId}');
-          },
-          onKeepSwiping: () {
-            Navigator.pop(context); // Close match screen
-            // Navigate back to discovery
-            context.go('/discover');
-          },
-        ),
-      ),
-    );
+    if (match is! match_models.Match) return;
+    unawaited(MatchCelebrationLauncher.show(context, ref, match: match));
   }
 
   void _showMoreOptions(BuildContext context) {

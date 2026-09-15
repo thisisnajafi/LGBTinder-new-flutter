@@ -4,11 +4,12 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:io' as _i6;
+import 'dart:io' as _i7;
 
 import 'package:dio/dio.dart' as _i5;
 import 'package:lgbtindernew/shared/models/api_response.dart' as _i2;
 import 'package:lgbtindernew/shared/services/api_service.dart' as _i3;
+import 'package:lgbtindernew/shared/services/retry_service.dart' as _i6;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -88,6 +89,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
     _i5.Options? options,
     bool? queueIfOffline = true,
     bool? deduplicateIdempotent = false,
+    _i6.RetryConfig? retryConfig,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -99,6 +101,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
                 #options: options,
                 #queueIfOffline: queueIfOffline,
                 #deduplicateIdempotent: deduplicateIdempotent,
+                #retryConfig: retryConfig,
               },
             ),
             returnValue: _i4.Future<_i2.ApiResponse<T>>.value(
@@ -113,6 +116,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
                     #options: options,
                     #queueIfOffline: queueIfOffline,
                     #deduplicateIdempotent: deduplicateIdempotent,
+                    #retryConfig: retryConfig,
                   },
                 ),
               ),
@@ -274,7 +278,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
   @override
   _i4.Future<_i2.ApiResponse<T>> uploadFile<T>(
     String? endpoint,
-    _i6.File? file, {
+    _i7.File? file, {
     String? fieldName = 'image',
     Map<String, dynamic>? fields,
     T Function(dynamic)? fromJson,
@@ -315,7 +319,7 @@ class MockApiService extends _i1.Mock implements _i3.ApiService {
   @override
   _i4.Future<_i2.ApiResponse<T>> uploadFiles<T>(
     String? endpoint,
-    List<_i6.File>? files, {
+    List<_i7.File>? files, {
     String? fieldName = 'images',
     Map<String, dynamic>? fields,
     T Function(dynamic)? fromJson,

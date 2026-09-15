@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/spacing_constants.dart';
+import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/app_list_view.dart';
 
@@ -63,7 +65,7 @@ class LazyLoadList<T> extends ConsumerStatefulWidget {
   final ScrollController? scrollController;
 
   const LazyLoadList({
-    Key? key,
+    super.key,
     required this.items,
     required this.itemBuilder,
     this.onLoadMore,
@@ -78,7 +80,7 @@ class LazyLoadList<T> extends ConsumerStatefulWidget {
     this.padding,
     this.physics,
     this.scrollController,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<LazyLoadList<T>> createState() => _LazyLoadListState<T>();
@@ -145,8 +147,10 @@ class _LazyLoadListState<T> extends ConsumerState<LazyLoadList<T>> {
       return widget.emptyWidget ?? _buildDefaultEmptyWidget();
     }
     
+    // AppListView already virtualizes via slivers + default cacheExtent
+    // (PERF-COMP-SHARED-001 / 002).
     Widget listView;
-    
+
     if (widget.separatorWidget != null) {
       listView = AppListView.separated(
         controller: _scrollController,
@@ -186,34 +190,36 @@ class _LazyLoadListState<T> extends ConsumerState<LazyLoadList<T>> {
   }
 
   Widget _buildLoadingIndicator() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      alignment: Alignment.center,
-      child: const SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
+    return const Padding(
+      padding: EdgeInsets.all(AppSpacing.spacingLG),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildDefaultEmptyWidget() {
+    final muted = Theme.of(context).colorScheme.onSurface;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.inbox_outlined,
+          AppSvgIcon(
+            assetPath: AppIcons.emptyBox,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+            color: muted.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.spacingLG),
           Text(
             'No items yet',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: muted.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -242,7 +248,7 @@ class LazyLoadGrid<T> extends ConsumerStatefulWidget {
   final double loadMoreThreshold;
 
   const LazyLoadGrid({
-    Key? key,
+    super.key,
     required this.items,
     required this.itemBuilder,
     this.onLoadMore,
@@ -257,7 +263,7 @@ class LazyLoadGrid<T> extends ConsumerStatefulWidget {
     this.padding,
     this.scrollController,
     this.loadMoreThreshold = 0.8,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<LazyLoadGrid<T>> createState() => _LazyLoadGridState<T>();
@@ -321,6 +327,9 @@ class _LazyLoadGridState<T> extends ConsumerState<LazyLoadGrid<T>> {
     Widget gridView = CustomScrollView(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
+      scrollCacheExtent: const ScrollCacheExtent.pixels(
+        AppScroll.listCacheExtentPixels,
+      ),
       slivers: [
         SliverPadding(
           padding: widget.padding ?? EdgeInsets.zero,
@@ -332,8 +341,14 @@ class _LazyLoadGridState<T> extends ConsumerState<LazyLoadGrid<T>> {
               childAspectRatio: widget.childAspectRatio,
             ),
             delegate: SliverChildBuilderDelegate(
-              (context, index) => widget.itemBuilder(context, widget.items[index], index),
+              (context, index) => widget.itemBuilder(
+                context,
+                widget.items[index],
+                index,
+              ),
               childCount: widget.items.length,
+              addAutomaticKeepAlives: false,
+              addRepaintBoundaries: true,
             ),
           ),
         ),
@@ -355,32 +370,34 @@ class _LazyLoadGridState<T> extends ConsumerState<LazyLoadGrid<T>> {
   }
 
   Widget _buildLoadingIndicator() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      alignment: Alignment.center,
-      child: const SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(strokeWidth: 2),
+    return const Padding(
+      padding: EdgeInsets.all(AppSpacing.spacingLG),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
       ),
     );
   }
 
   Widget _buildDefaultEmptyWidget() {
+    final muted = Theme.of(context).colorScheme.onSurface;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.photo_library_outlined,
+          AppSvgIcon(
+            assetPath: AppIcons.gallery,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+            color: muted.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.spacingLG),
           Text(
             'No images yet',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: muted.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -389,117 +406,19 @@ class _LazyLoadGridState<T> extends ConsumerState<LazyLoadGrid<T>> {
   }
 }
 
-/// PERFORMANCE FIX (Task 7.2.3): Visibility-based lazy loading
-/// 
-/// Only renders items when they become visible in the viewport.
-/// Useful for expensive widgets like video players or complex cards.
-class LazyLoadItem extends StatefulWidget {
+/// Pass-through for expensive rows. Viewport slivers already skip off-screen
+/// [itemBuilder] work (PERF-COMP-SHARED-001). Do not add a scroll-notification
+/// VisibilityDetector — that runs on every pixel of scroll.
+class LazyLoadItem extends StatelessWidget {
   final Widget child;
-  final Widget? placeholder;
-  final double placeholderHeight;
 
   const LazyLoadItem({
-    Key? key,
+    super.key,
     required this.child,
-    this.placeholder,
-    this.placeholderHeight = 200,
-  }) : super(key: key);
+  });
 
   @override
-  State<LazyLoadItem> createState() => _LazyLoadItemState();
-}
-
-class _LazyLoadItemState extends State<LazyLoadItem> {
-  bool _isVisible = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return VisibilityDetector(
-      onVisibilityChanged: (info) {
-        if (!_isVisible && info.visibleFraction > 0) {
-          setState(() {
-            _isVisible = true;
-          });
-        }
-      },
-      child: _isVisible
-          ? widget.child
-          : widget.placeholder ?? SizedBox(height: widget.placeholderHeight),
-    );
-  }
-}
-
-/// Simple visibility detector widget
-class VisibilityDetector extends StatefulWidget {
-  final Widget child;
-  final void Function(VisibilityInfo info) onVisibilityChanged;
-
-  const VisibilityDetector({
-    Key? key,
-    required this.child,
-    required this.onVisibilityChanged,
-  }) : super(key: key);
-
-  @override
-  State<VisibilityDetector> createState() => _VisibilityDetectorState();
-}
-
-class _VisibilityDetectorState extends State<VisibilityDetector> {
-  final GlobalKey _key = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibility());
-  }
-
-  void _checkVisibility() {
-    final RenderObject? renderObject = _key.currentContext?.findRenderObject();
-    if (renderObject == null) return;
-
-    final RenderAbstractViewport? viewport = RenderAbstractViewport.of(renderObject);
-    if (viewport == null) {
-      // Not in a scrollable - assume fully visible
-      widget.onVisibilityChanged(VisibilityInfo(visibleFraction: 1.0));
-      return;
-    }
-
-    final RevealedOffset? revealedOffset = viewport.getOffsetToReveal(renderObject, 0.0);
-    if (revealedOffset == null) return;
-
-    final viewportSize = viewport.paintBounds.size;
-    final itemSize = renderObject.paintBounds.size;
-    
-    // Calculate visible fraction
-    double visibleFraction = 0.0;
-    if (itemSize.height > 0) {
-      final visible = (viewportSize.height - revealedOffset.offset.abs()).clamp(0.0, itemSize.height);
-      visibleFraction = visible / itemSize.height;
-    }
-
-    widget.onVisibilityChanged(VisibilityInfo(visibleFraction: visibleFraction));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        _checkVisibility();
-        return false;
-      },
-      child: KeyedSubtree(
-        key: _key,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-/// Visibility information for lazy loading
-class VisibilityInfo {
-  final double visibleFraction;
-
-  const VisibilityInfo({required this.visibleFraction});
+  Widget build(BuildContext context) => child;
 }
 
 

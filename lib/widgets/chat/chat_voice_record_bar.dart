@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/animation_constants.dart';
@@ -8,21 +10,25 @@ import '../../core/utils/app_icons.dart';
 import 'voice_waveform_bars.dart';
 
 /// In-composer recording chrome: 30-bar waveform, lock hint, discard (CHAT-INPUT-003).
-class ChatVoiceRecordBar extends StatelessWidget {
+///
+/// Elapsed time ticks inside this widget so [MessageInput] does not rebuild
+/// every second (PERF-COMP-MSG-013).
+class ChatVoiceRecordBar extends StatefulWidget {
   static const double minTouch = 44;
   static const Key barKey = ValueKey('chat-voice-record-bar');
   static const Key discardKey = ValueKey('chat-voice-discard');
   static const Key lockedKey = ValueKey('chat-voice-locked');
   static const Key lockHintKey = ValueKey('chat-voice-lock-hint');
 
-  final int seconds;
+  /// When set, the bar shows this value (widget tests). Otherwise it ticks locally.
+  final int? seconds;
   final bool locked;
   final bool compact;
   final VoidCallback onDiscard;
 
   const ChatVoiceRecordBar({
     super.key,
-    required this.seconds,
+    this.seconds,
     required this.locked,
     required this.onDiscard,
     this.compact = false,
@@ -35,6 +41,40 @@ class ChatVoiceRecordBar extends StatelessWidget {
   }
 
   @override
+  State<ChatVoiceRecordBar> createState() => _ChatVoiceRecordBarState();
+}
+
+class _ChatVoiceRecordBarState extends State<ChatVoiceRecordBar> {
+  Timer? _timer;
+  late final ValueNotifier<int> _elapsed;
+
+  @override
+  void initState() {
+    super.initState();
+    _elapsed = ValueNotifier(widget.seconds ?? 0);
+    if (widget.seconds == null) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        _elapsed.value++;
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatVoiceRecordBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.seconds != null && widget.seconds != _elapsed.value) {
+      _elapsed.value = widget.seconds!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _elapsed.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -44,25 +84,25 @@ class ChatVoiceRecordBar extends StatelessWidget {
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Padding(
-      key: locked ? lockedKey : barKey,
+      key: widget.locked ? ChatVoiceRecordBar.lockedKey : ChatVoiceRecordBar.barKey,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.spacingLG,
         vertical: AppSpacing.spacingMD,
       ),
       child: Row(
         children: [
-          if (locked)
+          if (widget.locked)
             Semantics(
               button: true,
               label: 'Discard recording',
               child: InkWell(
-                key: discardKey,
-                onTap: onDiscard,
+                key: ChatVoiceRecordBar.discardKey,
+                onTap: widget.onDiscard,
                 borderRadius: BorderRadius.circular(AppSpacing.spacingMD),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
-                    minWidth: minTouch,
-                    minHeight: minTouch,
+                    minWidth: ChatVoiceRecordBar.minTouch,
+                    minHeight: ChatVoiceRecordBar.minTouch,
                   ),
                   child: Center(
                     child: AppSvgIcon(
@@ -76,16 +116,21 @@ class ChatVoiceRecordBar extends StatelessWidget {
             )
           else
             const SizedBox.shrink(),
-          if (locked) const SizedBox(width: AppSpacing.spacingXS),
+          if (widget.locked) const SizedBox(width: AppSpacing.spacingXS),
           PulsingRecordDot(color: AppColors.feedbackError),
           const SizedBox(width: AppSpacing.spacingSM),
-          AppText(
-            formatDuration(seconds),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w700,
-            ),
-            maxLines: 1,
+          ValueListenableBuilder<int>(
+            valueListenable: _elapsed,
+            builder: (context, seconds, _) {
+              return AppText(
+                ChatVoiceRecordBar.formatDuration(seconds),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+              );
+            },
           ),
           const SizedBox(width: AppSpacing.spacingMD),
           Expanded(
@@ -96,18 +141,18 @@ class ChatVoiceRecordBar extends StatelessWidget {
               barCount: AppAnimations.chatVoiceRecordBars,
             ),
           ),
-          if (!locked) ...[
+          if (!widget.locked) ...[
             const SizedBox(width: AppSpacing.spacingSM),
             Semantics(
               label: 'Slide up to lock',
               child: AppSvgIcon(
-                key: lockHintKey,
+                key: ChatVoiceRecordBar.lockHintKey,
                 assetPath: AppIcons.lock,
                 size: 18,
                 color: secondary,
               ),
             ),
-            if (!compact) ...[
+            if (!widget.compact) ...[
               const SizedBox(width: AppSpacing.spacingXS),
               AppText(
                 '< Slide to cancel',

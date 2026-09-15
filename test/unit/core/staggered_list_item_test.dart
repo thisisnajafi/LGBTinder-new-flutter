@@ -21,4 +21,11 @@ void main() {
       isFalse,
     );
   });
+
+  test('stagger delay index is capped at maxStaggerIndex - 1', () {
+    expect(StaggeredListItem.cappedStaggerIndex(0), 0);
+    expect(StaggeredListItem.cappedStaggerIndex(2), 2);
+    expect(StaggeredListItem.cappedStaggerIndex(99), 2);
+    expect(StaggeredListItem.cappedStaggerIndex(-1), 0);
+  });
 }

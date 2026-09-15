@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/typography.dart';
-import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/border_radius_constants.dart';
+import '../../../../core/theme/spacing_constants.dart';
+import '../../../../core/theme/typography.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../data/models/google_play_purchase_history.dart';
-import '../../data/services/payment_service.dart';
 import '../../providers/payment_providers.dart';
 
-/// Purchase Details Screen
-/// Shows detailed information about a specific Google Play purchase
+/// Purchase details — paints [initialPurchase] immediately (PERF-FEAT-PAY-007).
 class PurchaseDetailsScreen extends ConsumerStatefulWidget {
   final int purchaseId;
+  final GooglePlayPurchaseHistory? initialPurchase;
 
   const PurchaseDetailsScreen({
-    Key? key,
+    super.key,
     required this.purchaseId,
-  }) : super(key: key);
+    this.initialPurchase,
+  });
 
   @override
-  ConsumerState<PurchaseDetailsScreen> createState() => _PurchaseDetailsScreenState();
+  ConsumerState<PurchaseDetailsScreen> createState() =>
+      _PurchaseDetailsScreenState();
 }
 
 class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
@@ -37,7 +38,11 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPurchaseDetails();
+    _purchase = widget.initialPurchase;
+    if (_purchase != null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadPurchaseDetails();
+    });
   }
 
   Future<void> _loadPurchaseDetails() async {
@@ -49,22 +54,22 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
 
     try {
       final paymentService = ref.read(paymentServiceProvider);
-      final purchase = await paymentService.getGooglePlayPurchaseDetails(widget.purchaseId);
+      final purchase = await paymentService.getGooglePlayPurchaseDetails(
+        widget.purchaseId,
+      );
 
-      if (mounted) {
-        setState(() {
-          _purchase = purchase;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _purchase = purchase;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _hasError = true;
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
@@ -72,176 +77,275 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
-    final textColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    final borderColor = isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final backgroundColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final surfaceColor =
+        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor =
+        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+
+    final purchase = _purchase;
 
     return AppPageScaffold(
       title: 'Purchase Details',
       showBackButton: true,
       backgroundColor: backgroundColor,
-      body: _isLoading
-          ? SkeletonLoading()
-          : _hasError
+      body: _isLoading && purchase == null
+          ? const SkeletonLoading()
+          : _hasError && purchase == null
               ? ErrorDisplayWidget(
-                  errorMessage: _errorMessage ?? 'Failed to load purchase details',
+                  errorMessage:
+                      _errorMessage ?? 'Failed to load purchase details',
                   onRetry: _loadPurchaseDetails,
                 )
-              : _purchase == null
+              : purchase == null
                   ? Center(
                       child: Text(
                         'Purchase not found',
                         style: AppTypography.body.copyWith(color: textColor),
                       ),
                     )
-                  : ResponsiveGrid.constrained(
-                      context,
-                      SingleChildScrollView(
-                        padding: ResponsivePadding.page(context),
-                        child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Purchase Info Card
-                          _buildInfoCard(
-                            'Purchase Information',
-                            [
-                              _buildDetailRow('Product', _purchase!.productName, textColor, secondaryTextColor),
-                              _buildDetailRow('Product ID', _purchase!.productId, textColor, secondaryTextColor, isMonospace: true),
-                              _buildDetailRow('Type', _purchase!.isSubscription ? 'Subscription' : 'One-time Purchase', textColor, secondaryTextColor),
-                              _buildDetailRow('Status', _purchase!.status.toUpperCase(), textColor, secondaryTextColor),
-                              _buildDetailRow('Price', _purchase!.formattedPrice, textColor, secondaryTextColor),
-                              if (_purchase!.purchaseDate != null)
-                                _buildDetailRow(
-                                  'Purchase Date',
-                                  DateFormat('MMM d, y HH:mm').format(_purchase!.purchaseDate!),
-                                  textColor,
-                                  secondaryTextColor,
-                                ),
-                              if (_purchase!.expiryDate != null)
-                                _buildDetailRow(
-                                  'Expiry Date',
-                                  DateFormat('MMM d, y HH:mm').format(_purchase!.expiryDate!),
-                                  textColor,
-                                  secondaryTextColor,
-                                ),
-                              if (_purchase!.orderId != null)
-                                _buildDetailRow('Order ID', _purchase!.orderId!, textColor, secondaryTextColor, isMonospace: true),
-                              _buildDetailRow('Auto Renewing', _purchase!.autoRenewing ? 'Yes' : 'No', textColor, secondaryTextColor),
-                            ],
-                            surfaceColor,
-                            borderColor,
-                          ),
-
-                          // Subscription Details (if applicable)
-                          if (_purchase!.isSubscription && _purchase!.subscription != null) ...[
-                            SizedBox(height: AppSpacing.spacingLG),
-                            _buildInfoCard(
-                              'Subscription Details',
-                              [
-                                if (_purchase!.subscription!['plan'] != null)
-                                  _buildDetailRow(
-                                    'Plan',
-                                    _purchase!.subscription!['plan']['title']?.toString() ?? 'N/A',
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                                if (_purchase!.subscription!['billing_cycle'] != null)
-                                  _buildDetailRow(
-                                    'Billing Cycle',
-                                    _purchase!.subscription!['billing_cycle'].toString().toUpperCase(),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                                if (_purchase!.subscription!['start_date'] != null)
-                                  _buildDetailRow(
-                                    'Start Date',
-                                    DateFormat('MMM d, y').format(DateTime.parse(_purchase!.subscription!['start_date'])),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                                if (_purchase!.subscription!['end_date'] != null)
-                                  _buildDetailRow(
-                                    'End Date',
-                                    DateFormat('MMM d, y').format(DateTime.parse(_purchase!.subscription!['end_date'])),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                              ],
-                              surfaceColor,
-                              borderColor,
-                            ),
-                          ],
-
-                          // Superlike Pack Details (if applicable)
-                          if (!_purchase!.isSubscription && _purchase!.superlikePack != null) ...[
-                            SizedBox(height: AppSpacing.spacingLG),
-                            _buildInfoCard(
-                              'Superlike Pack Details',
-                              [
-                                if (_purchase!.superlikePack!['quantity'] != null)
-                                  _buildDetailRow(
-                                    'Quantity',
-                                    _purchase!.superlikePack!['quantity'].toString(),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                                if (_purchase!.superlikePack!['remaining'] != null)
-                                  _buildDetailRow(
-                                    'Remaining',
-                                    _purchase!.superlikePack!['remaining'].toString(),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                              ],
-                              surfaceColor,
-                              borderColor,
-                            ),
-                          ],
-
-                          // Marketing Attribution (if available)
-                          if (_purchase!.marketingAttribution != null) ...[
-                            SizedBox(height: AppSpacing.spacingLG),
-                            _buildInfoCard(
-                              'Marketing Attribution',
-                              [
-                                if (_purchase!.marketingAttribution!['utm_source'] != null)
-                                  _buildDetailRow(
-                                    'Source',
-                                    _purchase!.marketingAttribution!['utm_source'].toString(),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                                if (_purchase!.marketingAttribution!['utm_campaign'] != null)
-                                  _buildDetailRow(
-                                    'Campaign',
-                                    _purchase!.marketingAttribution!['utm_campaign'].toString(),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                                if (_purchase!.marketingAttribution!['campaign_id'] != null)
-                                  _buildDetailRow(
-                                    'Campaign ID',
-                                    _purchase!.marketingAttribution!['campaign_id'].toString(),
-                                    textColor,
-                                    secondaryTextColor,
-                                  ),
-                              ],
-                              surfaceColor,
-                              borderColor,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                  : _PurchaseDetailsBody(
+                      purchase: purchase,
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                      surfaceColor: surfaceColor,
+                      borderColor: borderColor,
                     ),
     );
   }
+}
 
-  Widget _buildInfoCard(String title, List<Widget> children, Color surfaceColor, Color borderColor) {
+class _PurchaseDetailsBody extends StatelessWidget {
+  const _PurchaseDetailsBody({
+    required this.purchase,
+    required this.textColor,
+    required this.secondaryTextColor,
+    required this.surfaceColor,
+    required this.borderColor,
+  });
+
+  final GooglePlayPurchaseHistory purchase;
+  final Color textColor;
+  final Color secondaryTextColor;
+  final Color surfaceColor;
+  final Color borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveGrid.constrained(
+      context,
+      SingleChildScrollView(
+        padding: ResponsivePadding.page(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _InfoCard(
+              title: 'Purchase Information',
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              children: [
+                _DetailRow(
+                  label: 'Product',
+                  value: purchase.productName,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                _DetailRow(
+                  label: 'Product ID',
+                  value: purchase.productId,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  isMonospace: true,
+                ),
+                _DetailRow(
+                  label: 'Type',
+                  value: purchase.isSubscription
+                      ? 'Subscription'
+                      : 'One-time Purchase',
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                _DetailRow(
+                  label: 'Status',
+                  value: purchase.status.toUpperCase(),
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                _DetailRow(
+                  label: 'Price',
+                  value: purchase.formattedPrice,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                if (purchase.purchaseDate != null)
+                  _DetailRow(
+                    label: 'Purchase Date',
+                    value: DateFormat('MMM d, y HH:mm')
+                        .format(purchase.purchaseDate!),
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                  ),
+                if (purchase.expiryDate != null)
+                  _DetailRow(
+                    label: 'Expiry Date',
+                    value:
+                        DateFormat('MMM d, y HH:mm').format(purchase.expiryDate!),
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                  ),
+                if (purchase.orderId != null)
+                  _DetailRow(
+                    label: 'Order ID',
+                    value: purchase.orderId!,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                    isMonospace: true,
+                  ),
+                _DetailRow(
+                  label: 'Auto Renewing',
+                  value: purchase.autoRenewing ? 'Yes' : 'No',
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+              ],
+            ),
+            if (purchase.isSubscription && purchase.subscription != null) ...[
+              const SizedBox(height: AppSpacing.spacingLG),
+              _InfoCard(
+                title: 'Subscription Details',
+                surfaceColor: surfaceColor,
+                borderColor: borderColor,
+                children: [
+                  if (purchase.subscription!['plan'] != null)
+                    _DetailRow(
+                      label: 'Plan',
+                      value: purchase.subscription!['plan']['title']
+                              ?.toString() ??
+                          'N/A',
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  if (purchase.subscription!['billing_cycle'] != null)
+                    _DetailRow(
+                      label: 'Billing Cycle',
+                      value: purchase.subscription!['billing_cycle']
+                          .toString()
+                          .toUpperCase(),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  if (purchase.subscription!['start_date'] != null)
+                    _DetailRow(
+                      label: 'Start Date',
+                      value: DateFormat('MMM d, y').format(
+                        DateTime.parse(
+                          purchase.subscription!['start_date'].toString(),
+                        ),
+                      ),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  if (purchase.subscription!['end_date'] != null)
+                    _DetailRow(
+                      label: 'End Date',
+                      value: DateFormat('MMM d, y').format(
+                        DateTime.parse(
+                          purchase.subscription!['end_date'].toString(),
+                        ),
+                      ),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                ],
+              ),
+            ],
+            if (!purchase.isSubscription && purchase.superlikePack != null) ...[
+              const SizedBox(height: AppSpacing.spacingLG),
+              _InfoCard(
+                title: 'Superlike Pack Details',
+                surfaceColor: surfaceColor,
+                borderColor: borderColor,
+                children: [
+                  if (purchase.superlikePack!['quantity'] != null)
+                    _DetailRow(
+                      label: 'Quantity',
+                      value: purchase.superlikePack!['quantity'].toString(),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  if (purchase.superlikePack!['remaining'] != null)
+                    _DetailRow(
+                      label: 'Remaining',
+                      value: purchase.superlikePack!['remaining'].toString(),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                ],
+              ),
+            ],
+            if (purchase.marketingAttribution != null) ...[
+              const SizedBox(height: AppSpacing.spacingLG),
+              _InfoCard(
+                title: 'Marketing Attribution',
+                surfaceColor: surfaceColor,
+                borderColor: borderColor,
+                children: [
+                  if (purchase.marketingAttribution!['utm_source'] != null)
+                    _DetailRow(
+                      label: 'Source',
+                      value: purchase.marketingAttribution!['utm_source']
+                          .toString(),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  if (purchase.marketingAttribution!['utm_campaign'] != null)
+                    _DetailRow(
+                      label: 'Campaign',
+                      value: purchase.marketingAttribution!['utm_campaign']
+                          .toString(),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  if (purchase.marketingAttribution!['campaign_id'] != null)
+                    _DetailRow(
+                      label: 'Campaign ID',
+                      value: purchase.marketingAttribution!['campaign_id']
+                          .toString(),
+                      textColor: textColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.title,
+    required this.children,
+    required this.surfaceColor,
+    required this.borderColor,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final Color surfaceColor;
+  final Color borderColor;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(AppSpacing.spacingLG),
+      padding: const EdgeInsets.all(AppSpacing.spacingLG),
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(AppRadius.radiusLG),
@@ -257,22 +361,33 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
             ),
             maxLines: 2,
           ),
-          SizedBox(height: AppSpacing.spacingMD),
+          const SizedBox(height: AppSpacing.spacingMD),
           ...children,
         ],
       ),
     );
   }
+}
 
-  Widget _buildDetailRow(
-    String label,
-    String value,
-    Color textColor,
-    Color secondaryTextColor, {
-    bool isMonospace = false,
-  }) {
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.textColor,
+    required this.secondaryTextColor,
+    this.isMonospace = false,
+  });
+
+  final String label;
+  final String value;
+  final Color textColor;
+  final Color secondaryTextColor;
+  final bool isMonospace;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.spacingMD),
+      padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -1,30 +1,36 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../providers/google_play_billing_provider.dart';
 
-/// Test screen for Google Play Billing functionality
-
-/// Test screen for Google Play Billing functionality
+/// Dev-only Google Play Billing playground (PERF-FEAT-PAY-009).
 class GooglePlayBillingTestScreen extends ConsumerStatefulWidget {
   const GooglePlayBillingTestScreen({super.key});
 
   @override
-  ConsumerState<GooglePlayBillingTestScreen> createState() => _GooglePlayBillingTestScreenState();
+  ConsumerState<GooglePlayBillingTestScreen> createState() =>
+      _GooglePlayBillingTestScreenState();
 }
 
-class _GooglePlayBillingTestScreenState extends ConsumerState<GooglePlayBillingTestScreen> {
+class _GooglePlayBillingTestScreenState
+    extends ConsumerState<GooglePlayBillingTestScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize billing when screen opens
+    if (kReleaseMode) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(googlePlayBillingInitializerProvider);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (kReleaseMode) {
+      return const SizedBox.shrink();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Google Play Billing Test'),

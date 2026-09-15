@@ -7,6 +7,7 @@ import '../cache/cache_providers.dart';
 import '../constants/animation_constants.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_icons.dart';
+import '../utils/blur_hash_average.dart';
 import '../responsive/responsive.dart';
 
 /// Image size presets for consistent memory usage
@@ -30,9 +31,11 @@ class OptimizedImage extends ConsumerWidget {
   final ImageSize size;
   final bool useMemoryCacheHint;
   final String? blurHash;
+
   /// Override size-preset decode cap (chat bubbles use 800).
   final int? memoryCacheWidth;
   final int? memoryCacheHeight;
+
   /// When false, keep [placeholder] instead of a download spinner.
   final bool? showDownloadProgress;
 
@@ -104,6 +107,23 @@ class OptimizedImage extends ConsumerWidget {
       showDownloadProgress ??
       (size == ImageSize.large || size == ImageSize.original);
 
+  bool get _hasBlurHash => blurHash != null && blurHash!.trim().length >= 6;
+
+  /// Fade only on detail/full-screen presets. List/thumbnail/card sizes stay
+  /// instant so scrolling does not run a 200ms fade per cell (PERF-COMP-IMG-002).
+  static bool shouldFade(ImageSize size) =>
+      size == ImageSize.large || size == ImageSize.original;
+
+  static Duration fadeInDurationFor(ImageSize size, BuildContext context) {
+    if (!shouldFade(size)) return Duration.zero;
+    return AppAnimations.imageFadeDuration(context);
+  }
+
+  static Duration fadeOutDurationFor(ImageSize size, BuildContext context) {
+    if (!shouldFade(size)) return Duration.zero;
+    return AppAnimations.imageFadeOutDuration(context);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (imageUrl.isEmpty) {
@@ -114,6 +134,9 @@ class OptimizedImage extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     final cacheManager = ref.watch(imageCacheServiceProvider);
+    final fadeIn = fadeInDurationFor(size, context);
+    final fadeOut = fadeOutDurationFor(size, context);
+    final useProgress = _useDownloadProgress && !_hasBlurHash;
 
     Widget image = CachedNetworkImage(
       imageUrl: imageUrl,
@@ -123,30 +146,35 @@ class OptimizedImage extends ConsumerWidget {
       fit: fit,
       memCacheWidth: resolvedMemCacheWidth,
       memCacheHeight: resolvedMemCacheHeight,
-      fadeInDuration: AppAnimations.imageFadeDuration(context),
-      fadeOutDuration: AppAnimations.imageFadeOutDuration(context),
+      fadeInDuration: fadeIn,
+      fadeOutDuration: fadeOut,
       fadeInCurve: AppAnimations.curveDefault,
       placeholder: (context, url) =>
           placeholder ?? _buildPlaceholder(context, isDark),
       errorWidget: (context, url, error) =>
           errorWidget ?? _buildErrorWidget(context),
-      progressIndicatorBuilder: _useDownloadProgress
+      progressIndicatorBuilder: useProgress
           ? (context, url, progress) =>
-              _buildProgressIndicator(context, progress, isDark)
+                _buildProgressIndicator(context, progress, isDark)
           : null,
     );
 
     if (borderRadius != null) {
-      image = ClipRRect(
-        borderRadius: borderRadius!,
-        child: image,
-      );
+      image = ClipRRect(borderRadius: borderRadius!, child: image);
     }
 
     return image;
   }
 
   Widget _buildPlaceholder(BuildContext context, bool isDark) {
+    final average = BlurHashAverage.tryColor(blurHash);
+    if (average != null) {
+      return ColoredBox(
+        color: average,
+        child: SizedBox(width: width, height: height),
+      );
+    }
+
     return Container(
       width: width,
       height: height,
@@ -207,7 +235,9 @@ class OptimizedImage extends ConsumerWidget {
           child: CircularProgressIndicator(
             value: progress.progress,
             strokeWidth: 2,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentPurple),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.accentPurple,
+            ),
             backgroundColor: AppColors.accentPurple.withValues(alpha: 0.2),
           ),
         ),
@@ -248,7 +278,8 @@ class OptimizedAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = backgroundColor ??
+    final bgColor =
+        backgroundColor ??
         (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
 
     if (imageUrl == null || imageUrl!.isEmpty) {
@@ -273,7 +304,7 @@ class OptimizedAvatar extends StatelessWidget {
         return CachedNetworkImage(
           imageUrl: imageUrl!,
           cacheManager: cacheManager,
-          fadeInDuration: AppAnimations.imageFadeDuration(context),
+          fadeInDuration: Duration.zero,
           imageBuilder: (context, imageProvider) => CircleAvatar(
             radius: radius,
             backgroundImage: imageProvider,
@@ -302,8 +333,8 @@ class OptimizedAvatar extends StatelessWidget {
               color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
             ),
           ),
-          memCacheWidth: (radius * 2).toInt(),
-          memCacheHeight: (radius * 2).toInt(),
+          memCacheWidth: 100,
+          memCacheHeight: 100,
         );
       },
     );

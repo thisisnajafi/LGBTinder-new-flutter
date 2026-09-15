@@ -10,11 +10,7 @@ class ScaleTapFeedback extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  const ScaleTapFeedback({
-    Key? key,
-    required this.child,
-    this.onTap,
-  }) : super(key: key);
+  const ScaleTapFeedback({super.key, required this.child, this.onTap});
 
   @override
   State<ScaleTapFeedback> createState() => _ScaleTapFeedbackState();
@@ -33,10 +29,12 @@ class _ScaleTapFeedbackState extends State<ScaleTapFeedback>
       vsync: this,
     );
     _scale = Tween<double>(begin: 1.0, end: AppAnimations.buttonPressScale)
-        .animate(CurvedAnimation(
-      parent: _controller,
-      curve: AppAnimations.curveDefault,
-    ));
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: AppAnimations.curveDefault,
+          ),
+        );
   }
 
   @override
@@ -50,25 +48,37 @@ class _ScaleTapFeedbackState extends State<ScaleTapFeedback>
   }
 
   void _onTapUp(TapUpDetails _) {
-    _controller.reverse();
+    if (AppAnimations.animationsEnabled(context)) {
+      _controller.reverse();
+    }
     widget.onTap?.call();
   }
 
   void _onTapCancel() {
-    _controller.reverse();
+    if (AppAnimations.animationsEnabled(context)) {
+      _controller.reverse();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final animatePress =
+        widget.onTap != null && AppAnimations.animationsEnabled(context);
+
+    if (!animatePress) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: widget.child,
+      );
+    }
+
     return GestureDetector(
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
       behavior: HitTestBehavior.opaque,
-      child: ScaleTransition(
-        scale: _scale,
-        child: widget.child,
-      ),
+      child: ScaleTransition(scale: _scale, child: widget.child),
     );
   }
 }

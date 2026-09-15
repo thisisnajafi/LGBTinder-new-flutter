@@ -11,7 +11,7 @@ import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
 
-/// Full-width profile photo carousel with dots, count badge, and gallery viewer.
+/// Unused. Live carousel is ProfileHeroSection (prefetch + RepaintBoundary).
 class ProfilePhotoCarousel extends ConsumerStatefulWidget {
   final List<String> imageUrls;
   final Widget? overlayHeader;

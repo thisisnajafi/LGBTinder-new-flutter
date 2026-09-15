@@ -967,11 +967,6 @@ class $LocalMessagesTable extends LocalMessages
   @override
   Set<GeneratedColumn> get $primaryKey => {localId};
   @override
-  List<Set<GeneratedColumn>> get uniqueKeys => [
-    {serverId, otherUserId},
-    {clientId},
-  ];
-  @override
   LocalMessage map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LocalMessage(
@@ -1042,14 +1037,8 @@ class $LocalMessagesTable extends LocalMessages
 
 class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   final int localId;
-
-  /// Server message id; null or 0 until the API assigns one.
   final int? serverId;
-
-  /// Optimistic / outbox correlation id.
   final String? clientId;
-
-  /// The chat partner from the current user's perspective.
   final int otherUserId;
   final int senderId;
   final int receiverId;
@@ -1060,7 +1049,7 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   final bool isDeleted;
   final String? attachmentUrl;
 
-  /// JSON-encoded [Message.metadata] and extended fields.
+  /// JSON blob for metadata / stickers / profile cards.
   final String? payloadJson;
   final String deliveryStatus;
   const LocalMessage({
@@ -2341,6 +2330,1267 @@ class MediaCacheMetaCompanion extends UpdateCompanion<MediaCacheMetaData> {
   }
 }
 
+class $LocalNotificationsTable extends LocalNotifications
+    with TableInfo<$LocalNotificationsTable, LocalNotification> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalNotificationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<int> serverId = GeneratedColumn<int>(
+    'server_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _messageMeta = const VerificationMeta(
+    'message',
+  );
+  @override
+  late final GeneratedColumn<String> message = GeneratedColumn<String>(
+    'message',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isReadMeta = const VerificationMeta('isRead');
+  @override
+  late final GeneratedColumn<bool> isRead = GeneratedColumn<bool>(
+    'is_read',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_read" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actorUserIdMeta = const VerificationMeta(
+    'actorUserId',
+  );
+  @override
+  late final GeneratedColumn<int> actorUserId = GeneratedColumn<int>(
+    'actor_user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actorNameMeta = const VerificationMeta(
+    'actorName',
+  );
+  @override
+  late final GeneratedColumn<String> actorName = GeneratedColumn<String>(
+    'actor_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actorImageUrlMeta = const VerificationMeta(
+    'actorImageUrl',
+  );
+  @override
+  late final GeneratedColumn<String> actorImageUrl = GeneratedColumn<String>(
+    'actor_image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actionUrlMeta = const VerificationMeta(
+    'actionUrl',
+  );
+  @override
+  late final GeneratedColumn<String> actionUrl = GeneratedColumn<String>(
+    'action_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isPlanRestrictedMeta = const VerificationMeta(
+    'isPlanRestricted',
+  );
+  @override
+  late final GeneratedColumn<bool> isPlanRestricted = GeneratedColumn<bool>(
+    'is_plan_restricted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_plan_restricted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _upgradeRequiredMeta = const VerificationMeta(
+    'upgradeRequired',
+  );
+  @override
+  late final GeneratedColumn<bool> upgradeRequired = GeneratedColumn<bool>(
+    'upgrade_required',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("upgrade_required" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerUserId,
+    serverId,
+    type,
+    title,
+    message,
+    createdAt,
+    isRead,
+    payloadJson,
+    actorUserId,
+    actorName,
+    actorImageUrl,
+    actionUrl,
+    isPlanRestricted,
+    upgradeRequired,
+    sortOrder,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_notifications';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalNotification> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUserIdMeta);
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_serverIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('message')) {
+      context.handle(
+        _messageMeta,
+        message.isAcceptableOrUnknown(data['message']!, _messageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_messageMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('is_read')) {
+      context.handle(
+        _isReadMeta,
+        isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta),
+      );
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('actor_user_id')) {
+      context.handle(
+        _actorUserIdMeta,
+        actorUserId.isAcceptableOrUnknown(
+          data['actor_user_id']!,
+          _actorUserIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('actor_name')) {
+      context.handle(
+        _actorNameMeta,
+        actorName.isAcceptableOrUnknown(data['actor_name']!, _actorNameMeta),
+      );
+    }
+    if (data.containsKey('actor_image_url')) {
+      context.handle(
+        _actorImageUrlMeta,
+        actorImageUrl.isAcceptableOrUnknown(
+          data['actor_image_url']!,
+          _actorImageUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('action_url')) {
+      context.handle(
+        _actionUrlMeta,
+        actionUrl.isAcceptableOrUnknown(data['action_url']!, _actionUrlMeta),
+      );
+    }
+    if (data.containsKey('is_plan_restricted')) {
+      context.handle(
+        _isPlanRestrictedMeta,
+        isPlanRestricted.isAcceptableOrUnknown(
+          data['is_plan_restricted']!,
+          _isPlanRestrictedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('upgrade_required')) {
+      context.handle(
+        _upgradeRequiredMeta,
+        upgradeRequired.isAcceptableOrUnknown(
+          data['upgrade_required']!,
+          _upgradeRequiredMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerUserId, serverId};
+  @override
+  LocalNotification map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalNotification(
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}server_id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      message: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}message'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      isRead: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_read'],
+      )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      ),
+      actorUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}actor_user_id'],
+      ),
+      actorName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}actor_name'],
+      ),
+      actorImageUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}actor_image_url'],
+      ),
+      actionUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action_url'],
+      ),
+      isPlanRestricted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_plan_restricted'],
+      )!,
+      upgradeRequired: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}upgrade_required'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalNotificationsTable createAlias(String alias) {
+    return $LocalNotificationsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalNotification extends DataClass
+    implements Insertable<LocalNotification> {
+  final int ownerUserId;
+  final int serverId;
+  final String type;
+  final String title;
+  final String message;
+  final DateTime createdAt;
+  final bool isRead;
+
+  /// JSON for `Notification.data`.
+  final String? payloadJson;
+  final int? actorUserId;
+  final String? actorName;
+  final String? actorImageUrl;
+  final String? actionUrl;
+  final bool isPlanRestricted;
+  final bool upgradeRequired;
+  final int sortOrder;
+  const LocalNotification({
+    required this.ownerUserId,
+    required this.serverId,
+    required this.type,
+    required this.title,
+    required this.message,
+    required this.createdAt,
+    required this.isRead,
+    this.payloadJson,
+    this.actorUserId,
+    this.actorName,
+    this.actorImageUrl,
+    this.actionUrl,
+    required this.isPlanRestricted,
+    required this.upgradeRequired,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_user_id'] = Variable<int>(ownerUserId);
+    map['server_id'] = Variable<int>(serverId);
+    map['type'] = Variable<String>(type);
+    map['title'] = Variable<String>(title);
+    map['message'] = Variable<String>(message);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['is_read'] = Variable<bool>(isRead);
+    if (!nullToAbsent || payloadJson != null) {
+      map['payload_json'] = Variable<String>(payloadJson);
+    }
+    if (!nullToAbsent || actorUserId != null) {
+      map['actor_user_id'] = Variable<int>(actorUserId);
+    }
+    if (!nullToAbsent || actorName != null) {
+      map['actor_name'] = Variable<String>(actorName);
+    }
+    if (!nullToAbsent || actorImageUrl != null) {
+      map['actor_image_url'] = Variable<String>(actorImageUrl);
+    }
+    if (!nullToAbsent || actionUrl != null) {
+      map['action_url'] = Variable<String>(actionUrl);
+    }
+    map['is_plan_restricted'] = Variable<bool>(isPlanRestricted);
+    map['upgrade_required'] = Variable<bool>(upgradeRequired);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  LocalNotificationsCompanion toCompanion(bool nullToAbsent) {
+    return LocalNotificationsCompanion(
+      ownerUserId: Value(ownerUserId),
+      serverId: Value(serverId),
+      type: Value(type),
+      title: Value(title),
+      message: Value(message),
+      createdAt: Value(createdAt),
+      isRead: Value(isRead),
+      payloadJson: payloadJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadJson),
+      actorUserId: actorUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actorUserId),
+      actorName: actorName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actorName),
+      actorImageUrl: actorImageUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actorImageUrl),
+      actionUrl: actionUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(actionUrl),
+      isPlanRestricted: Value(isPlanRestricted),
+      upgradeRequired: Value(upgradeRequired),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory LocalNotification.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalNotification(
+      ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
+      serverId: serializer.fromJson<int>(json['serverId']),
+      type: serializer.fromJson<String>(json['type']),
+      title: serializer.fromJson<String>(json['title']),
+      message: serializer.fromJson<String>(json['message']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      isRead: serializer.fromJson<bool>(json['isRead']),
+      payloadJson: serializer.fromJson<String?>(json['payloadJson']),
+      actorUserId: serializer.fromJson<int?>(json['actorUserId']),
+      actorName: serializer.fromJson<String?>(json['actorName']),
+      actorImageUrl: serializer.fromJson<String?>(json['actorImageUrl']),
+      actionUrl: serializer.fromJson<String?>(json['actionUrl']),
+      isPlanRestricted: serializer.fromJson<bool>(json['isPlanRestricted']),
+      upgradeRequired: serializer.fromJson<bool>(json['upgradeRequired']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerUserId': serializer.toJson<int>(ownerUserId),
+      'serverId': serializer.toJson<int>(serverId),
+      'type': serializer.toJson<String>(type),
+      'title': serializer.toJson<String>(title),
+      'message': serializer.toJson<String>(message),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'isRead': serializer.toJson<bool>(isRead),
+      'payloadJson': serializer.toJson<String?>(payloadJson),
+      'actorUserId': serializer.toJson<int?>(actorUserId),
+      'actorName': serializer.toJson<String?>(actorName),
+      'actorImageUrl': serializer.toJson<String?>(actorImageUrl),
+      'actionUrl': serializer.toJson<String?>(actionUrl),
+      'isPlanRestricted': serializer.toJson<bool>(isPlanRestricted),
+      'upgradeRequired': serializer.toJson<bool>(upgradeRequired),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  LocalNotification copyWith({
+    int? ownerUserId,
+    int? serverId,
+    String? type,
+    String? title,
+    String? message,
+    DateTime? createdAt,
+    bool? isRead,
+    Value<String?> payloadJson = const Value.absent(),
+    Value<int?> actorUserId = const Value.absent(),
+    Value<String?> actorName = const Value.absent(),
+    Value<String?> actorImageUrl = const Value.absent(),
+    Value<String?> actionUrl = const Value.absent(),
+    bool? isPlanRestricted,
+    bool? upgradeRequired,
+    int? sortOrder,
+  }) => LocalNotification(
+    ownerUserId: ownerUserId ?? this.ownerUserId,
+    serverId: serverId ?? this.serverId,
+    type: type ?? this.type,
+    title: title ?? this.title,
+    message: message ?? this.message,
+    createdAt: createdAt ?? this.createdAt,
+    isRead: isRead ?? this.isRead,
+    payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,
+    actorUserId: actorUserId.present ? actorUserId.value : this.actorUserId,
+    actorName: actorName.present ? actorName.value : this.actorName,
+    actorImageUrl: actorImageUrl.present
+        ? actorImageUrl.value
+        : this.actorImageUrl,
+    actionUrl: actionUrl.present ? actionUrl.value : this.actionUrl,
+    isPlanRestricted: isPlanRestricted ?? this.isPlanRestricted,
+    upgradeRequired: upgradeRequired ?? this.upgradeRequired,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  LocalNotification copyWithCompanion(LocalNotificationsCompanion data) {
+    return LocalNotification(
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      type: data.type.present ? data.type.value : this.type,
+      title: data.title.present ? data.title.value : this.title,
+      message: data.message.present ? data.message.value : this.message,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      isRead: data.isRead.present ? data.isRead.value : this.isRead,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      actorUserId: data.actorUserId.present
+          ? data.actorUserId.value
+          : this.actorUserId,
+      actorName: data.actorName.present ? data.actorName.value : this.actorName,
+      actorImageUrl: data.actorImageUrl.present
+          ? data.actorImageUrl.value
+          : this.actorImageUrl,
+      actionUrl: data.actionUrl.present ? data.actionUrl.value : this.actionUrl,
+      isPlanRestricted: data.isPlanRestricted.present
+          ? data.isPlanRestricted.value
+          : this.isPlanRestricted,
+      upgradeRequired: data.upgradeRequired.present
+          ? data.upgradeRequired.value
+          : this.upgradeRequired,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalNotification(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('serverId: $serverId, ')
+          ..write('type: $type, ')
+          ..write('title: $title, ')
+          ..write('message: $message, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('isRead: $isRead, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('actorUserId: $actorUserId, ')
+          ..write('actorName: $actorName, ')
+          ..write('actorImageUrl: $actorImageUrl, ')
+          ..write('actionUrl: $actionUrl, ')
+          ..write('isPlanRestricted: $isPlanRestricted, ')
+          ..write('upgradeRequired: $upgradeRequired, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerUserId,
+    serverId,
+    type,
+    title,
+    message,
+    createdAt,
+    isRead,
+    payloadJson,
+    actorUserId,
+    actorName,
+    actorImageUrl,
+    actionUrl,
+    isPlanRestricted,
+    upgradeRequired,
+    sortOrder,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalNotification &&
+          other.ownerUserId == this.ownerUserId &&
+          other.serverId == this.serverId &&
+          other.type == this.type &&
+          other.title == this.title &&
+          other.message == this.message &&
+          other.createdAt == this.createdAt &&
+          other.isRead == this.isRead &&
+          other.payloadJson == this.payloadJson &&
+          other.actorUserId == this.actorUserId &&
+          other.actorName == this.actorName &&
+          other.actorImageUrl == this.actorImageUrl &&
+          other.actionUrl == this.actionUrl &&
+          other.isPlanRestricted == this.isPlanRestricted &&
+          other.upgradeRequired == this.upgradeRequired &&
+          other.sortOrder == this.sortOrder);
+}
+
+class LocalNotificationsCompanion extends UpdateCompanion<LocalNotification> {
+  final Value<int> ownerUserId;
+  final Value<int> serverId;
+  final Value<String> type;
+  final Value<String> title;
+  final Value<String> message;
+  final Value<DateTime> createdAt;
+  final Value<bool> isRead;
+  final Value<String?> payloadJson;
+  final Value<int?> actorUserId;
+  final Value<String?> actorName;
+  final Value<String?> actorImageUrl;
+  final Value<String?> actionUrl;
+  final Value<bool> isPlanRestricted;
+  final Value<bool> upgradeRequired;
+  final Value<int> sortOrder;
+  final Value<int> rowid;
+  const LocalNotificationsCompanion({
+    this.ownerUserId = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.title = const Value.absent(),
+    this.message = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.isRead = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.actorUserId = const Value.absent(),
+    this.actorName = const Value.absent(),
+    this.actorImageUrl = const Value.absent(),
+    this.actionUrl = const Value.absent(),
+    this.isPlanRestricted = const Value.absent(),
+    this.upgradeRequired = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalNotificationsCompanion.insert({
+    required int ownerUserId,
+    required int serverId,
+    required String type,
+    required String title,
+    required String message,
+    required DateTime createdAt,
+    this.isRead = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.actorUserId = const Value.absent(),
+    this.actorName = const Value.absent(),
+    this.actorImageUrl = const Value.absent(),
+    this.actionUrl = const Value.absent(),
+    this.isPlanRestricted = const Value.absent(),
+    this.upgradeRequired = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerUserId = Value(ownerUserId),
+       serverId = Value(serverId),
+       type = Value(type),
+       title = Value(title),
+       message = Value(message),
+       createdAt = Value(createdAt);
+  static Insertable<LocalNotification> custom({
+    Expression<int>? ownerUserId,
+    Expression<int>? serverId,
+    Expression<String>? type,
+    Expression<String>? title,
+    Expression<String>? message,
+    Expression<DateTime>? createdAt,
+    Expression<bool>? isRead,
+    Expression<String>? payloadJson,
+    Expression<int>? actorUserId,
+    Expression<String>? actorName,
+    Expression<String>? actorImageUrl,
+    Expression<String>? actionUrl,
+    Expression<bool>? isPlanRestricted,
+    Expression<bool>? upgradeRequired,
+    Expression<int>? sortOrder,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (serverId != null) 'server_id': serverId,
+      if (type != null) 'type': type,
+      if (title != null) 'title': title,
+      if (message != null) 'message': message,
+      if (createdAt != null) 'created_at': createdAt,
+      if (isRead != null) 'is_read': isRead,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (actorUserId != null) 'actor_user_id': actorUserId,
+      if (actorName != null) 'actor_name': actorName,
+      if (actorImageUrl != null) 'actor_image_url': actorImageUrl,
+      if (actionUrl != null) 'action_url': actionUrl,
+      if (isPlanRestricted != null) 'is_plan_restricted': isPlanRestricted,
+      if (upgradeRequired != null) 'upgrade_required': upgradeRequired,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalNotificationsCompanion copyWith({
+    Value<int>? ownerUserId,
+    Value<int>? serverId,
+    Value<String>? type,
+    Value<String>? title,
+    Value<String>? message,
+    Value<DateTime>? createdAt,
+    Value<bool>? isRead,
+    Value<String?>? payloadJson,
+    Value<int?>? actorUserId,
+    Value<String?>? actorName,
+    Value<String?>? actorImageUrl,
+    Value<String?>? actionUrl,
+    Value<bool>? isPlanRestricted,
+    Value<bool>? upgradeRequired,
+    Value<int>? sortOrder,
+    Value<int>? rowid,
+  }) {
+    return LocalNotificationsCompanion(
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      serverId: serverId ?? this.serverId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      createdAt: createdAt ?? this.createdAt,
+      isRead: isRead ?? this.isRead,
+      payloadJson: payloadJson ?? this.payloadJson,
+      actorUserId: actorUserId ?? this.actorUserId,
+      actorName: actorName ?? this.actorName,
+      actorImageUrl: actorImageUrl ?? this.actorImageUrl,
+      actionUrl: actionUrl ?? this.actionUrl,
+      isPlanRestricted: isPlanRestricted ?? this.isPlanRestricted,
+      upgradeRequired: upgradeRequired ?? this.upgradeRequired,
+      sortOrder: sortOrder ?? this.sortOrder,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<int>(serverId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (message.present) {
+      map['message'] = Variable<String>(message.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (isRead.present) {
+      map['is_read'] = Variable<bool>(isRead.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (actorUserId.present) {
+      map['actor_user_id'] = Variable<int>(actorUserId.value);
+    }
+    if (actorName.present) {
+      map['actor_name'] = Variable<String>(actorName.value);
+    }
+    if (actorImageUrl.present) {
+      map['actor_image_url'] = Variable<String>(actorImageUrl.value);
+    }
+    if (actionUrl.present) {
+      map['action_url'] = Variable<String>(actionUrl.value);
+    }
+    if (isPlanRestricted.present) {
+      map['is_plan_restricted'] = Variable<bool>(isPlanRestricted.value);
+    }
+    if (upgradeRequired.present) {
+      map['upgrade_required'] = Variable<bool>(upgradeRequired.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalNotificationsCompanion(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('serverId: $serverId, ')
+          ..write('type: $type, ')
+          ..write('title: $title, ')
+          ..write('message: $message, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('isRead: $isRead, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('actorUserId: $actorUserId, ')
+          ..write('actorName: $actorName, ')
+          ..write('actorImageUrl: $actorImageUrl, ')
+          ..write('actionUrl: $actionUrl, ')
+          ..write('isPlanRestricted: $isPlanRestricted, ')
+          ..write('upgradeRequired: $upgradeRequired, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalNotificationListsTable extends LocalNotificationLists
+    with TableInfo<$LocalNotificationListsTable, LocalNotificationList> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalNotificationListsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currentPageMeta = const VerificationMeta(
+    'currentPage',
+  );
+  @override
+  late final GeneratedColumn<int> currentPage = GeneratedColumn<int>(
+    'current_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _hasMoreMeta = const VerificationMeta(
+    'hasMore',
+  );
+  @override
+  late final GeneratedColumn<bool> hasMore = GeneratedColumn<bool>(
+    'has_more',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_more" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _unreadCountMeta = const VerificationMeta(
+    'unreadCount',
+  );
+  @override
+  late final GeneratedColumn<int> unreadCount = GeneratedColumn<int>(
+    'unread_count',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerUserId,
+    currentPage,
+    hasMore,
+    unreadCount,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_notification_lists';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalNotificationList> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('current_page')) {
+      context.handle(
+        _currentPageMeta,
+        currentPage.isAcceptableOrUnknown(
+          data['current_page']!,
+          _currentPageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('has_more')) {
+      context.handle(
+        _hasMoreMeta,
+        hasMore.isAcceptableOrUnknown(data['has_more']!, _hasMoreMeta),
+      );
+    }
+    if (data.containsKey('unread_count')) {
+      context.handle(
+        _unreadCountMeta,
+        unreadCount.isAcceptableOrUnknown(
+          data['unread_count']!,
+          _unreadCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerUserId};
+  @override
+  LocalNotificationList map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalNotificationList(
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      )!,
+      currentPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}current_page'],
+      )!,
+      hasMore: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_more'],
+      )!,
+      unreadCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unread_count'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalNotificationListsTable createAlias(String alias) {
+    return $LocalNotificationListsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalNotificationList extends DataClass
+    implements Insertable<LocalNotificationList> {
+  final int ownerUserId;
+  final int currentPage;
+  final bool hasMore;
+  final int? unreadCount;
+  final DateTime updatedAt;
+  const LocalNotificationList({
+    required this.ownerUserId,
+    required this.currentPage,
+    required this.hasMore,
+    this.unreadCount,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_user_id'] = Variable<int>(ownerUserId);
+    map['current_page'] = Variable<int>(currentPage);
+    map['has_more'] = Variable<bool>(hasMore);
+    if (!nullToAbsent || unreadCount != null) {
+      map['unread_count'] = Variable<int>(unreadCount);
+    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  LocalNotificationListsCompanion toCompanion(bool nullToAbsent) {
+    return LocalNotificationListsCompanion(
+      ownerUserId: Value(ownerUserId),
+      currentPage: Value(currentPage),
+      hasMore: Value(hasMore),
+      unreadCount: unreadCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unreadCount),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LocalNotificationList.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalNotificationList(
+      ownerUserId: serializer.fromJson<int>(json['ownerUserId']),
+      currentPage: serializer.fromJson<int>(json['currentPage']),
+      hasMore: serializer.fromJson<bool>(json['hasMore']),
+      unreadCount: serializer.fromJson<int?>(json['unreadCount']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerUserId': serializer.toJson<int>(ownerUserId),
+      'currentPage': serializer.toJson<int>(currentPage),
+      'hasMore': serializer.toJson<bool>(hasMore),
+      'unreadCount': serializer.toJson<int?>(unreadCount),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LocalNotificationList copyWith({
+    int? ownerUserId,
+    int? currentPage,
+    bool? hasMore,
+    Value<int?> unreadCount = const Value.absent(),
+    DateTime? updatedAt,
+  }) => LocalNotificationList(
+    ownerUserId: ownerUserId ?? this.ownerUserId,
+    currentPage: currentPage ?? this.currentPage,
+    hasMore: hasMore ?? this.hasMore,
+    unreadCount: unreadCount.present ? unreadCount.value : this.unreadCount,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  LocalNotificationList copyWithCompanion(
+    LocalNotificationListsCompanion data,
+  ) {
+    return LocalNotificationList(
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      currentPage: data.currentPage.present
+          ? data.currentPage.value
+          : this.currentPage,
+      hasMore: data.hasMore.present ? data.hasMore.value : this.hasMore,
+      unreadCount: data.unreadCount.present
+          ? data.unreadCount.value
+          : this.unreadCount,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalNotificationList(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('currentPage: $currentPage, ')
+          ..write('hasMore: $hasMore, ')
+          ..write('unreadCount: $unreadCount, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(ownerUserId, currentPage, hasMore, unreadCount, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalNotificationList &&
+          other.ownerUserId == this.ownerUserId &&
+          other.currentPage == this.currentPage &&
+          other.hasMore == this.hasMore &&
+          other.unreadCount == this.unreadCount &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LocalNotificationListsCompanion
+    extends UpdateCompanion<LocalNotificationList> {
+  final Value<int> ownerUserId;
+  final Value<int> currentPage;
+  final Value<bool> hasMore;
+  final Value<int?> unreadCount;
+  final Value<DateTime> updatedAt;
+  const LocalNotificationListsCompanion({
+    this.ownerUserId = const Value.absent(),
+    this.currentPage = const Value.absent(),
+    this.hasMore = const Value.absent(),
+    this.unreadCount = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  LocalNotificationListsCompanion.insert({
+    this.ownerUserId = const Value.absent(),
+    this.currentPage = const Value.absent(),
+    this.hasMore = const Value.absent(),
+    this.unreadCount = const Value.absent(),
+    required DateTime updatedAt,
+  }) : updatedAt = Value(updatedAt);
+  static Insertable<LocalNotificationList> custom({
+    Expression<int>? ownerUserId,
+    Expression<int>? currentPage,
+    Expression<bool>? hasMore,
+    Expression<int>? unreadCount,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (currentPage != null) 'current_page': currentPage,
+      if (hasMore != null) 'has_more': hasMore,
+      if (unreadCount != null) 'unread_count': unreadCount,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  LocalNotificationListsCompanion copyWith({
+    Value<int>? ownerUserId,
+    Value<int>? currentPage,
+    Value<bool>? hasMore,
+    Value<int?>? unreadCount,
+    Value<DateTime>? updatedAt,
+  }) {
+    return LocalNotificationListsCompanion(
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      currentPage: currentPage ?? this.currentPage,
+      hasMore: hasMore ?? this.hasMore,
+      unreadCount: unreadCount ?? this.unreadCount,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (currentPage.present) {
+      map['current_page'] = Variable<int>(currentPage.value);
+    }
+    if (hasMore.present) {
+      map['has_more'] = Variable<bool>(hasMore.value);
+    }
+    if (unreadCount.present) {
+      map['unread_count'] = Variable<int>(unreadCount.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalNotificationListsCompanion(')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('currentPage: $currentPage, ')
+          ..write('hasMore: $hasMore, ')
+          ..write('unreadCount: $unreadCount, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2349,6 +3599,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalMessagesTable localMessages = $LocalMessagesTable(this);
   late final $OutboxEntriesTable outboxEntries = $OutboxEntriesTable(this);
   late final $MediaCacheMetaTable mediaCacheMeta = $MediaCacheMetaTable(this);
+  late final $LocalNotificationsTable localNotifications =
+      $LocalNotificationsTable(this);
+  late final $LocalNotificationListsTable localNotificationLists =
+      $LocalNotificationListsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2358,6 +3612,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localMessages,
     outboxEntries,
     mediaCacheMeta,
+    localNotifications,
+    localNotificationLists,
   ];
 }
 
@@ -3502,6 +4758,640 @@ typedef $$MediaCacheMetaTableProcessedTableManager =
       MediaCacheMetaData,
       PrefetchHooks Function()
     >;
+typedef $$LocalNotificationsTableCreateCompanionBuilder =
+    LocalNotificationsCompanion Function({
+      required int ownerUserId,
+      required int serverId,
+      required String type,
+      required String title,
+      required String message,
+      required DateTime createdAt,
+      Value<bool> isRead,
+      Value<String?> payloadJson,
+      Value<int?> actorUserId,
+      Value<String?> actorName,
+      Value<String?> actorImageUrl,
+      Value<String?> actionUrl,
+      Value<bool> isPlanRestricted,
+      Value<bool> upgradeRequired,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+typedef $$LocalNotificationsTableUpdateCompanionBuilder =
+    LocalNotificationsCompanion Function({
+      Value<int> ownerUserId,
+      Value<int> serverId,
+      Value<String> type,
+      Value<String> title,
+      Value<String> message,
+      Value<DateTime> createdAt,
+      Value<bool> isRead,
+      Value<String?> payloadJson,
+      Value<int?> actorUserId,
+      Value<String?> actorName,
+      Value<String?> actorImageUrl,
+      Value<String?> actionUrl,
+      Value<bool> isPlanRestricted,
+      Value<bool> upgradeRequired,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+
+class $$LocalNotificationsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalNotificationsTable> {
+  $$LocalNotificationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get message => $composableBuilder(
+    column: $table.message,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get actorUserId => $composableBuilder(
+    column: $table.actorUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get actorName => $composableBuilder(
+    column: $table.actorName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get actorImageUrl => $composableBuilder(
+    column: $table.actorImageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get actionUrl => $composableBuilder(
+    column: $table.actionUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPlanRestricted => $composableBuilder(
+    column: $table.isPlanRestricted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get upgradeRequired => $composableBuilder(
+    column: $table.upgradeRequired,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalNotificationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalNotificationsTable> {
+  $$LocalNotificationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get message => $composableBuilder(
+    column: $table.message,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isRead => $composableBuilder(
+    column: $table.isRead,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get actorUserId => $composableBuilder(
+    column: $table.actorUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actorName => $composableBuilder(
+    column: $table.actorName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actorImageUrl => $composableBuilder(
+    column: $table.actorImageUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actionUrl => $composableBuilder(
+    column: $table.actionUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPlanRestricted => $composableBuilder(
+    column: $table.isPlanRestricted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get upgradeRequired => $composableBuilder(
+    column: $table.upgradeRequired,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalNotificationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalNotificationsTable> {
+  $$LocalNotificationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get message =>
+      $composableBuilder(column: $table.message, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRead =>
+      $composableBuilder(column: $table.isRead, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get actorUserId => $composableBuilder(
+    column: $table.actorUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get actorName =>
+      $composableBuilder(column: $table.actorName, builder: (column) => column);
+
+  GeneratedColumn<String> get actorImageUrl => $composableBuilder(
+    column: $table.actorImageUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get actionUrl =>
+      $composableBuilder(column: $table.actionUrl, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPlanRestricted => $composableBuilder(
+    column: $table.isPlanRestricted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get upgradeRequired => $composableBuilder(
+    column: $table.upgradeRequired,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+}
+
+class $$LocalNotificationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalNotificationsTable,
+          LocalNotification,
+          $$LocalNotificationsTableFilterComposer,
+          $$LocalNotificationsTableOrderingComposer,
+          $$LocalNotificationsTableAnnotationComposer,
+          $$LocalNotificationsTableCreateCompanionBuilder,
+          $$LocalNotificationsTableUpdateCompanionBuilder,
+          (
+            LocalNotification,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalNotificationsTable,
+              LocalNotification
+            >,
+          ),
+          LocalNotification,
+          PrefetchHooks Function()
+        > {
+  $$LocalNotificationsTableTableManager(
+    _$AppDatabase db,
+    $LocalNotificationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalNotificationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalNotificationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalNotificationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> ownerUserId = const Value.absent(),
+                Value<int> serverId = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> message = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> isRead = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
+                Value<int?> actorUserId = const Value.absent(),
+                Value<String?> actorName = const Value.absent(),
+                Value<String?> actorImageUrl = const Value.absent(),
+                Value<String?> actionUrl = const Value.absent(),
+                Value<bool> isPlanRestricted = const Value.absent(),
+                Value<bool> upgradeRequired = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalNotificationsCompanion(
+                ownerUserId: ownerUserId,
+                serverId: serverId,
+                type: type,
+                title: title,
+                message: message,
+                createdAt: createdAt,
+                isRead: isRead,
+                payloadJson: payloadJson,
+                actorUserId: actorUserId,
+                actorName: actorName,
+                actorImageUrl: actorImageUrl,
+                actionUrl: actionUrl,
+                isPlanRestricted: isPlanRestricted,
+                upgradeRequired: upgradeRequired,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int ownerUserId,
+                required int serverId,
+                required String type,
+                required String title,
+                required String message,
+                required DateTime createdAt,
+                Value<bool> isRead = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
+                Value<int?> actorUserId = const Value.absent(),
+                Value<String?> actorName = const Value.absent(),
+                Value<String?> actorImageUrl = const Value.absent(),
+                Value<String?> actionUrl = const Value.absent(),
+                Value<bool> isPlanRestricted = const Value.absent(),
+                Value<bool> upgradeRequired = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalNotificationsCompanion.insert(
+                ownerUserId: ownerUserId,
+                serverId: serverId,
+                type: type,
+                title: title,
+                message: message,
+                createdAt: createdAt,
+                isRead: isRead,
+                payloadJson: payloadJson,
+                actorUserId: actorUserId,
+                actorName: actorName,
+                actorImageUrl: actorImageUrl,
+                actionUrl: actionUrl,
+                isPlanRestricted: isPlanRestricted,
+                upgradeRequired: upgradeRequired,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalNotificationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalNotificationsTable,
+      LocalNotification,
+      $$LocalNotificationsTableFilterComposer,
+      $$LocalNotificationsTableOrderingComposer,
+      $$LocalNotificationsTableAnnotationComposer,
+      $$LocalNotificationsTableCreateCompanionBuilder,
+      $$LocalNotificationsTableUpdateCompanionBuilder,
+      (
+        LocalNotification,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalNotificationsTable,
+          LocalNotification
+        >,
+      ),
+      LocalNotification,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalNotificationListsTableCreateCompanionBuilder =
+    LocalNotificationListsCompanion Function({
+      Value<int> ownerUserId,
+      Value<int> currentPage,
+      Value<bool> hasMore,
+      Value<int?> unreadCount,
+      required DateTime updatedAt,
+    });
+typedef $$LocalNotificationListsTableUpdateCompanionBuilder =
+    LocalNotificationListsCompanion Function({
+      Value<int> ownerUserId,
+      Value<int> currentPage,
+      Value<bool> hasMore,
+      Value<int?> unreadCount,
+      Value<DateTime> updatedAt,
+    });
+
+class $$LocalNotificationListsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalNotificationListsTable> {
+  $$LocalNotificationListsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get currentPage => $composableBuilder(
+    column: $table.currentPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasMore => $composableBuilder(
+    column: $table.hasMore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unreadCount => $composableBuilder(
+    column: $table.unreadCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalNotificationListsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalNotificationListsTable> {
+  $$LocalNotificationListsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get currentPage => $composableBuilder(
+    column: $table.currentPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasMore => $composableBuilder(
+    column: $table.hasMore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unreadCount => $composableBuilder(
+    column: $table.unreadCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalNotificationListsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalNotificationListsTable> {
+  $$LocalNotificationListsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get currentPage => $composableBuilder(
+    column: $table.currentPage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hasMore =>
+      $composableBuilder(column: $table.hasMore, builder: (column) => column);
+
+  GeneratedColumn<int> get unreadCount => $composableBuilder(
+    column: $table.unreadCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$LocalNotificationListsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalNotificationListsTable,
+          LocalNotificationList,
+          $$LocalNotificationListsTableFilterComposer,
+          $$LocalNotificationListsTableOrderingComposer,
+          $$LocalNotificationListsTableAnnotationComposer,
+          $$LocalNotificationListsTableCreateCompanionBuilder,
+          $$LocalNotificationListsTableUpdateCompanionBuilder,
+          (
+            LocalNotificationList,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalNotificationListsTable,
+              LocalNotificationList
+            >,
+          ),
+          LocalNotificationList,
+          PrefetchHooks Function()
+        > {
+  $$LocalNotificationListsTableTableManager(
+    _$AppDatabase db,
+    $LocalNotificationListsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalNotificationListsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalNotificationListsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalNotificationListsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> ownerUserId = const Value.absent(),
+                Value<int> currentPage = const Value.absent(),
+                Value<bool> hasMore = const Value.absent(),
+                Value<int?> unreadCount = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => LocalNotificationListsCompanion(
+                ownerUserId: ownerUserId,
+                currentPage: currentPage,
+                hasMore: hasMore,
+                unreadCount: unreadCount,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> ownerUserId = const Value.absent(),
+                Value<int> currentPage = const Value.absent(),
+                Value<bool> hasMore = const Value.absent(),
+                Value<int?> unreadCount = const Value.absent(),
+                required DateTime updatedAt,
+              }) => LocalNotificationListsCompanion.insert(
+                ownerUserId: ownerUserId,
+                currentPage: currentPage,
+                hasMore: hasMore,
+                unreadCount: unreadCount,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalNotificationListsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalNotificationListsTable,
+      LocalNotificationList,
+      $$LocalNotificationListsTableFilterComposer,
+      $$LocalNotificationListsTableOrderingComposer,
+      $$LocalNotificationListsTableAnnotationComposer,
+      $$LocalNotificationListsTableCreateCompanionBuilder,
+      $$LocalNotificationListsTableUpdateCompanionBuilder,
+      (
+        LocalNotificationList,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalNotificationListsTable,
+          LocalNotificationList
+        >,
+      ),
+      LocalNotificationList,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3514,4 +5404,11 @@ class $AppDatabaseManager {
       $$OutboxEntriesTableTableManager(_db, _db.outboxEntries);
   $$MediaCacheMetaTableTableManager get mediaCacheMeta =>
       $$MediaCacheMetaTableTableManager(_db, _db.mediaCacheMeta);
+  $$LocalNotificationsTableTableManager get localNotifications =>
+      $$LocalNotificationsTableTableManager(_db, _db.localNotifications);
+  $$LocalNotificationListsTableTableManager get localNotificationLists =>
+      $$LocalNotificationListsTableTableManager(
+        _db,
+        _db.localNotificationLists,
+      );
 }

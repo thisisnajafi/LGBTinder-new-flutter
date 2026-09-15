@@ -332,6 +332,19 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
     }
 
     if (widget.cards.isEmpty && _exitingCardSnapshot == null) {
+      final hasCustomEmpty = widget.emptyTitle != null ||
+          widget.emptySubtitle != null ||
+          widget.emptyIconPath != null ||
+          widget.emptyActionLabel != null ||
+          widget.onEmptyAction != null ||
+          widget.onRefresh != null ||
+          widget.emptySecondaryActionLabel != null ||
+          widget.onEmptySecondaryAction != null ||
+          widget.emptyTertiaryActionLabel != null ||
+          widget.onEmptyTertiaryAction != null;
+      if (!hasCustomEmpty) {
+        return const DiscoverEmptyState();
+      }
       return DiscoverEmptyState(
         title: widget.emptyTitle ?? "You've seen everyone nearby",
         subtitle: widget.emptySubtitle ??
@@ -424,7 +437,7 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
           ..setEntry(3, 2, 0.0011)
           ..rotateX(tiltX)
           ..rotateZ(tiltZ)
-          ..scale(scale, scale, 1),
+          ..scaleByDouble(scale, scale, 1, 1),
         child: Transform.translate(
           offset: Offset(0, -depth * 8.0),
           child: child,
@@ -442,15 +455,17 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
       key: ValueKey<int>(cardData['id'] as int? ?? 0),
       child: _applyStackDepth(
         depth: depth,
-        child: Align(
+            child: Align(
           alignment: Alignment.center,
           child: SizedBox(
             width: cardSize.width,
             height: cardSize.height,
-            child: _buildCard(
+            child: RepaintBoundary(
+              child: _buildCard(
               cardData,
               depth: depth,
               isBackgroundPreview: depth > 0,
+            ),
             ),
           ),
         ),
@@ -548,9 +563,9 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
                                     color: Theme.of(context)
                                         .colorScheme
                                         .shadow
-                                        .withValues(alpha: 0.35),
-                                    blurRadius: 28,
-                                    offset: const Offset(0, 12),
+                                        .withValues(alpha: 0.22),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
                                   ),
                                 ]
                               : null,
@@ -561,7 +576,9 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              _buildCard(cardData, depth: 0),
+                              RepaintBoundary(
+                                child: _buildCard(cardData, depth: 0),
+                              ),
                               if (!widget.isSheetOpen) _buildSwipeOverlay(),
                             ],
                           ),
