@@ -280,7 +280,6 @@ class ProfileSheetContent extends StatelessWidget {
                       const SizedBox(height: AppSpacing.spacingXS),
                       VerificationStatusRow(
                         photoVerified: profile.verification!.photoVerified,
-                        idVerified: profile.verification!.idVerified,
                         videoVerified: profile.verification!.videoVerified,
                       ),
                     ],

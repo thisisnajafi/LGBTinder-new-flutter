@@ -233,10 +233,10 @@ class _ChatMessageTimeline extends ConsumerWidget {
             )];
             switch (slot.kind) {
               case ChatTimelineSlotKind.date:
-                return ChatDateBadge(
-                  key: ValueKey(slot.key),
-                  label: slot.label ?? '',
-                );
+                // Keep the slot for grouping / sticky-label math, but do not
+                // paint it. Reverse lists pack a short thread at the bottom,
+                // so an inline pill would sit in the middle of the wallpaper.
+                return SizedBox(key: ValueKey(slot.key), height: 0);
               case ChatTimelineSlotKind.unread:
                 return ChatUnreadSeparatorBar(
                   key: unreadSeparatorKey,

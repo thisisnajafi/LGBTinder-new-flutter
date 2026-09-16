@@ -93,103 +93,110 @@ class AppBottomNavBar extends ConsumerWidget {
               solid: solidNavBar,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(innerRadius),
-                child: _NavBarBlur(
-                  enabled:
-                      !solidNavBar && AppAnimations.animationsEnabled(context),
-                  child: Container(
-                    height: barHeight,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.surfaceDark.withValues(alpha: 0.82)
-                          : Colors.white.withValues(alpha: 0.88),
-                      borderRadius: BorderRadius.circular(innerRadius),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : Colors.white.withValues(alpha: 0.72),
-                        width: 0.75,
+                child: SizedBox(
+                  height: barHeight,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _NavBarBlur(
+                        enabled: !solidNavBar &&
+                            AppAnimations.animationsEnabled(context),
                       ),
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        const hPad = AppSpacing.spacingSM;
-                        const pillInset = 4.0;
-                        const pillHeight = 48.0;
-                        final slotWidth =
-                            (constraints.maxWidth - hPad * 2) / itemCount;
-                        final pillLeft =
-                            hPad + currentIndex * slotWidth + pillInset;
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.surfaceDark.withValues(alpha: 0.92)
+                              : Colors.white.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(innerRadius),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.white.withValues(alpha: 0.72),
+                            width: 0.75,
+                          ),
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            const hPad = AppSpacing.spacingSM;
+                            const pillInset = 4.0;
+                            const pillHeight = 48.0;
+                            final slotWidth =
+                                (constraints.maxWidth - hPad * 2) / itemCount;
+                            final pillLeft =
+                                hPad + currentIndex * slotWidth + pillInset;
 
-                        return Stack(
-                          children: [
-                            AnimatedPositioned(
-                              duration: AppAnimations.animationsEnabled(context)
-                                  ? AppAnimations.transitionTab
-                                  : Duration.zero,
-                              curve: AppAnimations.curveDefault,
-                              left: pillLeft,
-                              top: (barHeight - pillHeight) / 2,
-                              width: slotWidth - pillInset * 2,
-                              height: pillHeight,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.14,
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.radiusLG,
+                            return Stack(
+                              children: [
+                                AnimatedPositioned(
+                                  duration:
+                                      AppAnimations.animationsEnabled(context)
+                                          ? AppAnimations.transitionTab
+                                          : Duration.zero,
+                                  curve: AppAnimations.curveDefault,
+                                  left: pillLeft,
+                                  top: (barHeight - pillHeight) / 2,
+                                  width: slotWidth - pillInset * 2,
+                                  height: pillHeight,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.radiusLG,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: hPad,
-                              ),
-                              child: Row(
-                                children: List.generate(itemCount, (index) {
-                                  final isActive = currentIndex == index;
-                                  final outlinePath =
-                                      AppIcons.mainNavIconOutline(index);
-                                  final activePath = AppIcons.mainNavIconActive(
-                                    index,
-                                  );
-                                  final label =
-                                      AppIcons.mainNavItems[index].label;
-                                  final useProfileAvatar =
-                                      index == profileTabIndex &&
-                                      profileAvatarUrl != null;
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: hPad,
+                                  ),
+                                  child: Row(
+                                    children: List.generate(itemCount, (index) {
+                                      final isActive = currentIndex == index;
+                                      final outlinePath =
+                                          AppIcons.mainNavIconOutline(index);
+                                      final activePath =
+                                          AppIcons.mainNavIconActive(index);
+                                      final label =
+                                          AppIcons.mainNavItems[index].label;
+                                      final useProfileAvatar =
+                                          index == profileTabIndex &&
+                                          profileAvatarUrl != null;
 
-                                  return Expanded(
-                                    child: _NavItem(
-                                      label: label,
-                                      outlinePath: outlinePath,
-                                      activePath: activePath,
-                                      isActive: isActive,
-                                      inactiveIconColor: inactiveIconColor,
-                                      iconOverride: useProfileAvatar
-                                          ? _ProfileNavAvatar(
-                                              imageUrl: profileAvatarUrl,
-                                              userId: profileUserId,
-                                              isOnline: profileIsOnline,
-                                            )
-                                          : null,
-                                      badge: _badgeForTab(
-                                        index: index,
-                                        messengerUnreadCount:
-                                            messengerUnreadCount,
-                                        notificationCount: notificationCount,
-                                      ),
-                                      onTap: () => onTap(index),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                                      return Expanded(
+                                        child: _NavItem(
+                                          label: label,
+                                          outlinePath: outlinePath,
+                                          activePath: activePath,
+                                          isActive: isActive,
+                                          inactiveIconColor: inactiveIconColor,
+                                          iconOverride: useProfileAvatar
+                                              ? _ProfileNavAvatar(
+                                                  imageUrl: profileAvatarUrl,
+                                                  userId: profileUserId,
+                                                  isOnline: profileIsOnline,
+                                                )
+                                              : null,
+                                          badge: _badgeForTab(
+                                            index: index,
+                                            messengerUnreadCount:
+                                                messengerUnreadCount,
+                                            notificationCount:
+                                                notificationCount,
+                                          ),
+                                          onTap: () => onTap(index),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -220,18 +227,21 @@ class AppBottomNavBar extends ConsumerWidget {
   }
 }
 
+/// Blur sits *behind* the glass + icons so Impeller does not drop the tabs.
 class _NavBarBlur extends StatelessWidget {
-  const _NavBarBlur({required this.enabled, required this.child});
+  const _NavBarBlur({required this.enabled});
 
   static final ImageFilter _blur = ImageFilter.blur(sigmaX: 10, sigmaY: 10);
 
   final bool enabled;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
-    return BackdropFilter(filter: _blur, child: child);
+    if (!enabled) return const SizedBox.shrink();
+    return BackdropFilter(
+      filter: _blur,
+      child: const ColoredBox(color: Colors.transparent),
+    );
   }
 }
 

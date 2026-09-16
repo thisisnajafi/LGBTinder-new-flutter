@@ -216,11 +216,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _seedInitialPeerPresence();
       _startRealtimeFallback();
     } else {
-      _thread.patch(
-        isLoading: false,
-        hasError: true,
-        errorMessage: 'Invalid conversation. Please go back and try again.',
-      );
+      _runAfterBuild(() {
+        _thread.patch(
+          isLoading: false,
+          hasError: true,
+          errorMessage: 'Invalid conversation. Please go back and try again.',
+        );
+      });
     }
   }
 
@@ -256,7 +258,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }());
     });
     _scrollController.dispose();
-    _threadNotifier.clear();
+    final threadNotifier = _threadNotifier;
+    Future<void>(() => threadNotifier.clear());
     super.dispose();
   }
 
@@ -339,26 +342,46 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  /// Riverpod forbids provider writes during build/initState. Always wait
+  /// until the current frame finishes so [action] cannot run mid-build.
+  void _runAfterBuild(VoidCallback action) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      action();
+    });
+  }
+
   Future<void> _loadCurrentUserId() async {
     try {
+      final cached = ref.read(cachedCurrentUserProvider).valueOrNull;
       final userService = ref.read(userServiceProvider);
-      final userInfo = await userService.getUserInfo();
-      if (mounted) {
-        _currentUserId = userInfo.id;
-        _messages = _messages.map((msg) {
-          final senderId = msg['sender_id'] as int?;
-          if (senderId == null) return msg;
-          return {...msg, 'is_sent': senderId == userInfo.id};
-        }).toList();
-        setState(() {});
+      if (cached != null && cached.id > 0) {
+        _runAfterBuild(() => _applyCurrentUserId(cached.id));
+        return;
       }
+
+      final userInfo = await userService.getUserInfo();
+      if (!mounted) return;
+      _applyCurrentUserId(userInfo.id);
     } catch (e) {
+      if (!mounted) return;
       AppLogger.warning(
         'Could not resolve current user for sent-status',
         tag: 'Chat',
         error: e,
       );
     }
+  }
+
+  void _applyCurrentUserId(int userId) {
+    if (!mounted) return;
+    _currentUserId = userId;
+    _messages = _messages.map((msg) {
+      final senderId = msg['sender_id'] as int?;
+      if (senderId == null) return msg;
+      return {...msg, 'is_sent': senderId == userId};
+    }).toList();
+    setState(() {});
   }
 
   Future<void> _loadConversationMuteStatus() async {
@@ -401,8 +424,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _seedInitialPeerPresence() {
-    final cached = ref.read(userPresenceCacheProvider)[widget.userId];
-    if (cached == null) {
+    _runAfterBuild(() {
+      final cached = ref.read(userPresenceCacheProvider)[widget.userId];
+      if (cached != null) return;
       for (final item in ref.read(chatListPreviewProvider).items) {
         if (item.id != widget.userId) continue;
         ref
@@ -417,7 +441,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             );
         break;
       }
-    }
+    });
     unawaited(_refreshPeerPresenceFromProfile());
   }
 
@@ -653,16 +677,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   /// FCM must treat this peer as "open" before history (or a conversation id) exists.
   void _registerActivePeerImmediately() {
     ActiveChatPeerBridge.primeActivePeer(widget.userId);
-    ref
-        .read(chatListPreviewProvider.notifier)
-        .clearUnreadForPeer(widget.userId);
-    unawaited(
-      Future<void>(() async {
-        if (!mounted) return;
-        _pusherLifecycle.markActiveChat(peerUserId: widget.userId);
-        await _subscribeWhenConversationKnown();
-      }),
-    );
+    _runAfterBuild(() {
+      ref
+          .read(chatListPreviewProvider.notifier)
+          .clearUnreadForPeer(widget.userId);
+      unawaited(
+        Future<void>(() async {
+          if (!mounted) return;
+          _pusherLifecycle.markActiveChat(peerUserId: widget.userId);
+          await _subscribeWhenConversationKnown();
+        }),
+      );
+    });
   }
 
   Future<void> _subscribeWhenConversationKnown() async {
@@ -1531,9 +1557,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _markAsRead() async {
-    ref
-        .read(chatListPreviewProvider.notifier)
-        .clearUnreadForPeer(widget.userId);
+    _runAfterBuild(() {
+      ref
+          .read(chatListPreviewProvider.notifier)
+          .clearUnreadForPeer(widget.userId);
+    });
     try {
       final chatService = ref.read(chatServiceProvider);
       final conversationId = _conversationId;
@@ -3118,8 +3146,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ) {
       if (next == null || previous?.seq == next.seq) return;
       if (!_isNearBottom()) return;
-      _scrollToBottom(bounce: next.insertedNew);
-      if (next.fromPeer) unawaited(_markAsRead());
+      _runAfterBuild(() {
+        _scrollToBottom(bounce: next.insertedNew);
+        if (next.fromPeer) unawaited(_markAsRead());
+      });
     });
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

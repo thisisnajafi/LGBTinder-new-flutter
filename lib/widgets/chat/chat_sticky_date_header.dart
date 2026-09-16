@@ -34,6 +34,20 @@ class ChatStickyDate {
     return labelForChronologicalIndex(timeline, chrono);
   }
 
+  /// Day shown under the header: the row at the visual top, or the newest
+  /// day when a short reverse thread leaves the top of the viewport empty.
+  static String? labelAtViewport({
+    required List<Map<String, dynamic>> timeline,
+    required GlobalKey listKey,
+  }) {
+    final visual = visualIndexAtViewportTop(listKey);
+    if (visual != null) {
+      return labelForVisualIndex(timeline, visual);
+    }
+    if (timeline.isEmpty) return null;
+    return labelForChronologicalIndex(timeline, timeline.length - 1);
+  }
+
   static int? visualIndexAtViewportTop(GlobalKey listKey) {
     final context = listKey.currentContext;
     if (context == null) return null;
@@ -134,10 +148,10 @@ class _ChatStickyDateHeaderState extends State<ChatStickyDateHeader> {
 
   void _sync() {
     if (!mounted) return;
-    final visual = ChatStickyDate.visualIndexAtViewportTop(widget.listKey);
-    final next = visual == null
-        ? null
-        : ChatStickyDate.labelForVisualIndex(widget.timeline, visual);
+    final next = ChatStickyDate.labelAtViewport(
+      timeline: widget.timeline,
+      listKey: widget.listKey,
+    );
     if (next == _label) return;
     setState(() => _label = next);
   }
@@ -146,12 +160,17 @@ class _ChatStickyDateHeaderState extends State<ChatStickyDateHeader> {
   Widget build(BuildContext context) {
     final label = _label;
     if (label == null || label.isEmpty) return const SizedBox.shrink();
-    return IgnorePointer(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ChatDateBadge(
-          key: const ValueKey('chat-sticky-date'),
-          label: label,
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ChatDateBadge(
+            key: const ValueKey('chat-sticky-date'),
+            label: label,
+          ),
         ),
       ),
     );

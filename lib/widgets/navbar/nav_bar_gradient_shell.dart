@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -13,8 +14,9 @@ enum NavBarGradientStyle {
   prideSweep,
 }
 
-/// Paints a cached gradient (or solid) ring so the shader is not rebuilt
-/// on every tab-body frame.
+/// Paints a cached gradient (or solid) **ring** so the shader is not rebuilt
+/// on every tab-body frame. The interior stays transparent so glass + icons
+/// composite on top (Impeller + BackdropFilter used to swallow a filled rect).
 class NavBarGradientShell extends StatelessWidget {
   const NavBarGradientShell({
     super.key,
@@ -50,6 +52,7 @@ class NavBarGradientShell extends StatelessWidget {
                   isDark: isDark,
                   style: style,
                   borderRadius: borderRadius,
+                  borderWidth: borderWidth,
                 ),
           child: Padding(padding: EdgeInsets.all(borderWidth), child: child),
         ),
@@ -115,11 +118,13 @@ class _CachedNavBarGradientPainter extends CustomPainter {
     required this.isDark,
     required this.style,
     required this.borderRadius,
+    required this.borderWidth,
   });
 
   final bool isDark;
   final NavBarGradientStyle style;
   final double borderRadius;
+  final double borderWidth;
 
   ui.Shader? _shader;
   Size? _size;
@@ -128,6 +133,8 @@ class _CachedNavBarGradientPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+
     if (_shader == null ||
         _size != size ||
         _cachedDark != isDark ||
@@ -141,26 +148,50 @@ class _CachedNavBarGradientPainter extends CustomPainter {
           rect.topLeft,
           rect.bottomRight,
           _brandColors(isDark),
+          const [0.0, 0.5, 1.0],
         ),
         NavBarGradientStyle.prideSweep => ui.Gradient.sweep(
           rect.center,
           _prideSweepColors,
+          _prideSweepStops,
         ),
       };
     }
 
-    final rrect = RRect.fromRectAndRadius(
+    final inset = borderWidth.clamp(0.5, size.shortestSide / 2);
+    final outer = RRect.fromRectAndRadius(
       Offset.zero & size,
       Radius.circular(borderRadius),
     );
-    canvas.drawRRect(rrect, Paint()..shader = _shader);
+    final innerRadius = math.max(0.0, borderRadius - inset);
+    final inner = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        inset,
+        inset,
+        math.max(0, size.width - inset * 2),
+        math.max(0, size.height - inset * 2),
+      ),
+      Radius.circular(innerRadius),
+    );
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRRect(outer)
+      ..addRRect(inner);
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = _shader
+        ..isAntiAlias = true,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _CachedNavBarGradientPainter oldDelegate) {
     return oldDelegate.isDark != isDark ||
         oldDelegate.style != style ||
-        oldDelegate.borderRadius != borderRadius;
+        oldDelegate.borderRadius != borderRadius ||
+        oldDelegate.borderWidth != borderWidth;
   }
 
   static List<Color> _brandColors(bool isDark) {
@@ -181,5 +212,10 @@ class _CachedNavBarGradientPainter extends CustomPainter {
   static final List<Color> _prideSweepColors = [
     ...AppColors.lgbtGradient,
     AppColors.lgbtGradient.first,
+  ];
+
+  static final List<double> _prideSweepStops = [
+    for (var i = 0; i < _prideSweepColors.length; i++)
+      i / (_prideSweepColors.length - 1),
   ];
 }

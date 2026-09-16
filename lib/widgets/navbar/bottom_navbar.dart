@@ -87,60 +87,69 @@ class BottomNavbar extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(
                       barRadius - _borderWidth,
                     ),
-                    child: _NavBarBlur(
-                      enabled: blurNav,
-                      child: Container(
-                        height: barHeight,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: width < 360 ? 4 : 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: glassFill,
-                          borderRadius: BorderRadius.circular(
-                            barRadius - _borderWidth,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: isDark ? 0.3 : 0.1,
+                    child: SizedBox(
+                      height: barHeight,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _NavBarBlur(enabled: blurNav),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: glassFill,
+                              borderRadius: BorderRadius.circular(
+                                barRadius - _borderWidth,
                               ),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: isDark ? 0.3 : 0.1,
+                                  ),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          children: List.generate(itemCount, (index) {
-                            final meta = AppIcons.mainNavItems[index];
-                            final label = _labelForIndex(
-                              index,
-                              meta.label,
-                              compactLabels,
-                            );
-                            return Expanded(
-                              child: _NavItem(
-                                label: label,
-                                outlinePath: AppIcons.mainNavIconOutline(index),
-                                activePath: AppIcons.mainNavIconActive(index),
-                                isActive: currentIndex == index,
-                                iconSize: iconSize,
-                                labelSize: labelSize,
-                                activeColor: activeColor,
-                                inactiveIconColor: inactiveIcon,
-                                inactiveLabelColor: inactiveLabel,
-                                badge:
-                                    index == 1 &&
-                                        notificationCount != null &&
-                                        notificationCount! > 0
-                                    ? NotificationBadge(
-                                        count: notificationCount!,
-                                      )
-                                    : null,
-                                onTap: () => onTap(index),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: width < 360 ? 4 : 8,
                               ),
-                            );
-                          }),
-                        ),
+                              child: Row(
+                                children: List.generate(itemCount, (index) {
+                                  final meta = AppIcons.mainNavItems[index];
+                                  final label = _labelForIndex(
+                                    index,
+                                    meta.label,
+                                    compactLabels,
+                                  );
+                                  return Expanded(
+                                    child: _NavItem(
+                                      label: label,
+                                      outlinePath:
+                                          AppIcons.mainNavIconOutline(index),
+                                      activePath:
+                                          AppIcons.mainNavIconActive(index),
+                                      isActive: currentIndex == index,
+                                      iconSize: iconSize,
+                                      labelSize: labelSize,
+                                      activeColor: activeColor,
+                                      inactiveIconColor: inactiveIcon,
+                                      inactiveLabelColor: inactiveLabel,
+                                      badge:
+                                          index == 1 &&
+                                              notificationCount != null &&
+                                              notificationCount! > 0
+                                          ? NotificationBadge(
+                                              count: notificationCount!,
+                                            )
+                                          : null,
+                                      onTap: () => onTap(index),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -173,17 +182,19 @@ class BottomNavbar extends ConsumerWidget {
 }
 
 class _NavBarBlur extends StatelessWidget {
-  const _NavBarBlur({required this.enabled, required this.child});
+  const _NavBarBlur({required this.enabled});
 
   static final ImageFilter _blur = ImageFilter.blur(sigmaX: 10, sigmaY: 10);
 
   final bool enabled;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
-    return BackdropFilter(filter: _blur, child: child);
+    if (!enabled) return const SizedBox.shrink();
+    return BackdropFilter(
+      filter: _blur,
+      child: const ColoredBox(color: Colors.transparent),
+    );
   }
 }
 

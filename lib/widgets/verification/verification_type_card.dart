@@ -6,37 +6,33 @@ import '../../core/utils/app_icons.dart';
 import 'verification_components.dart';
 import '../../core/responsive/responsive.dart';
 
-enum VerificationType { photo, id, video }
+enum VerificationType { photo, video }
 
 enum VerificationCardStatus { notStarted, pending, approved, rejected }
 
 extension VerificationTypeX on VerificationType {
   String get label => switch (this) {
         VerificationType.photo => 'Photo Verification',
-        VerificationType.id => 'ID Verification',
         VerificationType.video => 'Video Verification',
       };
 
-  String get uploadLabel => switch (this) {
-        VerificationType.photo => 'Photo',
-        VerificationType.id => 'ID',
-        VerificationType.video => 'Video',
+  String get captureLabel => switch (this) {
+        VerificationType.photo => 'Take Photo',
+        VerificationType.video => 'Record Video',
       };
 
   int get points => switch (this) {
-        VerificationType.photo => 30,
-        VerificationType.id => 40,
-        VerificationType.video => 30,
+        VerificationType.photo => 50,
+        VerificationType.video => 50,
       };
 
   String get iconPath => switch (this) {
         VerificationType.photo => AppIcons.camera,
-        VerificationType.id => AppIcons.document,
         VerificationType.video => AppIcons.video,
       };
 }
 
-/// Card for a single verification type (photo / id / video).
+/// Card for a single verification type (photo / video).
 class VerificationTypeCard extends StatelessWidget {
   final VerificationType type;
   final VerificationCardStatus status;
@@ -237,11 +233,11 @@ class VerificationTypeCard extends StatelessWidget {
             FilledButton.icon(
               onPressed: isUploading ? null : onUpload,
               icon: AppSvgIcon(
-                assetPath: AppIcons.upload,
+                assetPath: type.iconPath,
                 size: 16,
                 color: theme.colorScheme.onPrimary,
               ),
-              label: Text('Upload ${type.uploadLabel}'),
+              label: Text(type.captureLabel),
             ),
             if (isUploading) ...[
               SizedBox(height: AppSpacing.spacingSM),

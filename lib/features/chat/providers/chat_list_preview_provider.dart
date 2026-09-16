@@ -661,6 +661,7 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
   void clearUnreadForPeer(int peerUserId) {
     final index = state.items.indexWhere((item) => item.id == peerUserId);
     if (index < 0) return;
+    if (state.items[index].unreadCount == 0) return;
     final updated = state.items[index].copyWith(unreadCount: 0);
     final items = [...state.items];
     items[index] = updated;
@@ -901,7 +902,7 @@ final chatListSyncProvider = Provider<void>((ref) {
       // Current user read messages — clear unread for the peer in the conversation.
       final peerId = lifecycle.activePeerUserId;
       if (peerId != null && peerId > 0) {
-        preview.clearUnreadForPeer(peerId);
+        Future<void>(() => preview.clearUnreadForPeer(peerId));
       }
       return;
     }

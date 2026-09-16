@@ -5,8 +5,8 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_date_time.dart';
 
-/// Telegram-style date pill shown between messages of different days
-/// (CHAT-THREAD-005).
+/// Telegram-style date pill pinned under the chat header
+/// (CHAT-THREAD-005). Inline timeline slots stay for grouping math only.
 class ChatDateBadge extends StatelessWidget {
   const ChatDateBadge({
     super.key,

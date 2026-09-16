@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lgbtindernew/features/chat/providers/chat_list_preview_provider.dart';
 import 'package:lgbtindernew/pages/chat_page.dart';
 import 'package:lgbtindernew/widgets/chat/message_input.dart';
 import '../../helpers/test_helpers.dart';
@@ -53,6 +54,43 @@ void main() {
         findsOneWidget,
       );
       await _unmountChat(tester);
+    });
+
+    testWidgets('opening a thread with unread does not crash the tree', (
+      WidgetTester tester,
+    ) async {
+      final container = createTestContainer();
+      container.read(chatListPreviewProvider.notifier).seedFromMaps([
+        {
+          'id': 123,
+          'chat_id': 123,
+          'name': 'Test User',
+          'unread_count': 3,
+        },
+      ]);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: ChatPage(
+              userId: 123,
+              userName: 'Test User',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await waitForAsync(tester);
+
+      expect(find.text('Something went wrong'), findsNothing);
+      expect(find.byType(ChatPage), findsOneWidget);
+      expect(
+        container.read(chatListPreviewProvider).items.single.unreadCount,
+        0,
+      );
+      await _unmountChat(tester);
+      container.dispose();
     });
   });
 }

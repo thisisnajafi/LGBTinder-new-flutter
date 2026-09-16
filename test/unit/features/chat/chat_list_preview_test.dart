@@ -311,6 +311,26 @@ void main() {
     expect(container.read(chatListPreviewProvider).items.single.unreadCount, 0);
   });
 
+  test('clearUnreadForPeer is a no-op when unread is already zero', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final notifier = container.read(chatListPreviewProvider.notifier);
+    notifier.seedFromMaps([
+      {
+        'id': 12,
+        'chat_id': 12,
+        'name': 'Alex',
+        'unread_count': 0,
+      },
+    ]);
+
+    final before = container.read(chatListPreviewProvider);
+    notifier.clearUnreadForPeer(12);
+
+    expect(identical(container.read(chatListPreviewProvider), before), isTrue);
+  });
+
   test('background incoming message moves the row to top and increments unread', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);

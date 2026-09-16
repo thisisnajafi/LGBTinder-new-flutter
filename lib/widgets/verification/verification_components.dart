@@ -118,6 +118,7 @@ class VerificationBadgeChip extends StatelessWidget {
     switch (badge) {
       case 'Fully Verified':
         return AppColors.accentYellow;
+      case 'Video Verified':
       case 'Highly Verified':
       case 'Verified':
       case 'Photo Verified':
@@ -170,16 +171,14 @@ class VerificationBadgeChip extends StatelessWidget {
   }
 }
 
-/// Three mini dots for photo / id / video verification status.
+/// Two mini dots for photo / video verification status.
 class VerificationStatusRow extends StatelessWidget {
   final bool photoVerified;
-  final bool idVerified;
   final bool videoVerified;
 
   const VerificationStatusRow({
     super.key,
     required this.photoVerified,
-    required this.idVerified,
     required this.videoVerified,
   });
 
@@ -207,8 +206,6 @@ class VerificationStatusRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         dot(photoVerified, photoVerified ? 'Photo Verified' : 'Photo not verified'),
-        SizedBox(width: AppSpacing.spacingXS),
-        dot(idVerified, idVerified ? 'ID Verified' : 'ID not verified'),
         SizedBox(width: AppSpacing.spacingXS),
         dot(videoVerified, videoVerified ? 'Video Verified' : 'Video not verified'),
       ],
@@ -327,7 +324,7 @@ Color verificationScoreTint(BuildContext context, int score) {
   }
   if (score >= 100) return AppColors.accentYellow;
   if (score >= 70) return theme.colorScheme.primary;
-  if (score >= 30) {
+  if (score >= 50) {
     return theme.colorScheme.primary.withValues(alpha: 0.6);
   }
   return theme.colorScheme.onSurface.withValues(alpha: 0.3);

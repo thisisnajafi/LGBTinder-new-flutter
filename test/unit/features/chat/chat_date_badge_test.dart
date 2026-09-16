@@ -57,5 +57,29 @@ void main() {
       expect(ChatStickyDate.labelForChronologicalIndex(wrapped, 1), 'Yesterday');
       expect(ChatStickyDate.labelForChronologicalIndex(wrapped, 3), 'Today');
     });
+
+    test('labelAtViewport falls back to the newest day when no row is laid out', () {
+      final now = DateTime(2026, 8, 21, 18);
+      final wrapped = ChatDateBadgeInserter.wrap(
+        [
+          {
+            'kind': 'message',
+            'text': 'yesterday',
+            'timestamp': DateTime(2026, 8, 20, 10),
+          },
+          {
+            'kind': 'message',
+            'text': 'today',
+            'timestamp': DateTime(2026, 8, 21, 11),
+          },
+        ],
+        now: now,
+      );
+
+      expect(
+        ChatStickyDate.labelForChronologicalIndex(wrapped, wrapped.length - 1),
+        'Today',
+      );
+    });
   });
 }

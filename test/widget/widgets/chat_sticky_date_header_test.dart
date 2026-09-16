@@ -103,7 +103,7 @@ void main() {
                       visualIndex,
                     )];
                     if (item['kind'] == ChatDateBadgeInserter.kind) {
-                      return ChatDateBadge(label: item['label'] as String);
+                      return const SizedBox(height: 0);
                     }
                     return SizedBox(
                       height: 80,
@@ -147,5 +147,82 @@ void main() {
       tester.widget<ChatDateBadge>(sticky).label,
       'Yesterday',
     );
+  });
+
+  testWidgets('short reverse thread pins the day under the header, not mid-list',
+      (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final listKey = GlobalKey();
+    final now = DateTime(2026, 9, 16, 18);
+    final timeline = ChatDateBadgeInserter.wrap(
+      [
+        {
+          'kind': 'message',
+          'text': 'hello',
+          'timestamp': DateTime(2026, 9, 5, 11),
+        },
+        {
+          'kind': 'message',
+          'text': 'there',
+          'timestamp': DateTime(2026, 9, 5, 12),
+        },
+      ],
+      now: now,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          body: SizedBox(
+            height: 400,
+            child: Stack(
+              key: const ValueKey('chat-thread-stack'),
+              children: [
+                ChatThreadListView(
+                  key: listKey,
+                  controller: controller,
+                  itemCount: timeline.length,
+                  itemBuilder: (context, visualIndex) {
+                    final item = timeline[
+                        ChatThreadScroll.chronologicalIndex(
+                      timeline.length,
+                      visualIndex,
+                    )];
+                    if (item['kind'] == ChatDateBadgeInserter.kind) {
+                      return const SizedBox(height: 0);
+                    }
+                    return SizedBox(
+                      height: 56,
+                      child: Text(item['text'] as String),
+                    );
+                  },
+                ),
+                ChatStickyDateHeader(
+                  controller: controller,
+                  timeline: timeline,
+                  listKey: listKey,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final sticky = find.byKey(const ValueKey('chat-sticky-date'));
+    expect(sticky, findsOneWidget);
+    expect(tester.widget<ChatDateBadge>(sticky).label, '5 Sep');
+    expect(find.text('5 Sep'), findsOneWidget);
+
+    final stack = find.byKey(const ValueKey('chat-thread-stack'));
+    final stackTop = tester.getTopLeft(stack).dy;
+    final stickyTop = tester.getTopLeft(sticky).dy;
+    final stickyCenter = tester.getCenter(sticky).dy;
+    final stackCenter = tester.getCenter(stack).dy;
+    expect(stickyTop - stackTop, lessThan(24));
+    expect(stickyCenter, lessThan(stackCenter - 80));
   });
 }

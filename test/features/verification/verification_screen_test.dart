@@ -47,7 +47,24 @@ void main() {
   });
 
   group('VerificationTypeCard', () {
-    testWidgets('notStarted shows upload button', (tester) async {
+    testWidgets('video notStarted shows record button', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          VerificationTypeCard(
+            type: VerificationType.video,
+            status: VerificationCardStatus.notStarted,
+            guidelinesText: 'Record a short live video',
+            onUpload: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('Record Video'), findsOneWidget);
+      expect(find.text('Take Photo'), findsNothing);
+      expect(find.text('ID Verification'), findsNothing);
+    });
+
+    testWidgets('notStarted shows take photo button', (tester) async {
       await tester.pumpWidget(
         wrap(
           VerificationTypeCard(
@@ -59,7 +76,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Upload Photo'), findsOneWidget);
+      expect(find.text('Take Photo'), findsOneWidget);
       expect(find.text('Under Review'), findsNothing);
     });
 
@@ -94,7 +111,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Upload Photo'), findsNothing);
+      expect(find.text('Take Photo'), findsNothing);
       expect(find.text('Approved'), findsOneWidget);
     });
 
@@ -112,7 +129,7 @@ void main() {
       );
 
       expect(find.text('Photo was too blurry'), findsOneWidget);
-      expect(find.text('Upload Photo'), findsOneWidget);
+      expect(find.text('Take Photo'), findsOneWidget);
       expect(find.text('Rejected'), findsOneWidget);
     });
 
@@ -120,9 +137,9 @@ void main() {
       await tester.pumpWidget(
         wrap(
           VerificationTypeCard(
-            type: VerificationType.id,
+            type: VerificationType.video,
             status: VerificationCardStatus.pending,
-            guidelinesText: 'Upload your ID',
+            guidelinesText: 'Record a short video',
             onUpload: () {},
             onCancel: () {},
           ),

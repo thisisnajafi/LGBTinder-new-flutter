@@ -1,5 +1,4 @@
 // Screen: ProfileVerificationScreen
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,7 +15,7 @@ import '../../widgets/loading/shimmer_effect.dart';
 import '../../widgets/verification/verification_components.dart';
 import '../../widgets/verification/verification_type_card.dart';
 
-/// Profile verification — identity trust (photo / ID / video).
+/// Profile verification — identity trust (photo / video, camera only).
 class ProfileVerificationScreen extends ConsumerStatefulWidget {
   const ProfileVerificationScreen({super.key});
 
@@ -44,7 +43,6 @@ class _ProfileVerificationScreenState
     List<VerificationHistoryItem> history,
   ) {
     final verified = switch (type) {
-      'id' => verification.idVerified,
       'video' => verification.videoVerified,
       _ => verification.photoVerified,
     };
@@ -91,13 +89,10 @@ class _ProfileVerificationScreenState
     String? path;
     switch (type) {
       case VerificationType.photo:
-        path = await _pickPhotoSource();
-        break;
-      case VerificationType.id:
-        path = await _pickIdSource();
+        path = await _capturePhoto();
         break;
       case VerificationType.video:
-        path = await _pickVideo();
+        path = await _captureVideo();
         break;
     }
     if (path == null || !mounted) return;
@@ -116,7 +111,7 @@ class _ProfileVerificationScreenState
           content: Text(
             type == VerificationType.video
                 ? 'File too large. Maximum size is 50MB for videos.'
-                : 'File too large. Maximum size is 10MB for photos and documents.',
+                : 'File too large. Maximum size is 10MB for photos.',
           ),
         ),
       );
@@ -128,9 +123,6 @@ class _ProfileVerificationScreenState
       switch (type) {
         case VerificationType.photo:
           await notifier.submitPhotoVerification(path);
-          break;
-        case VerificationType.id:
-          await notifier.submitIdVerification(path);
           break;
         case VerificationType.video:
           await notifier.submitVideoVerification(path);
@@ -147,77 +139,14 @@ class _ProfileVerificationScreenState
     }
   }
 
-  Future<String?> _pickPhotoSource() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
-              title: const Text('Camera'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
-              title: const Text('Gallery'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return null;
-    await Future<void>.delayed(Duration.zero);
-    final picked = await AppMediaPicker.pickImage(source: source);
+  Future<String?> _capturePhoto() async {
+    final picked = await AppMediaPicker.pickImage(source: ImageSource.camera);
     return picked?.path;
   }
 
-  Future<String?> _pickIdSource() async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: AppSvgIcon(assetPath: AppIcons.gallery, size: 22),
-              title: const Text('Photo (Gallery)'),
-              onTap: () => Navigator.pop(ctx, 'gallery'),
-            ),
-            ListTile(
-              leading: AppSvgIcon(assetPath: AppIcons.camera, size: 22),
-              title: const Text('Photo (Camera)'),
-              onTap: () => Navigator.pop(ctx, 'camera'),
-            ),
-            ListTile(
-              leading: AppSvgIcon(assetPath: AppIcons.document, size: 22),
-              title: const Text('PDF Document'),
-              onTap: () => Navigator.pop(ctx, 'pdf'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (choice == null) return null;
-    await Future<void>.delayed(Duration.zero);
-    if (choice == 'pdf') {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['pdf'],
-      );
-      return result?.files.single.path;
-    }
-    final source =
-        choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
-    final picked = await AppMediaPicker.pickImage(source: source);
-    return picked?.path;
-  }
-
-  Future<String?> _pickVideo() async {
+  Future<String?> _captureVideo() async {
     final picked = await AppMediaPicker.pickVideo(
-      source: ImageSource.gallery,
+      source: ImageSource.camera,
       maxDuration: const Duration(minutes: 2),
     );
     return picked?.path;
@@ -336,7 +265,7 @@ class _ProfileVerificationScreenState
           ),
         ),
         SizedBox(height: AppSpacing.spacingMD),
-        for (var i = 0; i < 3; i++) ...[
+        for (var i = 0; i < 2; i++) ...[
           ShimmerEffect(
             child: Container(
               height: 160,
@@ -469,9 +398,8 @@ class _ProfileVerificationScreenState
     final theme = Theme.of(context);
     final animate = !MediaQuery.of(context).disableAnimations;
     final segments = [
-      ('Photo', 0.30, verification.photoVerified),
-      ('ID', 0.40, verification.idVerified),
-      ('Video', 0.30, verification.videoVerified),
+      ('Photo', 0.50, verification.photoVerified),
+      ('Video', 0.50, verification.videoVerified),
     ];
 
     return Column(
@@ -529,6 +457,10 @@ class _ProfileVerificationScreenState
     List<VerificationHistoryItem> history,
   ) {
     final theme = Theme.of(context);
+    final visibleHistory = [
+      for (final item in history)
+        if (item.type != 'id') item,
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -558,7 +490,7 @@ class _ProfileVerificationScreenState
               : const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
           child: _historyVisible
-              ? history.isEmpty
+              ? visibleHistory.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.spacingLG,
@@ -574,9 +506,9 @@ class _ProfileVerificationScreenState
                     )
                   : Column(
                       children: [
-                        for (var i = 0; i < history.length; i++) ...[
-                          VerificationHistoryCard(item: history[i]),
-                          if (i < history.length - 1)
+                        for (var i = 0; i < visibleHistory.length; i++) ...[
+                          VerificationHistoryCard(item: visibleHistory[i]),
+                          if (i < visibleHistory.length - 1)
                             SizedBox(height: AppSpacing.spacingSM),
                         ],
                       ],
