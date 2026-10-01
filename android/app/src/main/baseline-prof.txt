@@ -1,25 +1,25 @@
-# PERF-ANDROID-004: startup + chat/profile navigation hot methods.
+# PERF-ANDROID-004: startup + chat/profile navigation classes.
 # Human-readable ART baseline profile compiled by AGP from src/main.
-# H = Hot, S = Startup, P = Post-startup
+# Class rules cannot carry H/S/P flags on this AGP; those flags are method-only.
 # https://developer.android.com/topic/performance/baselineprofiles
 
-HSPLio/flutter/embedding/android/FlutterActivity;
-HSPLio/flutter/embedding/android/FlutterActivityAndFragmentDelegate;
-HSPLio/flutter/embedding/android/FlutterFragment;
-HSPLio/flutter/embedding/android/FlutterView;
-HSPLio/flutter/embedding/engine/FlutterEngine;
-HSPLio/flutter/embedding/engine/FlutterJNI;
-HSPLio/flutter/embedding/engine/loader/FlutterLoader;
-HSPLio/flutter/embedding/engine/renderer/FlutterRenderer;
-HSPLio/flutter/plugin/common/**
-HSPLio/flutter/plugin/platform/**
-HSPLandroidx/startup/**
-HSPLandroidx/profileinstaller/**
-HSPLandroidx/lifecycle/**
-HSPLandroidx/window/**
-HSPLandroidx/activity/**
-HSPLandroidx/fragment/app/**
-HSPLcom/lgbtfinder/**
-HSPLio/agora/**
-HSPLcom/google/firebase/messaging/**
-HSPLcom/pusher/**
+Lio/flutter/embedding/android/FlutterActivity;
+Lio/flutter/embedding/android/FlutterActivityAndFragmentDelegate;
+Lio/flutter/embedding/android/FlutterFragment;
+Lio/flutter/embedding/android/FlutterView;
+Lio/flutter/embedding/engine/FlutterEngine;
+Lio/flutter/embedding/engine/FlutterJNI;
+Lio/flutter/embedding/engine/loader/FlutterLoader;
+Lio/flutter/embedding/engine/renderer/FlutterRenderer;
+Lio/flutter/plugin/common/**
+Lio/flutter/plugin/platform/**
+Landroidx/startup/**
+Landroidx/profileinstaller/**
+Landroidx/lifecycle/**
+Landroidx/window/**
+Landroidx/activity/**
+Landroidx/fragment/app/**
+Lcom/lgbtfinder/**
+Lio/agora/**
+Lcom/google/firebase/messaging/**
+Lcom/pusher/**

@@ -437,6 +437,13 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         return;
       }
       _callId = id;
+      if (call != null) {
+        ref.read(messengerCallsProvider.notifier).upsertLiveCall(
+              call.status.toLowerCase() == 'unknown'
+                  ? call.copyWith(status: 'ringing')
+                  : call,
+            );
+      }
       _listenForCallEvents();
       unawaited(_joinAgoraChannel());
       _startAcceptPoll();
@@ -517,6 +524,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     if (!mounted || _sessionConnected()) return;
     unawaited(SoundService.instance.playCallConnect());
     _liveUi.setConnected(true);
+    _syncMessengerStatus('active');
     if (mounted) {
       setState(() {
         _connectionError = null;

@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lgbtindernew/core/constants/animation_constants.dart';
 import 'package:lgbtindernew/core/theme/app_theme.dart';
 import 'package:lgbtindernew/features/chat/providers/chat_typing_providers.dart';
-import 'package:lgbtindernew/widgets/chat/chat_peer_typing_indicator.dart';
+import 'package:lgbtindernew/features/chat/utils/chat_presence_copy.dart';
+import 'package:lgbtindernew/widgets/chat/chat_header.dart';
+import 'package:lgbtindernew/widgets/chat/last_seen_widget.dart';
 import 'package:lgbtindernew/widgets/chat/typing_indicator.dart';
 
 final _typingFlagProvider = StateProvider<bool>((ref) => false);
@@ -82,7 +84,30 @@ void main() {
     }
   });
 
-  testWidgets('peer typing switcher shows then hides only the indicator',
+  testWidgets('LastSeenWidget typing replaces Offline', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const Scaffold(
+          body: LastSeenWidget(),
+        ),
+      ),
+    );
+    expect(find.text(ChatPresenceCopy.offline), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const Scaffold(
+          body: LastSeenWidget(isTyping: true),
+        ),
+      ),
+    );
+    expect(find.text(ChatPresenceCopy.isTyping), findsOneWidget);
+    expect(find.text(ChatPresenceCopy.offline), findsNothing);
+  });
+
+  testWidgets('chat header subtitle shows is typing instead of Offline',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -95,30 +120,38 @@ void main() {
         child: MaterialApp(
           theme: AppTheme.lightTheme,
           home: const Scaffold(
-            body: ChatPeerTypingIndicator(
-              peerUserId: 9,
-              displayName: 'Alex',
+            body: ChatHeader(
+              userId: 9,
+              name: 'Alex',
             ),
           ),
         ),
       ),
     );
 
+    expect(find.text(ChatPresenceCopy.offline), findsOneWidget);
+    expect(find.text(ChatPresenceCopy.isTyping), findsNothing);
     expect(find.byType(TypingIndicator), findsNothing);
 
-    final context = tester.element(find.byType(ChatPeerTypingIndicator));
+    final context = tester.element(find.byType(ChatHeader));
     ProviderScope.containerOf(context).read(_typingFlagProvider.notifier).state =
         true;
     await tester.pump();
-    expect(find.byType(TypingIndicator), findsOneWidget);
-    expect(find.text('Alex is typing'), findsOneWidget);
-    expect(find.byType(AnimatedSwitcher), findsOneWidget);
+    expect(
+      tester.widget<LastSeenWidget>(find.byType(LastSeenWidget)).isTyping,
+      isTrue,
+    );
+    expect(find.text(ChatPresenceCopy.isTyping), findsOneWidget);
+    expect(find.byType(TypingIndicator), findsNothing);
 
-    ProviderScope.containerOf(tester.element(find.byType(ChatPeerTypingIndicator)))
+    ProviderScope.containerOf(tester.element(find.byType(ChatHeader)))
         .read(_typingFlagProvider.notifier)
         .state = false;
     await tester.pump();
-    await tester.pump(AppAnimations.chatTypingExit);
+    expect(
+      tester.widget<LastSeenWidget>(find.byType(LastSeenWidget)).isTyping,
+      isFalse,
+    );
     expect(find.byType(TypingIndicator), findsNothing);
   });
 }

@@ -178,6 +178,13 @@ class PushNotificationService {
     } else {
       AppLogger.debug('User declined or has not accepted notification permission');
     }
+
+    // Never show an OS banner while the app is open — in-app banners cover that.
+    await _firebaseMessaging.setForegroundNotificationPresentationOptions(
+      alert: false,
+      badge: true,
+      sound: false,
+    );
   }
 
   /// Initialize local notifications
@@ -352,6 +359,16 @@ class PushNotificationService {
     }
     unawaited(_playPayloadSound(message.data));
     ForegroundPushPolicy.bumpUnread?.call();
+    if (!ForegroundPushPolicy.shouldShowDeviceNotification(
+      appForeground: inAppChatBannerAppForeground(),
+      isIncomingCall: false,
+    )) {
+      AppLogger.info(
+        'Skipped device push; showing in-app notification instead',
+        tag: 'Notifications',
+      );
+      return;
+    }
     await _showLocalNotification(message);
   }
 

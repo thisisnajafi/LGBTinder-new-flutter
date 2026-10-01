@@ -56,7 +56,7 @@ class WizardStepPhotos extends ConsumerWidget {
                 Text(
                   hasPhoto
                       ? 'This photo appears on discovery and in chat'
-                      : 'Choose a clear photo that shows your face',
+                      : 'Choose a clear photo — next you will crop it to a square',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.55),

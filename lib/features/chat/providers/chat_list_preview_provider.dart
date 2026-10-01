@@ -685,6 +685,12 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
     state = state.copyWith(items: items);
   }
 
+  void removePeer(int peerUserId) {
+    final items = state.items.where((item) => item.id != peerUserId).toList();
+    if (items.length == state.items.length) return;
+    state = state.copyWith(items: items);
+  }
+
   static int _comparePinnedThenTime(
     ChatListPreviewItem a,
     ChatListPreviewItem b,

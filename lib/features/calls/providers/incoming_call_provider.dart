@@ -22,11 +22,13 @@ import '../utils/call_local_busy.dart';
 import '../utils/call_navigation.dart';
 import '../utils/call_ring_timeout.dart';
 import '../utils/call_signaling_log.dart';
+import '../utils/messenger_call_from_payload.dart';
 import 'active_call_session_provider.dart';
 import 'call_provider.dart';
 import 'call_providers.dart';
 import 'messenger_calls_provider.dart';
 import '../../settings/providers/sound_preferences_provider.dart';
+import '../../user/providers/user_providers.dart';
 
 /// Active incoming call (in-app banner + CallKit).
 final incomingCallProvider =
@@ -480,7 +482,21 @@ final incomingCallListenerProvider = Provider<void>((ref) {
           unawaited(pusher.subscribeCall(parsedIncoming));
         }
         ref.read(incomingCallProvider.notifier).present(payload);
-        ref.read(messengerCallsProvider.notifier).refreshOnIncoming();
+        final me = ref.read(cachedCurrentUserProvider).asData?.value.id ?? 0;
+        final incomingCall = messengerCallFromPayload(
+          payload,
+          currentUserId: me,
+        );
+        if (incomingCall != null) {
+          final status = incomingCall.status.toLowerCase();
+          ref.read(messengerCallsProvider.notifier).upsertLiveCall(
+                status == 'unknown' || status.isEmpty
+                    ? incomingCall.copyWith(status: 'ringing')
+                    : incomingCall,
+              );
+        } else {
+          ref.read(messengerCallsProvider.notifier).refreshOnIncoming();
+        }
         return;
       case ChatPusherEventNames.callEnded:
       case ChatPusherEventNames.callRejected:
@@ -500,6 +516,7 @@ final incomingCallListenerProvider = Provider<void>((ref) {
                       : event.name == ChatPusherEventNames.callBusy
                           ? 'busy'
                           : 'ended'),
+              duration: durationFromCallPayload(payload),
             );
         return;
       case ChatPusherEventNames.callAccepted:

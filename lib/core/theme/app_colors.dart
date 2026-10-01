@@ -135,4 +135,10 @@ class AppColors {
     end: Alignment.bottomRight,
     colors: [Color(0xFF6EE7A8), Color(0xFF22C55E)],
   );
+
+  /// Image / crop dimmer (UI-DESIGN-SYSTEM overlay tokens).
+  static const Color overlayDark = Color.fromRGBO(0, 0, 0, 0.55);
+  static const Color overlayLight = Color.fromRGBO(0, 0, 0, 0.3);
+  static const Color glassOverlayDark = Color.fromRGBO(255, 255, 255, 0.02);
+  static const Color glassOverlayLight = Color.fromRGBO(255, 255, 255, 0.8);
 }

@@ -35,7 +35,9 @@ class MessengerCallRow extends StatelessWidget {
       call: call,
       currentUserId: currentUserId,
     );
-    final live = CallLogLabels.isLiveStatus(call.status);
+    final live = CallLogLabels.isLiveStatus(
+      CallLogLabels.resolvedStatus(call),
+    );
     final subtitle = CallLogLabels.listSubtitle(
       call: call,
       currentUserId: currentUserId,

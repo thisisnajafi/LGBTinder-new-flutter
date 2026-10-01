@@ -13,6 +13,8 @@ import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/chat/chat_list_loading.dart';
 import '../../data/models/call.dart';
 import '../../pages/outgoing_call_page.dart';
+import '../../providers/active_call_session_provider.dart';
+import '../../providers/live_call_ui_provider.dart';
 import '../../providers/messenger_calls_provider.dart';
 import '../../utils/call_log_labels.dart';
 import '../../utils/call_navigation.dart';
@@ -51,12 +53,33 @@ class _MessengerCallsListState extends ConsumerState<MessengerCallsList> {
   Widget build(BuildContext context) {
     final state = ref.watch(messengerCallsProvider);
     final me = ref.watch(cachedCurrentUserProvider).asData?.value.id ?? 0;
-    final live = state.liveCall;
+    final session = ref.watch(activeCallSessionProvider);
+    final connected = ref.watch(liveCallUiProvider.select((s) => s.connected));
+    var calls = state.calls;
+    var live = state.liveCall;
+    if (session != null && session.callId > 0) {
+      final liveStatus =
+          connected || session.agoraJoined ? 'active' : 'ringing';
+      calls = [
+        for (final call in calls)
+          call.id == session.callId
+              ? call.copyWith(
+                  status: liveStatus,
+                  startedAt: CallLogLabels.isLiveStatus(call.status)
+                      ? call.startedAt
+                      : DateTime.now(),
+                )
+              : call,
+      ];
+      if (live != null && live.id == session.callId) {
+        live = live.copyWith(status: liveStatus);
+      }
+    }
     final query = widget.searchQuery.trim().toLowerCase();
     final avatarCache = ref.watch(peerAvatarCacheProvider);
 
     var groups = groupMessengerCalls(
-      calls: state.calls,
+      calls: calls,
       currentUserId: me,
       filter: widget.filter,
     );
@@ -81,19 +104,22 @@ class _MessengerCallsListState extends ConsumerState<MessengerCallsList> {
         ),
     ];
 
+    final banner = live;
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (live != null &&
-              live.id > 0 &&
-              CallLogLabels.isLiveStatus(live.status))
+          if (banner != null &&
+              banner.id > 0 &&
+              CallLogLabels.isLiveStatus(
+                CallLogLabels.resolvedStatus(banner),
+              ))
             MessengerActiveCallBanner(
-              call: live,
+              call: banner,
               currentUserId: me,
               onTap: () => openExistingCallPage(
                 context: context,
-                call: live,
+                call: banner,
                 currentUserId: me,
               ),
             ),

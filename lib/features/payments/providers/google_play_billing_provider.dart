@@ -5,6 +5,7 @@ import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/services/offline_payment_service.dart';
 import '../data/services/google_play_billing_service.dart';
+import 'payment_providers.dart';
 import '../data/services/marketing_attribution_service.dart';
 import '../domain/repositories/google_play_repository.dart';
 import '../domain/use_cases/initiate_google_purchase_use_case.dart';
@@ -69,14 +70,40 @@ final billingErrorsProvider = StreamProvider<String>((ref) {
 
 // Provider for subscription products
 final subscriptionProductsProvider = FutureProvider<List<ProductDetails>>((ref) async {
-  final repository = ref.watch(googlePlayRepositoryProvider);
-  return repository.querySubscriptionProducts();
+  final paymentService = ref.watch(paymentServiceProvider);
+  final plans = await paymentService.getPlans();
+  final subPlans = await paymentService.getSubPlans();
+  final ids = <String>{};
+  for (final plan in plans) {
+    final planProductId = plan.googleProductId?.trim();
+    if (planProductId != null && planProductId.isNotEmpty) {
+      ids.add(planProductId);
+    }
+    for (final subPlan in plan.subPlans) {
+      final subProductId = subPlan.googleProductId?.trim();
+      if (subProductId != null && subProductId.isNotEmpty) {
+        ids.add(subProductId);
+      }
+    }
+  }
+  for (final subPlan in subPlans) {
+    final subProductId = subPlan.googleProductId?.trim();
+    if (subProductId != null && subProductId.isNotEmpty) {
+      ids.add(subProductId);
+    }
+  }
+  if (ids.isEmpty) return [];
+  return ref.watch(googlePlayRepositoryProvider).queryProducts(ids);
 });
 
-// Provider for one-time products
 final oneTimeProductsProvider = FutureProvider<List<ProductDetails>>((ref) async {
-  final repository = ref.watch(googlePlayRepositoryProvider);
-  return repository.queryOneTimeProducts();
+  final packs = await ref.watch(superlikePackServiceProvider).getAvailablePacks();
+  final ids = <String>{
+    for (final pack in packs)
+      if (pack.resolvedGoogleProductId != null) pack.resolvedGoogleProductId!,
+  };
+  if (ids.isEmpty) return [];
+  return ref.watch(googlePlayRepositoryProvider).queryProducts(ids);
 });
 
 // Provider for InitiateGooglePurchaseUseCase
@@ -88,19 +115,39 @@ final initiateGooglePurchaseUseCaseProvider = Provider<InitiateGooglePurchaseUse
 // State notifier for purchase state management
 class GooglePlayPurchaseNotifier extends StateNotifier<GooglePlayPurchaseState> {
   final InitiateGooglePurchaseUseCase _purchaseUseCase;
+  final GooglePlayBillingService _billingService;
 
-  GooglePlayPurchaseNotifier(this._purchaseUseCase)
+  GooglePlayPurchaseNotifier(this._purchaseUseCase, this._billingService)
       : super(const GooglePlayPurchaseState.initial());
 
   Future<void> initiatePurchase(String productId, bool isSubscription, {String? offerId}) async {
     state = const GooglePlayPurchaseState.loading();
+    final tracked = _billingService.trackGrant(productId);
 
-    final result = await _purchaseUseCase.execute(productId, isSubscription, offerId: offerId);
+    try {
+      final result = await _purchaseUseCase.execute(productId, isSubscription, offerId: offerId);
 
-    if (result.isSuccess) {
-      state = GooglePlayPurchaseState.success(result.productDetails!);
-    } else {
-      state = GooglePlayPurchaseState.error(result.errorMessage!);
+      if (!result.isSuccess) {
+        tracked.cancel();
+        state = GooglePlayPurchaseState.error(result.errorMessage ?? 'Could not open Google Play');
+        return;
+      }
+
+      final grant = await tracked.result;
+      if (!mounted) return;
+      if (grant.canceled) {
+        state = const GooglePlayPurchaseState.initial();
+        return;
+      }
+      if (grant.granted && result.productDetails != null) {
+        state = GooglePlayPurchaseState.success(result.productDetails!);
+        return;
+      }
+      state = GooglePlayPurchaseState.error(grant.message ?? 'Purchase was not granted');
+    } catch (e) {
+      tracked.cancel();
+      if (!mounted) return;
+      state = GooglePlayPurchaseState.error('Purchase failed: $e');
     }
   }
 
@@ -137,7 +184,8 @@ class GooglePlayPurchaseState {
 // Provider for purchase notifier
 final googlePlayPurchaseProvider = StateNotifierProvider<GooglePlayPurchaseNotifier, GooglePlayPurchaseState>((ref) {
   final purchaseUseCase = ref.watch(initiateGooglePurchaseUseCaseProvider);
-  return GooglePlayPurchaseNotifier(purchaseUseCase);
+  final billingService = ref.watch(googlePlayBillingServiceProvider);
+  return GooglePlayPurchaseNotifier(purchaseUseCase, billingService);
 });
 
 // Provider for current purchases

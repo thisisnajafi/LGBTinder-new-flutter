@@ -48,3 +48,12 @@ app.*.map.json
 # Google OAuth download dumps (never commit)
 client_secret_*.json
 **/client_secret_*.json
+
+# Flavor secrets. Commit the *.example files only.
+android/app/src/*/google-services.json
+ios/config/*/GoogleService-Info.plist
+ios/Runner/GoogleService-Info.plist
+dart_defines.json
+*.p8
+*.p12
+*.mobileprovision

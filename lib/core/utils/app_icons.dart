@@ -130,6 +130,9 @@ class AppIcons {
   static const String cameraSlash = '$_basePath/camera-slash.svg';
   static String get gallery => getIconPath('gallery'); // Use outline style
   static String get galleryAdd => getIconPath('gallery-add'); // Use outline style
+  static String get crop => getIconPath('crop');
+  static String get rotateLeft => getIconPath('rotate-left');
+  static String get rotateRight => getIconPath('rotate-right');
   static const String galleryEdit = '$_basePath/gallery-edit.svg';
   static const String image = '$_basePath/image.svg';
   static const String video = '$_basePath/video.svg';
@@ -186,8 +189,8 @@ class AppIcons {
   static const String notification1 = '$_basePath/notification-1.svg';
   static const String notificationBing = '$_basePath/notification-bing.svg';
   static const String notificationFavorite = '$_basePath/notification-favorite.svg';
-  static const String bell = '$_basePath/notification.svg';
-  static const String bellSlash = '$_basePath/notification-slash.svg';
+  static String get bell => getIconPath('notification');
+  static String get bellSlash => getIconPath('notification-slash');
   static const String online = '$_basePath/status.svg';
   static const String offline = '$_basePath/status-offline.svg';
 

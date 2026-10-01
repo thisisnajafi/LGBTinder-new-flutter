@@ -16,11 +16,8 @@ abstract class GooglePlayRepository {
   /// Initialize the billing service
   Future<void> initialize();
 
-  /// Query subscription products
-  Future<List<ProductDetails>> querySubscriptionProducts();
-
-  /// Query one-time products
-  Future<List<ProductDetails>> queryOneTimeProducts();
+  /// Query Play for backend-supplied product IDs.
+  Future<List<ProductDetails>> queryProducts(Set<String> productIds);
 
   /// Launch billing flow for subscriptions
   Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails, {String? offerId});
@@ -72,13 +69,8 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   }
 
   @override
-  Future<List<ProductDetails>> querySubscriptionProducts() async {
-    return await _billingService.querySubscriptionProducts();
-  }
-
-  @override
-  Future<List<ProductDetails>> queryOneTimeProducts() async {
-    return await _billingService.queryOneTimeProducts();
+  Future<List<ProductDetails>> queryProducts(Set<String> productIds) async {
+    return _billingService.queryProducts(productIds);
   }
 
   @override

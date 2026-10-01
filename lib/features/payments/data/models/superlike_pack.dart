@@ -71,26 +71,21 @@ class SuperlikePack {
       superlikeCount: superlikeCount,
       price: price,
       currency: json['currency']?.toString() ?? 'usd',
-      isPopular: json['is_popular'] == true || json['is_popular'] == 1,
+      isPopular: json['is_popular'] == true ||
+          json['is_popular'] == 1 ||
+          json['is_best_value'] == true ||
+          json['is_best_value'] == 1,
       stripePriceId: json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
       googleProductId: json['google_product_id']?.toString() ??
           json['googleProductId']?.toString(),
     );
   }
 
-  /// Play Console product id for this pack, with catalog fallbacks.
+  /// Play Console product id configured in the admin catalog.
   String? get resolvedGoogleProductId {
     final configured = googleProductId?.trim();
-    if (configured != null && configured.isNotEmpty) return configured;
-    return switch (superlikeCount) {
-      5 => 'superlike_small',
-      15 => 'superlike_medium',
-      30 => 'superlike_large',
-      50 => 'superlike_mega',
-      100 => 'superlike_large',
-      200 => 'superlike_medium',
-      _ => null,
-    };
+    if (configured == null || configured.isEmpty) return null;
+    return configured;
   }
 
   Map<String, dynamic> toJson() {

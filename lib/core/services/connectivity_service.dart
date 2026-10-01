@@ -115,7 +115,7 @@ class ConnectivityService {
   }
 
   Future<bool> _hasInternetAccess() async {
-    const probes = [
+    final probes = [
       ApiEndpoints.apiOrigin,
       '${ApiEndpoints.baseUrl}/',
       'https://connectivitycheck.gstatic.com/generate_204',

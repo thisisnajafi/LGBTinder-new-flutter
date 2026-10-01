@@ -9,6 +9,7 @@ class SubscriptionPlan {
   final List<String>? features;
   final bool isPopular;
   final String? stripePriceId;
+  final String? googleProductId;
   final List<SubPlan> subPlans;
 
   SubscriptionPlan({
@@ -21,6 +22,7 @@ class SubscriptionPlan {
     this.features,
     this.isPopular = false,
     this.stripePriceId,
+    this.googleProductId,
     this.subPlans = const [],
   });
 
@@ -93,6 +95,7 @@ class SubscriptionPlan {
       isPopular: json['is_popular'] == true || json['is_popular'] == 1,
       stripePriceId:
           json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      googleProductId: json['google_product_id']?.toString(),
       subPlans: parsedSubPlans ?? const [],
     );
   }
@@ -108,6 +111,7 @@ class SubscriptionPlan {
       if (features != null) 'features': features,
       'is_popular': isPopular,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
+      if (googleProductId != null) 'google_product_id': googleProductId,
       if (subPlans.isNotEmpty)
         'sub_plans': subPlans.map((e) => e.toJson()).toList(),
     };
@@ -126,6 +130,7 @@ class SubPlan {
   final int? durationDays;
   final String? durationText;
   final String? stripePriceId;
+  final String? googleProductId;
   final String? googleOfferId;
 
   SubPlan({
@@ -139,6 +144,7 @@ class SubPlan {
     this.durationDays,
     this.durationText,
     this.stripePriceId,
+    this.googleProductId,
     this.googleOfferId,
   });
 
@@ -266,6 +272,7 @@ class SubPlan {
       durationText: durationText,
       stripePriceId:
           json['stripe_price_id']?.toString() ?? json['price_id']?.toString(),
+      googleProductId: json['google_product_id']?.toString(),
       googleOfferId: json['google_offer_id']?.toString(),
     );
   }
@@ -282,6 +289,7 @@ class SubPlan {
       if (durationDays != null) 'duration_days': durationDays,
       if (durationText != null) 'duration_text': durationText,
       if (stripePriceId != null) 'stripe_price_id': stripePriceId,
+      if (googleProductId != null) 'google_product_id': googleProductId,
       if (googleOfferId != null) 'google_offer_id': googleOfferId,
     };
   }

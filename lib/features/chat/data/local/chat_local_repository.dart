@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/chat.dart';
@@ -679,6 +681,61 @@ class ChatLocalRepository {
     await (_db.delete(_db.localMessages)
           ..where((t) => t.serverId.equals(serverId)))
         .go();
+  }
+
+  /// Drops one peer's messages, list row, outbox, and cached media files.
+  Future<void> purgePeer(int otherUserId) async {
+    if (otherUserId <= 0) return;
+
+    final messages = await (_db.select(_db.localMessages)
+          ..where((t) => t.otherUserId.equals(otherUserId)))
+        .get();
+    final urls = <String>{
+      for (final row in messages)
+        if (row.attachmentUrl != null && row.attachmentUrl!.trim().isNotEmpty)
+          row.attachmentUrl!.trim(),
+    };
+
+    if (urls.isNotEmpty) {
+      final metas = await (_db.select(_db.mediaCacheMeta)
+            ..where((t) => t.url.isIn(urls)))
+          .get();
+      for (final meta in metas) {
+        final path = meta.localPath?.trim();
+        if (path == null || path.isEmpty) continue;
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+      await (_db.delete(_db.mediaCacheMeta)..where((t) => t.url.isIn(urls))).go();
+      for (final url in urls) {
+        try {
+          await DefaultCacheManager().removeFile(url);
+        } catch (e) {
+          AppLogger.warning(
+            'Failed to drop cached media $url',
+            tag: 'Chat',
+            error: e,
+          );
+        }
+      }
+    }
+
+    await _db.transaction(() async {
+      await (_db.delete(_db.localMessages)
+            ..where((t) => t.otherUserId.equals(otherUserId)))
+          .go();
+      await (_db.delete(_db.localConversations)
+            ..where((t) => t.otherUserId.equals(otherUserId)))
+          .go();
+      await (_db.delete(_db.outboxEntries)
+            ..where((t) => t.receiverId.equals(otherUserId)))
+          .go();
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('chat_local_history_meta_$otherUserId');
   }
 
   /// Keep the row and mark it as a for-everyone tombstone.

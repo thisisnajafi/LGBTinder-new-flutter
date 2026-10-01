@@ -1,11 +1,19 @@
-/// API endpoint URLs organized by feature
+import '../config/app_config.dart';
+
+/// API endpoint URLs organized by feature.
+///
+/// Paths stay shared. The origin comes from the installed [AppConfig].
+/// Tests and tools that never install a flavor keep the production origin.
 class ApiEndpoints {
-  // API origin (host only, no path) — use for WebSocket and baseUrl
-  static const String apiOrigin = 'https://api.lgbtfinder.com';
-  // Base URL (production API) — must include /api to match Laravel apiPrefix
-  static const String baseUrl = '$apiOrigin/api';
-  // Storage URL for media files (same host as API)
-  static const String storageUrl = '$apiOrigin/storage';
+  /// Host only, no path. Flavor-specific once a flavor entry point has installed [AppConfig].
+  static String get apiOrigin =>
+      AppConfig.isReady ? AppConfig.current.apiOrigin : AppConfig.productionOrigin;
+
+  /// Must include /api to match the Laravel api prefix.
+  static String get baseUrl => '$apiOrigin/api';
+
+  /// Storage URL for media files (same host as the API).
+  static String get storageUrl => '$apiOrigin/storage';
 
   // ==================== Authentication ====================
   static const String register = '/auth/register';
@@ -190,6 +198,8 @@ class ApiEndpoints {
   /// Viewer-scoped conversation pin (not message pin REST aliases).
   static String chatPeerConversationPin(int userId) =>
       '/chat/conversations/$userId/pin';
+  static String chatConversationDelete(int userId) =>
+      '/chat/conversations/$userId';
   static String chatConversationActive(int conversationId) =>
       '/chat/$conversationId/active';
   static const String chatStickerPacks = '/chat/sticker-packs';

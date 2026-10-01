@@ -58,6 +58,29 @@ void main() {
         isFalse,
       );
     });
+
+    test('shows generic in-app notifications while the app is open', () {
+      expect(
+        InAppChatBannerPolicy.shouldPresent(
+          isChatPayload: false,
+          isGenericPayload: true,
+          suppressedOpenOrMuted: false,
+          isOwnMessage: false,
+          appForeground: true,
+        ),
+        isTrue,
+      );
+      expect(
+        InAppChatBannerPolicy.shouldPresent(
+          isChatPayload: false,
+          isGenericPayload: true,
+          suppressedOpenOrMuted: false,
+          isOwnMessage: false,
+          appForeground: false,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('InAppChatBannerPolicy.push', () {
@@ -130,6 +153,26 @@ void main() {
       expect(item?.title, 'Someone');
       expect(item?.body, 'Sent you a message');
       expect(item?.avatarUrl, isNull);
+    });
+
+    test('fromFcm generic like becomes an in-app banner', () {
+      final item = InAppChatBannerPolicy.fromFcm({
+        'type': 'like',
+        'from_user_id': '12',
+        'title': 'New Like! ❤️',
+        'body': 'Alex liked your profile',
+      });
+      expect(item?.type, 'like');
+      expect(item?.peerUserId, 12);
+      expect(item?.title, 'New Like! ❤️');
+      expect(item?.body, 'Alex liked your profile');
+    });
+
+    test('fromGenericFcm skips live incoming calls', () {
+      expect(
+        InAppChatBannerPolicy.fromGenericFcm({'type': 'incoming_call_video'}),
+        isNull,
+      );
     });
 
     test('fromMessage uses preview helpers', () {

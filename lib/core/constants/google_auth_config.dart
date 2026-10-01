@@ -1,18 +1,19 @@
+import '../config/app_config.dart';
+
 /// Google Sign-In configuration.
 ///
-/// The web client ID is public (also in `android/app/google-services.json`).
-/// Override at build time when needed:
-/// `flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=...`
+/// The web client ID is public (also in the production `google-services.json`).
+/// The installed flavor supplies it. A missing flavor falls back to the
+/// production client id so existing tests keep working.
 class GoogleAuthConfig {
   GoogleAuthConfig._();
 
-  static const String _defaultWebClientId =
-      '904491806534-vdhds1qkgv3ijf857d67mtg41hg0elvd.apps.googleusercontent.com';
-
-  static const String webClientId = String.fromEnvironment(
-    'GOOGLE_WEB_CLIENT_ID',
-    defaultValue: _defaultWebClientId,
-  );
+  static String get webClientId {
+    if (AppConfig.isReady && AppConfig.current.googleWebClientId.isNotEmpty) {
+      return AppConfig.current.googleWebClientId;
+    }
+    return AppConfig.defaultGoogleWebClientId;
+  }
 
   static bool get isConfigured => webClientId.isNotEmpty;
 }

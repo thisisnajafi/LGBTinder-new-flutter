@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Real Firebase configs live in flavor source sets. Commit *.example only.
+app/src/*/google-services.json

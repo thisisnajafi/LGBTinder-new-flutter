@@ -1,7 +1,5 @@
 // Screen: SubscriptionPlansScreen
 // Plan purchase UI aligned with backend PlanSeeder (Basic, Premium, Golden)
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/responsive/responsive.dart';
@@ -146,7 +144,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
 
   Future<void> _subscribeWithGooglePlay() async {
     try {
-      final productId = _getGooglePlayProductId(_selectedPlanId!);
+      final productId = _googlePlayProductId();
 
       if (productId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -166,51 +164,46 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
 
       final purchaseNotifier = ref.read(googlePlayPurchaseProvider.notifier);
       await purchaseNotifier.initiatePurchase(productId, true, offerId: offerId);
+      if (!mounted) return;
 
-      ref.listen(googlePlayPurchaseProvider, (previous, next) {
-        if (next.isSuccess && mounted) {
-          ref.read(appEventTrackerProvider).track('purchase_success', meta: {
-            'payment_system': 'google_play',
-            'product_id': productId,
-            'plan_id': _selectedPlanId,
-            'sub_plan_id': _selectedSubPlanId,
-          });
-          unawaited(
-            ref.read(subscriptionRefreshProvider).refresh(),
-          );
-          unawaited(
-            ref
-                .read(subscriptionSyncProvider)
-                .onSubscriptionChangeNotification(),
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Subscription successful!'),
-              backgroundColor: AppColors.onlineGreen,
-            ),
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SubscriptionManagementScreen(),
-            ),
-          );
-        } else if (next.errorMessage != null && mounted) {
-          ref.read(appEventTrackerProvider).track('purchase_failed', meta: {
-            'payment_system': 'google_play',
-            'product_id': productId,
-            'plan_id': _selectedPlanId,
-            'sub_plan_id': _selectedSubPlanId,
-            'error': next.errorMessage,
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Purchase failed: ${next.errorMessage}'),
-              backgroundColor: AppColors.accentRed,
-            ),
-          );
-        }
-      });
+      final purchaseState = ref.read(googlePlayPurchaseProvider);
+      if (purchaseState.isSuccess) {
+        ref.read(appEventTrackerProvider).track('purchase_success', meta: {
+          'payment_system': 'google_play',
+          'product_id': productId,
+          'plan_id': _selectedPlanId,
+          'sub_plan_id': _selectedSubPlanId,
+        });
+        await ref.read(subscriptionRefreshProvider).refresh();
+        await ref.read(subscriptionSyncProvider).onSubscriptionChangeNotification();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subscription successful!'),
+            backgroundColor: AppColors.onlineGreen,
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SubscriptionManagementScreen(),
+          ),
+        );
+      } else if (purchaseState.errorMessage != null) {
+        ref.read(appEventTrackerProvider).track('purchase_failed', meta: {
+          'payment_system': 'google_play',
+          'product_id': productId,
+          'plan_id': _selectedPlanId,
+          'sub_plan_id': _selectedSubPlanId,
+          'error': purchaseState.errorMessage,
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Purchase failed: ${purchaseState.errorMessage}'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+      }
     } catch (e) {
       ref.read(appEventTrackerProvider).track('purchase_exception', meta: {
         'payment_system': 'google_play',
@@ -229,17 +222,16 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
     }
   }
 
-  String? _getGooglePlayProductId(int planId) {
-    switch (planId) {
-      case 1:
-        return 'bronze_base';
-      case 2:
-        return 'silver_base';
-      case 3:
-        return 'gold_base';
-      default:
-        return null;
+  String? _googlePlayProductId() {
+    final fromSub = _selectedSubPlan?.googleProductId?.trim();
+    if (fromSub != null && fromSub.isNotEmpty) return fromSub;
+
+    for (final plan in _plans) {
+      if (plan.id != _selectedPlanId) continue;
+      final fromPlan = plan.googleProductId?.trim();
+      if (fromPlan != null && fromPlan.isNotEmpty) return fromPlan;
     }
+    return null;
   }
 
   List<SubPlan> _subPlansForPlan(int planId) {

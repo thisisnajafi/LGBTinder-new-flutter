@@ -17,6 +17,7 @@ import '../../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../../features/profile/providers/profile_providers.dart';
 import '../../../shared/models/api_error.dart';
 import '../../profile/avatar_upload.dart';
+import '../../profile/profile_photo_crop_screen.dart';
 import '../../profile/profile_photo_source_sheet.dart';
 import 'profile_image_editor.dart';
 
@@ -131,13 +132,22 @@ class _ProfileEditPhotosSectionState
       }
     }
     try {
-      final XFile? image = await AppMediaPicker.pickImage(source: source);
-      if (image == null) return;
-
-      final prepared = await ImageUploadCompressor.prepareForPreview(
-        File(image.path),
-      );
-      if (!mounted) return;
+      File prepared;
+      if (setAsPrimary) {
+        final cropped = await ProfilePhotoCropScreen.pickAndCrop(
+          context,
+          source: source,
+        );
+        if (cropped == null || !mounted) return;
+        prepared = cropped;
+      } else {
+        final XFile? image = await AppMediaPicker.pickImage(source: source);
+        if (image == null) return;
+        prepared = await ImageUploadCompressor.prepareForPreview(
+          File(image.path),
+        );
+        if (!mounted) return;
+      }
 
       if (setAsPrimary) {
         setState(() {

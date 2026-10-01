@@ -19,6 +19,10 @@ void main() {
     );
 
     expect(find.text('Add a profile photo'), findsOneWidget);
+    expect(
+      find.text('Choose a clear photo — next you will crop it to a square'),
+      findsOneWidget,
+    );
     expect(find.byType(AvatarUpload), findsOneWidget);
   });
 

@@ -97,8 +97,8 @@ class PusherWebSocketService {
     _authDio = authDio ??
         _authDio ??
         Dio(BaseOptions(
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
+          connectTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 8),
         ));
 
     await _syncRemoteCredentials();

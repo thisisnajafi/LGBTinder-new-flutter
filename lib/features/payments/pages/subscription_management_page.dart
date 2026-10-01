@@ -162,7 +162,7 @@ class _SubscriptionManagementPageState
   }
 
   Future<void> _purchasePlan(SubPlan subPlan) async {
-    final productId = _googlePlayProductId(subPlan.planId);
+    final productId = _googlePlayProductId(subPlan);
     if (productId == null) {
       _showSnack('Plan is not available for purchase', isError: true);
       return;
@@ -179,7 +179,11 @@ class _SubscriptionManagementPageState
       );
 
       final state = ref.read(googlePlayPurchaseProvider);
-      if (state.errorMessage != null) {
+      if (state.isSuccess) {
+        await ref.read(subscriptionRefreshProvider).refresh();
+        await _loadAll();
+        if (mounted) _showSnack('Subscription updated');
+      } else if (state.errorMessage != null) {
         _showSnack(state.errorMessage!, isError: true);
       }
     } catch (e) {
@@ -274,17 +278,10 @@ class _SubscriptionManagementPageState
 
   String _formatDate(DateTime date) => DateFormat('MMM d, y').format(date);
 
-  String? _googlePlayProductId(int planId) {
-    switch (planId) {
-      case 1:
-        return 'bronze_base';
-      case 2:
-        return 'silver_base';
-      case 3:
-        return 'gold_base';
-      default:
-        return null;
-    }
+  String? _googlePlayProductId(SubPlan subPlan) {
+    final fromSub = subPlan.googleProductId?.trim();
+    if (fromSub != null && fromSub.isNotEmpty) return fromSub;
+    return null;
   }
 
   String _tierLabel(String? tier) {

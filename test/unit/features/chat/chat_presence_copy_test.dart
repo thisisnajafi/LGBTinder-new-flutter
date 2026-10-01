@@ -45,6 +45,10 @@ void main() {
     );
   });
 
+  test('typing subtitle copy is is typing', () {
+    expect(ChatPresenceCopy.isTyping, 'is typing');
+  });
+
   test('blank last message is treated as empty', () {
     expect(ChatPresenceCopy.hasLastMessage(null), isFalse);
     expect(ChatPresenceCopy.hasLastMessage('  '), isFalse);

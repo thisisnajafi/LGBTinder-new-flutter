@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>LGBTFinder</string>
+	<string>$(APP_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -46,15 +46,19 @@
 		<string>audio</string>
 		<string>remote-notification</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>LGBTFinder uses Bluetooth so call audio can play through a headset.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs camera access for video calling</string>
+	<string>LGBTFinder uses the camera for video calls, profile photos, and identity verification.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>This app needs microphone access for voice calling</string>
+	<string>LGBTFinder uses the microphone for voice and video calls and for voice messages in chat.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>LGBTinder uses your location to show people nearby and improve match suggestions.</string>
+	<string>LGBTFinder uses your location while you are using the app to show people nearby and for safety features you turn on.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>LGBTFinder saves photos you download from chat to your library.</string>
+	<string>LGBTFinder saves photos you download from chat into your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>LGBTFinder needs photo library access to save images from chat.</string>
+	<string>LGBTFinder uses your photo library so you can choose pictures to send in chat and to add to your profile.</string>
 </dict>
 </plist>

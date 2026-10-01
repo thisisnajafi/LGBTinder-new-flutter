@@ -10,6 +10,7 @@ Call _call({
   required String status,
   String callType = 'audio',
   Duration? duration,
+  DateTime? startedAt,
 }) {
   return Call(
     id: id,
@@ -18,7 +19,7 @@ Call _call({
     receiverId: receiverId,
     callType: callType,
     status: status,
-    startedAt: DateTime(2026, 5, 24),
+    startedAt: startedAt ?? DateTime(2026, 5, 24),
     duration: duration,
   );
 }
@@ -87,6 +88,7 @@ void main() {
         callerId: 10,
         receiverId: 20,
         status: 'ringing',
+        startedAt: DateTime.now(),
       );
 
       expect(
@@ -94,7 +96,33 @@ void main() {
         'Connecting…',
       );
       expect(CallLogLabels.isLiveStatus('ringing'), isTrue);
-      expect(CallLogLabels.isLiveStatus('active'), isTrue);
+      expect(CallLogLabels.isLiveStatus('accepted'), isTrue);
+    });
+
+    test('stale ringing resolves to missed instead of Connecting…', () {
+      final call = _call(
+        id: 9,
+        callerId: 10,
+        receiverId: 20,
+        status: 'ringing',
+        startedAt: DateTime(2026, 9, 5),
+      );
+      expect(CallLogLabels.resolvedStatus(call), 'missed');
+      expect(
+        CallLogLabels.title(call: call, currentUserId: 10),
+        'No answer',
+      );
+    });
+
+    test('fresh ringing stays live', () {
+      final call = _call(
+        id: 10,
+        callerId: 10,
+        receiverId: 20,
+        status: 'ringing',
+        startedAt: DateTime.now(),
+      );
+      expect(CallLogLabels.resolvedStatus(call), 'ringing');
     });
 
     test('listSubtitle groups missed calls', () {

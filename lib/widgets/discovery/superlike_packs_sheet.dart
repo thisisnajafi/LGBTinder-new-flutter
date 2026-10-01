@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
-
 import '../../core/cache/session_cache_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../core/services/startup_cache_service.dart';
@@ -121,19 +119,17 @@ class _SuperlikePacksSheetState extends ConsumerState<SuperlikePacksSheet> {
       }
 
       final billing = ref.read(googlePlayBillingServiceProvider);
-      final outcome = billing.waitForPurchaseOutcome(productId);
+      final tracked = billing.trackGrant(productId);
       final launched = await billing.purchaseConsumableProduct(productId);
       if (!launched) {
+        tracked.cancel();
         throw Exception('Could not start Google Play purchase');
       }
 
-      final status = await outcome;
-      if (status == PurchaseStatus.canceled) {
-        return;
-      }
-      if (status != PurchaseStatus.purchased &&
-          status != PurchaseStatus.restored) {
-        throw Exception('Purchase did not complete');
+      final grant = await tracked.result;
+      if (grant.canceled) return;
+      if (!grant.granted) {
+        throw Exception(grant.message ?? 'Purchase was not granted');
       }
 
       await ref.read(startupCacheServiceProvider).primeCache();

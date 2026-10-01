@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import '../../../../core/constants/api_endpoints.dart';
@@ -9,6 +8,21 @@ import '../../../../shared/services/api_service.dart';
 import '../../../../core/services/offline_payment_service.dart';
 import '../../../../core/services/app_logger.dart';
 import 'marketing_attribution_service.dart';
+
+/// Server-confirmed outcome for one Play purchase.
+class BillingGrantResult {
+  const BillingGrantResult({
+    required this.productId,
+    required this.granted,
+    this.canceled = false,
+    this.message,
+  });
+
+  final String productId;
+  final bool granted;
+  final bool canceled;
+  final String? message;
+}
 
 /// Google Play Billing Service for handling in-app purchases and subscriptions
 class GooglePlayBillingService {
@@ -22,17 +36,49 @@ class GooglePlayBillingService {
   final StreamController<List<PurchaseDetails>> _purchaseUpdatesController = StreamController<List<PurchaseDetails>>.broadcast();
   final StreamController<String> _errorController = StreamController<String>.broadcast();
   final StreamController<Map<String, dynamic>> _userFriendlyErrorController = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<BillingGrantResult> _grantController = StreamController<BillingGrantResult>.broadcast();
 
   // Stream subscriptions
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
 
   // Store offerId for purchases (keyed by productId, cleared after processing)
   final Map<String, String?> _pendingOfferIds = {};
+  final Map<String, bool> _pendingIsSubscription = {};
 
   /// Called after a subscription is activated or restored on the backend.
   void Function()? onSubscriptionChanged;
 
   static const String _packageName = 'com.lgbtfinder';
+
+  void _log(String message) {
+    AppLogger.debug(message, tag: 'GooglePlayBilling');
+  }
+
+  /// Pick the Play [ProductDetails] whose base plan matches [basePlanId].
+  ///
+  /// Android returns one [ProductDetails] per subscription offer. Buying the
+  /// first match charges the wrong period.
+  static ProductDetails? matchCatalogProduct(
+    List<ProductDetails> products,
+    String productId, {
+    String? basePlanId,
+  }) {
+    final matches = products.where((product) => product.id == productId).toList();
+    if (matches.isEmpty) return null;
+
+    final wanted = basePlanId?.trim();
+    if (wanted == null || wanted.isEmpty) return matches.first;
+
+    for (final product in matches) {
+      if (product is! GooglePlayProductDetails) continue;
+      final index = product.subscriptionIndex;
+      final offers = product.productDetails.subscriptionOfferDetails;
+      if (index == null || offers == null || index >= offers.length) continue;
+      if (offers[index].basePlanId == wanted) return product;
+    }
+
+    return null;
+  }
 
   GooglePlayBillingService(
     this._apiService,
@@ -49,6 +95,59 @@ class GooglePlayBillingService {
   Stream<bool> get billingAvailability => _billingAvailabilityController.stream;
   Stream<List<PurchaseDetails>> get purchaseUpdates => _purchaseUpdatesController.stream;
   Stream<String> get errors => _errorController.stream;
+
+  /// Fires after the backend grants or refuses a purchase. Play status alone is not enough.
+  Stream<BillingGrantResult> get grantResults => _grantController.stream;
+
+  /// Subscribe before opening the billing sheet so a fast result is not missed.
+  ({Future<BillingGrantResult> result, void Function() cancel}) trackGrant(String productId) {
+    final completer = Completer<BillingGrantResult>();
+    late final StreamSubscription<BillingGrantResult> subscription;
+    subscription = grantResults.listen((event) {
+      if (event.productId != productId || completer.isCompleted) return;
+      completer.complete(event);
+      subscription.cancel();
+    });
+
+    return (
+      result: completer.future.timeout(
+        const Duration(minutes: 3),
+        onTimeout: () {
+          subscription.cancel();
+          return BillingGrantResult(
+            productId: productId,
+            granted: false,
+            message: 'Purchase timed out. If you were charged, reopen the app to finish.',
+          );
+        },
+      ),
+      cancel: () {
+        subscription.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(BillingGrantResult(
+            productId: productId,
+            granted: false,
+            canceled: true,
+          ));
+        }
+      },
+    );
+  }
+
+  void _emitGrant(
+    String productId, {
+    required bool granted,
+    bool canceled = false,
+    String? message,
+  }) {
+    if (_grantController.isClosed) return;
+    _grantController.add(BillingGrantResult(
+      productId: productId,
+      granted: granted,
+      canceled: canceled,
+      message: message,
+    ));
+  }
 
   /// Initialize the billing service
   Future<void> _initialize() async {
@@ -69,17 +168,9 @@ class GooglePlayBillingService {
           _errorController.add('Purchase stream error: $error');
         },
         onDone: () {
-          debugPrint('Purchase stream closed');
+          _log('Purchase stream closed');
         },
       );
-
-      // Enable pending purchases for Android
-      if (Platform.isAndroid) {
-        final InAppPurchaseAndroidPlatformAddition androidPlatformAddition =
-            _inAppPurchase.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
-        // Note: setPendingPurchaseUpdateListener is not available in current version
-        // This functionality may need to be implemented differently
-      }
 
       // Process any pending purchases that were queued offline
       await processPendingPurchases();
@@ -93,16 +184,16 @@ class GooglePlayBillingService {
       // Start periodic status sync (every 5 minutes)
       startPeriodicStatusSync();
 
-      debugPrint('Google Play Billing initialized successfully');
+      _log('Google Play Billing initialized successfully');
     } catch (e) {
       _errorController.add('Failed to initialize billing: $e');
-      debugPrint('Billing initialization error: $e');
+      _log('Billing initialization error: $e');
     }
   }
 
   /// Handle purchase updates from the stream
   Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) async {
-    debugPrint('Purchase update received: ${purchaseDetailsList.length} purchases');
+    _log('Purchase update received: ${purchaseDetailsList.length} purchases');
 
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
       await _handlePurchaseUpdate(purchaseDetails);
@@ -114,11 +205,11 @@ class GooglePlayBillingService {
 
   /// Handle individual purchase updates
   Future<void> _handlePurchaseUpdate(PurchaseDetails purchaseDetails) async {
-    debugPrint('Handling purchase: ${purchaseDetails.productID}, status: ${purchaseDetails.status}');
+    _log('Handling purchase: ${purchaseDetails.productID}, status: ${purchaseDetails.status}');
 
     switch (purchaseDetails.status) {
       case PurchaseStatus.pending:
-        debugPrint('Purchase pending: ${purchaseDetails.productID}');
+        _log('Purchase pending: ${purchaseDetails.productID}');
         break;
 
       case PurchaseStatus.purchased:
@@ -139,7 +230,8 @@ class GooglePlayBillingService {
         break;
 
       case PurchaseStatus.canceled:
-        debugPrint('Purchase cancelled: ${purchaseDetails.productID}');
+        _log('Purchase cancelled: ${purchaseDetails.productID}');
+        _emitGrant(purchaseDetails.productID, granted: false, canceled: true);
         break;
     }
   }
@@ -147,25 +239,28 @@ class GooglePlayBillingService {
   /// Handle successful purchases
   Future<void> _handleSuccessfulPurchase(PurchaseDetails purchaseDetails, {String? offerId}) async {
     try {
-      debugPrint('Processing successful purchase: ${purchaseDetails.productID}');
+      _log('Processing successful purchase: ${purchaseDetails.productID}');
 
-      if (_isSubscriptionProduct(purchaseDetails.productID)) {
+      if (_purchaseIsSubscription(purchaseDetails.productID)) {
         final result = await _activateSubscriptionWithBackend(purchaseDetails, offerId: offerId);
 
         if (result['success'] == true) {
           await _completePurchase(purchaseDetails);
           onSubscriptionChanged?.call();
-          debugPrint('Subscription activated and completed: ${purchaseDetails.productID}');
+          _emitGrant(purchaseDetails.productID, granted: true);
+          _log('Subscription activated and completed: ${purchaseDetails.productID}');
         } else {
-          debugPrint('Subscription activation failed: ${purchaseDetails.productID}');
+          _log('Subscription activation failed: ${purchaseDetails.productID}');
+          final message = result['message']?.toString() ?? 'Subscription activation failed';
           if (result['error'] != null) {
             _userFriendlyErrorController.add(Map<String, dynamic>.from(result['error'] as Map));
           } else {
-            _errorController.add('Subscription activation failed: ${result['message'] ?? 'Unknown error'}');
+            _errorController.add('Subscription activation failed: $message');
           }
           // Subscriptions stay restorable after acknowledge. Completing here
           // prevents Google's 3-day auto-refund while webhook/restore retries grant.
           await _completePurchase(purchaseDetails);
+          _emitGrant(purchaseDetails.productID, granted: false, message: message);
         }
         return;
       }
@@ -176,37 +271,44 @@ class GooglePlayBillingService {
       if (validationResult['success'] == true) {
         await _acknowledgePurchase(purchaseDetails);
         await _completePurchase(purchaseDetails);
-        debugPrint('Purchase validated and completed: ${purchaseDetails.productID}');
+        _emitGrant(purchaseDetails.productID, granted: true);
+        _log('Purchase validated and completed: ${purchaseDetails.productID}');
       } else {
-        debugPrint('Purchase validation failed: ${purchaseDetails.productID}');
+        _log('Purchase validation failed: ${purchaseDetails.productID}');
+        final message = validationResult['message']?.toString() ?? 'Purchase validation failed';
         if (validationResult['error'] != null) {
           _userFriendlyErrorController.add(validationResult['error']);
         } else {
-          _errorController.add('Purchase validation failed: ${validationResult['message'] ?? 'Unknown error'}');
+          _errorController.add('Purchase validation failed: $message');
         }
+        _emitGrant(purchaseDetails.productID, granted: false, message: message);
       }
     } catch (e) {
-      debugPrint('Error handling successful purchase: $e');
+      _log('Error handling successful purchase: $e');
       _errorController.add('Error processing purchase: $e');
+      _emitGrant(purchaseDetails.productID, granted: false, message: 'Error processing purchase');
     }
   }
 
   /// Handle restored purchases
   Future<void> _handleRestoredPurchase(PurchaseDetails purchaseDetails) async {
     try {
-      debugPrint('Processing restored purchase: ${purchaseDetails.productID}');
+      _log('Processing restored purchase: ${purchaseDetails.productID}');
 
-      if (_isSubscriptionProduct(purchaseDetails.productID)) {
+      if (_purchaseIsSubscription(purchaseDetails.productID)) {
         final result = await _restoreSubscriptionWithBackend(purchaseDetails);
 
         if (result['success'] == true) {
           await _completePurchase(purchaseDetails);
           onSubscriptionChanged?.call();
-          debugPrint('Restored subscription validated: ${purchaseDetails.productID}');
+          _emitGrant(purchaseDetails.productID, granted: true);
+          _log('Restored subscription validated: ${purchaseDetails.productID}');
         } else {
-          debugPrint('Restored subscription failed: ${purchaseDetails.productID}');
-          _errorController.add('Restored purchase failed: ${result['message'] ?? 'Unknown error'}');
+          _log('Restored subscription failed: ${purchaseDetails.productID}');
+          final message = result['message']?.toString() ?? 'Restored purchase failed';
+          _errorController.add('Restored purchase failed: $message');
           await _completePurchase(purchaseDetails);
+          _emitGrant(purchaseDetails.productID, granted: false, message: message);
         }
         return;
       }
@@ -223,21 +325,25 @@ class GooglePlayBillingService {
           }
         }
         await _completePurchase(purchaseDetails);
-        debugPrint('Restored one-time purchase validated: ${purchaseDetails.productID}');
+        _emitGrant(purchaseDetails.productID, granted: true);
+        _log('Restored one-time purchase validated: ${purchaseDetails.productID}');
       } else {
-        debugPrint('Restored purchase validation failed: ${purchaseDetails.productID}');
-        _errorController.add('Restored purchase validation failed: ${validationResult['message'] ?? 'Unknown error'}');
+        _log('Restored purchase validation failed: ${purchaseDetails.productID}');
+        final message = validationResult['message']?.toString() ?? 'Restored purchase validation failed';
+        _errorController.add('Restored purchase validation failed: $message');
+        _emitGrant(purchaseDetails.productID, granted: false, message: message);
       }
     } catch (e) {
-      debugPrint('Error handling restored purchase: $e');
+      _log('Error handling restored purchase: $e');
       _errorController.add('Error processing restored purchase: $e');
+      _emitGrant(purchaseDetails.productID, granted: false, message: 'Error processing restored purchase');
     }
   }
 
   /// Handle purchase errors
   Future<void> _handlePurchaseError(PurchaseDetails purchaseDetails) async {
     final errorMessage = purchaseDetails.error?.message ?? 'Unknown error';
-    debugPrint('Purchase error for ${purchaseDetails.productID}: $errorMessage');
+    _log('Purchase error for ${purchaseDetails.productID}: $errorMessage');
 
     AppLogger.error(
       'Purchase failed',
@@ -246,6 +352,7 @@ class GooglePlayBillingService {
     );
 
     _errorController.add('Purchase failed: $errorMessage');
+    _emitGrant(purchaseDetails.productID, granted: false, message: errorMessage);
   }
 
   /// Complete the purchase with Google Play.
@@ -257,7 +364,7 @@ class GooglePlayBillingService {
   Future<void> _completePurchase(PurchaseDetails purchaseDetails) async {
     if (purchaseDetails.pendingCompletePurchase) {
       await _inAppPurchase.completePurchase(purchaseDetails);
-      debugPrint('completePurchase called for ${purchaseDetails.productID}');
+      _log('completePurchase called for ${purchaseDetails.productID}');
     }
   }
 
@@ -309,11 +416,7 @@ class GooglePlayBillingService {
         throw Exception('Unable to extract purchase token from purchase details');
       }
 
-      if (offerId != null) {
-        await _marketingAttributionService.getAttributionData();
-      }
-
-      debugPrint('Activating subscription with backend: ${purchaseDetails.productID}');
+      _log('Activating subscription with backend: ${purchaseDetails.productID}');
 
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.subscriptionsActivate,
@@ -321,6 +424,7 @@ class GooglePlayBillingService {
           'purchase_token': purchaseToken,
           'product_id': purchaseDetails.productID,
           'package_name': _packageName,
+          if (offerId != null && offerId.trim().isNotEmpty) 'offer_id': offerId.trim(),
         },
         fromJson: (json) => json as Map<String, dynamic>,
       );
@@ -344,7 +448,7 @@ class GooglePlayBillingService {
         'error': errorData,
       };
     } catch (e) {
-      debugPrint('Subscription activation error: $e');
+      _log('Subscription activation error: $e');
       return {
         'success': false,
         'message': 'Subscription activation failed: $e',
@@ -362,7 +466,7 @@ class GooglePlayBillingService {
         throw Exception('Unable to extract purchase token from purchase details');
       }
 
-      debugPrint('Restoring subscription with backend: ${purchaseDetails.productID}');
+      _log('Restoring subscription with backend: ${purchaseDetails.productID}');
 
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.subscriptionsRestore,
@@ -379,7 +483,7 @@ class GooglePlayBillingService {
         'message': response.message,
       };
     } catch (e) {
-      debugPrint('Subscription restore error: $e');
+      _log('Subscription restore error: $e');
       return {
         'success': false,
         'message': 'Subscription restore failed: $e',
@@ -392,7 +496,7 @@ class GooglePlayBillingService {
     try {
       await _inAppPurchase.restorePurchases();
     } catch (e) {
-      debugPrint('Failed to process unfinished purchases on init: $e');
+      _log('Failed to process unfinished purchases on init: $e');
     }
   }
 
@@ -421,7 +525,7 @@ class GooglePlayBillingService {
         if (hasAttribution) ...attributionData.map((key, value) => MapEntry(key, value ?? '')),
       };
 
-      debugPrint('Validating purchase with backend: ${purchaseDetails.productID}');
+      _log('Validating purchase with backend: ${purchaseDetails.productID}');
 
       final response = await _apiService.post<Map<String, dynamic>>(
         isSubscription ? ApiEndpoints.googlePlayValidatePurchase : ApiEndpoints.googlePlayValidateOneTimePurchase,
@@ -443,7 +547,7 @@ class GooglePlayBillingService {
         final errorData = response.data?['error'] ?? response.data;
         if (errorData != null && errorData is Map) {
           // Emit user-friendly error
-          _userFriendlyErrorController.add(Map<String, dynamic>.from(errorData as Map));
+          _userFriendlyErrorController.add(Map<String, dynamic>.from(errorData));
         }
 
         return {
@@ -453,7 +557,7 @@ class GooglePlayBillingService {
         };
       }
     } catch (e) {
-      debugPrint('Backend validation error: $e');
+      _log('Backend validation error: $e');
       return {
         'success': false,
         'message': 'Backend validation failed: $e',
@@ -485,7 +589,7 @@ class GooglePlayBillingService {
         'isSubscription': isSubscription,
       };
 
-      debugPrint('Acknowledging purchase: ${purchaseDetails.productID}');
+      _log('Acknowledging purchase: ${purchaseDetails.productID}');
 
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.googlePlayAcknowledgePurchase,
@@ -494,12 +598,12 @@ class GooglePlayBillingService {
       );
 
       if (response.isSuccess) {
-        debugPrint('Purchase acknowledged successfully: ${purchaseDetails.productID}');
+        _log('Purchase acknowledged successfully: ${purchaseDetails.productID}');
       } else {
-        debugPrint('Purchase acknowledgement failed: ${response.message}');
+        _log('Purchase acknowledgement failed: ${response.message}');
       }
     } catch (e) {
-      debugPrint('Purchase acknowledgement error: $e');
+      _log('Purchase acknowledgement error: $e');
     }
   }
 
@@ -513,7 +617,7 @@ class GooglePlayBillingService {
         return [];
       }
 
-      debugPrint('Queried ${response.productDetails.length} products');
+      _log('Queried ${response.productDetails.length} products');
       return response.productDetails;
     } catch (e) {
       _errorController.add('Error querying products: $e');
@@ -521,24 +625,9 @@ class GooglePlayBillingService {
     }
   }
 
-  /// Query subscription products
-  Future<List<ProductDetails>> querySubscriptionProducts() async {
-    final subscriptionIds = {
-      'bronze_base',
-      'silver_base',
-      'gold_base',
-    };
-    return queryProductDetails(subscriptionIds);
-  }
-
-  /// Query one-time products
-  Future<List<ProductDetails>> queryOneTimeProducts() async {
-    final productIds = {
-      'superlike_small',
-      'superlike_medium',
-      'superlike_large',
-      'superlike_mega',
-    };
+  /// Query Play for the product IDs supplied by the backend catalog.
+  Future<List<ProductDetails>> queryProducts(Set<String> productIds) async {
+    if (productIds.isEmpty) return [];
     return queryProductDetails(productIds);
   }
 
@@ -555,42 +644,38 @@ class GooglePlayBillingService {
       }
 
       if (Platform.isAndroid) {
-        // For Android, use the Android-specific purchase param for subscriptions
-        final InAppPurchaseAndroidPlatformAddition androidAddition =
-            _inAppPurchase.getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
-        
-        // Create purchase param for subscription
-        // Note: For subscriptions, we use buyNonConsumable but the package handles it as subscription
-        final PurchaseParam purchaseParam = PurchaseParam(
-          productDetails: productDetails,
-        );
+        final PurchaseParam purchaseParam = productDetails is GooglePlayProductDetails
+            ? GooglePlayPurchaseParam(
+                productDetails: productDetails,
+                offerToken: productDetails.offerToken,
+              )
+            : PurchaseParam(productDetails: productDetails);
 
-        // Store offerId for later retrieval during purchase processing
         if (offerId != null) {
           _pendingOfferIds[productDetails.id] = offerId;
         }
+        _pendingIsSubscription[productDetails.id] = true;
 
-        // Use buyNonConsumable for subscriptions (cross-platform via InAppPurchase)
         final bool success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-        debugPrint('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
+        _log('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
         return success;
       } else {
         // For iOS, use standard purchase flow for subscriptions
         final PurchaseParam purchaseParam = PurchaseParam(
           productDetails: productDetails,
         );
-        // Store offerId for later retrieval during purchase processing
         if (offerId != null) {
           _pendingOfferIds[productDetails.id] = offerId;
         }
+        _pendingIsSubscription[productDetails.id] = true;
 
         // iOS also uses buyNonConsumable for subscriptions
         final bool success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-        debugPrint('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
+        _log('Subscription billing flow launched for ${productDetails.id}${offerId != null ? ' with offer: $offerId' : ''}: $success');
         return success;
       }
     } catch (e) {
-      debugPrint('Failed to launch subscription billing flow: $e');
+      _log('Failed to launch subscription billing flow: $e');
 
       // If billing is not available, queue the purchase for later
       final isAvailable = await _inAppPurchase.isAvailable();
@@ -621,10 +706,10 @@ class GooglePlayBillingService {
       );
 
       final bool success = await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-      debugPrint('Billing flow launched for ${productDetails.id}: $success');
+      _log('Billing flow launched for ${productDetails.id}: $success');
       return success;
     } catch (e) {
-      debugPrint('Failed to launch billing flow: $e');
+      _log('Failed to launch billing flow: $e');
 
       // If billing is not available, queue the purchase for later
       final isAvailable = await _inAppPurchase.isAvailable();
@@ -645,12 +730,13 @@ class GooglePlayBillingService {
       final PurchaseParam purchaseParam = PurchaseParam(
         productDetails: productDetails,
       );
+      _pendingIsSubscription[productDetails.id] = false;
 
       final bool success = await _inAppPurchase.buyConsumable(purchaseParam: purchaseParam);
-      debugPrint('Consumable billing flow launched for ${productDetails.id}: $success');
+      _log('Consumable billing flow launched for ${productDetails.id}: $success');
       return success;
     } catch (e) {
-      debugPrint('Failed to launch consumable billing flow: $e');
+      _log('Failed to launch consumable billing flow: $e');
 
       // If billing is not available, queue the purchase for later
       final isAvailable = await _inAppPurchase.isAvailable();
@@ -665,7 +751,13 @@ class GooglePlayBillingService {
     }
   }
 
-  /// Check if a product ID represents a subscription
+  bool _purchaseIsSubscription(String productId) {
+    final known = _pendingIsSubscription[productId];
+    if (known != null) return known;
+    return _isSubscriptionProduct(productId);
+  }
+
+  /// Fallback for restored purchases that were not started in this session.
   bool _isSubscriptionProduct(String productId) {
     if (productId.contains('_base')) return true;
     if (productId.startsWith('lgbtfinder.')) return true;
@@ -675,7 +767,7 @@ class GooglePlayBillingService {
   /// Get current purchases from backend and validate them
   Future<List<PurchaseDetails>> getCurrentPurchases() async {
     try {
-      debugPrint('Fetching current purchases from backend...');
+      _log('Fetching current purchases from backend...');
 
       // First, get purchases from backend API
       final response = await _apiService.get<Map<String, dynamic>>(
@@ -689,7 +781,7 @@ class GooglePlayBillingService {
         if (data != null && data['hasActiveSubscription'] == true) {
           // If user has active subscription, restorePurchases will trigger purchase stream
           // which will validate with backend
-          debugPrint('User has active subscription, triggering restore...');
+          _log('User has active subscription, triggering restore...');
           await restorePurchases();
         }
       }
@@ -699,7 +791,7 @@ class GooglePlayBillingService {
       // Return empty list as purchases come through stream
       return [];
     } catch (e) {
-      debugPrint('Failed to get current purchases: $e');
+      _log('Failed to get current purchases: $e');
       _errorController.add('Failed to get current purchases: $e');
       return [];
     }
@@ -709,17 +801,17 @@ class GooglePlayBillingService {
   /// This triggers the purchase stream which will validate purchases with backend
   Future<void> restorePurchases() async {
     try {
-      debugPrint('Initiating purchase restoration...');
+      _log('Initiating purchase restoration...');
       
       // Call restorePurchases which triggers purchase stream
       await _inAppPurchase.restorePurchases();
       
-      debugPrint('Purchase restoration initiated - purchases will come through stream');
+      _log('Purchase restoration initiated - purchases will come through stream');
       
       // Note: Restored purchases will come through _onPurchaseUpdate
       // and will be validated with backend automatically
     } catch (e) {
-      debugPrint('Failed to restore purchases: $e');
+      _log('Failed to restore purchases: $e');
       _errorController.add('Failed to restore purchases: $e');
       rethrow;
     }
@@ -739,9 +831,9 @@ class GooglePlayBillingService {
       };
 
       await _offlinePaymentService.queuePurchase(purchaseData);
-      debugPrint('Purchase queued for offline processing: ${productDetails.id}');
+      _log('Purchase queued for offline processing: ${productDetails.id}');
     } catch (e) {
-      debugPrint('Failed to queue purchase for offline: $e');
+      _log('Failed to queue purchase for offline: $e');
       _errorController.add('Failed to queue purchase for offline processing');
     }
   }
@@ -751,12 +843,12 @@ class GooglePlayBillingService {
     try {
       final hasPending = await _offlinePaymentService.hasPendingPurchases();
       if (hasPending) {
-        debugPrint('Processing pending purchases...');
+        _log('Processing pending purchases...');
         await _offlinePaymentService.processPendingPurchases();
-        debugPrint('Finished processing pending purchases');
+        _log('Finished processing pending purchases');
       }
     } catch (e) {
-      debugPrint('Failed to process pending purchases: $e');
+      _log('Failed to process pending purchases: $e');
       _errorController.add('Failed to process pending purchases');
     }
   }
@@ -778,6 +870,7 @@ class GooglePlayBillingService {
     _billingAvailabilityController.close();
     _purchaseUpdatesController.close();
     _errorController.close();
+    _grantController.close();
   }
 
   /// Check if billing is available
@@ -789,7 +882,7 @@ class GooglePlayBillingService {
   /// Call this periodically or on app launch to ensure status is up to date
   Future<Map<String, dynamic>?> syncSubscriptionStatus() async {
     try {
-      debugPrint('Syncing subscription status with backend...');
+      _log('Syncing subscription status with backend...');
 
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.googlePlaySubscriptionStatus,
@@ -798,15 +891,15 @@ class GooglePlayBillingService {
 
       if (response.isSuccess && response.data != null) {
         final data = response.data!['data'];
-        debugPrint('Subscription status synced: ${data?['hasActiveSubscription']}');
+        _log('Subscription status synced: ${data?['hasActiveSubscription']}');
         return data;
       } else {
-        debugPrint('Failed to sync subscription status: ${response.message}');
+        _log('Failed to sync subscription status: ${response.message}');
         _errorController.add('Failed to sync subscription status: ${response.message}');
         return null;
       }
     } catch (e) {
-      debugPrint('Error syncing subscription status: $e');
+      _log('Error syncing subscription status: $e');
       _errorController.add('Error syncing subscription status: $e');
       return null;
     }
@@ -823,13 +916,13 @@ class GooglePlayBillingService {
     _statusSyncTimer = Timer.periodic(interval, (timer) async {
       await syncSubscriptionStatus();
     });
-    debugPrint('Started periodic subscription status sync (interval: ${interval.inMinutes} minutes)');
+    _log('Started periodic subscription status sync (interval: ${interval.inMinutes} minutes)');
   }
 
   /// Stop periodic subscription status sync
   void stopPeriodicStatusSync() {
     _statusSyncTimer?.cancel();
     _statusSyncTimer = null;
-    debugPrint('Stopped periodic subscription status sync');
+    _log('Stopped periodic subscription status sync');
   }
 }

@@ -895,6 +895,15 @@ class ChatService {
     return response.data?['is_pinned'] == true;
   }
 
+  /// Hide the conversation, delete its media on the server, and drop the list row.
+  Future<void> deleteConversation(int userId) async {
+    final response = await _apiService.delete<Map<String, dynamic>>(
+      ApiEndpoints.chatConversationDelete(userId),
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+    if (!response.isSuccess) throw Exception(response.message);
+  }
+
   Message _withClientId(Message message, String? clientId) {
     if (clientId == null || clientId.isEmpty) return message;
     if (message.clientId != null && message.clientId!.isNotEmpty) {

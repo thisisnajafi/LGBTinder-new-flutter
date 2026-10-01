@@ -122,6 +122,7 @@ dependencies:
 
   # Payments (Google Play Billing only; Stripe removed)
   in_app_purchase: ^3.1.0  # Google Play Billing
+  in_app_purchase_android: ^0.4.0  # Offer tokens for subscription base plans
 
   # Image Processing
   image: ^4.1.7

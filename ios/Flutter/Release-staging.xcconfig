@@ -1,0 +1,7 @@
+#include "Release.xcconfig"
+FLUTTER_TARGET=lib/main_staging.dart
+APP_FLAVOR=staging
+APP_DISPLAY_NAME=LGBTFinder Staging
+PRODUCT_BUNDLE_IDENTIFIER=com.lgbtfinder.staging
+ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-Staging
+INFOPLIST_FILE=Runner/Info.plist

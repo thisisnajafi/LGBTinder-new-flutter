@@ -52,13 +52,15 @@ class MessengerCallsNotifier extends StateNotifier<MessengerCallsState> {
   bool _hasLoaded = false;
   bool _inFlight = false;
   bool _disposed = false;
+  Timer? _refreshDebounce;
+  Timer? _staleTicker;
 
   Future<void> load({bool force = false}) async {
     if (_inFlight) return;
     if (!_hasLoaded && state.calls.isEmpty) {
       final cached = _hydrateFromCache();
       if (cached.isNotEmpty) {
-        state = MessengerCallsState(calls: cached, isLoading: true);
+        _publish(calls: cached, isLoading: true);
       }
     }
     if (_hasLoaded && !force && state.calls.isNotEmpty) {
@@ -85,10 +87,21 @@ class MessengerCallsNotifier extends StateNotifier<MessengerCallsState> {
     unawaited(_refreshSilent());
   }
 
+  void upsertLiveCall(Call call) {
+    if (call.id <= 0 || _disposed) return;
+    final merged = <Call>[
+      call,
+      ...state.calls.where((existing) => existing.id != call.id),
+    ];
+    _publish(calls: merged, liveCall: call);
+  }
+
   /// Pusher / local hang-up: leave "Connecting…" and drop the live banner.
   void applyRemoteStatus({
     required int callId,
     required String status,
+    Duration? duration,
+    Call? seed,
   }) {
     if (callId <= 0 || _disposed) return;
     final normalized = status.toLowerCase();
@@ -97,31 +110,33 @@ class MessengerCallsNotifier extends StateNotifier<MessengerCallsState> {
     for (final call in state.calls) {
       if (call.id == callId) {
         found = true;
-        calls.add(
-          call.copyWith(
-            status: normalized,
-            endedAt: CallLogLabels.isTerminalStatus(normalized)
-                ? (call.endedAt ?? DateTime.now())
-                : call.endedAt,
-          ),
-        );
+        calls.add(_mergeStatus(call, normalized, duration: duration));
       } else {
         calls.add(call);
       }
     }
+    if (!found && seed != null && seed.id == callId) {
+      found = true;
+      calls.insert(0, _mergeStatus(seed, normalized, duration: duration));
+    }
 
     final live = state.liveCall;
     final liveMatches = live != null && live.id == callId;
-    final liveStillLive =
-        liveMatches && CallLogLabels.isLiveStatus(normalized);
+    Call? nextLive = live;
+    if (liveMatches) {
+      nextLive = CallLogLabels.isLiveStatus(normalized)
+          ? _mergeStatus(live, normalized, duration: duration)
+          : null;
+    } else if (CallLogLabels.isLiveStatus(normalized) && found) {
+      nextLive = calls.firstWhere((call) => call.id == callId);
+    }
 
-    state = state.copyWith(
+    _publish(
       calls: found ? calls : state.calls,
-      liveCall: liveStillLive ? live.copyWith(status: normalized) : live,
-      clearLiveCall: liveMatches && !liveStillLive,
+      liveCall: nextLive,
+      clearLiveCall: liveMatches && nextLive == null,
     );
-
-    unawaited(_refreshSilent());
+    _scheduleRefresh();
   }
 
   List<Call> callsForPeer(int peerUserId) {
@@ -158,7 +173,98 @@ class MessengerCallsNotifier extends StateNotifier<MessengerCallsState> {
   @override
   void dispose() {
     _disposed = true;
+    _refreshDebounce?.cancel();
+    _staleTicker?.cancel();
     super.dispose();
+  }
+
+  Call _mergeFetched(Call incoming, Call? previous) {
+    if (previous == null) return incoming;
+    if (CallLogLabels.isTerminalStatus(previous.status) &&
+        CallLogLabels.isLiveStatus(incoming.status)) {
+      return previous;
+    }
+    return incoming;
+  }
+
+  Call _mergeStatus(Call call, String status, {Duration? duration}) {
+    final next = status.toLowerCase();
+    if (CallLogLabels.isTerminalStatus(call.status) &&
+        CallLogLabels.isLiveStatus(next)) {
+      return call;
+    }
+    return call.copyWith(
+      status: next,
+      endedAt: CallLogLabels.isTerminalStatus(next)
+          ? (call.endedAt ?? DateTime.now())
+          : call.endedAt,
+      duration: duration ?? call.duration,
+    );
+  }
+
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 900), () {
+      if (_disposed) return;
+      unawaited(_refreshSilent());
+    });
+  }
+
+  void _armStaleTicker() {
+    final needsTick = state.calls.any(
+          (call) => CallLogLabels.isLiveStatus(call.status),
+        ) ||
+        (state.liveCall != null &&
+            CallLogLabels.isLiveStatus(state.liveCall!.status));
+    if (!needsTick) {
+      _staleTicker?.cancel();
+      _staleTicker = null;
+      return;
+    }
+    if (_staleTicker != null) return;
+    _staleTicker = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_disposed) {
+        _staleTicker?.cancel();
+        return;
+      }
+      _publish(calls: state.calls, liveCall: state.liveCall);
+    });
+  }
+
+  void _publish({
+    required List<Call> calls,
+    Call? liveCall,
+    bool clearLiveCall = false,
+    bool? isLoading,
+    String? error,
+    bool clearError = true,
+  }) {
+    final rawLive = clearLiveCall ? null : liveCall;
+    final liveId = rawLive != null &&
+            CallLogLabels.isLiveStatus(
+              CallLogLabels.resolvedStatus(rawLive),
+            )
+        ? rawLive.id
+        : null;
+    final decorated = [
+      for (final call in calls)
+        CallLogLabels.withResolvedStatus(call, liveCallId: liveId),
+    ];
+    Call? nextLive;
+    if (rawLive != null) {
+      final resolved = CallLogLabels.withResolvedStatus(rawLive);
+      nextLive = CallLogLabels.isLiveStatus(resolved.status) ? resolved : null;
+    }
+    if (nextLive != null && !decorated.any((call) => call.id == nextLive!.id)) {
+      decorated.insert(0, nextLive);
+    }
+    state = MessengerCallsState(
+      isLoading: isLoading ?? state.isLoading,
+      calls: decorated,
+      liveCall: nextLive,
+      error: clearError ? null : error,
+    );
+    _armStaleTicker();
   }
 
   Future<void> _fetch({bool keepExistingOnError = false}) async {
@@ -177,11 +283,20 @@ class MessengerCallsNotifier extends StateNotifier<MessengerCallsState> {
       }
       if (_disposed) return;
       _hasLoaded = true;
-      final withAvatars = _withAvatars(history);
-      state = MessengerCallsState(
-        calls: withAvatars,
-        liveCall: live != null && live.id > 0 ? live : null,
-      );
+      final previousById = {for (final call in state.calls) call.id: call};
+      final mergedHistory = [
+        for (final incoming in history)
+          _mergeFetched(incoming, previousById[incoming.id]),
+      ];
+      final withAvatars = _withAvatars(mergedHistory);
+      Call? nextLive = live != null && live.id > 0 ? live : null;
+      if (nextLive != null &&
+          !CallLogLabels.isLiveStatus(
+            CallLogLabels.resolvedStatus(nextLive, liveCallId: nextLive.id),
+          )) {
+        nextLive = null;
+      }
+      _publish(calls: withAvatars, liveCall: nextLive, isLoading: false);
       final me = _ref.read(cachedCurrentUserProvider).asData?.value.id ?? 0;
       unawaited(
         _ref.read(callHistoryLocalCacheProvider.notifier).saveInbox(

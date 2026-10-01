@@ -33,6 +33,7 @@ import '../routes/app_router.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../widgets/buttons/gradient_button.dart';
+import '../widgets/profile/profile_photo_crop_screen.dart';
 import '../widgets/profile/profile_photo_source_sheet.dart';
 import '../widgets/profile/wizard/wizard_step_about.dart';
 import '../widgets/profile/wizard/wizard_step_basic_info.dart';
@@ -376,13 +377,18 @@ class _ProfileWizardPageState extends ConsumerState<ProfileWizardPage> {
 
   Future<void> _pickImage(ImageSource source, {bool isPrimary = false}) async {
     try {
+      if (isPrimary || _currentStep == 0) {
+        final cropped = await ProfilePhotoCropScreen.pickAndCrop(
+          context,
+          source: source,
+        );
+        if (cropped == null || !mounted) return;
+        _wizard.setPrimaryPhoto(cropped);
+        return;
+      }
       final XFile? image = await AppMediaPicker.pickImage(source: source);
       if (image == null) return;
       final file = File(image.path);
-      if (isPrimary || _currentStep == 0) {
-        _wizard.setPrimaryPhoto(file);
-        return;
-      }
       if (_draft.remainingGallerySlots <= 0) {
         if (mounted) {
           _showStepError(

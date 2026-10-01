@@ -7,14 +7,29 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Play Store signing: place android/key.properties (gitignored) with store credentials.
-val keystorePropertiesFile = rootProject.file("key.properties")
+// Play Store signing: android/key.properties (gitignored), or the four
+// ANDROID_KEYSTORE_* / ANDROID_KEY_* environment variables for CI.
 val keystoreProperties = Properties()
-val hasReleaseKeystore = keystorePropertiesFile.exists().also { exists ->
-    if (exists) {
-        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+} else {
+    val storeFileEnv = System.getenv("ANDROID_KEYSTORE_FILE")
+    val storePasswordEnv = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    val keyAliasEnv = System.getenv("ANDROID_KEY_ALIAS")
+    val keyPasswordEnv = System.getenv("ANDROID_KEY_PASSWORD")
+    if (!storeFileEnv.isNullOrBlank() &&
+        !storePasswordEnv.isNullOrBlank() &&
+        !keyAliasEnv.isNullOrBlank() &&
+        !keyPasswordEnv.isNullOrBlank()
+    ) {
+        keystoreProperties["storeFile"] = storeFileEnv
+        keystoreProperties["storePassword"] = storePasswordEnv
+        keystoreProperties["keyAlias"] = keyAliasEnv
+        keystoreProperties["keyPassword"] = keyPasswordEnv
     }
 }
+val hasReleaseKeystore = keystoreProperties["storeFile"] != null
 
 android {
     namespace = "com.lgbtfinder"
@@ -47,6 +62,25 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("development") {
+            dimension = "environment"
+            isDefault = true
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "LGBTFinder Dev")
+        }
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            resValue("string", "app_name", "LGBTFinder Staging")
+        }
+        create("production") {
+            dimension = "environment"
+            resValue("string", "app_name", "LGBTFinder")
+        }
     }
 
     // Agora full-sdk ships optional AI/beauty/AV1 *extensions* (~50MB+).

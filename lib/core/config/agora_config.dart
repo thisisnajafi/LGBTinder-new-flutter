@@ -1,12 +1,19 @@
+import 'app_config.dart';
+
 /// Agora RTC configuration.
 ///
-/// Join always prefers `app_id` from the token endpoint. An optional
-/// `--dart-define=AGORA_APP_ID=...` is only a last-resort override for local
-/// builds — there is no bundled App ID.
+/// Join always prefers `app_id` from the token endpoint. A flavor may set
+/// [AppConfig.agoraAppIdOverride]. `--dart-define=AGORA_APP_ID=...` still wins
+/// as a last-resort local override. There is no bundled production App ID.
 class AgoraConfig {
   AgoraConfig._();
 
-  static const String appId = String.fromEnvironment('AGORA_APP_ID');
+  static String get appId {
+    const fromDefine = String.fromEnvironment('AGORA_APP_ID');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    if (AppConfig.isReady) return AppConfig.current.agoraAppIdOverride;
+    return '';
+  }
 
   static bool get isConfigured => appId.isNotEmpty;
 

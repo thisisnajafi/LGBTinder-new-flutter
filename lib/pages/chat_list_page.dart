@@ -30,6 +30,7 @@ import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/modals/confirmation_dialog.dart';
 import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/chat/providers/conversation_pin_cache_provider.dart';
+import '../features/chat/providers/chat_conversation_delete_queue.dart';
 import '../features/chat/providers/chat_list_hidden_peers_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
@@ -369,24 +370,28 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   }
 
   Future<void> _swipeMute(int userId, bool currentlyMuted) async {
+    final next = !currentlyMuted;
+    ref.read(conversationMuteCacheProvider.notifier).setMuted(userId, next);
     try {
       final chatService = ref.read(chatServiceProvider);
       final muted = currentlyMuted
           ? await chatService.unmuteConversation(userId)
           : await chatService.muteConversation(userId);
       ref.read(conversationMuteCacheProvider.notifier).setMuted(userId, muted);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(muted ? 'Conversation muted' : 'Conversation unmuted'),
-        ),
-      );
     } on ApiError catch (e) {
+      ref.read(conversationMuteCacheProvider.notifier).setMuted(
+            userId,
+            currentlyMuted,
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e, stack) {
+      ref.read(conversationMuteCacheProvider.notifier).setMuted(
+            userId,
+            currentlyMuted,
+          );
       AppLogger.error(
         'Swipe mute failed',
         tag: 'ChatListPage',
@@ -401,26 +406,28 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   }
 
   Future<void> _togglePin(int userId, bool currentlyPinned) async {
+    final next = !currentlyPinned;
+    ref.read(conversationPinCacheProvider.notifier).setPinned(userId, next);
     try {
       final chatService = ref.read(chatServiceProvider);
       final pinned = currentlyPinned
           ? await chatService.unpinConversation(userId)
           : await chatService.pinConversation(userId);
       ref.read(conversationPinCacheProvider.notifier).setPinned(userId, pinned);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            pinned ? 'Conversation pinned' : 'Conversation unpinned',
-          ),
-        ),
-      );
     } on ApiError catch (e) {
+      ref.read(conversationPinCacheProvider.notifier).setPinned(
+            userId,
+            currentlyPinned,
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e, stack) {
+      ref.read(conversationPinCacheProvider.notifier).setPinned(
+            userId,
+            currentlyPinned,
+          );
       AppLogger.error(
         'Conversation pin failed',
         tag: 'ChatListPage',
@@ -475,17 +482,25 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
 
   void _hideConversation(int userId, String name) {
     ref.read(chatListHiddenPeersProvider.notifier).hide(userId);
+    ref.read(chatConversationDeleteQueueProvider.notifier).schedule(userId);
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
         duration: AppAnimations.chatListDeleteUndo,
-        content: Text(name == 'User' ? 'Conversation hidden' : '$name hidden'),
+        content: Text(
+          name == 'User' ? 'Conversation deleted' : '$name deleted',
+        ),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
-            ref.read(chatListHiddenPeersProvider.notifier).restore(userId);
+            final restored = ref
+                .read(chatConversationDeleteQueueProvider.notifier)
+                .undo(userId);
+            if (!restored) {
+              ref.read(chatListHiddenPeersProvider.notifier).restore(userId);
+            }
           },
         ),
       ),
@@ -629,8 +644,14 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                     userId: userId,
                     isMuted: muted,
                     isPinned: pinned,
-                    onMuteToggle: () => _swipeMute(userId, muted),
-                    onPinToggle: () => _togglePin(userId, pinned),
+                    onMuteToggle: () {
+                      unawaited(_swipeMute(userId, muted));
+                      return Future<void>.value();
+                    },
+                    onPinToggle: () {
+                      unawaited(_togglePin(userId, pinned));
+                      return Future<void>.value();
+                    },
                     onConfirmDelete: () => _confirmHideConversation(name),
                     onDeleted: () => _hideConversation(userId, name),
                     child: RepaintBoundary(

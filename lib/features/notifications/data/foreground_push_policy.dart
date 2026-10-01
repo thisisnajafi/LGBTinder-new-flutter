@@ -18,4 +18,14 @@ class ForegroundPushPolicy {
       fromUserId: fromUserId,
     );
   }
+
+  /// Device tray / OS notifications are only for background or killed apps.
+  /// Incoming calls use CallKit / the in-app banner instead of a tray item.
+  static bool shouldShowDeviceNotification({
+    required bool appForeground,
+    required bool isIncomingCall,
+  }) {
+    if (isIncomingCall) return false;
+    return !appForeground;
+  }
 }

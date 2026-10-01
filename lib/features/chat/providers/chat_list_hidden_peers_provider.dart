@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Session-only hidden conversation peers (CHAT-MSG-006).
 ///
-/// There is no conversation-delete API; rows are filtered locally and Undo
-/// restores them. Logout / [clear] drops the set.
+/// The row leaves the list immediately. [ChatConversationDeleteQueue] commits
+/// the server and device delete after the undo window.
 final chatListHiddenPeersProvider =
     NotifierProvider<ChatListHiddenPeersNotifier, Set<int>>(
   ChatListHiddenPeersNotifier.new,

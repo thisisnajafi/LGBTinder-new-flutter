@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/animation_constants.dart';
 import '../../features/calls/data/models/call.dart';
 import '../../features/calls/presentation/widgets/call_history_bubble.dart';
 import '../../features/chat/presentation/widgets/chat_empty_conversation.dart';
@@ -15,7 +14,6 @@ import '../loading/skeleton_chat.dart';
 import 'chat_date_badge.dart';
 import 'chat_load_older_retry.dart';
 import 'chat_message_list_tile.dart';
-import 'chat_peer_typing_indicator.dart';
 import 'chat_sticky_date_header.dart';
 import 'chat_thread_jump_fab_layer.dart';
 import 'chat_thread_list_view.dart';
@@ -131,25 +129,6 @@ class ChatMessageList extends ConsumerWidget {
             onVideoTap: onVideoTap,
             onVoiceListened: onVoiceListened,
           ),
-        ),
-        ChatPeerTypingIndicator(
-          peerUserId: peerUserId,
-          displayName: peerDisplayName,
-          onAppearedAtBottom: () {
-            if (!scrollController.hasClients) return;
-            final pixels = scrollController.position.pixels;
-            if (!ChatThreadScroll.isNearLatest(pixels: pixels)) return;
-            final reduced = !AppAnimations.animationsEnabled(context);
-            if (reduced) {
-              scrollController.jumpTo(ChatThreadScroll.latestPixels);
-              return;
-            }
-            scrollController.animateTo(
-              ChatThreadScroll.latestPixels,
-              duration: AppAnimations.chatTypingExit,
-              curve: AppAnimations.curveDefault,
-            );
-          },
         ),
       ],
     );

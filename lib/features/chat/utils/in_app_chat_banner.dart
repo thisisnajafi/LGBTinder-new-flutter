@@ -142,6 +142,13 @@ class InAppChatBannerPolicy {
     );
   }
 
+  static const Set<String> incomingCallTypes = {
+    'call',
+    'incoming_call',
+    'incoming_call_audio',
+    'incoming_call_video',
+  };
+
   static const Set<String> genericBannerTypes = {
     'like',
     'new_like',
@@ -155,6 +162,15 @@ class InAppChatBannerPolicy {
     'plan_upgraded',
     'subscription',
     'premium',
+    'feed_like',
+    'feed_comment',
+    'story_like',
+    'story_reply',
+    'comment_like',
+    'profile_view',
+    'missed_call',
+    'safety_alert',
+    'system_announcement',
   };
 
   static InAppChatBannerItem? fromGenericFcm(
@@ -163,7 +179,7 @@ class InAppChatBannerPolicy {
     String? notificationBody,
   }) {
     final type = (data['type']?.toString() ?? 'general').toLowerCase();
-    if (!genericBannerTypes.contains(type)) return null;
+    if (incomingCallTypes.contains(type)) return null;
 
     final peer = int.tryParse(data['user_id']?.toString() ?? '') ??
         int.tryParse(data['from_user_id']?.toString() ?? '') ??

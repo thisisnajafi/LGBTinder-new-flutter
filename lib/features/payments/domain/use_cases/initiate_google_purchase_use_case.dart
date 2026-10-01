@@ -1,4 +1,5 @@
 import 'package:in_app_purchase/in_app_purchase.dart';
+import '../../data/services/google_play_billing_service.dart';
 import '../repositories/google_play_repository.dart';
 
 /// Use case for initiating a Google Play purchase
@@ -10,16 +11,17 @@ class InitiateGooglePurchaseUseCase {
   /// Execute the use case
   Future<PurchaseResult> execute(String productId, bool isSubscription, {String? offerId}) async {
     try {
-      // Query product details
-      final products = isSubscription
-          ? await _repository.querySubscriptionProducts()
-          : await _repository.queryOneTimeProducts();
-
-      // Find the requested product
-      final productDetails = products.firstWhere(
-        (product) => product.id == productId,
-        orElse: () => throw Exception('Product not found: $productId'),
+      final products = await _repository.queryProducts({productId});
+      final productDetails = GooglePlayBillingService.matchCatalogProduct(
+        products,
+        productId,
+        basePlanId: isSubscription ? offerId : null,
       );
+
+      if (productDetails == null) {
+        final period = (offerId == null || offerId.isEmpty) ? '' : ' ($offerId)';
+        throw Exception('Product not found: $productId$period');
+      }
 
       // Launch billing flow
       final success = isSubscription

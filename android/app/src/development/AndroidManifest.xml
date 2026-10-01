@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Local Laravel is HTTP (10.0.2.2 / LAN). Production and staging do not set this. -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

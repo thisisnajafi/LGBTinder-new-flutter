@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../shared/widgets/common/app_svg_icon.dart';
 import '../../../../core/utils/app_icons.dart';
-import '../../../../core/utils/app_media_picker.dart';
+import '../../../../widgets/profile/profile_photo_crop_screen.dart';
 
 /// Profile image picker widget
 /// Allows users to pick images from camera or gallery
@@ -153,16 +152,13 @@ class ProfileImagePicker extends ConsumerWidget {
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
+      final cropped = await ProfilePhotoCropScreen.pickAndCrop(
+        context,
         source: source,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
       );
 
-      if (image != null) {
-        onImageSelected(image.path);
+      if (cropped != null && context.mounted) {
+        onImageSelected(cropped.path);
       }
     } catch (e) {
       if (context.mounted) {

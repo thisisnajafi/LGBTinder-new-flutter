@@ -3,15 +3,27 @@
 
 import 'package:flutter/foundation.dart';
 
+import '../config/app_config.dart';
+
 enum LogLevel { verbose, debug, info, warning, error, fatal }
 
 class AppLogger {
   AppLogger._();
 
-  static const bool _enabled = kDebugMode;
+  /// Release production still records error and fatal. Lower levels follow the
+  /// flavor floor. Before a flavor is installed (unit tests), stay quiet
+  /// outside debug, with the historical error floor.
+  static bool get _enabled {
+    if (!AppConfig.isReady) return kDebugMode;
+    return true;
+  }
 
-  /// General app logs below this level are suppressed in debug console.
-  static const LogLevel _minLevel = LogLevel.error;
+  static LogLevel get _minLevel {
+    if (!AppConfig.isReady) return LogLevel.error;
+    final index = AppConfig.current.minimumLogLevelIndex;
+    if (index < 0 || index >= LogLevel.values.length) return LogLevel.error;
+    return LogLevel.values[index];
+  }
 
   /// Per-tag floor. Agora, CallSignaling, and ChatPusher event logs must
   /// be visible in debug even though the global floor is [LogLevel.error].
@@ -30,15 +42,19 @@ class AppLogger {
     'Notifications': LogLevel.warning,
   };
 
-  static const bool _apiLogging = true;
+  /// Request and response bodies are a development-debug concern.
+  static bool get _apiLogging {
+    if (!AppConfig.isReady) return true;
+    return AppConfig.current.flavor == AppFlavor.development && kDebugMode;
+  }
 
   /// Effective minimum for [tag]. Used by tests and [_log].
   @visibleForTesting
   static LogLevel minLevelFor(String? tag) {
-    if (tag != null && _tagMinLevel.containsKey(tag)) {
-      return _tagMinLevel[tag]!;
-    }
-    return _minLevel;
+    final global = _minLevel;
+    final tagged = tag == null ? null : _tagMinLevel[tag];
+    if (tagged != null && tagged.index < global.index) return tagged;
+    return global;
   }
 
   static const String _reset = '\x1B[0m';

@@ -8,6 +8,7 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
+import '../../features/chat/providers/chat_typing_providers.dart';
 import '../../features/chat/providers/user_presence_cache_provider.dart';
 import 'last_seen_widget.dart';
 
@@ -99,9 +100,16 @@ class ChatHeader extends ConsumerWidget {
                           ),
                           maxLines: 1,
                         ),
-                        LastSeenWidget(
-                          isOnline: liveOnline,
-                          lastSeenAt: liveLastSeen,
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final isTyping =
+                                ref.watch(isUserTypingProvider(userId));
+                            return LastSeenWidget(
+                              isOnline: liveOnline,
+                              lastSeenAt: liveLastSeen,
+                              isTyping: isTyping,
+                            );
+                          },
                         ),
                       ],
                     ),

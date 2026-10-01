@@ -26,7 +26,10 @@ class MessengerActiveCallBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = messengerPeerName(call, currentUserId);
-    final connecting = call.status == 'ringing' || call.status == 'initiating';
+    final status = CallLogLabels.resolvedStatus(call);
+    final connecting = status == 'ringing' ||
+        status == 'initiating' ||
+        status == 'initiated';
     final label = connecting ? 'Connecting with $name' : 'On a call with $name';
 
     return Padding(

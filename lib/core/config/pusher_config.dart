@@ -1,4 +1,5 @@
 import '../constants/api_endpoints.dart';
+import 'app_config.dart';
 
 /// Pusher Channels configuration for real-time chat.
 ///
@@ -8,18 +9,8 @@ import '../constants/api_endpoints.dart';
 class PusherConfig {
   PusherConfig._();
 
-  static const String _defaultAppKey = 'bcf8236559a0fc82dcb9';
-  static const String _defaultCluster = 'us3';
-
-  static const String _compileTimeAppKey = String.fromEnvironment(
-    'PUSHER_APP_KEY',
-    defaultValue: _defaultAppKey,
-  );
-
-  static const String _compileTimeCluster = String.fromEnvironment(
-    'PUSHER_APP_CLUSTER',
-    defaultValue: _defaultCluster,
-  );
+  static const String _defaultAppKey = AppConfig.defaultPusherAppKey;
+  static const String _defaultCluster = AppConfig.defaultPusherCluster;
 
   static String? _runtimeAppKey;
   static String? _runtimeCluster;
@@ -27,14 +18,20 @@ class PusherConfig {
   static String get appKey {
     final runtime = _runtimeAppKey?.trim() ?? '';
     if (runtime.isNotEmpty) return runtime;
-    return _compileTimeAppKey;
+    if (AppConfig.isReady && AppConfig.current.pusherAppKey.isNotEmpty) {
+      return AppConfig.current.pusherAppKey;
+    }
+    return _defaultAppKey;
   }
 
   static String get cluster {
     final runtime = _runtimeCluster?.trim() ?? '';
     if (runtime.isNotEmpty) return runtime;
     if (hasRemoteKey) return '';
-    return _compileTimeCluster;
+    if (AppConfig.isReady && AppConfig.current.pusherCluster.isNotEmpty) {
+      return AppConfig.current.pusherCluster;
+    }
+    return _defaultCluster;
   }
 
   static bool get hasRemoteKey {

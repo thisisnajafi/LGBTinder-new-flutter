@@ -10,6 +10,7 @@ class ChatPresenceCopy {
 
   static const String online = 'Online';
   static const String offline = 'Offline';
+  static const String isTyping = 'is typing';
   static const String activeRecently = 'Active recently';
   static const String noMessagesYet = 'No messages yet';
 

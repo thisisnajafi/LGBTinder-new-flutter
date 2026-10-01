@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BUNDLE_ID</key>
+	<string>com.lgbtfinder.staging</string>
+	<key>PROJECT_ID</key>
+	<string>REPLACE_WITH_FIREBASE_PROJECT_ID</string>
+	<key>NOTE</key>
+	<string>Replace ios/config/staging/GoogleService-Info.plist with the file downloaded from Firebase. Do not commit the real plist.</string>
+</dict>
+</plist>
