@@ -374,7 +374,7 @@ class ProfileService {
     }
   }
 
-  static const _guidelinesCacheKey = 'verification:guidelines';
+  static const _guidelinesCacheKey = 'verification:guidelines:v3';
   static const _guidelinesSavedAtKey = 'verification:guidelines:savedAt';
   static const _guidelinesTtl = Duration(hours: 24);
 

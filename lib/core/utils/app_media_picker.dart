@@ -47,21 +47,25 @@ class AppMediaPicker {
     required ImageSource source,
     int imageQuality = defaultImageQuality,
     double maxWidth = defaultMaxWidth,
+    CameraDevice preferredCameraDevice = CameraDevice.rear,
   }) {
     return _picker.pickImage(
       source: source,
       imageQuality: imageQuality,
       maxWidth: maxWidth,
+      preferredCameraDevice: preferredCameraDevice,
     );
   }
 
   static Future<XFile?> pickVideo({
     required ImageSource source,
     Duration? maxDuration,
+    CameraDevice preferredCameraDevice = CameraDevice.rear,
   }) {
     return _picker.pickVideo(
       source: source,
       maxDuration: maxDuration,
+      preferredCameraDevice: preferredCameraDevice,
     );
   }
 

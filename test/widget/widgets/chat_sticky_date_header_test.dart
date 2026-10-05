@@ -32,7 +32,10 @@ void main() {
           ),
         )
         .decoration as BoxDecoration;
-    expect(decoration.color, AppColors.surfaceElevatedLight);
+    expect(
+      decoration.color,
+      AppColors.surfaceElevatedLight.withValues(alpha: 0.5),
+    );
     expect(decoration.color, isNot(AppColors.surfaceElevatedDark));
   });
 
@@ -55,7 +58,10 @@ void main() {
           ),
         )
         .decoration as BoxDecoration;
-    expect(decoration.color, AppColors.surfaceElevatedDark.withValues(alpha: 0.88));
+    expect(
+      decoration.color,
+      AppColors.surfaceElevatedDark.withValues(alpha: 0.5),
+    );
   });
 
   testWidgets('sticky chip follows the day at the top of a reverse thread',
@@ -90,31 +96,33 @@ void main() {
         home: Scaffold(
           body: SizedBox(
             height: 400,
-            child: Stack(
+            child: Column(
               children: [
-                ChatThreadListView(
-                  key: listKey,
-                  controller: controller,
-                  itemCount: timeline.length,
-                  itemBuilder: (context, visualIndex) {
-                    final item = timeline[
-                        ChatThreadScroll.chronologicalIndex(
-                      timeline.length,
-                      visualIndex,
-                    )];
-                    if (item['kind'] == ChatDateBadgeInserter.kind) {
-                      return const SizedBox(height: 0);
-                    }
-                    return SizedBox(
-                      height: 80,
-                      child: Text(item['text'] as String),
-                    );
-                  },
-                ),
                 ChatStickyDateHeader(
                   controller: controller,
                   timeline: timeline,
                   listKey: listKey,
+                ),
+                Expanded(
+                  child: ChatThreadListView(
+                    key: listKey,
+                    controller: controller,
+                    itemCount: timeline.length,
+                    itemBuilder: (context, visualIndex) {
+                      final item = timeline[
+                          ChatThreadScroll.chronologicalIndex(
+                        timeline.length,
+                        visualIndex,
+                      )];
+                      if (item['kind'] == ChatDateBadgeInserter.kind) {
+                        return const SizedBox(height: 0);
+                      }
+                      return SizedBox(
+                        height: 80,
+                        child: Text(item['text'] as String),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -177,32 +185,34 @@ void main() {
         home: Scaffold(
           body: SizedBox(
             height: 400,
-            child: Stack(
+            child: Column(
               key: const ValueKey('chat-thread-stack'),
               children: [
-                ChatThreadListView(
-                  key: listKey,
-                  controller: controller,
-                  itemCount: timeline.length,
-                  itemBuilder: (context, visualIndex) {
-                    final item = timeline[
-                        ChatThreadScroll.chronologicalIndex(
-                      timeline.length,
-                      visualIndex,
-                    )];
-                    if (item['kind'] == ChatDateBadgeInserter.kind) {
-                      return const SizedBox(height: 0);
-                    }
-                    return SizedBox(
-                      height: 56,
-                      child: Text(item['text'] as String),
-                    );
-                  },
-                ),
                 ChatStickyDateHeader(
                   controller: controller,
                   timeline: timeline,
                   listKey: listKey,
+                ),
+                Expanded(
+                  child: ChatThreadListView(
+                    key: listKey,
+                    controller: controller,
+                    itemCount: timeline.length,
+                    itemBuilder: (context, visualIndex) {
+                      final item = timeline[
+                          ChatThreadScroll.chronologicalIndex(
+                        timeline.length,
+                        visualIndex,
+                      )];
+                      if (item['kind'] == ChatDateBadgeInserter.kind) {
+                        return const SizedBox(height: 0);
+                      }
+                      return SizedBox(
+                        height: 56,
+                        child: Text(item['text'] as String),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

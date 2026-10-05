@@ -14,6 +14,7 @@ import '../../features/profile/providers/profile_provider.dart';
 import '../../widgets/loading/shimmer_effect.dart';
 import '../../widgets/verification/verification_components.dart';
 import '../../widgets/verification/verification_type_card.dart';
+import '../../widgets/verification/verification_video_record_page.dart';
 
 /// Profile verification — identity trust (photo / video, camera only).
 class ProfileVerificationScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class _ProfileVerificationScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profileProvider.notifier).loadVerificationStatus();
       ref.read(profileProvider.notifier).loadVerificationGuidelines();
+      ref.read(profileProvider.notifier).loadVerificationHistory();
     });
   }
 
@@ -47,6 +49,11 @@ class _ProfileVerificationScreenState
       _ => verification.photoVerified,
     };
     if (verified) return VerificationCardStatus.approved;
+
+    final latestApproved = history.where((h) => h.type == type).toList();
+    if (latestApproved.isNotEmpty && latestApproved.first.status == 'approved') {
+      return VerificationCardStatus.approved;
+    }
 
     final pending = verification.pendingVerifications
         ?.where((p) => p.type == type)
@@ -140,16 +147,18 @@ class _ProfileVerificationScreenState
   }
 
   Future<String?> _capturePhoto() async {
-    final picked = await AppMediaPicker.pickImage(source: ImageSource.camera);
+    final picked = await AppMediaPicker.pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.front,
+    );
     return picked?.path;
   }
 
   Future<String?> _captureVideo() async {
-    final picked = await AppMediaPicker.pickVideo(
-      source: ImageSource.camera,
-      maxDuration: const Duration(minutes: 2),
+    final path = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const VerificationVideoRecordPage()),
     );
-    return picked?.path;
+    return path;
   }
 
   Future<void> _confirmCancel(int verificationId) async {

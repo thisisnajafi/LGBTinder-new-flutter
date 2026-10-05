@@ -2,6 +2,12 @@ import 'core/config/app_config.dart';
 import 'main.dart';
 
 void main() {
-  AppConfig.installProduction();
+  try {
+    AppConfig.installProduction();
+  } catch (_) {
+    if (!AppConfig.isReady) {
+      AppConfig.installProduction(requireMatchingFlavor: false);
+    }
+  }
   startLgbtinderApp();
 }

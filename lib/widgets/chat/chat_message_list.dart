@@ -199,63 +199,69 @@ class _ChatMessageTimeline extends ConsumerWidget {
         },
     ];
 
-    return Stack(
+    return Column(
       children: [
-        ChatListView(
-          key: threadListKey,
-          controller: scrollController,
-          itemCount: slots.length,
-          itemBuilder: (context, index) {
-            final slot = slots[ChatThreadScroll.chronologicalIndex(
-              slots.length,
-              index,
-            )];
-            switch (slot.kind) {
-              case ChatTimelineSlotKind.date:
-                // Keep the slot for grouping / sticky-label math, but do not
-                // paint it. Reverse lists pack a short thread at the bottom,
-                // so an inline pill would sit in the middle of the wallpaper.
-                return SizedBox(key: ValueKey(slot.key), height: 0);
-              case ChatTimelineSlotKind.unread:
-                return ChatUnreadSeparatorBar(
-                  key: unreadSeparatorKey,
-                  count: slot.unreadCount,
-                );
-              case ChatTimelineSlotKind.call:
-                return _CallHistoryRow(
-                  key: ValueKey(slot.key),
-                  peerUserId: peerUserId,
-                  rowKey: slot.key,
-                  currentUserId: currentUserId,
-                  onRedialCall: onRedialCall,
-                );
-              case ChatTimelineSlotKind.message:
-                return MessageRow(
-                  key: ValueKey(slot.key),
-                  peerUserId: peerUserId,
-                  rowKey: slot.key,
-                  group: grouping[slot.key] ?? ChatBubbleGroup.isolated,
-                  onRetry: onRetryFailed,
-                  onReply: onReply,
-                  onJumpToReply: onJumpToReply,
-                  onReact: onReact,
-                  onLongPress: onLongPress,
-                  onSelfDestructTap: onSelfDestructTap,
-                  onImageTap: onImageTap,
-                  onVideoTap: onVideoTap,
-                  onVoiceListened: onVoiceListened,
-                );
-            }
-          },
-        ),
         ChatStickyDateHeader(
           controller: scrollController,
           timeline: headerTimeline,
           listKey: threadListKey,
         ),
-        ChatThreadJumpFabLayer(
-          peerUserId: peerUserId,
-          onPressed: onJumpToLatest,
+        Expanded(
+          child: Stack(
+            children: [
+              ChatListView(
+                key: threadListKey,
+                controller: scrollController,
+                itemCount: slots.length,
+                itemBuilder: (context, index) {
+                  final slot = slots[ChatThreadScroll.chronologicalIndex(
+                    slots.length,
+                    index,
+                  )];
+                  switch (slot.kind) {
+                    case ChatTimelineSlotKind.date:
+                      // Keep the slot for grouping / sticky-label math, but do not
+                      // paint it. Reverse lists pack a short thread at the bottom,
+                      // so an inline pill would sit in the middle of the wallpaper.
+                      return SizedBox(key: ValueKey(slot.key), height: 0);
+                    case ChatTimelineSlotKind.unread:
+                      return ChatUnreadSeparatorBar(
+                        key: unreadSeparatorKey,
+                        count: slot.unreadCount,
+                      );
+                    case ChatTimelineSlotKind.call:
+                      return _CallHistoryRow(
+                        key: ValueKey(slot.key),
+                        peerUserId: peerUserId,
+                        rowKey: slot.key,
+                        currentUserId: currentUserId,
+                        onRedialCall: onRedialCall,
+                      );
+                    case ChatTimelineSlotKind.message:
+                      return MessageRow(
+                        key: ValueKey(slot.key),
+                        peerUserId: peerUserId,
+                        rowKey: slot.key,
+                        group: grouping[slot.key] ?? ChatBubbleGroup.isolated,
+                        onRetry: onRetryFailed,
+                        onReply: onReply,
+                        onJumpToReply: onJumpToReply,
+                        onReact: onReact,
+                        onLongPress: onLongPress,
+                        onSelfDestructTap: onSelfDestructTap,
+                        onImageTap: onImageTap,
+                        onVideoTap: onVideoTap,
+                        onVoiceListened: onVoiceListened,
+                      );
+                  }
+                },
+              ),
+              ChatThreadJumpFabLayer(
+                peerUserId: peerUserId,
+                onPressed: onJumpToLatest,
+              ),
+            ],
+          ),
         ),
       ],
     );

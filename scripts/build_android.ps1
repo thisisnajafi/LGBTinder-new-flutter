@@ -64,7 +64,7 @@ if (-not $SkipTests) {
 }
 
 Log "Step 5/7: Split release APKs (armeabi-v7a, arm64-v8a, x86_64)"
-flutter build apk --release --split-per-abi
+flutter build apk --release --split-per-abi --flavor production --target lib/main_production.dart
 if ($LASTEXITCODE -ne 0) { throw "APK build failed" }
 
 Log "Step 6/7: Release App Bundle"

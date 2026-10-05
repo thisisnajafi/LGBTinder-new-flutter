@@ -17,9 +17,10 @@ class ChatDateBadge extends StatelessWidget {
 
   static Color backgroundOf(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return isDark
-        ? AppColors.surfaceElevatedDark.withValues(alpha: 0.88)
+    final surface = isDark
+        ? AppColors.surfaceElevatedDark
         : AppColors.surfaceElevatedLight;
+    return surface.withValues(alpha: 0.5);
   }
 
   static Color foregroundOf(BuildContext context) {

@@ -63,8 +63,21 @@ class _AppProviderObserver extends ProviderObserver {
 /// is `--flavor development --target lib/main_development.dart`. Staging
 /// still needs its own entry file and `--flavor`.
 void main() {
-  AppConfig.installFromProcessFlavor();
+  installStartupConfig();
   startLgbtinderApp();
+}
+
+/// Never leave the Android splash up. A thrown config error used to skip
+/// [runApp], so the activity never drew and the system reported that the UI
+/// was not responding.
+void installStartupConfig() {
+  try {
+    AppConfig.installFromProcessFlavor();
+  } catch (_) {
+    if (!AppConfig.isReady) {
+      AppConfig.installProduction(requireMatchingFlavor: false);
+    }
+  }
 }
 
 void startLgbtinderApp() {

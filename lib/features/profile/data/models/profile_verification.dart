@@ -48,23 +48,18 @@ class ProfileVerification {
     }
 
     return ProfileVerification(
-      photoVerified: verificationStatus['photo_verified'] == true ||
-          verificationStatus['photo_verified'] == 1,
-      idVerified: verificationStatus['id_verified'] == true ||
-          verificationStatus['id_verified'] == 1,
-      videoVerified: verificationStatus['video_verified'] == true ||
-          verificationStatus['video_verified'] == 1,
+      photoVerified: _parseBool(verificationStatus['photo_verified']),
+      idVerified: _parseBool(verificationStatus['id_verified']),
+      videoVerified: _parseBool(verificationStatus['video_verified']),
       verificationScore: _parseInt(verificationStatus['verification_score']) ?? 0,
       totalVerifications:
           _parseInt(verificationStatus['total_verifications']) ?? 0,
       pendingVerificationsCount:
           _parseInt(verificationStatus['pending_verifications']) ?? 0,
       verificationBadge: data['verification_badge']?.toString() ?? 'Unverified',
-      canSubmitPhoto:
-          data['can_submit_photo'] == true || data['can_submit_photo'] == 1,
-      canSubmitId: data['can_submit_id'] == true || data['can_submit_id'] == 1,
-      canSubmitVideo:
-          data['can_submit_video'] == true || data['can_submit_video'] == 1,
+      canSubmitPhoto: _parseBool(data['can_submit_photo']),
+      canSubmitId: _parseBool(data['can_submit_id']),
+      canSubmitVideo: _parseBool(data['can_submit_video']),
       pendingVerifications: pendingList,
     );
   }
@@ -85,6 +80,15 @@ class ProfileVerification {
         'pending_verifications':
             pendingVerifications!.map((e) => e.toJson()).toList(),
     };
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value == true || value == 1) return true;
+    if (value is String) {
+      final normalized = value.toLowerCase();
+      return normalized == '1' || normalized == 'true';
+    }
+    return false;
   }
 
   static int? _parseInt(dynamic value) {
@@ -123,11 +127,9 @@ class ProfileIdentityVerification extends Equatable {
     return ProfileIdentityVerification(
       score: ProfileVerification._parseInt(json['score']) ?? 0,
       badge: json['badge']?.toString() ?? 'Unverified',
-      photoVerified:
-          json['photo_verified'] == true || json['photo_verified'] == 1,
-      idVerified: json['id_verified'] == true || json['id_verified'] == 1,
-      videoVerified:
-          json['video_verified'] == true || json['video_verified'] == 1,
+      photoVerified: ProfileVerification._parseBool(json['photo_verified']),
+      idVerified: ProfileVerification._parseBool(json['id_verified']),
+      videoVerified: ProfileVerification._parseBool(json['video_verified']),
       photoVerifiedAt: _parseDate(json['photo_verified_at']),
       idVerifiedAt: _parseDate(json['id_verified_at']),
       videoVerifiedAt: _parseDate(json['video_verified_at']),

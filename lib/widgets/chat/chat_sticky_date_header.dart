@@ -93,7 +93,7 @@ class ChatStickyDate {
   }
 }
 
-/// Floating day chip that tracks the messages at the top of a reverse thread.
+/// Day chip pinned above the thread. It tracks the day at the top of the viewport.
 class ChatStickyDateHeader extends StatefulWidget {
   final ScrollController controller;
   final List<Map<String, dynamic>> timeline;
@@ -117,8 +117,17 @@ class _ChatStickyDateHeaderState extends State<ChatStickyDateHeader> {
   @override
   void initState() {
     super.initState();
+    _label = _newestLabel();
     widget.controller.addListener(_scheduleSync);
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  String? _newestLabel() {
+    if (widget.timeline.isEmpty) return null;
+    return ChatStickyDate.labelForChronologicalIndex(
+      widget.timeline,
+      widget.timeline.length - 1,
+    );
   }
 
   @override
@@ -160,17 +169,12 @@ class _ChatStickyDateHeaderState extends State<ChatStickyDateHeader> {
   Widget build(BuildContext context) {
     final label = _label;
     if (label == null || label.isEmpty) return const SizedBox.shrink();
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: IgnorePointer(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ChatDateBadge(
-            key: const ValueKey('chat-sticky-date'),
-            label: label,
-          ),
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ChatDateBadge(
+          key: const ValueKey('chat-sticky-date'),
+          label: label,
         ),
       ),
     );

@@ -80,7 +80,7 @@ else
 fi
 
 log "Step 5/7: Split release APKs (armeabi-v7a, arm64-v8a, x86_64)"
-flutter build apk --release --split-per-abi
+flutter build apk --release --split-per-abi --flavor production --target lib/main_production.dart
 
 log "Step 6/7: Release App Bundle"
 flutter build appbundle --release
