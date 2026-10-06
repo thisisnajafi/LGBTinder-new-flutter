@@ -1,0 +1,182 @@
+# LGBTFinder iOS builds on Codemagic.
+#
+# This file is the build configuration. Codemagic uses it automatically once it
+# is on the branch you scan. Secrets, certificates, and the App Store Connect
+# key are NOT in this file. Add those in the Codemagic UI (steps below).
+#
+# After you push this file:
+#   1. Open the app in Codemagic.
+#   2. Click "Check for configuration file" and select the branch.
+#   3. Finish the UI steps in the comments under each workflow.
+#
+# Flavors already in the Xcode project (do not create them again):
+#   production  bundle id com.lgbtfinder          entry lib/main_production.dart
+#   staging     bundle id com.lgbtfinder.staging  entry lib/main_staging.dart
+# Development stays a local flavor. It is not an App Store build.
+
+workflows:
+  ios-production:
+    name: iOS production (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    # Name this App Store Connect API key integration exactly "lgbtfinder"
+    # in Codemagic: Team settings → Integrations → App Store Connect.
+    integrations:
+      app_store_connect: lgbtfinder
+    environment:
+      flutter: 3.44.0
+      xcode: latest
+      cocoapods: default
+      # Team or app variable group "ios_production" must contain one secret:
+      #   IOS_FIREBASE_PLIST_BASE64
+      # Value is the production GoogleService-Info.plist (bundle id
+      # com.lgbtfinder), base64-encoded, with no line breaks.
+      # PowerShell:
+      #   [Convert]::ToBase64String([IO.File]::ReadAllBytes("GoogleService-Info.plist"))
+      groups:
+        - ios_production
+      # Uploaded in Codemagic → Team settings → codemagic.yaml settings →
+      # Code signing identities:
+      #   - Apple Distribution certificate (.p12) and its password
+      #   - App Store provisioning profile whose App ID is com.lgbtfinder
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.lgbtfinder
+      vars:
+        XCODE_SCHEME: production
+        ENTRY_POINT: lib/main_production.dart
+        BUNDLE_ID: com.lgbtfinder
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+        - pattern: master
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          set -e
+          flutter pub get
+      - name: Write production GoogleService-Info.plist
+        script: |
+          set -euo pipefail
+          if [ -z "${IOS_FIREBASE_PLIST_BASE64:-}" ]; then
+            echo "Add secret IOS_FIREBASE_PLIST_BASE64 to the Codemagic group ios_production."
+            exit 1
+          fi
+          mkdir -p ios/config/production
+          printf '%s' "$IOS_FIREBASE_PLIST_BASE64" | base64 --decode > ios/config/production/GoogleService-Info.plist
+          if grep -q "REPLACE_WITH_FIREBASE_PROJECT_ID" ios/config/production/GoogleService-Info.plist; then
+            echo "IOS_FIREBASE_PLIST_BASE64 is still the placeholder plist."
+            exit 1
+          fi
+      - name: Install CocoaPods
+        script: |
+          set -e
+          find . -name Podfile -execdir pod install \;
+      - name: Apply iOS code signing profiles
+        script: |
+          set -e
+          xcode-project use-profiles
+      - name: Build production IPA
+        script: |
+          set -euo pipefail
+          # Do not pass API_ORIGIN. The production entry point rejects it.
+          flutter build ipa --release \
+            --flavor "$XCODE_SCHEME" \
+            --target "$ENTRY_POINT" \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  ios-staging:
+    name: iOS staging (IPA only)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      flutter: 3.44.0
+      xcode: latest
+      cocoapods: default
+      # Variable group "ios_staging" secrets:
+      #   IOS_FIREBASE_PLIST_BASE64  staging GoogleService-Info.plist for com.lgbtfinder.staging
+      #   STAGING_API_ORIGIN         https host of the staging API, no trailing slash
+      # Code signing identities: App Store profile for com.lgbtfinder.staging.
+      # Start this workflow manually. It does not upload to TestFlight.
+      groups:
+        - ios_staging
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.lgbtfinder.staging
+      vars:
+        XCODE_SCHEME: staging
+        ENTRY_POINT: lib/main_staging.dart
+        BUNDLE_ID: com.lgbtfinder.staging
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "staging-ios-*"
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          set -e
+          flutter pub get
+      - name: Write staging GoogleService-Info.plist
+        script: |
+          set -euo pipefail
+          if [ -z "${IOS_FIREBASE_PLIST_BASE64:-}" ]; then
+            echo "Add secret IOS_FIREBASE_PLIST_BASE64 to the Codemagic group ios_staging."
+            exit 1
+          fi
+          if [ -z "${STAGING_API_ORIGIN:-}" ]; then
+            echo "Add STAGING_API_ORIGIN to the Codemagic group ios_staging."
+            exit 1
+          fi
+          mkdir -p ios/config/staging
+          printf '%s' "$IOS_FIREBASE_PLIST_BASE64" | base64 --decode > ios/config/staging/GoogleService-Info.plist
+          if grep -q "REPLACE_WITH_FIREBASE_PROJECT_ID" ios/config/staging/GoogleService-Info.plist; then
+            echo "IOS_FIREBASE_PLIST_BASE64 is still the placeholder plist."
+            exit 1
+          fi
+      - name: Install CocoaPods
+        script: |
+          set -e
+          find . -name Podfile -execdir pod install \;
+      - name: Apply iOS code signing profiles
+        script: |
+          set -e
+          xcode-project use-profiles
+      - name: Build staging IPA
+        script: |
+          set -euo pipefail
+          flutter build ipa --release \
+            --flavor "$XCODE_SCHEME" \
+            --target "$ENTRY_POINT" \
+            --dart-define=API_ORIGIN="$STAGING_API_ORIGIN" \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
