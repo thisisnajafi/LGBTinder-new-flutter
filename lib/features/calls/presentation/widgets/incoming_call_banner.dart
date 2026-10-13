@@ -16,6 +16,7 @@ import '../../../../core/widgets/profile_image_widget.dart';
 import '../../../../shared/services/agora_service.dart';
 import '../../../../shared/services/push_notification_service.dart';
 import '../../data/models/active_call_notification.dart';
+import '../../data/services/call_kit_service.dart';
 import '../../data/models/incoming_call_data.dart';
 import '../../providers/active_call_session_provider.dart';
 import '../../providers/incoming_call_provider.dart';
@@ -218,12 +219,14 @@ class IncomingCallHost extends ConsumerStatefulWidget {
   ConsumerState<IncomingCallHost> createState() => _IncomingCallHostState();
 }
 
-class _IncomingCallHostState extends ConsumerState<IncomingCallHost> {
+class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
+    with WidgetsBindingObserver {
   bool _showingPermissionSheet = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     ActiveCallBridge.handle = _onActiveCallNotification;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -235,8 +238,18 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     ActiveCallBridge.handle = null;
     super.dispose();
+  }
+
+  /// Lock screen and Home: promote the in-app banner to the native incoming UI.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) return;
+    final incoming = ref.read(incomingCallProvider);
+    if (incoming == null) return;
+    unawaited(CallKitService.instance.showIncoming(incoming));
   }
 
   void _onActiveCallNotification(String? actionId, String? payload) {

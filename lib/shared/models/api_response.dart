@@ -58,7 +58,20 @@ class ApiResponse<T> {
 
   static bool _looksLikeApiEnvelope(Map<String, dynamic> json) {
     if (json.containsKey('data') || json.containsKey('success')) return true;
-    if (json['status'] is String || json['status'] is int) return true;
+    if (json['status'] is String || json['status'] is int) {
+      // A call row is `{id, caller_id, status: "ringing"}`. Caching that map
+      // and reading it back must not treat `status` as an API envelope word.
+      final normalized = json['status'].toString().toLowerCase();
+      const envelopeWords = {'success', 'error', 'fail', 'failed'};
+      final resource = json.containsKey('id') ||
+          json.containsKey('caller_id') ||
+          json.containsKey('first_name') ||
+          json.containsKey('email');
+      if (resource && !envelopeWords.contains(normalized)) {
+        return false;
+      }
+      return true;
+    }
     if (json.containsKey('error')) return true;
 
     // `{status: false, message: "..."}` without a nested `data` field.

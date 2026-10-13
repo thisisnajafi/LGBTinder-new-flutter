@@ -132,6 +132,7 @@ class CallService {
       final response = await _apiService.get<dynamic>(
         ApiEndpoints.callsHistory,
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        useCache: false,
       );
 
       List<dynamic>? dataList;
@@ -161,6 +162,7 @@ class CallService {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.callsActive,
         fromJson: (json) => json as Map<String, dynamic>,
+        useCache: false,
       );
 
       if (response.isSuccess && response.data != null) {
@@ -178,6 +180,9 @@ class CallService {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.callsById(callId),
         fromJson: (json) => json as Map<String, dynamic>,
+        // Live status (ringing → active → missed). A cached ringing row
+        // never sees accept or the missed-call job.
+        useCache: false,
       );
 
       if (response.isSuccess && response.data != null) {

@@ -93,6 +93,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   bool _hangupTonePlayed = false;
   bool _joiningAgora = false;
   bool _endPosted = false;
+  /// Mirrors [liveCallUiProvider.connected] so dispose never reads [ref].
+  bool _mediaConnected = false;
+
+  /// A previous call can leave [callEndSummaryProvider] set. The overlay
+  /// must ignore that until this page actually hangs up, or the leftover
+  /// card pops the new call.
+  bool _endOverlayArmed = false;
+  CallNotifier? _callNotifier;
+  LiveCallUiNotifier? _liveUiNotifier;
+  MessengerCallsNotifier? _messengerNotifier;
+  AgoraRtcSessionNotifier? _rtcNotifier;
+  StateController<CallEndSummary?>? _endSummary;
   Timer? _acceptPollTimer;
   Timer? _ringTimeoutTimer;
   Timer? _remoteLeftTimer;
@@ -111,6 +123,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _captureNotifiers();
     _agoraService = AgoraService();
     _qualityMonitor = CallQualityMonitor(_agoraService);
     _signaling = ref.read(callSignalingServiceProvider);
@@ -162,7 +175,22 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   String? get _displayBackdropUrl =>
       _backdropPhotoUrl ?? _primaryPhotoUrl ?? widget.recipientAvatarUrl;
 
-  bool _sessionConnected() => ref.read(liveCallUiProvider).connected;
+  void _captureNotifiers() {
+    _callNotifier = ref.read(callProvider.notifier);
+    _liveUiNotifier = ref.read(liveCallUiProvider.notifier);
+    _messengerNotifier = ref.read(messengerCallsProvider.notifier);
+    _rtcNotifier = ref.read(agoraRtcSessionProvider.notifier);
+    _endSummary = ref.read(callEndSummaryProvider.notifier);
+  }
+
+  bool _sessionConnected() {
+    if (!mounted) return _mediaConnected;
+    try {
+      return ref.read(liveCallUiProvider).connected;
+    } catch (_) {
+      return _mediaConnected;
+    }
+  }
 
   LiveCallUiNotifier get _liveUi => ref.read(liveCallUiProvider.notifier);
 
@@ -523,11 +551,13 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     await SoundService.instance.stopCallSounds();
     if (!mounted || _sessionConnected()) return;
     unawaited(SoundService.instance.playCallConnect());
+    _mediaConnected = true;
     _liveUi.setConnected(true);
     _syncMessengerStatus('active');
     if (mounted) {
       setState(() {
         _connectionError = null;
+        _statusLabel = 'Connected';
       });
     }
     _durationTimer?.cancel();
@@ -937,7 +967,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _cancelReconnectWatchdog();
     unawaited(_playHangupTone());
     final connected = _sessionConnected();
-    final status = payload['status']?.toString();
+    final status = payload['status']?.toString().toLowerCase();
+    if (mounted && !connected) {
+      setState(() {
+        _statusLabel = status == 'rejected' || status == 'declined'
+            ? 'Declined'
+            : status == 'busy'
+                ? 'Busy'
+                : status == 'cancelled'
+                    ? 'Cancelled'
+                    : 'No answer';
+      });
+    }
     _syncMessengerStatus(status ?? (connected ? 'ended' : 'missed'));
     unawaited(_stopCallMedia());
     _presentEndSummary(
@@ -1008,13 +1049,21 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   void _presentEndSummary(CallEndReason reason) {
     if (!mounted) return;
+    _endOverlayArmed = true;
+    setState(() {});
     final live = ref.read(liveCallUiProvider);
-    ref.read(callEndSummaryProvider.notifier).state = CallEndSummary(
+    final summary = CallEndSummary(
       reason: reason,
       talkTime: live.duration,
       isVideo: widget.type == OutgoingCallType.video,
-      wasConnected: live.connected,
+      wasConnected: live.connected || _mediaConnected,
     );
+    final controller = _endSummary;
+    if (controller != null) {
+      controller.state = summary;
+    } else {
+      ref.read(callEndSummaryProvider.notifier).state = summary;
+    }
   }
 
   Future<void> _postEndIfNeeded({dynamic notifier}) async {
@@ -1088,23 +1137,12 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     }
     final shouldEnd = !_leaving && !_endPosted && _callId > 0;
     final callId = _callId;
-    final wasConnected = _sessionConnected();
-    dynamic endNotifier;
-    if (shouldEnd) {
-      try {
-        endNotifier = ref.read(callProvider.notifier);
-        ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
-              callId: callId,
-              status: wasConnected ? 'ended' : 'missed',
-            );
-      } catch (e) {
-        AppLogger.warning(
-          'dispose applyRemoteStatus failed',
-          tag: 'outgoing_call_page',
-          error: e,
-        );
-      }
-    }
+    final wasConnected = _mediaConnected;
+    final endNotifier = shouldEnd ? _callNotifier : null;
+    final messenger = _messengerNotifier;
+    final liveUi = _liveUiNotifier;
+    final rtc = _rtcNotifier;
+    final summary = _endSummary;
     _leaving = true;
     _cancelRingingTimers();
     _remoteLeftTimer?.cancel();
@@ -1120,20 +1158,38 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     }
     unawaited(_agoraService.dispose());
     unawaited(SoundService.instance.stopCallSounds());
-    if (endNotifier != null) {
-      unawaited(_postEndIfNeeded(notifier: endNotifier));
-    }
-    try {
-      ref.read(liveCallUiProvider.notifier).reset();
-      ref.read(agoraRtcSessionProvider.notifier).reset();
-      ref.read(callEndSummaryProvider.notifier).state = null;
-    } catch (e) {
-      AppLogger.warning(
-        'dispose live-call reset failed',
-        tag: 'outgoing_call_page',
-        error: e,
-      );
-    }
+    // Provider writes during dispose throw and drop the end request.
+    // Run them after this frame.
+    Future<void>(() async {
+      if (shouldEnd && messenger != null) {
+        try {
+          messenger.applyRemoteStatus(
+            callId: callId,
+            status: wasConnected ? 'ended' : 'missed',
+          );
+        } catch (e) {
+          AppLogger.warning(
+            'dispose applyRemoteStatus failed',
+            tag: 'outgoing_call_page',
+            error: e,
+          );
+        }
+      }
+      if (endNotifier != null) {
+        await _postEndIfNeeded(notifier: endNotifier);
+      }
+      try {
+        liveUi?.reset();
+        rtc?.reset();
+        summary?.state = null;
+      } catch (e) {
+        AppLogger.warning(
+          'dispose live-call reset failed',
+          tag: 'outgoing_call_page',
+          error: e,
+        );
+      }
+    });
     super.dispose();
   }
 
@@ -1268,8 +1324,9 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                   ),
                   Consumer(
                     builder: (context, ref, _) {
+                      final endSummary = ref.watch(callEndSummaryProvider);
                       return CallEndOverlay(
-                        summary: ref.watch(callEndSummaryProvider),
+                        summary: _endOverlayArmed ? endSummary : null,
                         onFinished: _leaveCallUi,
                       );
                     },

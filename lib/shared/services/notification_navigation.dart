@@ -7,6 +7,7 @@ import '../../core/services/app_logger.dart';
 
 import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/utils/call_navigation.dart';
+import '../../features/calls/utils/call_ring_timeout.dart';
 import '../../features/notifications/data/models/notification.dart' as app_models;
 import '../../routes/app_router.dart';
 
@@ -286,7 +287,52 @@ class NotificationNavigation {
     'comment_like',
   ];
 
+  static const Set<String> _incomingCallTypes = {
+    'call',
+    'incoming_call',
+    'incoming_call_audio',
+    'incoming_call_video',
+  };
+
+  static const Set<String> _terminalCallStatuses = {
+    'ended',
+    'missed',
+    'rejected',
+    'declined',
+    'busy',
+    'cancelled',
+  };
+
+  /// A ringing payload older than the 45s ring window is history, not a live call.
+  static bool incomingCallIsStillRinging(app_models.Notification notification) {
+    final type = notification.type.toLowerCase().trim();
+    if (!_incomingCallTypes.contains(type)) return false;
+    final status =
+        notification.data?['status']?.toString().toLowerCase() ?? '';
+    if (_terminalCallStatuses.contains(status)) return false;
+    return DateTime.now().difference(notification.createdAt) <=
+        CallRingTimeout.duration;
+  }
+
+  static String _peerHistoryLocation(int? userId) {
+    if (userId != null && userId > 0) {
+      return Uri(
+        path: AppRoutes.peerCallHistory,
+        queryParameters: {'userId': userId.toString()},
+      ).toString();
+    }
+    return '${AppRoutes.home}/chat-list';
+  }
+
   static String resolveFromNotification(app_models.Notification notification) {
+    final type = notification.type.toLowerCase().trim();
+    if (_incomingCallTypes.contains(type) &&
+        !incomingCallIsStillRinging(notification)) {
+      return _peerHistoryLocation(
+        resolvePeerUserIdFromNotification(notification),
+      );
+    }
+
     if (notification.actionUrl != null && notification.actionUrl!.trim().isNotEmpty) {
       return notification.actionUrl!.trim();
     }

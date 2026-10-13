@@ -89,6 +89,47 @@ void main() {
       expect(route, isNot(contains(AppRoutes.chat)));
     });
 
+    test('stale incoming_call opens peer history not a live call', () {
+      final notification = app_models.Notification.fromJson({
+        'id': 9,
+        'type': 'incoming_call',
+        'message': 'Jordan Blake is calling you',
+        'created_at': DateTime.now()
+            .subtract(const Duration(hours: 6))
+            .toIso8601String(),
+        'data': {
+          'call_id': 4,
+          'user_id': 2,
+          'caller_id': 2,
+          'call_type': 'audio',
+        },
+      });
+
+      final route = NotificationNavigation.resolveFromNotification(notification);
+      expect(route, contains('userId=2'));
+      expect(route, contains(AppRoutes.peerCallHistory));
+      expect(route, isNot(contains('callId=4')));
+    });
+
+    test('fresh incoming_call from the inbox still opens the live call', () {
+      final notification = app_models.Notification.fromJson({
+        'id': 10,
+        'type': 'incoming_call_audio',
+        'message': 'Jordan Blake is calling you',
+        'created_at': DateTime.now().toIso8601String(),
+        'data': {
+          'call_id': 8,
+          'caller_id': 2,
+          'caller_name': 'Jordan',
+          'call_type': 'audio',
+        },
+      });
+
+      final route = NotificationNavigation.resolveFromNotification(notification);
+      expect(route, startsWith(AppRoutes.outgoingCall));
+      expect(route, contains('callId=8'));
+    });
+
     test('incoming_call without payload goes home not chat', () {
       expect(
         NotificationNavigation.resolveDestination(type: 'incoming_call'),

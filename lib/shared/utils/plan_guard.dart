@@ -304,14 +304,14 @@ class PlanGuard {
   /// Check if user can make video calls
   Future<PlanGuardResult> canMakeVideoCall() async {
     try {
-      final limits = await _planLimitsService.getPlanLimits();
+      final limits = await _planLimitsService.getPlanLimits(forceRefresh: true);
 
       if (limits.features.videoCalls) {
         return PlanGuardResult.allowed();
       }
 
       return PlanGuardResult.denied(
-        message: 'Video calls are a Premium feature. Upgrade to connect face-to-face!',
+        message: 'Video calls are a Golden feature. Upgrade to connect face-to-face!',
         errorCode: 'FEATURE_NOT_AVAILABLE',
         featureName: 'video_calls',
         upgradeRequired: true,

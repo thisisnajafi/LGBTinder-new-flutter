@@ -3242,7 +3242,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           'desc':
               access.errorMessage ??
               'Upgrade to unlock face-to-face video calling.',
-          'minTier': 'silder',
+          'minTier': 'golden',
         },
       ).toString();
       context.push(target);

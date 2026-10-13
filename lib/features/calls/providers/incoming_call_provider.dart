@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../chat/providers/chat_pusher_providers.dart';
 import '../../../core/services/app_logger.dart';
@@ -163,20 +162,23 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
         );
         return;
       }
+      // Push before clearing the banner. Clearing state unmounts the
+      // button context, and GoRouter.of(that context) is missing because
+      // the banner sits above the navigator.
+      ref.read(appRouterProvider).push(
+            activeCallLocation(
+              callId: int.parse(data.callId),
+              recipientId: data.callerId,
+              recipientName: data.callerName,
+              recipientAvatarUrl: data.callerAvatar,
+              type: data.isVideo
+                  ? OutgoingCallType.video
+                  : OutgoingCallType.voice,
+            ),
+          );
       state = null;
       unawaited(SoundService.instance.stopCallSounds());
-      await CallKitService.instance.endCall(data.callId);
-
-      if (context.mounted) {
-        openActiveCallPage(
-          context: context,
-          callId: int.parse(data.callId),
-          recipientId: data.callerId,
-          recipientName: data.callerName,
-          recipientAvatarUrl: data.callerAvatar,
-          type: data.isVideo ? OutgoingCallType.video : OutgoingCallType.voice,
-        );
-      }
+      unawaited(CallKitService.instance.endCall(data.callId));
     } catch (e) {
       CallSignalingLog.logHttpError('accept', data.callId, e);
     }
@@ -434,9 +436,9 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     if (data == null) return;
     if (!context.mounted) return;
 
+    final router = ref.read(appRouterProvider);
     try {
-      final uri =
-          GoRouter.of(context).routerDelegate.currentConfiguration.uri;
+      final uri = router.routerDelegate.currentConfiguration.uri;
       if (uri.path == AppRoutes.splash || uri.path.isEmpty) {
         return;
       }
@@ -457,13 +459,14 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     _pendingNavigation = null;
     IncomingCallHandler.clearPendingCallData();
 
-    openActiveCallPage(
-      context: context,
-      callId: int.parse(data.callId),
-      recipientId: data.callerId,
-      recipientName: data.callerName,
-      recipientAvatarUrl: data.callerAvatar,
-      type: data.isVideo ? OutgoingCallType.video : OutgoingCallType.voice,
+    router.push(
+      activeCallLocation(
+        callId: int.parse(data.callId),
+        recipientId: data.callerId,
+        recipientName: data.callerName,
+        recipientAvatarUrl: data.callerAvatar,
+        type: data.isVideo ? OutgoingCallType.video : OutgoingCallType.voice,
+      ),
     );
   }
 }
