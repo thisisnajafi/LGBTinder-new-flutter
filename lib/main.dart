@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'features/calls/data/services/call_kit_service.dart';
 import 'features/calls/presentation/widgets/incoming_call_banner.dart';
 import 'widgets/chat/in_app_chat_banner.dart';
+import 'core/widgets/connectivity_banner.dart';
 import 'core/config/app_config.dart';
 import 'core/constants/api_endpoints.dart';
 import 'core/theme/app_theme.dart';
@@ -280,7 +281,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
             });
           }
 
-          return SessionSideEffectsHost(
+          return ConnectivityBanner(
+            child: SessionSideEffectsHost(
             child: ServiceLifecycleHost(
               child: StartupCacheListener(
                 child: CacheLifecycleListener(
@@ -293,6 +295,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
+            ),
             ),
           );
         },

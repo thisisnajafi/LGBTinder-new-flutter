@@ -21,7 +21,6 @@ import '../shared/services/pusher_websocket_service.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../core/utils/app_logger.dart';
 import '../core/location/location_providers.dart';
-import '../core/widgets/connectivity_banner.dart';
 import '../core/providers/api_providers.dart';
 import '../routes/home_tab_routes.dart';
 
@@ -246,8 +245,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         resizeToAvoidBottomInset: currentIndex != 1,
-        body: ConnectivityBanner(
-          child: Stack(
+        body: Stack(
             fit: StackFit.expand,
             children: [
               Padding(
@@ -279,7 +277,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ],
           ),
-        ),
       ),
     );
   }

@@ -337,7 +337,7 @@ class _MessageInputState extends ConsumerState<MessageInput>
                             builder: (context, constraints) {
                               return ChatVoiceRecordBar(
                                 locked: _isRecordingLocked,
-                                compact: constraints.maxWidth < 300,
+                                compact: constraints.maxWidth < 560,
                                 onDiscard: () =>
                                     unawaited(_cancelRecording()),
                               );

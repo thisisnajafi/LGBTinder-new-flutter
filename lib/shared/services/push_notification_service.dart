@@ -145,21 +145,67 @@ class PushNotificationService {
     if (_isInitialized) return;
 
     try {
+      await _initializeLocalNotifications();
+    } catch (e) {
+      AppLogger.debug('Local notifications init failed: $e');
+    }
+
+    try {
       await SoundService.instance.initialize();
       await _requestPermission();
-      await Future.delayed(Duration.zero); // yield to UI
-
-      await _initializeLocalNotifications();
-      await Future.delayed(Duration.zero); // yield to UI
-
+      await Future.delayed(Duration.zero);
       await _getFCMToken();
-      await Future.delayed(Duration.zero); // yield to UI
-
+      await Future.delayed(Duration.zero);
       _setupMessageHandlers();
-      _isInitialized = true;
     } catch (e) {
-      AppLogger.debug('Error initializing push notifications: $e');
+      AppLogger.debug('FCM init failed (local tray still available): $e');
     }
+
+    _isInitialized = true;
+  }
+
+  /// Tray alert when Firebase has no API key. Real FCM still owns production.
+  Future<void> showLocalChatAlert({
+    required int messageId,
+    required String title,
+    required String body,
+    required int senderId,
+  }) async {
+    if (!_isInitialized) {
+      try {
+        await _initializeLocalNotifications();
+      } catch (e) {
+        AppLogger.debug('Local chat alert skipped: $e');
+        return;
+      }
+    }
+
+    final androidDetails = AndroidNotificationDetails(
+      kLgbtfinderFcmChannelId,
+      'LGBTFinder Notifications',
+      channelDescription: 'Notifications for LGBTFinder app',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      groupKey: 'messages_$senderId',
+      styleInformation: BigTextStyleInformation(body),
+    );
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+    final id = messageId > 0
+        ? messageId
+        : DateTime.now().millisecondsSinceEpoch % 2147483647;
+    await _localNotifications.show(id, title, body, details);
+    AppLogger.info(
+      'Local chat tray for message $messageId from $senderId',
+      tag: 'Notifications',
+    );
   }
 
   /// Request notification permission
@@ -230,6 +276,7 @@ class PushNotificationService {
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         kLgbtfinderFcmChannelId,

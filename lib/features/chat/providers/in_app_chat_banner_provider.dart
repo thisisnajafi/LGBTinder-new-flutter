@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/animation_constants.dart';
 import '../../../core/services/app_logger.dart';
+import '../../../shared/services/push_notification_service.dart';
 import '../../user/providers/user_providers.dart';
 import '../data/models/message.dart';
 import '../utils/chat_fcm_suppress.dart';
+import '../utils/chat_message_preview.dart';
 import '../utils/in_app_chat_banner.dart';
 import 'active_chat_peer_bridge.dart';
 import 'chat_list_preview_provider.dart';
@@ -120,11 +122,30 @@ void _presentFromPusher(Ref ref, Message message) {
     isActiveConversation: ActiveChatPeerBridge.isActiveConversation,
     isMutedPeer: ConversationMuteBridge.isPeerMuted,
   );
+  final foreground = inAppChatBannerAppForeground();
+  if (!own &&
+      !suppressed &&
+      PushNotificationService().fcmToken == null) {
+    final preview = chatMessagePreviewText(
+      message: message.message,
+      messageType: message.messageType,
+      mediaDuration: message.mediaDuration,
+      isExpired: message.isExpired,
+    );
+    unawaited(
+      PushNotificationService().showLocalChatAlert(
+        messageId: message.id,
+        title: 'New message',
+        body: preview,
+        senderId: message.senderId,
+      ),
+    );
+  }
   if (!InAppChatBannerPolicy.shouldPresent(
     isChatPayload: true,
     suppressedOpenOrMuted: suppressed,
     isOwnMessage: own,
-    appForeground: inAppChatBannerAppForeground(),
+    appForeground: foreground,
   )) {
     return;
   }

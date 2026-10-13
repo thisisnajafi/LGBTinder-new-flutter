@@ -98,6 +98,7 @@ import '../features/calls/utils/call_navigation.dart';
 import '../features/calls/utils/call_redial_confirm.dart';
 import '../routes/app_router.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../core/services/connectivity_service.dart';
 import '../core/cache/peer_avatar_cache.dart';
 import '../core/utils/media_url.dart';
 import '../core/responsive/responsive.dart';
@@ -1797,6 +1798,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     _scrollToBottom(bounce: true);
 
+    if (!ConnectivityService.instance.isOnline) {
+      AppLogger.info(
+        'Queued chat message $clientId while offline',
+        tag: 'Chat',
+      );
+      await _queueOrFailText(
+        clientId: clientId,
+        text: trimmed,
+        error: ApiError(code: 0, message: 'No internet connection'),
+      );
+      return;
+    }
+
     try {
       final sentMessage = await ref
           .read(chatServiceProvider)
@@ -2914,13 +2928,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   static const int _maxChatImageBytes = 5 * 1024 * 1024;
 
+  /// Gallery picks on Android 13+ can be HEIC. GD cannot decode that, so
+  /// every chat image is rewritten to JPEG before upload.
   Future<File?> _compressImageIfNeeded(String sourcePath) async {
-    final source = File(sourcePath);
-    final length = await source.length();
-    if (length <= _maxChatImageBytes) {
-      return source;
-    }
-
     final targetPath =
         '${(await getTemporaryDirectory()).path}/chat_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final result = await FlutterImageCompress.compressAndGetFile(
@@ -2929,8 +2939,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       quality: 75,
       minWidth: 1280,
       minHeight: 1280,
+      format: CompressFormat.jpeg,
     );
-    return result != null ? File(result.path) : source;
+    if (result != null) return File(result.path);
+    return File(sourcePath);
   }
 
   Future<void> _pickAndSendMedia(

@@ -56,6 +56,7 @@ class PusherWebSocketService {
   bool _isConnected = false;
   bool _isConnecting = false;
   String? _connectedKey;
+  String? _connectedIdentity;
   bool _recoveringKey = false;
 
   Stream<Message> get messageStream => _messageController.stream;
@@ -112,7 +113,7 @@ class PusherWebSocketService {
     }
 
     if ((_isConnecting || _isConnected) &&
-        _connectedKey == PusherConfig.appKey) {
+        _connectedIdentity == PusherConfig.connectionIdentity) {
       return;
     }
 
@@ -125,9 +126,16 @@ class PusherWebSocketService {
 
     try {
       _pusher = PusherChannelsFlutter.getInstance();
+      final cluster = PusherConfig.cluster.trim().isEmpty
+          ? 'mt1'
+          : PusherConfig.cluster;
       await _pusher!.init(
         apiKey: PusherConfig.appKey,
-        cluster: PusherConfig.cluster,
+        cluster: cluster,
+        host: PusherConfig.host,
+        wsPort: PusherConfig.wsPort,
+        wssPort: PusherConfig.wssPort,
+        useTLS: PusherConfig.useTls,
         onConnectionStateChange: _onConnectionStateChange,
         onError: _onError,
         onEvent: _onPusherEvent,
@@ -146,11 +154,17 @@ class PusherWebSocketService {
         onAuthorizer: _authorizeChannel,
       );
       _connectedKey = PusherConfig.appKey;
+      _connectedIdentity = PusherConfig.connectionIdentity;
+      AppLogger.info(
+        'Connecting key=${PusherConfig.appKey} host=${PusherConfig.host ?? 'cluster'} port=${PusherConfig.wsPort ?? ''} tls=${PusherConfig.useTls}',
+        tag: 'Pusher',
+      );
       await _pusher!.connect();
     } catch (e, stack) {
       _isConnecting = false;
       _isConnected = false;
       _connectedKey = null;
+      _connectedIdentity = null;
       _emitConnection(ConnectionStatus.disconnected);
       AppLogger.error(
         'Failed to initialize Pusher',
@@ -362,6 +376,7 @@ class PusherWebSocketService {
     _isConnected = false;
     _isConnecting = false;
     _connectedKey = null;
+    _connectedIdentity = null;
     _currentUserId = null;
     _statusUserIds.clear();
     if (clearToken) {
@@ -943,11 +958,23 @@ class PusherWebSocketService {
       final prefs = await SharedPreferences.getInstance();
       final key = prefs.getString('lgbtfinder_pusher_runtime_key');
       final cluster = prefs.getString('lgbtfinder_pusher_runtime_cluster');
+      final host = prefs.getString('lgbtfinder_pusher_runtime_host');
+      final port = prefs.getInt('lgbtfinder_pusher_runtime_port');
+      final useTls = prefs.containsKey('lgbtfinder_pusher_runtime_use_tls')
+          ? prefs.getBool('lgbtfinder_pusher_runtime_use_tls')
+          : null;
       if (key != null &&
           key.trim().isNotEmpty &&
           cluster != null &&
           cluster.trim().isNotEmpty) {
-        PusherConfig.applyRemote(key: key, cluster: cluster);
+        PusherConfig.applyRemote(
+          key: key,
+          cluster: cluster,
+          host: host,
+          port: port,
+          useTls: useTls,
+          updateEndpoint: host != null && host.trim().isNotEmpty,
+        );
       }
     } catch (e) {
       AppLogger.warning(
@@ -970,9 +997,18 @@ class PusherWebSocketService {
           : data?['pusher'];
       if (pusher is Map) {
         final map = Map<String, dynamic>.from(pusher);
+        final portRaw = map['port'];
+        final port = portRaw is int
+            ? portRaw
+            : int.tryParse(portRaw?.toString() ?? '');
+        final useTlsRaw = map['use_tls'];
         PusherConfig.applyRemote(
           key: map['key']?.toString(),
           cluster: map['cluster']?.toString(),
+          host: map['host']?.toString(),
+          port: port,
+          useTls: useTlsRaw is bool ? useTlsRaw : null,
+          updateEndpoint: true,
         );
         await _persistRuntimeCredentials();
       }
@@ -996,6 +1032,24 @@ class PusherWebSocketService {
         'lgbtfinder_pusher_runtime_cluster',
         PusherConfig.cluster,
       );
+      final host = PusherConfig.host;
+      if (host == null) {
+        await prefs.remove('lgbtfinder_pusher_runtime_host');
+        await prefs.remove('lgbtfinder_pusher_runtime_port');
+        await prefs.remove('lgbtfinder_pusher_runtime_use_tls');
+      } else {
+        await prefs.setString('lgbtfinder_pusher_runtime_host', host);
+        final port = PusherConfig.wsPort;
+        if (port == null) {
+          await prefs.remove('lgbtfinder_pusher_runtime_port');
+        } else {
+          await prefs.setInt('lgbtfinder_pusher_runtime_port', port);
+        }
+        await prefs.setBool(
+          'lgbtfinder_pusher_runtime_use_tls',
+          PusherConfig.useTls,
+        );
+      }
     } catch (e) {
       AppLogger.warning(
         'Could not persist Pusher credentials',

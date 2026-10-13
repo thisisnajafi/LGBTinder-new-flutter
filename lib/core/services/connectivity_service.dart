@@ -42,8 +42,19 @@ class ConnectivityService {
   bool get isConnected => _current == NetworkConnectionState.connected;
 
   /// Backward-compatible online flag used by [ApiService] and [SyncService].
-  /// Any state except explicit [disconnected] allows API attempts (Dio reports real failures).
+  /// [disconnected] means the API cannot be reached, so chat queues instead of posting.
   bool get isOnline => _current != NetworkConnectionState.disconnected;
+
+  /// Interface down, or every probe failed: offline. A live probe is online.
+  static NetworkConnectionState classify({
+    required bool hasInterface,
+    required bool hasInternet,
+  }) {
+    if (!hasInterface || !hasInternet) {
+      return NetworkConnectionState.disconnected;
+    }
+    return NetworkConnectionState.connected;
+  }
 
   /// Backward-compatible bool stream for existing listeners.
   Stream<bool> get connectivityStream => onStateChange.map(
@@ -103,13 +114,11 @@ class ConnectivityService {
     }
 
     final hasInternet = await _hasInternetAccess();
-    _setState(
-      hasInternet
-          ? NetworkConnectionState.connected
-          : NetworkConnectionState.weak,
-    );
+    _setState(classify(hasInterface: true, hasInternet: hasInternet));
     AppLogger.info(
-      'Connectivity verified: ${_current.name}',
+      hasInternet
+          ? 'Connectivity verified: connected'
+          : 'Connectivity verified: disconnected (api unreachable)',
       tag: 'Connectivity',
     );
   }

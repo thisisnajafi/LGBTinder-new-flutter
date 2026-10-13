@@ -86,7 +86,7 @@ class _ChatVoiceRecordBarState extends State<ChatVoiceRecordBar> {
     return Padding(
       key: widget.locked ? ChatVoiceRecordBar.lockedKey : ChatVoiceRecordBar.barKey,
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.spacingLG,
+        horizontal: AppSpacing.spacingSM,
         vertical: AppSpacing.spacingMD,
       ),
       child: Row(
@@ -152,14 +152,18 @@ class _ChatVoiceRecordBarState extends State<ChatVoiceRecordBar> {
                 color: secondary,
               ),
             ),
-            if (!widget.compact) ...[
-              const SizedBox(width: AppSpacing.spacingXS),
-              AppText(
-                '< Slide to cancel',
-                maxLines: 1,
-                style: theme.textTheme.labelSmall?.copyWith(color: secondary),
+            if (!widget.compact)
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.spacingXS),
+                  child: AppText(
+                    '< Slide to cancel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(color: secondary),
+                  ),
+                ),
               ),
-            ],
           ],
         ],
       ),

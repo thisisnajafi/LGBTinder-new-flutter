@@ -14,6 +14,9 @@ class PusherConfig {
 
   static String? _runtimeAppKey;
   static String? _runtimeCluster;
+  static String? _runtimeHost;
+  static int? _runtimePort;
+  static bool? _runtimeUseTls;
 
   static String get appKey {
     final runtime = _runtimeAppKey?.trim() ?? '';
@@ -45,6 +48,22 @@ class PusherConfig {
     return key.isNotEmpty && cluster.isNotEmpty;
   }
 
+  /// Socket host from `/api/realtime/config`. Null keeps cluster DNS.
+  static String? get host {
+    final value = _runtimeHost?.trim() ?? '';
+    return value.isEmpty ? null : value;
+  }
+
+  static int? get wsPort => _runtimePort;
+
+  static int? get wssPort => _runtimePort;
+
+  /// Cloud sockets use TLS. A local host without an explicit flag does not.
+  static bool get useTls => _runtimeUseTls ?? host == null;
+
+  static String get connectionIdentity =>
+      '$appKey|$cluster|${host ?? ''}|${wsPort ?? ''}|$useTls';
+
   /// Laravel Sanctum broadcasting auth (no /api prefix).
   static String get authEndpoint => '${ApiEndpoints.apiOrigin}/broadcasting/auth';
 
@@ -58,7 +77,14 @@ class PusherConfig {
 
   /// Apply a remote key/cluster pair. A key change without a cluster clears
   /// the old cluster so a recovered key cannot keep `us3`.
-  static void applyRemote({String? key, String? cluster}) {
+  static void applyRemote({
+    String? key,
+    String? cluster,
+    String? host,
+    int? port,
+    bool? useTls,
+    bool updateEndpoint = false,
+  }) {
     final nextKey = key?.trim();
     final nextCluster = cluster?.trim();
     final applyingKey = nextKey != null && nextKey.isNotEmpty;
@@ -74,11 +100,21 @@ class PusherConfig {
     } else if (keyChanged) {
       _runtimeCluster = null;
     }
+
+    if (updateEndpoint) {
+      final nextHost = host?.trim() ?? '';
+      _runtimeHost = nextHost.isEmpty ? null : nextHost;
+      _runtimePort = (port != null && port > 0) ? port : null;
+      _runtimeUseTls = useTls;
+    }
   }
 
   static void resetRuntime() {
     _runtimeAppKey = null;
     _runtimeCluster = null;
+    _runtimeHost = null;
+    _runtimePort = null;
+    _runtimeUseTls = null;
   }
 
   static String? parseKeyFromAuthError(String message) {

@@ -81,6 +81,19 @@ class ChatMediaPermissions {
     return ChatMediaPermissionResult.denied;
   }
 
+  /// Android 13+ opens the system photo picker, which does not need a
+  /// runtime storage grant. Blocking on [Permission.photos] left the
+  /// gallery sheet on screen after READ_EXTERNAL_STORAGE was granted.
+  static bool usesSystemPhotoPicker({
+    required bool isAndroid,
+    required int androidSdk,
+    required ChatMediaPermissionKind kind,
+  }) {
+    if (!isAndroid || androidSdk < 33) return false;
+    return kind == ChatMediaPermissionKind.photos ||
+        kind == ChatMediaPermissionKind.videos;
+  }
+
   static Permission permissionFor(
     ChatMediaPermissionKind kind, {
     bool isAndroid = false,
@@ -107,6 +120,13 @@ class ChatMediaPermissions {
     final sdk = Platform.isAndroid
         ? (await DeviceInfoPlugin().androidInfo).version.sdkInt
         : 33;
+    if (usesSystemPhotoPicker(
+      isAndroid: Platform.isAndroid,
+      androidSdk: sdk,
+      kind: kind,
+    )) {
+      return ChatMediaPermissionResult.granted;
+    }
     final permission = permissionFor(
       kind,
       isAndroid: Platform.isAndroid,

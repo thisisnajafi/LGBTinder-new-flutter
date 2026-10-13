@@ -1459,10 +1459,9 @@ packages:
   pusher_channels_flutter:
     dependency: "direct main"
     description:
-      name: pusher_channels_flutter
-      sha256: "0b06194d85d1665d21e634ea091917b28670fb6d585d76903a4f72d894906000"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/pusher_channels_flutter"
+      relative: true
+    source: path
     version: "2.4.0"
   qr:
     dependency: "direct main"
