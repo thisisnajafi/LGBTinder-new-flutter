@@ -210,6 +210,25 @@ class ProfileCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (profile.isOfficial == true) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.7)),
+              ),
+              child: Text(
+                'Official',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
           // Identity verification badge (profile verification, not email)
           if (profile.verification != null &&
               profile.verification!.badge != 'Unverified') ...[

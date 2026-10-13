@@ -25,6 +25,7 @@ class DiscoveryProfile {
   final String? educationTitle;
   final bool? isSuperliked;
   final bool? isVerified;
+  final bool? isOfficial;
   final ProfileIdentityVerification? verification;
   final bool? isPremium;
   final bool? isOnline;
@@ -58,6 +59,7 @@ class DiscoveryProfile {
     this.educationTitle,
     this.isSuperliked,
     this.isVerified,
+    this.isOfficial,
     this.verification,
     this.isPremium,
     this.isOnline,
@@ -108,6 +110,9 @@ class DiscoveryProfile {
       educationTitle: _parseFirstTitle(json['educations']) ?? json['education']?.toString() ?? json['education_title']?.toString(),
       isSuperliked: json['is_superliked'] == true || json['is_superliked'] == 1,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isOfficial: json['is_official'] == true ||
+          json['is_official'] == 1 ||
+          json['account_badge']?.toString() == 'official',
       verification: json['verification'] is Map
           ? ProfileIdentityVerification.fromJson(
               Map<String, dynamic>.from(json['verification'] as Map),
@@ -152,6 +157,8 @@ class DiscoveryProfile {
       if (educationTitle != null) 'education_title': educationTitle,
       if (isSuperliked != null) 'is_superliked': isSuperliked,
       if (isVerified != null) 'is_verified': isVerified,
+      if (isOfficial != null) 'is_official': isOfficial,
+      if (isOfficial == true) 'account_badge': 'official',
       if (verification != null)
         'verification': {
           'score': verification!.score,
