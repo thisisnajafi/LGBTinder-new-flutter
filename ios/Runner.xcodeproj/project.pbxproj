@@ -1445,27 +1445,6 @@
 				331C8088294A63A400263BE5 /* Debug */,
 				331C8089294A63A400263BE5 /* Release */,
 				331C808A294A63A400263BE5 /* Profile */,
-			
-				E1A100000000000000000001 /* Debug-development */,
-				E1A100000000000000000002 /* Profile-development */,
-				E1A100000000000000000003 /* Release-development */,
-				E1A100000000000000000004 /* Debug-staging */,
-				E1A100000000000000000005 /* Profile-staging */,
-				E1A100000000000000000006 /* Release-staging */,
-				E1A100000000000000000007 /* Debug-production */,
-				E1A100000000000000000008 /* Profile-production */,
-				E1A100000000000000000009 /* Release-production */,
-			
-				E2A100000000000000000001 /* Debug-development */,
-				E2A100000000000000000002 /* Profile-development */,
-				E2A100000000000000000003 /* Release-development */,
-				E2A100000000000000000004 /* Debug-staging */,
-				E2A100000000000000000005 /* Profile-staging */,
-				E2A100000000000000000006 /* Release-staging */,
-				E2A100000000000000000007 /* Debug-production */,
-				E2A100000000000000000008 /* Profile-production */,
-				E2A100000000000000000009 /* Release-production */,
-			
 				E3A100000000000000000001 /* Debug-development */,
 				E3A100000000000000000002 /* Profile-development */,
 				E3A100000000000000000003 /* Release-development */,
@@ -1485,6 +1464,15 @@
 				97C147031CF9000F007C117D /* Debug */,
 				97C147041CF9000F007C117D /* Release */,
 				249021D3217E4FDB00AE95B9 /* Profile */,
+				E1A100000000000000000001 /* Debug-development */,
+				E1A100000000000000000002 /* Profile-development */,
+				E1A100000000000000000003 /* Release-development */,
+				E1A100000000000000000004 /* Debug-staging */,
+				E1A100000000000000000005 /* Profile-staging */,
+				E1A100000000000000000006 /* Release-staging */,
+				E1A100000000000000000007 /* Debug-production */,
+				E1A100000000000000000008 /* Profile-production */,
+				E1A100000000000000000009 /* Release-production */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1495,6 +1483,15 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+				E2A100000000000000000001 /* Debug-development */,
+				E2A100000000000000000002 /* Profile-development */,
+				E2A100000000000000000003 /* Release-development */,
+				E2A100000000000000000004 /* Debug-staging */,
+				E2A100000000000000000005 /* Profile-staging */,
+				E2A100000000000000000006 /* Release-staging */,
+				E2A100000000000000000007 /* Debug-production */,
+				E2A100000000000000000008 /* Profile-production */,
+				E2A100000000000000000009 /* Release-production */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
