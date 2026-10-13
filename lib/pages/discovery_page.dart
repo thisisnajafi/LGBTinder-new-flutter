@@ -226,6 +226,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       country: profile.country,
       bio: profile.profileBio,
       isVerified: profile.isVerified ?? false,
+      isOfficial: profile.isOfficial ?? false,
       verification: profile.verification,
       isOnline: profile.isOnline ?? false,
       matchPercentage: profile.matchPercentage ?? profile.compatibilityScore,

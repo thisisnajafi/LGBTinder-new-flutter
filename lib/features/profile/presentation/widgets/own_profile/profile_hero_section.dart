@@ -44,6 +44,7 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
     required this.onEditPhoto,
     required this.onViewProfile,
     this.viewerMode = false,
+    this.isOfficial = false,
     this.onBack,
     this.onMessage,
     this.onLike,
@@ -58,6 +59,8 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
   final List<String> photoUrls;
   final int? age;
   final bool isVerified;
+  /// Marketing account badge (`is_official` / `account_badge=official`).
+  final bool isOfficial;
   final UserTier tier;
   final String? locationLabel;
   final bool isOnline;
@@ -199,6 +202,10 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
           ),
           const SizedBox(height: AppSpacing.spacingMD),
           _buildIdentityRow(context, isDark),
+          if (widget.isOfficial) ...[
+            const SizedBox(height: AppSpacing.spacingSM),
+            Center(child: _buildOfficialBadge(context)),
+          ],
           const SizedBox(height: AppSpacing.spacingSM),
           _buildMetaRow(context, isDark),
           const SizedBox(height: AppSpacing.spacingSM),
@@ -443,6 +450,25 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
           ),
         ],
       ],
+    );
+  }
+
+  /// Same style as discovery [ProfileCard] Official badge.
+  Widget _buildOfficialBadge(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+      ),
+      child: Text(
+        'Official',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
     );
   }
 

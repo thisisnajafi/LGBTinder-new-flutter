@@ -41,6 +41,8 @@ class UserProfile extends Equatable {
   final int? minAgePreference;
   final int? maxAgePreference;
   final bool? isVerified;
+  /// Marketing / house account — API `is_official` or `account_badge=official`.
+  final bool? isOfficial;
   final ProfileIdentityVerification? verification;
   final bool? isPremium;
   final bool? isOnline;
@@ -89,6 +91,7 @@ class UserProfile extends Equatable {
     this.minAgePreference,
     this.maxAgePreference,
     this.isVerified,
+    this.isOfficial,
     this.verification,
     this.isPremium,
     this.isOnline,
@@ -290,6 +293,9 @@ class UserProfile extends Equatable {
       minAgePreference: json['min_age_preference'] != null ? ((json['min_age_preference'] is int) ? json['min_age_preference'] as int : int.tryParse(json['min_age_preference'].toString())) : null,
       maxAgePreference: json['max_age_preference'] != null ? ((json['max_age_preference'] is int) ? json['max_age_preference'] as int : int.tryParse(json['max_age_preference'].toString())) : null,
       isVerified: json['is_verified'] == true || json['is_verified'] == 1,
+      isOfficial: json['is_official'] == true ||
+          json['is_official'] == 1 ||
+          json['account_badge']?.toString() == 'official',
       verification: json['verification'] is Map
           ? ProfileIdentityVerification.fromJson(
               Map<String, dynamic>.from(json['verification'] as Map),
@@ -358,6 +364,8 @@ class UserProfile extends Equatable {
       if (minAgePreference != null) 'min_age_preference': minAgePreference,
       if (maxAgePreference != null) 'max_age_preference': maxAgePreference,
       if (isVerified != null) 'is_verified': isVerified,
+      if (isOfficial != null) 'is_official': isOfficial,
+      if (isOfficial == true) 'account_badge': 'official',
       if (verification != null) 'verification': {
         'score': verification!.score,
         'badge': verification!.badge,
@@ -411,6 +419,7 @@ class UserProfile extends Equatable {
         minAgePreference,
         maxAgePreference,
         isVerified,
+        isOfficial,
         verification,
         isPremium,
         isOnline,

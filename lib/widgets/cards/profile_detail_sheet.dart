@@ -162,6 +162,7 @@ class DiscoverySheetProfile {
     this.country,
     this.bio,
     this.isVerified = false,
+    this.isOfficial = false,
     this.verification,
     this.isOnline = false,
     this.matchPercentage,
@@ -186,6 +187,8 @@ class DiscoverySheetProfile {
   final String? country;
   final String? bio;
   final bool isVerified;
+  /// Marketing account badge (`is_official` / `account_badge=official`).
+  final bool isOfficial;
   final ProfileIdentityVerification? verification;
   final bool isOnline;
   final int? matchPercentage;
@@ -286,42 +289,70 @@ class ProfileSheetContent extends StatelessWidget {
                   ],
                 ),
               ),
-              if (profile.verification != null &&
-                  profile.verification!.badge != 'Unverified')
-                VerificationBadgeChip(
-                  badge: profile.verification!.badge,
-                  compact: true,
-                )
-              else if (profile.isVerified)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.spacingSM,
-                    vertical: AppSpacing.spacingXS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: accent),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppSvgIcon(
-                        assetPath: AppIcons.getIconPath('verify'),
-                        size: 12,
-                        color: accent,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (profile.isOfficial) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                      const SizedBox(width: AppSpacing.spacingXS),
-                      Text(
-                        'Verified',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: accent,
-                          fontWeight: FontWeight.w600,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                      child: Text(
+                        'Official',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.spacingSM),
+                  ],
+                  if (profile.verification != null &&
+                      profile.verification!.badge != 'Unverified')
+                    VerificationBadgeChip(
+                      badge: profile.verification!.badge,
+                      compact: true,
+                    )
+                  else if (profile.isVerified)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.spacingSM,
+                        vertical: AppSpacing.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(color: accent),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppSvgIcon(
+                            assetPath: AppIcons.getIconPath('verify'),
+                            size: 12,
+                            color: accent,
+                          ),
+                          const SizedBox(width: AppSpacing.spacingXS),
+                          Text(
+                            'Verified',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: accent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

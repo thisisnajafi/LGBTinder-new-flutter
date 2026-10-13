@@ -264,6 +264,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                   photoUrls: photoUrls,
                   age: _age,
                   isVerified: widget.profile.isVerified == true,
+                  isOfficial: widget.profile.isOfficial == true,
                   tier: _tier,
                   planLabel: planBadgeLabelFromUserProfile(widget.profile),
                   locationLabel: _locationDisplay,
