@@ -10,13 +10,13 @@ import '../utils/app_icons.dart';
 import '../utils/blur_hash_average.dart';
 import '../responsive/responsive.dart';
 
-/// Image size presets for consistent memory usage
+/// Decode-width presets. Height stays proportional so photos are not stretched.
 enum ImageSize {
-  thumbnail, // 100x100 - for lists and avatars
-  small, // 200x200 - for cards
-  medium, // 400x400 - for profile view
-  large, // 800x800 - for full screen
-  original, // No resize - for zoom view
+  thumbnail, // 100px wide — lists and avatars
+  small, // 200px wide — cards
+  medium, // 400px wide — profile view
+  large, // 800px wide — full screen
+  original, // No resize — zoom view
 }
 
 /// Cached network image with decode-size hints (PERF-INFRA-031).
@@ -56,7 +56,8 @@ class OptimizedImage extends ConsumerWidget {
     this.showDownloadProgress,
   });
 
-  /// Get memory cache dimensions based on size preset
+  /// Longest decode width for [size]. Only one axis is set: [ResizeImage]
+  /// stretches the bitmap when both width and height are non-null.
   int? get memCacheWidth {
     if (!useMemoryCacheHint) return null;
     switch (size) {
@@ -73,34 +74,16 @@ class OptimizedImage extends ConsumerWidget {
     }
   }
 
-  int? get memCacheHeight {
-    if (!useMemoryCacheHint) return null;
-    switch (size) {
-      case ImageSize.thumbnail:
-        return 100;
-      case ImageSize.small:
-        return 200;
-      case ImageSize.medium:
-        return 400;
-      case ImageSize.large:
-        return 800;
-      case ImageSize.original:
-        return null;
-    }
-  }
-
   int? get resolvedMemCacheWidth {
-    if (memoryCacheWidth != null || memoryCacheHeight != null) {
-      return memoryCacheWidth;
-    }
+    if (memoryCacheWidth != null) return memoryCacheWidth;
+    if (memoryCacheHeight != null) return null;
     return memCacheWidth;
   }
 
+  /// Kept null whenever a width cap is set so the source aspect ratio survives decode.
   int? get resolvedMemCacheHeight {
-    if (memoryCacheWidth != null || memoryCacheHeight != null) {
-      return memoryCacheHeight;
-    }
-    return memCacheHeight;
+    if (resolvedMemCacheWidth != null) return null;
+    return memoryCacheHeight;
   }
 
   bool get _useDownloadProgress =>
@@ -334,7 +317,6 @@ class OptimizedAvatar extends StatelessWidget {
             ),
           ),
           memCacheWidth: 100,
-          memCacheHeight: 100,
         );
       },
     );

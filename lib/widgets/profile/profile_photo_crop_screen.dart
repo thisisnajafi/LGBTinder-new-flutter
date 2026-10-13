@@ -361,7 +361,7 @@ class _ProfilePhotoCropScreenState extends State<ProfilePhotoCropScreen> {
                             quarterTurns: geometry.normalizedTurns,
                             child: Image.memory(
                               _bytes!,
-                              fit: BoxFit.fill,
+                              fit: BoxFit.contain,
                               filterQuality: FilterQuality.medium,
                               gaplessPlayback: true,
                             ),
