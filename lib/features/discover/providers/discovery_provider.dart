@@ -120,7 +120,7 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
     try {
       final profiles = await _getNearbySuggestionsUseCase.execute(
         limit: 10,
-        filters: state.filters.isEmpty ? null : state.filters,
+        filters: state.filters.isEmpty ? null : state.filters.toJson(),
       );
 
       if (profiles.isEmpty) {

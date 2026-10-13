@@ -58,7 +58,7 @@ class _SwitchTileState extends ConsumerState<SwitchTile> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 

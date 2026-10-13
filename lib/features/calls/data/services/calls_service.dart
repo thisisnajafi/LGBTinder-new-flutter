@@ -41,7 +41,7 @@ class CallsService {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.callsAccept,
-        data: CallActionRequest.accept(callId).toJson(),
+        data: CallActionRequest.accept(callId.toString()).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -58,7 +58,7 @@ class CallsService {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.callsReject,
-        data: CallActionRequest.reject(callId).toJson(),
+        data: CallActionRequest.reject(callId.toString()).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -75,7 +75,7 @@ class CallsService {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.callsEnd,
-        data: CallActionRequest.end(callId).toJson(),
+        data: CallActionRequest.end(callId.toString()).toJson(),
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

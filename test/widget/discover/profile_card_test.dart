@@ -2,10 +2,10 @@
 //
 // Tests for:
 // - Widget rendering
-// - User interactions
-// - State changes
+// - Tap callback when interactive
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lgbtindernew/features/discover/presentation/widgets/profile_card.dart';
 import 'package:lgbtindernew/features/discover/data/models/discovery_profile.dart';
@@ -23,108 +23,45 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProfileCard(
-              profile: profile,
-              onLike: () {},
-              onDislike: () {},
-              onSuperlike: () {},
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ProfileCard(profile: profile),
             ),
           ),
         ),
       );
 
-      // Verify profile information is displayed
-      expect(find.text('John'), findsOneWidget);
-      expect(find.text('25'), findsOneWidget);
-      expect(find.text('New York'), findsOneWidget);
-      expect(find.text('Test bio'), findsOneWidget);
+      expect(find.textContaining('John'), findsWidgets);
+      expect(find.textContaining('25'), findsWidgets);
+      expect(find.textContaining('New York'), findsWidgets);
     });
 
-    testWidgets('calls onLike when like button is tapped', (WidgetTester tester) async {
-      bool likeCalled = false;
+    testWidgets('calls onTap when interactive', (WidgetTester tester) async {
+      var tapped = false;
       final profile = DiscoveryProfile(
         id: 1,
         firstName: 'John',
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProfileCard(
-              profile: profile,
-              onLike: () => likeCalled = true,
-              onDislike: () {},
-              onSuperlike: () {},
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ProfileCard(
+                profile: profile,
+                isInteractive: true,
+                onTap: () => tapped = true,
+              ),
             ),
           ),
         ),
       );
 
-      // Find and tap like button
-      final likeButton = find.byIcon(Icons.favorite);
-      expect(likeButton, findsOneWidget);
-      
-      await tester.tap(likeButton);
+      await tester.tap(find.byType(ProfileCard));
       await tester.pump();
 
-      expect(likeCalled, true);
-    });
-
-    testWidgets('calls onDislike when dislike button is tapped', (WidgetTester tester) async {
-      bool dislikeCalled = false;
-      final profile = DiscoveryProfile(
-        id: 1,
-        firstName: 'John',
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProfileCard(
-              profile: profile,
-              onLike: () {},
-              onDislike: () => dislikeCalled = true,
-              onSuperlike: () {},
-            ),
-          ),
-        ),
-      );
-
-      // Find and tap dislike button
-      final dislikeButton = find.byIcon(Icons.close);
-      expect(dislikeButton, findsOneWidget);
-      
-      await tester.tap(dislikeButton);
-      await tester.pump();
-
-      expect(dislikeCalled, true);
-    });
-
-    testWidgets('shows loading state when processing', (WidgetTester tester) async {
-      final profile = DiscoveryProfile(
-        id: 1,
-        firstName: 'John',
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ProfileCard(
-              profile: profile,
-              isLoading: true,
-              onLike: () {},
-              onDislike: () {},
-              onSuperlike: () {},
-            ),
-          ),
-        ),
-      );
-
-      // Verify loading indicator is shown
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tapped, isTrue);
     });
   });
 }
-

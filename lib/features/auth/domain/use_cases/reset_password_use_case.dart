@@ -1,5 +1,5 @@
 import '../../data/repositories/auth_repository.dart';
-import '../../data/models/reset_password_request.dart';
+import '../../data/models/otp_request.dart';
 import '../../data/models/otp_response.dart';
 
 /// Use Case: ResetPasswordUseCase

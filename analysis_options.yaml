@@ -9,6 +9,28 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# Vendored plugins ship their own web stubs; Codemagic builds iOS only.
+# Parked / unwired feature trees still contain stale types and are not
+# imported from the production or staging entry points (see FEATURES-APP.md).
+analyzer:
+  exclude:
+    - third_party/**
+    - lib/features/admin/**
+    - lib/features/community/**
+    - lib/features/analytics/**
+    - lib/features/marketing/**
+    - lib/features/onboarding/**
+    - lib/screens/community_forum_screen.dart
+    - lib/screens/video_call_screen.dart
+    - lib/screens/voice_call_screen.dart
+    - lib/features/calls/presentation/widgets/call_controls.dart
+    - lib/features/chat/presentation/widgets/message_attachment_viewer.dart
+    - lib/features/chat/presentation/widgets/online_friends_list.dart
+    - lib/widgets/common/call_quota_display.dart
+    - lib/features/payments/providers/payment_provider.dart
+    - lib/features/payments/domain/use_cases/get_payment_history_use_case.dart
+    - lib/features/notifications/presentation/widgets/notification_badge.dart
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

@@ -1,5 +1,5 @@
 import '../../data/repositories/auth_repository.dart';
-import '../../data/models/verify_otp_request.dart';
+import '../../data/models/otp_request.dart';
 import '../../data/models/otp_response.dart';
 
 /// Use Case: VerifyOtpUseCase

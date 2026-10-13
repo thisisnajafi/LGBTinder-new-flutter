@@ -32,10 +32,10 @@ class GooglePlayProduct extends Equatable {
       priceAmountMicros: int.tryParse(productDetails.price.replaceAll(RegExp(r'[^\d]'), '')) ?? 0,
       priceCurrencyCode: productDetails.currencyCode ?? 'USD',
       isActive: true,
-      productType: productDetails.kind == ProductKind.sub ? ProductType.subscription : ProductType.oneTime,
-      subscriptionOffers: productDetails.kind == ProductKind.sub
-          ? _parseSubscriptionOffers(productDetails)
-          : null,
+      // ProductDetails has no product-kind field on this package version.
+      // Callers that know the catalog type should set productType explicitly.
+      productType: ProductType.oneTime,
+      subscriptionOffers: null,
     );
   }
 

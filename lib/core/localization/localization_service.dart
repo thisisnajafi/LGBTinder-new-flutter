@@ -60,7 +60,7 @@ class LocalizationService {
       });
     }
 
-    return translation;
+    return translation ?? key;
   }
 
   /// Get pluralized string
