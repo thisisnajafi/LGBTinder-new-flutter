@@ -52,24 +52,18 @@ public class SwiftPusherChannelsFlutterPlugin: NSObject, FlutterPlugin, PusherDe
       host = .cluster(args["cluster"] as! String)
     }
     var useTLS: Bool = true
-    if args["useTLS"] is Bool {
-      useTLS = args["useTLS"] as! Bool
+    if let tls = Self.boolArg(args["useTLS"]) {
+      useTLS = tls
     }
     var port: Int
     if useTLS {
-      port = 443
-      if args["wssPort"] is Int {
-        port = args["wssPort"] as! Int
-      }
+      port = Self.intArg(args["wssPort"]) ?? 443
     } else {
-      port = 80
-      if args["wsPort"] is Int {
-        port = args["wsPort"] as! Int
-      }
+      port = Self.intArg(args["wsPort"]) ?? 80
     }
     var activityTimeout: TimeInterval?
-    if args["activityTimeout"] is TimeInterval {
-      activityTimeout = args["activityTimeout"] as! Double / 1000.0
+    if let timeoutMs = Self.doubleArg(args["activityTimeout"]) {
+      activityTimeout = timeoutMs / 1000.0
     }
     var path: String?
     if args["path"] is String {
@@ -84,14 +78,14 @@ public class SwiftPusherChannelsFlutterPlugin: NSObject, FlutterPlugin, PusherDe
       activityTimeout: activityTimeout
     )
     pusher = Pusher(key: args["apiKey"] as! String, options: options)
-    if args["maxReconnectionAttempts"] is Int {
-      pusher.connection.reconnectAttemptsMax = (args["maxReconnectionAttempts"] as! Int)
+    if let attempts = Self.intArg(args["maxReconnectionAttempts"]) {
+      pusher.connection.reconnectAttemptsMax = attempts
     }
-    if args["maxReconnectGapInSeconds"] is TimeInterval {
-      pusher.connection.maxReconnectGapInSeconds = (args["maxReconnectGapInSeconds"] as! TimeInterval)
+    if let gap = Self.doubleArg(args["maxReconnectGapInSeconds"]) {
+      pusher.connection.maxReconnectGapInSeconds = gap
     }
-    if args["pongTimeout"] is Int {
-      pusher.connection.pongResponseTimeoutInterval = args["pongTimeout"] as! TimeInterval / 1000.0
+    if let pong = Self.doubleArg(args["pongTimeout"]) {
+      pusher.connection.pongResponseTimeoutInterval = pong / 1000.0
     }
     pusher.connection.delegate = self
     pusher.bind(eventCallback: onEvent)
@@ -246,5 +240,24 @@ public class SwiftPusherChannelsFlutterPlugin: NSObject, FlutterPlugin, PusherDe
     if let channel = pusher.connection.channels.find(name: channelName) {
       channel.trigger(eventName: eventName, data: data as Any)
     }
+  }
+
+  /// Flutter method-channel numbers arrive as NSNumber, so `is Int` misses them.
+  private static func intArg(_ value: Any?) -> Int? {
+    if let number = value as? Int { return number }
+    if let number = value as? NSNumber { return number.intValue }
+    return nil
+  }
+
+  private static func doubleArg(_ value: Any?) -> Double? {
+    if let number = value as? Double { return number }
+    if let number = value as? NSNumber { return number.doubleValue }
+    return nil
+  }
+
+  private static func boolArg(_ value: Any?) -> Bool? {
+    if let flag = value as? Bool { return flag }
+    if let number = value as? NSNumber { return number.boolValue }
+    return nil
   }
 }

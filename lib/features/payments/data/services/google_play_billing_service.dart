@@ -149,8 +149,17 @@ class GooglePlayBillingService {
     ));
   }
 
-  /// Initialize the billing service
+  /// Initialize the billing service.
+  ///
+  /// Play Billing is Android-only. iOS must not attach the purchase stream,
+  /// because this service confirms receipts with the Play backend.
   Future<void> _initialize() async {
+    if (!Platform.isAndroid) {
+      _billingAvailabilityController.add(false);
+      _log('Google Play Billing is not started on this platform');
+      return;
+    }
+
     try {
       // Check if billing is available
       final bool available = await _inAppPurchase.isAvailable();

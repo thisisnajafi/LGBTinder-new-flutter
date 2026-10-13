@@ -1,17 +1,28 @@
 import Flutter
+import flutter_callkit_incoming
 import Photos
+import PushKit
 import UIKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, PKPushRegistryDelegate {
   private var screenshotChannel: FlutterMethodChannel?
   private var screenshotObserver: NSObjectProtocol?
+  private var voipRegistry: PKPushRegistry?
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
+
+    // PushKit must be registered while the process starts so a killed app can
+    // show CallKit. The registry is retained or iOS drops the delegate.
+    let registry = PKPushRegistry(queue: DispatchQueue.main)
+    registry.delegate = self
+    registry.desiredPushTypes = [.voIP]
+    voipRegistry = registry
+
     let launched = super.application(application, didFinishLaunchingWithOptions: launchOptions)
     if let controller = window?.rootViewController as? FlutterViewController {
       let galleryChannel = FlutterMethodChannel(
@@ -108,5 +119,58 @@ import UIKit
       NotificationCenter.default.removeObserver(observer)
       screenshotObserver = nil
     }
+  }
+
+  func pushRegistry(
+    _ registry: PKPushRegistry,
+    didUpdate credentials: PKPushCredentials,
+    for type: PKPushType
+  ) {
+    guard type == .voIP else { return }
+    let deviceToken = credentials.token.map { String(format: "%02x", $0) }.joined()
+    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP(deviceToken)
+  }
+
+  func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
+    guard type == .voIP else { return }
+    SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP("")
+  }
+
+  func pushRegistry(
+    _ registry: PKPushRegistry,
+    didReceiveIncomingPushWith payload: PKPushPayload,
+    for type: PKPushType,
+    completion: @escaping () -> Void
+  ) {
+    guard type == .voIP else {
+      completion()
+      return
+    }
+
+    let body = payload.dictionaryPayload
+    let rawId = body["id"] as? String ?? ""
+    let id = UUID(uuidString: rawId)?.uuidString ?? UUID().uuidString
+    let nameCaller = body["nameCaller"] as? String ?? "Incoming call"
+    let handle = body["handle"] as? String ?? ""
+    let isVideo = (body["isVideo"] as? Bool) ?? (body["isVideo"] as? NSNumber)?.boolValue ?? false
+    let data = flutter_callkit_incoming.Data(
+      id: id,
+      nameCaller: nameCaller,
+      handle: handle,
+      type: isVideo ? 1 : 0
+    )
+    var extra: [String: Any] = [:]
+    for (key, value) in body {
+      if let key = key as? String {
+        extra[key] = value
+      }
+    }
+    data.extra = extra as NSDictionary
+
+    guard let plugin = SwiftFlutterCallkitIncomingPlugin.sharedInstance else {
+      completion()
+      return
+    }
+    plugin.showCallkitIncoming(data, fromPushKit: true, completion: completion)
   }
 }

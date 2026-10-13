@@ -141,9 +141,6 @@ Future<void> _bootstrap() async {
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
   ]);
 
   SystemChrome.setSystemUIOverlayStyle(
