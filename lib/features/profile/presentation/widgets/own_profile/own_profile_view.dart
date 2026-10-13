@@ -58,7 +58,9 @@ class OwnProfileView extends ConsumerWidget {
     final avatarUrl = primaryImage?.imageUrl;
     final photoUrls = orderedProfilePhotoUrls(photos);
     final galleryPhotos = galleryProfileImages(photos);
-    final galleryUrls = galleryPhotos.map((p) => p.imageUrl).toList();
+    final galleryUrls = galleryPhotos.isNotEmpty
+        ? galleryPhotos.map((p) => p.imageUrl).toList()
+        : photoUrls;
     final galleryCount = galleryPhotos.length;
     final canAddGalleryPhoto =
         galleryCount < AppConstants.maxGalleryPhotos;

@@ -292,6 +292,11 @@ class NotificationNavigation {
     'incoming_call',
     'incoming_call_audio',
     'incoming_call_video',
+    'voice_call',
+    'video_call',
+    'call_incoming',
+    'incoming',
+    'ringing',
   };
 
   static const Set<String> _terminalCallStatuses = {
@@ -304,13 +309,33 @@ class NotificationNavigation {
   };
 
   /// A ringing payload older than the 45s ring window is history, not a live call.
-  static bool incomingCallIsStillRinging(app_models.Notification notification) {
+  static bool _looksLikeIncomingCall(app_models.Notification notification) {
     final type = notification.type.toLowerCase().trim();
-    if (!_incomingCallTypes.contains(type)) return false;
+    if (_incomingCallTypes.contains(type)) return true;
+    if (type.contains('missed') || type.contains('declin')) return false;
+    final data = notification.data;
+    if (data == null) return false;
+    return data.containsKey('call_id') || data.containsKey('call_type');
+  }
+
+  static DateTime _callTimestamp(app_models.Notification notification) {
+    final raw = notification.data?['created_at'] ??
+        notification.data?['started_at'] ??
+        notification.data?['ringing_at'];
+    final parsed = raw == null ? null : DateTime.tryParse(raw.toString());
+    if (parsed != null &&
+        notification.createdAt.difference(parsed).inSeconds.abs() > 5) {
+      return parsed;
+    }
+    return notification.createdAt;
+  }
+
+  static bool incomingCallIsStillRinging(app_models.Notification notification) {
+    if (!_looksLikeIncomingCall(notification)) return false;
     final status =
         notification.data?['status']?.toString().toLowerCase() ?? '';
     if (_terminalCallStatuses.contains(status)) return false;
-    return DateTime.now().difference(notification.createdAt) <=
+    return DateTime.now().difference(_callTimestamp(notification)) <=
         CallRingTimeout.duration;
   }
 
@@ -325,8 +350,7 @@ class NotificationNavigation {
   }
 
   static String resolveFromNotification(app_models.Notification notification) {
-    final type = notification.type.toLowerCase().trim();
-    if (_incomingCallTypes.contains(type) &&
+    if (_looksLikeIncomingCall(notification) &&
         !incomingCallIsStillRinging(notification)) {
       return _peerHistoryLocation(
         resolvePeerUserIdFromNotification(notification),

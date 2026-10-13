@@ -228,6 +228,14 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
         screenshotPath: screenshotPath,
       );
       final created = SupportTicketItem.fromPayload(data);
+      if (mounted && created != null) {
+        setState(() {
+          _tickets = [
+            created,
+            ..._tickets.where((ticket) => ticket.id != created.id),
+          ];
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

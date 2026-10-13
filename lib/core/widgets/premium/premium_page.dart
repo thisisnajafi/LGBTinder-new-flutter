@@ -107,6 +107,7 @@ class PremiumTabPageLayout extends StatelessWidget {
     required this.body,
     this.showTitleHeader = true,
     this.onRefresh,
+    this.wideContentMaxWidth,
   });
 
   final String title;
@@ -115,6 +116,10 @@ class PremiumTabPageLayout extends StatelessWidget {
   final Widget body;
   final bool showTitleHeader;
   final RefreshCallback? onRefresh;
+
+  /// When set, tablet and desktop content may grow to this width.
+  /// The default cap is a single phone column.
+  final double? wideContentMaxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -157,10 +162,19 @@ class PremiumTabPageLayout extends StatelessWidget {
       );
     }
 
+    final framed = wideContentMaxWidth == null
+        ? ResponsiveGrid.constrained(context, content)
+        : ResponsiveGrid.constrainedTo(
+            context,
+            content,
+            tablet: wideContentMaxWidth!,
+            desktop: wideContentMaxWidth,
+          );
+
     return Scaffold(
       backgroundColor: bg,
       body: PremiumSafeArea(
-        child: ResponsiveGrid.constrained(context, content),
+        child: framed,
       ),
     );
   }

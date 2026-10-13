@@ -62,7 +62,12 @@ class SafetyApiService {
         'longitude': longitude,
         'radius_km': radiusKm,
       },
-      fromJson: (json) => json as Map<String, dynamic>,
+      fromJson: (json) {
+        if (json is List) return <String, dynamic>{'places': json};
+        if (json is Map<String, dynamic>) return json;
+        if (json is Map) return Map<String, dynamic>.from(json);
+        return <String, dynamic>{};
+      },
     );
     if (!response.isSuccess) throw Exception(response.message);
     return response.data ?? {};

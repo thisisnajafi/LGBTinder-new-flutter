@@ -42,7 +42,11 @@ class AppBottomNavBar extends ConsumerWidget {
 
   /// Bottom padding reserved for tab content (bar + float inset + safe area).
   static double bottomReserve(double safeAreaBottom) =>
-      barHeight + floatingBottomMargin + safeAreaBottom + (_borderWidth * 2);
+      barHeight +
+      floatingBottomMargin +
+      safeAreaBottom +
+      (_borderWidth * 2) +
+      28;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -10,6 +10,7 @@ import '../core/constants/animation_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/app_date_time.dart';
 import '../core/utils/app_icons.dart';
+import '../core/utils/screenshot_protection.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
 import '../widgets/chat/chat_message_context_menu.dart';
 import '../widgets/chat/chat_forward_sheet.dart';
@@ -202,6 +203,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _pusherLifecycle = ref.read(chatPusherLifecycleProvider.notifier);
     _typingOutbound = ChatTypingOutbound(send: _sendTypingIndicator);
     _scrollController.addListener(_onScroll);
+    unawaited(ScreenshotProtection.acquire());
     _resolvedUserName = widget.userName;
     _resolvedAvatarUrl = widget.avatarUrl;
     _loadCurrentUserId();
@@ -229,6 +231,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   void dispose() {
+    unawaited(ScreenshotProtection.release());
     _callEventSubscription?.cancel();
     _connectionSubscription?.cancel();
     _localMessagesSubscription?.cancel();

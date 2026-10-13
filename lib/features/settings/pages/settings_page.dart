@@ -16,7 +16,9 @@ import '../../../features/settings/presentation/screens/account_details_screen.d
 import '../../../features/settings/presentation/screens/appearance_settings_screen.dart';
 import '../../../features/settings/presentation/screens/matching_preferences_screen.dart';
 import '../../../features/settings/presentation/screens/sound_preferences_screen.dart';
+import '../../../core/localization/widgets/language_selector.dart';
 import '../../../routes/app_router.dart';
+import 'about_screen.dart';
 import '../../../routes/home_tab_routes.dart';
 import '../../../screens/active_sessions_screen.dart';
 import '../../../screens/notification_settings_screen.dart';
@@ -188,6 +190,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 subtitle: themeModeLabel(themeMode),
                 onTap: () => _push(const AppearanceSettingsScreen()),
               ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.discover,
+                title: 'Language',
+                subtitle: 'English, Persian, Arabic, and more',
+                onTap: () => _push(
+                  const PremiumDetailScaffold(
+                    title: 'Language',
+                    subtitle: 'App language and layout direction',
+                    body: SingleChildScrollView(
+                      child: LanguageSelector(),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: _sectionGap),
@@ -214,7 +230,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 iconPath: AppIcons.info,
                 title: 'About',
                 subtitle: _appVersion != null ? 'Version $_appVersion' : 'Loading…',
-                onTap: () {},
+                onTap: () => _push(const AboutScreen()),
                 trailing: _appVersion != null
                     ? AppText(
                         _appVersion!,
@@ -247,15 +263,44 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return PremiumTabPageLayout(
       title: 'Settings',
       subtitle: 'Your account, privacy, and preferences',
+      wideContentMaxWidth: 1120,
       onRefresh: () async {
         await ref.read(appCacheManagerProvider).revalidateAll();
         await _loadVersion();
       },
-      body: AppListView.builder(
-        physics: AppScroll.bouncing,
-        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
-        itemCount: sections.length,
-        itemBuilder: (context, index) => sections[index],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 720;
+          if (!wide) {
+            return AppListView.builder(
+              physics: AppScroll.bouncing,
+              padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXXL),
+              itemCount: sections.length,
+              itemBuilder: (context, index) => sections[index],
+            );
+          }
+          final mid = (sections.length / 2).ceil();
+          Widget column(int start, int end) {
+            final slice = sections.sublist(start, end);
+            return AppListView.builder(
+              physics: AppScroll.bouncing,
+              padding: const EdgeInsets.only(
+                bottom: AppSpacing.spacingXXXL,
+                right: AppSpacing.spacingSM,
+              ),
+              itemCount: slice.length,
+              itemBuilder: (context, index) => slice[index],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: column(0, mid)),
+              Expanded(child: column(mid, sections.length)),
+            ],
+          );
+        },
       ),
     );
   }

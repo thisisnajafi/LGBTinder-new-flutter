@@ -198,7 +198,9 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
     return PremiumDetailScaffold(
       title: 'Emergency contacts',
       subtitle: 'Trusted contacts for safety alerts',
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: _contacts.isEmpty
+          ? null
+          : SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(

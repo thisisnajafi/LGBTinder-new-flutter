@@ -17,6 +17,7 @@ class ScreenshotProtection {
       StreamController<void>.broadcast();
 
   static bool _handlerBound = false;
+  static int _depth = 0;
 
   /// Fires when the OS reports a screenshot (iOS; Android is usually blocked).
   static Stream<void> get screenshots {
@@ -38,6 +39,18 @@ class ScreenshotProtection {
         }
       }
     });
+  }
+
+  /// Reference-counted secure flag so chat, calls, and profile can overlap.
+  static Future<void> acquire() async {
+    _depth++;
+    if (_depth == 1) await enable();
+  }
+
+  static Future<void> release() async {
+    if (_depth == 0) return;
+    _depth--;
+    if (_depth == 0) await disable();
   }
 
   static Future<void> enable() async {

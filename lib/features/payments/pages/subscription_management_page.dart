@@ -97,6 +97,24 @@ class _SubscriptionManagementPageState
     }
   }
 
+  List<Map<String, dynamic>> _historyFromCurrentStatus() {
+    final status = _status;
+    if (status == null || !status.isActive) return const [];
+    return [
+      {
+        'id': status.planId ?? 0,
+        'plan_name': status.planName ?? status.tier ?? 'Current plan',
+        'tier': status.tier,
+        'status': status.status ?? 'active',
+        'provider': status.provider,
+        'started_at': status.startDate?.toIso8601String(),
+        'ended_at': null,
+        'amount': null,
+        'currency': null,
+      },
+    ];
+  }
+
   Future<void> _loadHistory({bool more = false}) async {
     if (_historyLoading) return;
     if (more && !_historyHasMore) return;
@@ -114,11 +132,14 @@ class _SubscriptionManagementPageState
         result.items.length,
         loaded,
       );
+      final rows = result.items.isNotEmpty
+          ? result.items
+          : _historyFromCurrentStatus();
       setState(() {
         if (more) {
           _history = [..._history, ...result.items];
         } else {
-          _history = result.items;
+          _history = rows;
         }
         _historyPage = page + 1;
         _historyHasMore = hasMore;

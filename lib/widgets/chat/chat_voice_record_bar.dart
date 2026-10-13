@@ -141,7 +141,7 @@ class _ChatVoiceRecordBarState extends State<ChatVoiceRecordBar> {
               barCount: AppAnimations.chatVoiceRecordBars,
             ),
           ),
-          if (!widget.locked) ...[
+          if (!widget.locked && !widget.compact) ...[
             const SizedBox(width: AppSpacing.spacingSM),
             Semantics(
               label: 'Slide up to lock',

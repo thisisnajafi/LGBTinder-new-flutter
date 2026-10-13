@@ -258,6 +258,8 @@ class LanguageListTile extends ConsumerWidget {
       case 'ja': return '🇯🇵';
       case 'ko': return '🇰🇷';
       case 'ar': return '🇸🇦';
+      case 'fa': return '🇮🇷';
+      case 'he': return '🇮🇱';
       case 'hi': return '🇮🇳';
       default: return locale.languageCode.toUpperCase();
     }
@@ -350,6 +352,8 @@ class CompactLanguageSelector extends ConsumerWidget {
       case 'ja': return '🇯🇵';
       case 'ko': return '🇰🇷';
       case 'ar': return '🇸🇦';
+      case 'fa': return '🇮🇷';
+      case 'he': return '🇮🇱';
       case 'hi': return '🇮🇳';
       default: return '🌐';
     }

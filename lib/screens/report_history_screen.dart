@@ -39,16 +39,23 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
 
     try {
       final apiService = ref.read(apiServiceProvider);
-      final response = await apiService.get<dynamic>(
+      final safety = await apiService.get<dynamic>(
         ApiEndpoints.safetyReportHistory,
+        fromJson: (json) => json,
+      );
+      final userReports = await apiService.get<dynamic>(
+        ApiEndpoints.reports,
         fromJson: (json) => json,
       );
 
       if (!mounted) return;
-      if (response.isSuccess && response.data != null) {
-        final reportsList = _extractReportList(response.data);
+      final merged = <dynamic>[
+        ..._extractReportList(safety.data),
+        ..._extractReportList(userReports.data),
+      ];
+      if (safety.isSuccess || userReports.isSuccess) {
         setState(() {
-          _reports = reportsList.map(_mapReport).toList();
+          _reports = merged.map(_mapReport).toList();
           _isLoading = false;
         });
       } else if (showSpinner) {

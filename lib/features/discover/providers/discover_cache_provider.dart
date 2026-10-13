@@ -299,7 +299,8 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
 
   /// Clear persisted discover/nearby caches and fetch a fresh feed.
   Future<void> clearAndRefresh({Map<String, dynamic>? filters}) async {
-    state = const DiscoverCacheState();
+    final keepSwipe = state.lastSwipedUserId;
+    state = DiscoverCacheState(lastSwipedUserId: keepSwipe);
     await _cacheService.clearCache(CacheKeys.discoverFeed);
     await _cacheService.clearCacheByPattern('nearby_suggestions_');
     await _refresh(filters: filters);
@@ -557,10 +558,6 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
   /// Undo the last like/dislike/superlike via POST /likes/rewind.
   Future<void> rewindLastSwipe() async {
     final userId = state.lastSwipedUserId;
-    if (userId == null) {
-      throw Exception('Nothing to rewind');
-    }
-
     final result = await _likesService.rewind();
     final restoredId = int.tryParse(
           '${result.restoredUser?['id'] ?? result.restoredUser?['user_id'] ?? userId}',

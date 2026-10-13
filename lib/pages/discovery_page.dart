@@ -330,7 +330,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       await openPaywall();
       return;
     }
-    if (ref.read(discoverCacheProvider).lastSwipedUserId == null) return;
 
     setState(() => _isSwipeInProgress = true);
     try {
@@ -840,7 +839,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       );
     }
 
-    if (_isLocationStale(location)) {
+    if (location?.locationUpdatedAt != null && _isLocationStale(location)) {
       return _DiscoverEmptyConfig(
         title: 'No one nearby right now',
         subtitle:
@@ -905,7 +904,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     return _DiscoverEmptyConfig(
       title: "You've seen everyone nearby",
-      subtitle: 'Check back soon or expand your filters to see more people',
+      subtitle:
+          'Nobody is inside your current distance. Increase it or adjust filters.',
       primaryLabel: 'Adjust filters',
       onPrimary: _openFilters,
       secondaryLabel: 'Increase distance + retry',
@@ -1331,9 +1331,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Widget _buildDiscoveryActionRow() {
     return Consumer(
       builder: (context, ref, _) {
-        final lastSwipeId = ref.watch(
-          discoverCacheProvider.select((s) => s.lastSwipedUserId),
-        );
         final rewindAllowed = ref.watch(
           planLimitsProvider.select(
             (async) => async.valueOrNull?.features.rewind == true,
@@ -1344,8 +1341,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           DiscoverySwipeActionButton(
             type: DiscoverySwipeActionType.rewind,
             size: AppSpacing.spacingXXXL,
-            onPressed:
-                _isSwipeInProgress || (rewindAllowed && lastSwipeId == null)
+            onPressed: _isSwipeInProgress || !rewindAllowed
                 ? null
                 : _handleRewind,
           ),

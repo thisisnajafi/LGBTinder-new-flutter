@@ -14,6 +14,8 @@ import '../../../../../core/widgets/premium/premium_hero_header.dart';
 import '../../../../../core/widgets/optimized_image.dart';
 import '../../../../../core/widgets/profile_camera_badge.dart';
 import '../../../../../core/widgets/premium/profile_locked_overlay.dart';
+import '../../../../../features/matching/data/models/like.dart';
+import '../../../../../features/matching/data/models/match.dart';
 import '../../../../../features/matching/providers/likes_providers.dart';
 import '../../../../../routes/home_tab_routes.dart';
 import '../../../../../screens/feature_locked_screen.dart';
@@ -154,14 +156,13 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
     }
     try {
       final likesService = ref.read(likesServiceProvider);
-      final results = await Future.wait([
-        likesService.getMatches(),
-        likesService.getPendingLikes(),
-      ]);
+      final matches = await likesService.getMatches().catchError((_) => <Match>[]);
+      final likes = await likesService.getPendingLikes().catchError((_) => <Like>[]);
+      final counted = await likesService.getMatchesCount();
       if (!mounted) return;
       setState(() {
-        _matchesCount = results[0].length;
-        _likesReceived = results[1].length;
+        _matchesCount = matches.length > counted ? matches.length : counted;
+        _likesReceived = likes.length;
         _statsLoading = false;
       });
     } catch (_) {

@@ -203,7 +203,12 @@ class ProfileService {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.imagesList,
-        fromJson: (json) => json as Map<String, dynamic>,
+        fromJson: (json) {
+          if (json is List) return <String, dynamic>{'images': json};
+          if (json is Map<String, dynamic>) return json;
+          if (json is Map) return Map<String, dynamic>.from(json);
+          return <String, dynamic>{};
+        },
       );
 
       if (response.isSuccess && response.data != null) {

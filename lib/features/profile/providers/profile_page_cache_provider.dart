@@ -218,10 +218,24 @@ class ProfilePageCacheNotifier extends StateNotifier<AsyncValue<ProfilePageData>
       Object? profileError;
       try {
         profileLog('refresh: GET /profile (getMyProfile)');
-        profile = await _profileService.getMyProfile();
+        var loaded = await _profileService.getMyProfile();
+        if (loaded.images == null || loaded.images!.isEmpty) {
+          try {
+            final images = await _profileService.getProfileImages();
+            if (images.isNotEmpty) {
+              loaded = UserProfile.fromJson({
+                ...loaded.toJson(),
+                'images': images.map((image) => image.toJson()).toList(),
+              });
+            }
+          } catch (e, st) {
+            profileLogError('refresh getProfileImages', e, st);
+          }
+        }
+        profile = loaded;
         profileLog(
-          'refresh: getMyProfile OK id=${profile.id} '
-          'name=${profile.firstName} images=${profile.images?.length ?? 0}',
+          'refresh: getMyProfile OK id=${loaded.id} '
+          'name=${loaded.firstName} images=${loaded.images?.length ?? 0}',
         );
       } catch (e, st) {
         profileError = e;

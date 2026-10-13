@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/agora_config.dart';
 import '../../../core/services/app_logger.dart';
+import '../../../core/utils/screenshot_protection.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/responsive/responsive.dart';
@@ -123,6 +124,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(ScreenshotProtection.acquire());
     _captureNotifiers();
     _agoraService = AgoraService();
     _qualityMonitor = CallQualityMonitor(_agoraService);
@@ -1121,6 +1123,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   @override
   void dispose() {
+    unawaited(ScreenshotProtection.release());
     final keep = ActiveCallLifecycle.keepEngine(
       callEnded: _leaving,
       minimized: _preservingEngine,

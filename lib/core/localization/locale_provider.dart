@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,11 +23,13 @@ class SupportedLocales {
   static const japanese = Locale('ja', 'JP');
   static const korean = Locale('ko', 'KR');
   static const arabic = Locale('ar', 'SA');
+  static const persian = Locale('fa', 'IR');
+  static const hebrew = Locale('he', 'IL');
   static const hindi = Locale('hi', 'IN');
 
   static List<Locale> get all => [
     english, spanish, french, german, italian, portuguese,
-    russian, chinese, japanese, korean, arabic, hindi,
+    russian, chinese, japanese, korean, arabic, persian, hebrew, hindi,
   ];
 
   static List<String> get languageCodes => all.map((locale) => locale.languageCode).toList();
@@ -43,6 +47,8 @@ class SupportedLocales {
       case 'ja': return '日本語';
       case 'ko': return '한국어';
       case 'ar': return 'العربية';
+      case 'fa': return 'فارسی';
+      case 'he': return 'עברית';
       case 'hi': return 'हिंदी';
       default: return locale.languageCode.toUpperCase();
     }
@@ -61,9 +67,18 @@ class SupportedLocales {
       case 'ja': return '日本語';
       case 'ko': return '한국어';
       case 'ar': return 'العربية';
+      case 'fa': return 'فارسی';
+      case 'he': return 'עברית';
       case 'hi': return 'हिंदी';
       default: return locale.languageCode.toUpperCase();
     }
+  }
+
+  static Locale? match(Locale locale) {
+    for (final supported in all) {
+      if (supported.languageCode == locale.languageCode) return supported;
+    }
+    return null;
   }
 
   static bool isRTL(Locale locale) {
@@ -115,9 +130,15 @@ class LocaleNotifier extends StateNotifier<LocaleState> {
       final prefs = await SharedPreferences.getInstance();
       final savedLocaleCode = prefs.getString(_localeKey);
 
+      final platformLocale = _getSystemLocale();
       if (savedLocaleCode != null) {
-        final savedLocale = _getLocaleFromCode(savedLocaleCode);
-        if (savedLocale != null) {
+        final savedLocale = SupportedLocales.match(
+          _getLocaleFromCode(savedLocaleCode) ?? const Locale('und'),
+        );
+        if (savedLocale != null &&
+            (platformLocale == null ||
+                platformLocale.languageCode == 'en' ||
+                platformLocale.languageCode == savedLocale.languageCode)) {
           state = state.copyWith(
             currentLocale: savedLocale,
             isLoading: false,
@@ -126,10 +147,8 @@ class LocaleNotifier extends StateNotifier<LocaleState> {
         }
       }
 
-      // Default to system locale or English
-      final systemLocale = _getSystemLocale();
       state = state.copyWith(
-        currentLocale: systemLocale ?? SupportedLocales.english,
+        currentLocale: platformLocale ?? SupportedLocales.english,
         isLoading: false,
       );
     } catch (e) {
@@ -159,18 +178,18 @@ class LocaleNotifier extends StateNotifier<LocaleState> {
 
   Locale? _getSystemLocale() {
     try {
-      // Get system locale (this would need to be implemented based on platform)
-      // For now, return English as default
-      return SupportedLocales.english;
+      return SupportedLocales.match(PlatformDispatcher.instance.locale);
     } catch (e) {
       return null;
     }
   }
 
   Future<void> setLocale(Locale locale) async {
-    if (!SupportedLocales.all.contains(locale)) {
+    final canonical = SupportedLocales.match(locale);
+    if (canonical == null) {
       throw Exception('Unsupported locale: ${locale.languageCode}');
     }
+    locale = canonical;
 
     state = state.copyWith(isLoading: true);
 

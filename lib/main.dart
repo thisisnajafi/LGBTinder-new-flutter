@@ -26,6 +26,7 @@ import 'shared/services/incoming_call_handler.dart';
 import 'core/providers/feature_flags_provider.dart';
 import 'core/providers/app_motion_prefs_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
+import 'core/localization/locale_provider.dart';
 import 'core/cache/cache_lifecycle_listener.dart';
 import 'core/cache/image_cache_service.dart';
 import 'core/widgets/startup_cache_listener.dart';
@@ -140,6 +141,9 @@ Future<void> _bootstrap() async {
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -261,10 +265,20 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeLocales(List<Locale>? locales) {
+    final code = (locales != null && locales.isNotEmpty)
+        ? locales.first.languageCode
+        : null;
+    if (code == null || code.isEmpty) return;
+    unawaited(ref.read(localeProvider.notifier).setLocaleByCode(code));
+  }
+
+  @override
   Widget build(BuildContext context) {
     startupLog('MyApp.build()');
     final router = ref.watch(appRouterProvider);
     ref.watch(appMotionPrefsProvider);
+    final locale = ref.watch(localeProvider).currentLocale;
 
     return ErrorBoundary(
       child: MaterialApp.router(
@@ -281,7 +295,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
             });
           }
 
-          return ConnectivityBanner(
+          final textDirection = SupportedLocales.isRTL(locale)
+              ? TextDirection.rtl
+              : TextDirection.ltr;
+          return Directionality(
+            textDirection: textDirection,
+            child: ConnectivityBanner(
             child: SessionSideEffectsHost(
             child: ServiceLifecycleHost(
               child: StartupCacheListener(
@@ -297,6 +316,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
               ),
             ),
             ),
+          ),
           );
         },
       ),

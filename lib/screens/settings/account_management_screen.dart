@@ -122,22 +122,28 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     }
   }
 
+  void _showMessage(String text) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _handleChangePassword() async {
+    if (_isLoading) return;
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      _showMessage('Passwords do not match');
       return;
     }
 
     if (_newPasswordController.text.length < 8 ||
         !_passwordComplexity.hasMatch(_newPasswordController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol',
-          ),
-        ),
+      _showMessage(
+        'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol',
       );
       return;
     }
@@ -172,9 +178,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to change password: $e')),
-        );
+        _showMessage('Failed to change password: $e');
       }
     } finally {
       if (mounted) {
@@ -192,9 +196,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     return AppSettingsDetailScaffold(
       title: 'Account management',
       subtitle: 'Update email and password',
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : AppSettingsDetailList(
+      body: AppSettingsDetailList(
               children: [
                 PremiumSettingsGroup(
                   title: 'Email address',
@@ -228,9 +230,10 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     AppSettingsLayout.horizontalPadding,
                     0,
                   ),
-                  child: GradientButton(
+                  child:                     GradientButton(
                     text: 'Update email',
-                    onPressed: _handleChangeEmail,
+                    onPressed: _isLoading ? null : _handleChangeEmail,
+                    isLoading: _isLoading,
                     isFullWidth: true,
                     iconPath: AppIcons.save,
                   ),
@@ -267,6 +270,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                       prefixIconPath: AppIcons.lock,
                       textInputAction: TextInputAction.done,
                       autocorrect: false,
+                      onSubmitted: (_) => _handleChangePassword(),
                     ),
                   ],
                 ),
@@ -279,7 +283,8 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                   ),
                   child: GradientButton(
                     text: 'Change password',
-                    onPressed: _handleChangePassword,
+                    onPressed: _isLoading ? null : _handleChangePassword,
+                    isLoading: _isLoading,
                     isFullWidth: true,
                     iconPath: AppIcons.lockReset,
                   ),

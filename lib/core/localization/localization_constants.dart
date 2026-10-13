@@ -13,6 +13,8 @@ class LocalizationConstants {
     'ja': '日本語',
     'ko': '한국어',
     'ar': 'العربية',
+    'fa': 'فارسی',
+    'he': 'עברית',
     'hi': 'हिंदी',
   };
 

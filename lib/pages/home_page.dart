@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/responsive/responsive.dart';
+import '../core/utils/screenshot_protection.dart';
 import '../core/widgets/app_bottom_nav_bar.dart';
 import '../pages/discovery_page.dart';
 import '../pages/chat_list_page.dart';
@@ -266,6 +267,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                 ),
               ),
+              if (currentIndex == AppBottomNavBar.profileTabIndex)
+                const _ProfileScreenshotGuard(),
               Positioned(
                 left: 0,
                 right: 0,
@@ -309,4 +312,29 @@ class _HomeBottomNavHost extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Blocks screenshots while the profile tab is the selected home tab.
+class _ProfileScreenshotGuard extends StatefulWidget {
+  const _ProfileScreenshotGuard();
+
+  @override
+  State<_ProfileScreenshotGuard> createState() => _ProfileScreenshotGuardState();
+}
+
+class _ProfileScreenshotGuardState extends State<_ProfileScreenshotGuard> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(ScreenshotProtection.acquire());
+  }
+
+  @override
+  void dispose() {
+    unawaited(ScreenshotProtection.release());
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }

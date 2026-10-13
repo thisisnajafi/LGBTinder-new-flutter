@@ -3,6 +3,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/api_service.dart';
+import '../models/user_image.dart';
 import '../models/user_profile.dart';
 import '../models/update_profile_request.dart';
 
@@ -117,6 +118,27 @@ class ProfileService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Gallery and profile photos when GET /profile omits them.
+  Future<List<UserImage>> getProfileImages() async {
+    final response = await _apiService.get<Map<String, dynamic>>(
+      ApiEndpoints.imagesList,
+      fromJson: (json) {
+        if (json is List) return <String, dynamic>{'images': json};
+        if (json is Map<String, dynamic>) return json;
+        if (json is Map) return Map<String, dynamic>.from(json);
+        return <String, dynamic>{};
+      },
+    );
+    if (!response.isSuccess || response.data == null) {
+      throw Exception(response.message);
+    }
+    final raw = response.data!['images'] ?? response.data!['data'];
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((image) {
+      return UserImage.fromJson(Map<String, dynamic>.from(image));
+    }).toList();
   }
 }
 

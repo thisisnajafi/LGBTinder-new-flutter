@@ -712,11 +712,18 @@ class PaymentService {
     }
 
     final data = response.data!;
-    final items = (data['items'] as List<dynamic>? ?? [])
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    final pagination = data['pagination'] is Map<String, dynamic>
-        ? data['pagination'] as Map<String, dynamic>
+    dynamic raw = data['items'] ?? data['data'] ?? data['subscriptions'];
+    if (raw is Map) {
+      raw = raw['data'] ?? raw['items'];
+    }
+    final items = raw is List
+        ? raw
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList()
+        : <Map<String, dynamic>>[];
+    final pagination = data['pagination'] is Map
+        ? Map<String, dynamic>.from(data['pagination'] as Map)
         : <String, dynamic>{};
 
     return (items: items, pagination: pagination);

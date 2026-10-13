@@ -144,9 +144,12 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
         ? widget.size * 0.44
         : widget.size * 0.42;
 
-    return Semantics(
+    final enabled = widget.onPressed != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.4,
+      child: Semantics(
       button: true,
-      enabled: widget.onPressed != null,
+      enabled: enabled,
       label: visuals.semanticLabel,
       child: RepaintBoundary(
         child: SizedBox(
@@ -232,6 +235,7 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
             ),
           ),
         ),
+      ),
       ),
     );
   }
