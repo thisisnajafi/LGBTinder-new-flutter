@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lgbtindernew/core/providers/api_providers.dart';
@@ -14,7 +15,7 @@ class _MockSessionApiService extends Mock implements SessionApiService {}
 
 void main() {
   group('PresenceService lifecycle', () {
-    test('onForeground marks online and reports session activity', () async {
+    test('onForeground marks online and reports session activity', () {
       final chatRepo = _MockChatRepository();
       final sessionApi = _MockSessionApiService();
 
@@ -29,14 +30,16 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(presenceServiceProvider).onForeground();
-
-      verify(() => chatRepo.setOnlineStatus(true)).called(1);
-      verify(() => sessionApi.reportActivity()).called(1);
-      expect(container.read(ownPresenceProvider), isTrue);
+      fakeAsync((async) {
+        container.read(presenceServiceProvider).onForeground();
+        async.elapse(PresenceService.statusDebounce);
+        verify(() => chatRepo.setOnlineStatus(true)).called(1);
+        verify(() => sessionApi.reportActivity()).called(1);
+        expect(container.read(ownPresenceProvider), isTrue);
+      });
     });
 
-    test('onBackground marks offline and stops heartbeat', () async {
+    test('onBackground marks offline and stops heartbeat', () {
       final chatRepo = _MockChatRepository();
       final sessionApi = _MockSessionApiService();
 
@@ -51,15 +54,19 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final service = container.read(presenceServiceProvider);
-      await service.onForeground();
-      await service.onBackground();
+      fakeAsync((async) {
+        final service = container.read(presenceServiceProvider);
+        service.onForeground();
+        async.elapse(PresenceService.statusDebounce);
+        service.onBackground();
+        async.elapse(PresenceService.statusDebounce);
 
-      verifyInOrder([
-        () => chatRepo.setOnlineStatus(true),
-        () => chatRepo.setOnlineStatus(false),
-      ]);
-      expect(container.read(ownPresenceProvider), isFalse);
+        verifyInOrder([
+          () => chatRepo.setOnlineStatus(true),
+          () => chatRepo.setOnlineStatus(false),
+        ]);
+        expect(container.read(ownPresenceProvider), isFalse);
+      });
     });
   });
 }

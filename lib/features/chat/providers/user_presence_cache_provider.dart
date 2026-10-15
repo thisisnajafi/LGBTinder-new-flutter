@@ -32,9 +32,9 @@ class UserPresenceCacheNotifier extends Notifier<Map<int, UserPresenceSnapshot>>
       updatedAt: event.timestamp,
     );
     final previous = state[event.userId];
-    if (previous != null &&
-        previous.isOnline == next.isOnline &&
-        previous.lastSeenAt == next.lastSeenAt) {
+    // Repeat online/offline events (heartbeat last_seen noise) do not change
+    // the known state. The offline transition still carries the real last seen.
+    if (previous != null && previous.isOnline == event.isOnline) {
       return;
     }
     state = {

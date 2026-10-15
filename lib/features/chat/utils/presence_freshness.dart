@@ -1,12 +1,13 @@
-/// How long an "Online" label stays valid without a new presence event.
+/// Chat "Online" follows `user.status` transitions.
 ///
-/// Matches `UserPresenceService::PRESENCE_TTL_SECONDS` (20). A peer who
-/// backgrounds without a successful offline POST still drops to Last seen
-/// inside the grace used by RT-008.
+/// Heartbeats refresh last_seen on the server and are not broadcast (RT-020).
+/// A short local expiry would show Last seen for someone who is still in the
+/// app. The offline event, including `presence:expire-stale`, is what switches
+/// the label. [ttl] matches `UserPresenceService::PRESENCE_TTL_SECONDS`.
 class PresenceFreshness {
   PresenceFreshness._();
 
-  static const Duration ttl = Duration(seconds: 20);
+  static const Duration ttl = Duration(seconds: 90);
 
   static bool isEffectivelyOnline({
     required bool isOnline,
@@ -14,10 +15,11 @@ class PresenceFreshness {
     DateTime? now,
   }) {
     if (!isOnline) return false;
-    if (refreshedAt == null) return true;
-    final current = now ?? DateTime.now();
-    final age = current.difference(refreshedAt);
-    if (age.isNegative) return true;
-    return age < ttl;
+    // Heartbeat events no longer refresh this stamp. Stay online until the
+    // next user.status says otherwise, including a future clock skew.
+    if (refreshedAt != null && now != null && refreshedAt.isAfter(now)) {
+      return true;
+    }
+    return true;
   }
 }

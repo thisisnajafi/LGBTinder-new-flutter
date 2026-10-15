@@ -55,5 +55,46 @@ void main() {
         isTrue,
       );
     });
+
+    test('apply ignores a newer last seen while online state is unchanged', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(userPresenceCacheProvider.notifier);
+      notifier.apply(
+        UserPresenceEvent(
+          userId: 42,
+          isOnline: true,
+          lastSeenAt: DateTime.parse('2026-06-26T12:00:00Z'),
+          timestamp: DateTime.parse('2026-06-26T12:00:01Z'),
+        ),
+      );
+      final first = container.read(userPresenceCacheProvider);
+
+      notifier.apply(
+        UserPresenceEvent(
+          userId: 42,
+          isOnline: true,
+          lastSeenAt: DateTime.parse('2026-06-26T12:00:30Z'),
+          timestamp: DateTime.parse('2026-06-26T12:00:31Z'),
+        ),
+      );
+
+      expect(identical(container.read(userPresenceCacheProvider), first), isTrue);
+
+      notifier.apply(
+        UserPresenceEvent(
+          userId: 42,
+          isOnline: false,
+          lastSeenAt: DateTime.parse('2026-06-26T12:00:30Z'),
+          timestamp: DateTime.parse('2026-06-26T12:00:40Z'),
+        ),
+      );
+      expect(container.read(userPresenceCacheProvider)[42]!.isOnline, isFalse);
+      expect(
+        container.read(userPresenceCacheProvider)[42]!.lastSeenAt,
+        DateTime.parse('2026-06-26T12:00:30Z'),
+      );
+    });
   });
 }

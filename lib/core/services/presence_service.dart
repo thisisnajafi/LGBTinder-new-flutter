@@ -6,6 +6,7 @@ import '../../features/chat/providers/chat_providers.dart';
 import '../providers/api_providers.dart';
 import '../providers/own_presence_provider.dart';
 import '../services/app_logger.dart';
+import 'presence_lifecycle.dart';
 
 /// Keeps user online status and session activity in sync with the backend.
 class PresenceService {
@@ -13,12 +14,42 @@ class PresenceService {
 
   final Ref _ref;
   Timer? _heartbeatTimer;
+  final PresenceChangeDebouncer _debouncer = PresenceChangeDebouncer(
+    window: PresenceService.statusDebounce,
+  );
+  bool? _appliedOnline;
 
-  /// Shorter than the server presence TTL (20s) so a foreground user keeps
-  /// receiving `user.status` heartbeats before peers expire them.
-  static const Duration heartbeatInterval = Duration(seconds: 8);
+  /// Inside the server presence TTL (90s) and no more often than once a minute.
+  static const Duration heartbeatInterval = Duration(seconds: 45);
 
-  Future<void> onForeground() async {
+  /// Lifecycle flaps (permission UI, app switcher) wait this long.
+  static const Duration statusDebounce = Duration(seconds: 2);
+
+  void onForeground() {
+    _schedule(true);
+  }
+
+  void onBackground() {
+    stopHeartbeat();
+    _schedule(false);
+  }
+
+  void _schedule(bool online) {
+    _debouncer.schedule(online, (value) {
+      if (_appliedOnline == value) {
+        if (value) startHeartbeat();
+        return;
+      }
+      _appliedOnline = value;
+      if (value) {
+        unawaited(_goOnline());
+      } else {
+        unawaited(_goOffline());
+      }
+    });
+  }
+
+  Future<void> _goOnline() async {
     try {
       AppLogger.info('Marking user online (foreground)', tag: 'Presence');
       await _ref.read(chatRepositoryProvider).setOnlineStatus(true);
@@ -36,7 +67,7 @@ class PresenceService {
     }
   }
 
-  Future<void> onBackground() async {
+  Future<void> _goOffline() async {
     stopHeartbeat();
     try {
       AppLogger.info('Marking user offline (background)', tag: 'Presence');
@@ -84,6 +115,7 @@ class PresenceService {
   }
 
   void dispose() {
+    _debouncer.dispose();
     stopHeartbeat();
   }
 }
