@@ -136,7 +136,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 ### RT-012 – Accepting a video call while the camera permission prompt is up records the call as "rejected"
 - Steps: first-ever video call to emu; tap Accept → Android camera permission dialog → "While using the app".
 - Actual: call ends; server #64 `rejected`, "User rejected the call". Second call works.
-- Severity: Medium · Status: Open
+- Severity: Medium · Status: Fixed locally (42cc63ec1f10fbd0b85e7659f21fde9a5e558421), pending deploy/retest
 - Related: first voice call from emu while mic permission prompt was showing never rang the phone (19:18).
 
 ### RT-013 – Declining from CallKit when the app was killed doesn't reach the server
