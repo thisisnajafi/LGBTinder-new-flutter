@@ -230,3 +230,23 @@ Scheduler cron: NOT added – no SSH access to the VPS from the PC (deploy key/h
 - Steps: phone app backgrounded; one chat message arrives.
 - Expected: one shade entry. Actual: two entries, both title "New Message! 💬" and body "Abolfazl Najafi sent you a message" (FCM notification payload plus the RT-009 local notification).
 - Severity: Medium · Evidence: dumpsys notification, ph-53-bg-push · Status: Fixed locally (5c5f68c9fdf8b0de7806aa662def992c4bb82d06), pending deploy/retest
+
+## Session 5 — two emulators (2026-10-16 ~00:45–01:05 Tehran)
+emulator-5554 Pixel_Play = user 742; emulator-5556 Pixel_Play13 = user 745 (asdasd). Build with 06f03d8 + 5c5f68c. All calls 742<->745 only (verified in history).
+
+| Test | Result | Evidence |
+|---|---|---|
+| Presence / Online | PASS | both headers "Online" |
+| Typing | PASS | 5554 header "is typing" |
+| Chat delivery | PASS | "RT_emu_test_1" shown on 5554 |
+| Background notification exactly 1 (RT-017) | PASS | dumpsys: single lgbtfinder_messages record |
+| Background incoming banner (RT-016) | PASS | callkit_incoming_channel_id, category=call, call #80 745->742 |
+| Banner decline | PASS | #80 rejected "User rejected the call" |
+| Missed call | PASS | #81 missed caller-timeout + callkit_missed notification |
+| Voice call accept | PASS | #82 active, both sides timer |
+| Minimize + remote hang-up | PASS | "Active call… Tap to return" pill, then #82 ended dur=50, pill cleared |
+| Video call | PASS | #83 Agora onRemoteVideoStateDecoding, ended dur=33 |
+| RT-012 initiate without permission (fresh install 5556) | PASS | mic/camera prompts shown, call proceeded (#80, #83) |
+| RT-012 accept after pm revoke (5554) | PARTIAL | accept from banner (#86) showed mic then camera prompts, both granted; ring timeout (45s) expired during prompts so not connected. Not an app bug per se; consider pausing ring timeout / longer window while prompting |
+
+Notes: #85 was auto-declined right after the revoke-relaunch (CallkitKilledAction "Persisted decline 85") with no decline tap — needs a look (possible stale queued decline). Presence `user.status` events arrive every ~2 s on 5554 (noisy). Screenshots: rt-shots/emu-*, emu2-*.
