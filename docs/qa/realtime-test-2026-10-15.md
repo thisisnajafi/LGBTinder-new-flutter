@@ -195,3 +195,32 @@ How to verify after the backend is deployed:
 1. `php artisan schedule:list` shows `presence:expire-stale` with expression `* * * * *`.
 2. `php artisan presence:expire-stale` prints `Expired N stale presence record(s).` and, for a user whose last heartbeat is older than 20 seconds, broadcasts `user.status` with `is_online: false` and the existing `last_seen`.
 3. With the scheduler cron firing, a peer who backgrounds (or whose offline POST never arrives) is no longer "Online" after the 20 second TTL plus at most one minute for the catch-up broadcast.
+
+## Session 4 – Retest after fixes (23:27–23:55)
+Backend pushed aaca4a6..7d6e2e7 (approved) → GitHub Actions "LGBTFinder Backend" run 38796149700: test ✔, deploy ✔; migration 2026_10_15_140000 ran. App: new debug build (HEAD 1015fff) installed on emulator + phone (no wipe). App NOT pushed.
+Scheduler cron: NOT added – no SSH access to the VPS from the PC (deploy key/host only in GitHub secrets VPS_SSH_KEY/VPS_HOST/VPS_USER). Needed on VPS as the web user:
+`* * * * * cd /var/www/backend && php artisan schedule:run >> /dev/null 2>&1` (APP_PATH = VPS_APP_PATH secret, default /var/www/backend), then verify `php artisan schedule:list` shows calls:update-missed and presence:expire-stale.
+
+| Test | Result | Evidence |
+|---|---|---|
+| Presence Online (both) | PASS | headers |
+| Presence offline when phone backgrounded (RT-008) | PASS – "Last seen just now" within 8 s; Online again on resume | uiautomator |
+| Typing both ways | PASS | "is typing" headers |
+| Chat both ways + live read receipts | PASS | "RT retest 1/2 … Message read" |
+| Background message push (RT-009) | PASS – "New Message! 💬 / Abolfazl Najafi sent you a message" (2 entries posted – check for duplicate) | dumpsys notification, ph-53-bg-push |
+| Voice emu→phone fg: ring, accept, mute, speaker, hang-up from emu | PASS (#72, 31 s) | history |
+| Video phone→emu: ring, accept, camera off/on | PASS (#73 46 s, #74 32 s) | Agora local video Stopped→Capturing→Encoding |
+| Flip camera | NOT VERIFIED (no log; secure screen) | – |
+| Minimized call + remote hang-up clears banner; next call rings (RT-014) | PASS (#74 → #75 rang) | uiautomator |
+| Decline fg | PASS (#75 rejected) | history |
+| No answer → server missed (RT-011) | PASS (#76 missed, end=caller-timeout) | history |
+| Decline from CallKit with app killed (RT-013) | PASS (#77 rejected) | history |
+| Incoming call with app in background (CallKit banner) | **FAIL – regression RT-016** (#78, #79) | ph-56/57, logcat |
+| Stale-ringing server timeout (RT-010) | Covered by backend tests; no stale call seen in retest; cron not installed | – |
+| Permission-prompt accept (RT-012) | NOT RETESTED (permissions already granted on both devices) | – |
+| Likes / match notifications | NOT RUN (accounts already matched; Discover empty) | – |
+
+### RT-016 – Regression: no CallKit incoming banner while app is in background
+- Steps: after RT-013 test (app killed, declined from banner), phone HOME; emu calls (#78 23:49, #79 23:52).
+- Expected: CallKit heads-up (worked in session 3, #69). Actual: FCM delivered (`FLTFireMsgReceiver: broadcast received` 23:50:01, pid 2818) but no notification posted; call times out as missed. Foreground ringing still works (#72, #75).
+- Suspect: RT-013 (043fc86) / RT-012 (42cc63e) changes to the CallKit/background handler. Severity: **High** · Status: Open
