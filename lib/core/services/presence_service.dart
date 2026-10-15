@@ -25,11 +25,11 @@ class PresenceService {
   /// Lifecycle flaps (permission UI, app switcher) wait this long.
   static const Duration statusDebounce = Duration(seconds: 2);
 
-  void onForeground() {
+  Future<void> onForeground() async {
     _schedule(true);
   }
 
-  void onBackground() {
+  Future<void> onBackground() async {
     stopHeartbeat();
     _schedule(false);
   }
