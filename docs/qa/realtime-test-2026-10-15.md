@@ -30,7 +30,7 @@ Build: debug, --flavor production --target lib/main_production.dart
 - Actual: not listed; APK not installed on phone.
 - Severity: Blocker (env)
 - Evidence: adb output "device offline" / "device 'VGJVOBHE59KNV4JB' not found"
-- Status: Open – user to replug cable / re-accept USB debugging prompt (MIUI may also need "Install via USB" enabled)
+- Status: Resolved (18:41, phone reconnected)
 
 ### RT-004 – Android build fails with default JDK 11
 - Feature: build
@@ -51,3 +51,22 @@ Build: debug, --flavor production --target lib/main_production.dart
 - Chat list loads existing conversation with "Message read" receipt state shown: PASS (emu-07)
 - Pusher client starts: PASS (connection state unverified, RT-005)
 - Two-device features: NOT RUN (RT-001, RT-003)
+
+## Session 2 (18:41)
+- adb devices: both listed (`VGJVOBHE59KNV4JB device`, `emulator-5554 device`). RT-003 → Resolved.
+- Emulator: logged out of test account, "Continue with Google" → account picker → profnajafi3@gmail.com, no password/2FA. Home shows "Hello, Abolfazl". PASS (emu-10, emu-11, emu-12)
+
+### RT-006 – LGBTFinder app is not installed on the phone; MIUI blocks adb install
+- Feature: all (device B)
+- Device: VGJVOBHE59KNV4JB
+- Steps: `pm list packages` (incl. -3 -u) → no com.lgbtfinder (no package with lgbt/finder except unrelated ones). `adb install -r app-production-debug.apk` → MIUI "Install this app via USB?" dialog; tapping Install via `adb shell input tap` has no effect.
+- Expected: app present and logged in as asdasd@asd.com (per user).
+- Actual: app absent; install fails `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user` (2 attempts).
+- Severity: Blocker (env)
+- Evidence: ph-00-install.png, adb output
+- Status: Open – user must tap "Install" on the phone during install, or enable Developer options → "Install via USB" + "USB debugging (Security settings)" (latter also needed for adb taps/typing on MIUI).
+
+### RT-007 – uiautomator returns stale dump ("could not get idle state") on Discover
+- Feature: QA tooling, emulator. Discover screen animates continuously, so uiautomator never sees idle and returns the previous screen. Screenshots are reliable.
+- Severity: Low · Status: Info
+
