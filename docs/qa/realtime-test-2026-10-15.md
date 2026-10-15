@@ -262,3 +262,19 @@ Notes: #85 was auto-declined right after the revoke-relaunch (CallkitKilledActio
 ### RT-020 – presence `user.status` spam
 - The backend broadcasts `user.status` only when online/offline actually changes. Heartbeats still update last seen (throttled to 30s) and do not broadcast. Presence TTL is 90s so a foreground heartbeat every 45s does not expire the user. The app heartbeats every 45s, waits 2s before sending a lifecycle online/offline flip, and ignores incoming `user.status` events that do not change that user's online/offline state. Last seen still comes from the offline event.
 - Needs a backend deploy (`0f99c4d`). No migration. `presence:expire-stale` still depends on the existing scheduler cron. App `e8863cc`.
+
+## Session 6 — RT-018..020 retest (2026-10-16 ~02:15–02:30 Tehran)
+App build 7232452 on emulator-5554 (742) + emulator-5556 (745), against PRODUCTION backend (RT-018/RT-020 backend commits fbd1eec, 0f99c4d NOT deployed; no local backend run).
+
+| Test | Result | Evidence |
+|---|---|---|
+| RT-019 no self-decline after restart | PASS | revoke+relaunch 5556, incoming #87 shown and accepted; log "Ignoring ACTION_CALL_INCOMING/ENDED (not an explicit Decline)" |
+| RT-018 accept after revoke (app fallback) | PASS | POST /calls/87/accepting -> 404 handled, mic+camera prompts, #87 connected (onUserJoined), ended dur=129 |
+| RT-018 server-side ring extension | NOT TESTED | needs backend deploy (accepting_at migration) |
+| RT-020 presence event rate | IMPROVED | 7 user.status events / 120 s on 5554 (was ~60); bursts every ~45 s = new heartbeat. Remaining raw events come from undeployed backend |
+| Background banner (RT-016) | PASS | callkit_incoming notification (#88, #89) |
+| Banner accept, voice | PASS | #89 active, ended dur=30 |
+| Single notification (RT-017) | PASS | one FCM record for "RT_test_3" |
+| Video call | PASS | #87 |
+Note: #88 missed only because the tester was slow (caller timeout), banner was shown.
+Build fix: 7232452 (presence onForeground/onBackground made Future<void>).
