@@ -54,24 +54,18 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     return;
   }
 
-  if (!BackgroundMessageDisplay.shouldPostLocalNotification(
+  await _showBackgroundLocalNotification(
+    message,
+    data,
     hasOsNotificationPayload: message.notification != null,
-    isCallPayload: false,
-  )) {
-    AppLogger.info(
-      'Background FCM left to the OS notification payload',
-      tag: 'Notifications',
-    );
-    return;
-  }
-
-  await _showBackgroundLocalNotification(message, data);
+  );
 }
 
 Future<void> _showBackgroundLocalNotification(
   RemoteMessage message,
-  Map<String, dynamic> data,
-) async {
+  Map<String, dynamic> data, {
+  required bool hasOsNotificationPayload,
+}) async {
   final text = BackgroundMessageDisplay.resolveText(
     notificationTitle: message.notification?.title,
     notificationBody: message.notification?.body,
@@ -85,6 +79,10 @@ Future<void> _showBackgroundLocalNotification(
     return;
   }
 
+  final tag = BackgroundMessageDisplay.trayTagForMessage(
+    data['message_id'] ?? message.messageId,
+  );
+
   try {
     final plugin = FlutterLocalNotificationsPlugin();
     const androidSettings = AndroidInitializationSettings(
@@ -94,6 +92,30 @@ Future<void> _showBackgroundLocalNotification(
     await plugin.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),
     );
+
+    final active = await _readTray(plugin);
+    final post = BackgroundMessageDisplay.shouldPostLocalNotification(
+      hasOsNotificationPayload: hasOsNotificationPayload,
+      isCallPayload: false,
+      trayAlreadyShowsMessage: BackgroundMessageDisplay.trayAlreadyShowsMessage(
+        title: text.title,
+        body: text.body,
+        active: active,
+      ),
+    );
+    if (!post) {
+      AppLogger.info(
+        'Background FCM left a single tray row for ${message.messageId}',
+        tag: 'Notifications',
+      );
+      await _collapseDuplicateTrayRows(
+        plugin,
+        title: text.title,
+        body: text.body,
+        keepTag: tag,
+      );
+      return;
+    }
 
     final androidPlugin = plugin
         .resolvePlatformSpecificImplementation<
@@ -129,6 +151,7 @@ Future<void> _showBackgroundLocalNotification(
           : 'Notifications for LGBTFinder app',
       importance: Importance.high,
       priority: Priority.high,
+      tag: tag,
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
@@ -148,6 +171,15 @@ Future<void> _showBackgroundLocalNotification(
       NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: jsonEncode(data),
     );
+    // The OS may still be inserting the FCM notification row. Wait so the
+    // collapse sees both and leaves one.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    await _collapseDuplicateTrayRows(
+      plugin,
+      title: text.title,
+      body: text.body,
+      keepTag: tag,
+    );
 
     AppLogger.info(
       'Background FCM displayed local notification ${message.messageId}',
@@ -160,5 +192,57 @@ Future<void> _showBackgroundLocalNotification(
       error: e,
       stackTrace: stack,
     );
+  }
+}
+
+Future<List<BackgroundTrayItem>> _readTray(
+  FlutterLocalNotificationsPlugin plugin,
+) async {
+  try {
+    final active = await plugin.getActiveNotifications();
+    return [
+      for (final item in active)
+        BackgroundTrayItem(
+          id: item.id,
+          tag: item.tag,
+          title: item.title,
+          body: item.body,
+        ),
+    ];
+  } catch (e) {
+    AppLogger.warning(
+      'Active notification list failed',
+      tag: 'Notifications',
+      error: e,
+    );
+    return const [];
+  }
+}
+
+/// Drop every shade row for this message except one.
+Future<void> _collapseDuplicateTrayRows(
+  FlutterLocalNotificationsPlugin plugin, {
+  required String title,
+  required String body,
+  required String keepTag,
+}) async {
+  final extras = BackgroundMessageDisplay.extrasToCancel(
+    title: title,
+    body: body,
+    keepTag: keepTag,
+    active: await _readTray(plugin),
+  );
+  for (final extra in extras) {
+    final id = extra.id;
+    if (id == null) continue;
+    try {
+      await plugin.cancel(id, tag: extra.tag);
+    } catch (e) {
+      AppLogger.warning(
+        'Duplicate notification cancel failed',
+        tag: 'Notifications',
+        error: e,
+      );
+    }
   }
 }

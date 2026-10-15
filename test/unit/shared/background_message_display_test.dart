@@ -36,6 +36,75 @@ void main() {
       );
     });
 
+    test('a shade row that already shows this message is not posted again', () {
+      const active = [
+        BackgroundTrayItem(
+          id: 7,
+          tag: 'FCM-Notification:1',
+          title: 'New Message! 💬',
+          body: 'Abolfazl Najafi sent you a message',
+        ),
+      ];
+      expect(
+        BackgroundMessageDisplay.trayAlreadyShowsMessage(
+          title: 'New Message! 💬',
+          body: 'Abolfazl Najafi sent you a message',
+          active: active,
+        ),
+        isTrue,
+      );
+      expect(
+        BackgroundMessageDisplay.shouldPostLocalNotification(
+          hasOsNotificationPayload: false,
+          isCallPayload: false,
+          trayAlreadyShowsMessage: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('keeps one tray row and drops the duplicate', () {
+      const local = BackgroundTrayItem(
+        id: 11,
+        tag: 'lgbtfinder-message-11',
+        title: 'New Message! 💬',
+        body: 'Abolfazl Najafi sent you a message',
+      );
+      const system = BackgroundTrayItem(
+        id: 99,
+        tag: 'FCM-Notification:99',
+        title: 'New Message! 💬',
+        body: 'Abolfazl Najafi sent you a message',
+      );
+      final extras = BackgroundMessageDisplay.extrasToCancel(
+        title: local.title!,
+        body: local.body!,
+        keepTag: local.tag!,
+        active: const [system, local],
+      );
+      expect(extras, [system]);
+      expect(
+        BackgroundMessageDisplay.extrasToCancel(
+          title: local.title!,
+          body: local.body!,
+          keepTag: local.tag!,
+          active: const [local],
+        ),
+        isEmpty,
+      );
+    });
+
+    test('message tag is stable for one chat message id', () {
+      expect(
+        BackgroundMessageDisplay.trayTagForMessage(42),
+        'lgbtfinder-message-42',
+      );
+      expect(
+        BackgroundMessageDisplay.trayTagForMessage(42),
+        BackgroundMessageDisplay.trayTagForMessage('42'),
+      );
+    });
+
     test('resolves the tray text from the data payload', () {
       final text = BackgroundMessageDisplay.resolveText(
         data: {'type': 'message', 'title': 'Abolfazl', 'body': 'RT test 3'},
