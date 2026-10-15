@@ -146,7 +146,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 
 ### RT-014 – Phone reported "busy" right after a video call ended remotely while call UI was minimized
 - Steps: video #65, phone minimized call ("Hide call and open chat"), emu hangs up. "Active call … Tap to return" banner stayed on phone; tapping it did nothing. Next call #66 → `busy` "User is busy"; emu retry then rejoined #66's dead channel and sat at "Connecting…".
-- Workaround: force-stop the app. Severity: High · Status: Fixed locally, pending deploy/retest
+- Workaround: force-stop the app. Severity: High · Status: Fixed locally (e4e257078c6fec2ba52495e7e28fa1898ebab8e6), pending deploy/retest
 
 ### RT-015 – QA incident: test call placed to a non-test user
 - At 19:45 the phone chat list order had changed after an app restart; my coordinate tap opened "alireza" (user 743) instead of "Abolfazl", and a video call (#71) rang ~25 s before I cancelled it via API (→ cancelled). No message was sent. User 743 may see a missed/cancelled call from asdasd.
