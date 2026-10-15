@@ -14,8 +14,8 @@ class CallActionRequest {
     return CallActionRequest(callId: callId, action: 'accept');
   }
 
-  factory CallActionRequest.reject(String callId) {
-    return CallActionRequest(callId: callId, action: 'reject');
+  factory CallActionRequest.reject(String callId, {String? reason}) {
+    return CallActionRequest(callId: callId, action: 'reject', reason: reason);
   }
 
   factory CallActionRequest.end(String callId, {String? reason}) {

@@ -6,9 +6,10 @@ import 'package:lgbtindernew/shared/services/chat_pusher_event_names.dart';
 
 void main() {
   group('CallSignalingLog', () {
-    test('covers all five Pusher call event names with call_id', () {
+    test('covers Pusher call event names with call_id', () {
       const names = [
         ChatPusherEventNames.callIncoming,
+        ChatPusherEventNames.callAccepting,
         ChatPusherEventNames.callAccepted,
         ChatPusherEventNames.callRejected,
         ChatPusherEventNames.callEnded,

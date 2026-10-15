@@ -10,6 +10,7 @@ class CallSignalingLog {
 
   static const List<String> eventNames = [
     ChatPusherEventNames.callIncoming,
+    ChatPusherEventNames.callAccepting,
     ChatPusherEventNames.callAccepted,
     ChatPusherEventNames.callRejected,
     ChatPusherEventNames.callEnded,

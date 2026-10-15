@@ -514,6 +514,7 @@ class PusherWebSocketService {
         _handleScreenshotDetected(payload);
         break;
       case ChatPusherEventNames.callIncoming:
+      case ChatPusherEventNames.callAccepting:
       case ChatPusherEventNames.callAccepted:
       case ChatPusherEventNames.callRejected:
       case ChatPusherEventNames.callEnded:

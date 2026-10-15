@@ -337,6 +337,7 @@ class ApiEndpoints {
   static const String callsAccept = '/calls/accept';  // Send call_id in body
   static const String callsDecline = '/calls/reject'; // Backend uses 'reject' not 'decline'
   static const String callsEnd = '/calls/end';        // Send call_id in body
+  static String callsAcceptingById(String callId) => '/calls/$callId/accepting';
   static String callsAcceptById(String callId) => '/calls/$callId/accept';
   static String callsRejectById(String callId) => '/calls/$callId/reject';
   static String callsEndById(String callId) => '/calls/$callId/end';

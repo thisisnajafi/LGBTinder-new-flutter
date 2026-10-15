@@ -199,19 +199,30 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     return lifecycle == AppLifecycleState.resumed;
   }
 
+  static const String _permissionDeniedReason =
+      'Microphone or camera permission denied';
+
   /// Accept from in-app banner.
   Future<void> accept(BuildContext context) async {
     final data = state;
     if (data == null) return;
 
+    _autoDismissTimer?.cancel();
+    await ref.read(callServiceProvider).signalAccepting(data.callId);
+    if (!context.mounted) {
+      await _rejectPermissionDenied(data.callId);
+      return;
+    }
+
     final allowed = await ensureCallMediaPermissions(
       context,
       video: data.isVideo,
     );
-    if (!allowed || !context.mounted) return;
+    if (!allowed || !context.mounted) {
+      await _rejectPermissionDenied(data.callId);
+      return;
+    }
     if (state?.callId != data.callId) return;
-
-    _autoDismissTimer?.cancel();
 
     try {
       final ok = await ref.read(callProvider.notifier).acceptCall(
@@ -334,6 +345,9 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       return false;
     }
 
+    _autoDismissTimer?.cancel();
+    await ref.read(callServiceProvider).signalAccepting(callId);
+
     final permission = await CallPermissions.ensure(video: data.isVideo);
     if (permission != CallPermissionResult.granted) {
       AppLogger.warning(
@@ -341,6 +355,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
         tag: 'IncomingCall',
       );
       _acceptedCallId = null;
+      await _rejectPermissionDenied(callId);
       _queuePermissionSheet(permission, video: data.isVideo);
       return false;
     }
@@ -409,6 +424,30 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
         error: e,
       );
       return false;
+    }
+  }
+
+  Future<void> _rejectPermissionDenied(String callId) async {
+    AppLogger.info(
+      'Rejecting $callId after permission denial',
+      tag: 'IncomingCall',
+    );
+    if (state?.callId == callId) {
+      state = null;
+    }
+    unawaited(SoundService.instance.stopCallSounds());
+    try {
+      await ref.read(callProvider.notifier).declineCall(
+            CallActionRequest.reject(
+              callId,
+              reason: _permissionDeniedReason,
+            ),
+          );
+      await dropCallKitPending(callId);
+    } catch (e) {
+      CallSignalingLog.logHttpError('reject', callId, e);
+    } finally {
+      await CallKitService.instance.endCall(callId);
     }
   }
 

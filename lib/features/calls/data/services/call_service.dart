@@ -1,4 +1,6 @@
 import '../../../../core/constants/api_endpoints.dart';
+import '../../../../core/services/app_logger.dart';
+import '../../../../shared/models/api_error.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../utils/call_signaling_log.dart';
 import '../models/call.dart';
@@ -36,6 +38,44 @@ class CallService {
     }
   }
 
+  /// Tell the caller Accept was tapped, before mic/camera prompts (RT-018).
+  ///
+  /// A 404/405 means an older backend without this route. Callers keep the
+  /// previous 45s ring timeout.
+  Future<void> signalAccepting(String callId) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.callsAcceptingById(callId),
+        fromJson: (json) => json as Map<String, dynamic>,
+      );
+      if (!response.isSuccess) {
+        AppLogger.warning(
+          'accepting $callId was not stored: ${response.message}',
+          tag: CallSignalingLog.tag,
+        );
+      }
+    } on ApiError catch (e) {
+      if (e.code == 404 || e.code == 405) {
+        AppLogger.info(
+          'accepting endpoint unavailable ($e.code); using the 45s ring timeout',
+          tag: CallSignalingLog.tag,
+        );
+        return;
+      }
+      AppLogger.warning(
+        'accepting $callId failed',
+        tag: CallSignalingLog.tag,
+        error: e,
+      );
+    } catch (e) {
+      AppLogger.warning(
+        'accepting $callId failed',
+        tag: CallSignalingLog.tag,
+        error: e,
+      );
+    }
+  }
+
   /// Accept an incoming call
   Future<Call> acceptCall(CallActionRequest request) async {
     try {
@@ -61,6 +101,7 @@ class CallService {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.callsRejectById(request.callId),
+        data: request.reason == null ? null : {'reason': request.reason},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 

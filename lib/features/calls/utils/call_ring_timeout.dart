@@ -10,6 +10,11 @@ class CallRingTimeout {
   static const int seconds = 45;
   static const Duration duration = Duration(seconds: seconds);
 
+  /// Extra ring time after the callee taps Accept (permission prompts).
+  /// Matches [Call::ACCEPTING_GRACE_SECONDS].
+  static const int acceptingGraceSeconds = 60;
+  static const Duration acceptingGrace = Duration(seconds: acceptingGraceSeconds);
+
   /// Matches [Call::END_REASON_CALLER_TIMEOUT].
   static const String callerTimeoutReason = 'caller-timeout';
 

@@ -58,6 +58,7 @@ class CallSignalingService {
   void listen({
     required int callId,
     CallEventHandler? onAccepted,
+    CallEventHandler? onAccepting,
     CallEventHandler? onRejected,
     CallEventHandler? onEnded,
     CallEventHandler? onBusy,
@@ -73,6 +74,8 @@ class CallSignalingService {
 
       CallSignalingLog.logDispatch(event.name, eventCallId);
       switch (event.name) {
+        case ChatPusherEventNames.callAccepting:
+          onAccepting?.call(payload);
         case ChatPusherEventNames.callAccepted:
           onAccepted?.call(payload);
         case ChatPusherEventNames.callRejected:

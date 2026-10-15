@@ -246,10 +246,22 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _signaling.listen(
       callId: _callId,
       onAccepted: _onCallAccepted,
+      onAccepting: _onCalleeAccepting,
       onRejected: _onCallRejected,
       onEnded: (payload) => _onCallEnded(payload),
       onBusy: _onCallRejected,
     );
+  }
+
+  /// Callee tapped Accept and is still in the permission prompts.
+  void _onCalleeAccepting(Map<String, dynamic> payload) {
+    if (!mounted || _sessionConnected() || _leaving || widget.isCallee) return;
+    AppLogger.info(
+      'Callee is accepting $_callId (event ${payload['call_id']}); extending ring timeout',
+      tag: 'outgoing_call_page',
+    );
+    _setStatus('Connecting…');
+    _startRingTimeout(CallRingTimeout.acceptingGrace);
   }
 
   void _cancelRingingTimers() {
@@ -258,9 +270,10 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   /// Ring timer: POST /calls/end with caller-timeout, then leave the UI.
-  void _startRingTimeout() {
+  /// [duration] is the accepting grace (60s) after `call.accepting`.
+  void _startRingTimeout([Duration duration = CallRingTimeout.duration]) {
     _ringTimeoutTimer?.cancel();
-    _ringTimeoutTimer = Timer(CallRingTimeout.duration, () async {
+    _ringTimeoutTimer = Timer(duration, () async {
       if (!mounted || _sessionConnected() || _leaving || _callId <= 0) return;
       String? status;
       try {

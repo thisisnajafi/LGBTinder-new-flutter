@@ -17,6 +17,7 @@ class ChatPusherEventNames {
   static const screenshotDetected = 'ScreenshotDetected';
   static const userStatus = 'user.status';
   static const callIncoming = 'call.incoming';
+  static const callAccepting = 'call.accepting';
   static const callAccepted = 'call.accepted';
   static const callRejected = 'call.rejected';
   static const callEnded = 'call.ended';
@@ -40,6 +41,7 @@ class ChatPusherEventNames {
     screenshotDetected,
     userStatus,
     callIncoming,
+    callAccepting,
     callAccepted,
     callRejected,
     callEnded,
