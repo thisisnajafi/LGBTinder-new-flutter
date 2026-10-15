@@ -13,6 +13,7 @@ import '../data/models/call_wake_lock.dart';
 import '../data/services/call_kit_service.dart';
 import '../data/services/call_signaling_service.dart';
 import '../utils/call_audio_route.dart';
+import '../utils/minimized_call_remote_end.dart';
 import 'agora_rtc_session_provider.dart';
 import 'call_provider.dart';
 import 'live_call_ui_provider.dart';
@@ -32,6 +33,7 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
   final Ref _ref;
   Timer? _tick;
   Timer? _remoteLeft;
+  bool _localTeardown = false;
 
   void attach(ActiveCallSession session) {
     final keepMinimized =
@@ -41,10 +43,9 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
 
   void minimize(ActiveCallSession session) {
     state = session.copyWith(minimized: true, agoraJoined: true);
-    _bindEngineWhileMinimized();
-    _listenSignaling();
-    _startTick();
+    rebindMinimizedListeners();
     unawaited(PushNotificationService().showActiveCall(state!));
+    _scheduleRebind();
     AppLogger.info(
       'Call minimized callId=${session.callId}',
       tag: _tag,
@@ -70,14 +71,46 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
     unawaited(PushNotificationService().hideActiveCall());
   }
 
+  /// Agora remote leave while the call UI is minimized (or the page callback
+  /// outlived the route). Ignored unless this session is the minimized one.
+  void noteRemoteOffline(CallRemoteLeaveReason reason) {
+    if (state == null || !state!.minimized) return;
+    if (MinimizedCallRemoteEnd.offlineEndsImmediately(reason)) {
+      unawaited(_onRemoteEnded());
+      return;
+    }
+    if (MinimizedCallRemoteEnd.offlineEndsAfterGrace(reason)) {
+      _armRemoteDropGrace();
+    }
+  }
+
+  /// Re-attach Pusher and Agora listeners after the call route unmounts.
+  /// The outgoing page installs `mounted` guards that would swallow leave.
+  void rebindMinimizedListeners() {
+    if (state == null || !state!.minimized) return;
+    _bindEngineWhileMinimized();
+    _listenSignaling();
+    _startTick();
+  }
+
+  void _scheduleRebind() {
+    scheduleMicrotask(() {
+      if (state?.minimized == true) rebindMinimizedListeners();
+    });
+  }
+
   Future<void> hangUpFromSystem({
     int? callIdOverride,
     bool postEnd = true,
   }) async {
+    if (_localTeardown) return;
     final session = state;
     final callId = callIdOverride ?? session?.callId ?? 0;
-    final wasConnected = _ref.read(liveCallUiProvider).connected;
-    clearUiOnly();
+    if (session == null && callId <= 0) return;
+    _localTeardown = true;
+    try {
+      final wasConnected = _safeWasConnected();
+      clearUiOnly();
 
     try {
       await AgoraService().dispose();
@@ -132,7 +165,35 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
       );
     }
 
+    _clearTrackedActiveCall(callId);
     AppLogger.info('Call ended from notification callId=$callId', tag: _tag);
+    } finally {
+      _localTeardown = false;
+    }
+  }
+
+  bool _safeWasConnected() {
+    try {
+      return _ref.read(liveCallUiProvider).connected;
+    } catch (e) {
+      AppLogger.warning('live-call read failed', tag: _tag, error: e);
+      return false;
+    }
+  }
+
+  void _clearTrackedActiveCall(int callId) {
+    try {
+      final active = _ref.read(callProvider).activeCall;
+      if (active == null) return;
+      if (callId > 0 &&
+          active.id != callId &&
+          active.callId != callId.toString()) {
+        return;
+      }
+      _ref.read(callProvider.notifier).clearLocalActiveCall();
+    } catch (e) {
+      AppLogger.warning('clear local active call failed', tag: _tag, error: e);
+    }
   }
 
   void _startTick() {
@@ -158,6 +219,15 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
     await hangUpFromSystem(postEnd: false);
   }
 
+  void _armRemoteDropGrace() {
+    _remoteLeft?.cancel();
+    _remoteLeft = Timer(const Duration(seconds: 8), () {
+      if (state == null || !state!.minimized) return;
+      if (_ref.read(agoraRtcSessionProvider).remoteUid != null) return;
+      unawaited(_onRemoteEnded());
+    });
+  }
+
   void _bindEngineWhileMinimized() {
     final agora = AgoraService();
     final rtc = _ref.read(agoraRtcSessionProvider.notifier);
@@ -170,18 +240,7 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
     agora.onRemoteUserLeft = (_) {};
     agora.onRemoteUserOffline = (uid, reason) {
       rtc.remoteUserLeft(uid, reason);
-      if (reason == CallRemoteLeaveReason.quit) {
-        unawaited(_onRemoteEnded());
-        return;
-      }
-      if (reason == CallRemoteLeaveReason.dropped) {
-        _remoteLeft?.cancel();
-        _remoteLeft = Timer(const Duration(seconds: 8), () {
-          if (state == null) return;
-          if (_ref.read(agoraRtcSessionProvider).remoteUid != null) return;
-          unawaited(_onRemoteEnded());
-        });
-      }
+      noteRemoteOffline(reason);
     };
     agora.onRemoteVideoMuted = (uid, muted) {
       final current = _ref.read(agoraRtcSessionProvider).remoteUid;

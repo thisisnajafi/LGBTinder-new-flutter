@@ -78,6 +78,20 @@ void main() {
       );
     });
 
+    test('ended, busy, and unknown rows are not rejoined', () {
+      for (final status in ['ended', 'busy', 'missed', 'unknown']) {
+        expect(
+          CallConflictResolver.decide(
+            existing: _call(status: status),
+            peerId: 20,
+            now: now,
+          ),
+          CallConflictAction.giveUp,
+          reason: status,
+        );
+      }
+    });
+
     test('missing active payload gives up', () {
       expect(
         CallConflictResolver.decide(existing: null, peerId: 20, now: now),

@@ -280,6 +280,13 @@ class CallNotifier extends StateNotifier<CallState> {
   }
 
 
+  /// Drop the in-memory active call after the remote side already ended it.
+  /// Does not call the API.
+  void clearLocalActiveCall() {
+    if (state.activeCall == null) return;
+    state = state.copyWith(activeCall: null);
+  }
+
   /// Check if there's an active call
   bool get hasActiveCall => state.activeCall != null;
 

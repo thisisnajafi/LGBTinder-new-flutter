@@ -46,6 +46,7 @@ import '../providers/call_providers.dart';
 import '../providers/live_call_ui_provider.dart';
 import '../providers/messenger_calls_provider.dart';
 import '../utils/call_conflict_resolver.dart';
+import '../utils/call_rejoin_policy.dart';
 import '../utils/call_log_labels.dart';
 import '../utils/call_audio_route.dart';
 import '../utils/call_navigation.dart';
@@ -111,6 +112,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   LiveCallUiNotifier? _liveUiNotifier;
   MessengerCallsNotifier? _messengerNotifier;
   AgoraRtcSessionNotifier? _rtcNotifier;
+  ActiveCallSessionNotifier? _sessionNotifier;
   StateController<CallEndSummary?>? _endSummary;
   Timer? _acceptPollTimer;
   Timer? _ringTimeoutTimer;
@@ -189,6 +191,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _liveUiNotifier = ref.read(liveCallUiProvider.notifier);
     _messengerNotifier = ref.read(messengerCallsProvider.notifier);
     _rtcNotifier = ref.read(agoraRtcSessionProvider.notifier);
+    _sessionNotifier = ref.read(activeCallSessionProvider.notifier);
     _endSummary = ref.read(callEndSummaryProvider.notifier);
   }
 
@@ -619,12 +622,32 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   Future<void> _attachExistingCall(Call existing) async {
-    _callId = existing.id;
+    Call current;
+    try {
+      current = await ref
+          .read(callRepositoryProvider)
+          .getCall(existing.id.toString());
+    } catch (e) {
+      AppLogger.warning(
+        'Rejoin status check failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+      if (mounted) _failOnPage('Could not rejoin call');
+      return;
+    }
+    if (!mounted) return;
+    if (!CallRejoinPolicy.isActiveStatus(current.status)) {
+      _failOnPage('Call already ended');
+      return;
+    }
+
+    _callId = current.id;
     _listenForCallEvents();
     final me = ref.read(cachedCurrentUserProvider).asData?.value.id ?? 0;
-    final iAmCallee = me > 0 && existing.receiverId == me;
-    final status = existing.status.toLowerCase();
-    final live = status == 'active' || status == 'connected';
+    final iAmCallee = me > 0 && current.receiverId == me;
+    final status = current.status.toLowerCase();
+    final live = CallRejoinPolicy.isActiveStatus(status);
     if (live || iAmCallee) {
       if (iAmCallee && !live) {
         final allowed = await ensureCallMediaPermissions(
@@ -671,6 +694,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         _liveUi.tick();
       }
     });
+    if (_preservingEngine || !mounted) return;
     if (!_agoraJoined) {
       await _joinAgoraChannel();
     }
@@ -678,19 +702,23 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   Future<void> _joinAgoraChannel() async {
-    if (_joiningAgora || _callId <= 0) return;
+    if (_joiningAgora || _callId <= 0 || _preservingEngine) return;
     _joiningAgora = true;
     final isVideo = widget.type == OutgoingCallType.video;
     final rtc = ref.read(agoraRtcSessionProvider.notifier);
     try {
       _agoraService.onRemoteUserJoined = (uid) {
-        if (!mounted) return;
+        if (!mounted || _preservingEngine) return;
         _remoteLeftTimer?.cancel();
         _remoteLeftTimer = null;
         rtc.remoteUserJoined(uid);
       };
       _agoraService.onRemoteUserLeft = (_) {};
       _agoraService.onRemoteUserOffline = (uid, reason) {
+        if (_preservingEngine) {
+          _sessionNotifier?.noteRemoteOffline(reason);
+          return;
+        }
         if (!mounted) return;
         rtc.remoteUserLeft(uid, reason);
         if (!_sessionConnected()) return;
@@ -1042,12 +1070,25 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         );
   }
 
+  void _clearLocalActiveCall() {
+    try {
+      _callNotifier?.clearLocalActiveCall();
+    } catch (e) {
+      AppLogger.warning(
+        'clear local active call failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
+  }
+
   void _onCallRejected(Map<String, dynamic> payload) {
     if (_leaving) return;
     _remoteSettled = true;
     _leaving = true;
     _preservingEngine = false;
     _clearActiveSession();
+    _clearLocalActiveCall();
     _cancelRingingTimers();
     _remoteLeftTimer?.cancel();
     _cancelReconnectWatchdog();
@@ -1069,6 +1110,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _leaving = true;
     _preservingEngine = false;
     _clearActiveSession();
+    _clearLocalActiveCall();
     _cancelRingingTimers();
     _remoteLeftTimer?.cancel();
     _cancelReconnectWatchdog();
@@ -1116,6 +1158,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _leaving = true;
     _preservingEngine = false;
     _clearActiveSession();
+    _clearLocalActiveCall();
     _cancelRingingTimers();
     _remoteLeftTimer?.cancel();
     _cancelReconnectWatchdog();

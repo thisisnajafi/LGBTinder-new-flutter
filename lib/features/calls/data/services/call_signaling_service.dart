@@ -7,6 +7,7 @@ import '../../../../core/providers/api_providers.dart';
 import '../../../chat/providers/chat_pusher_providers.dart';
 import '../../../../shared/services/chat_pusher_event_names.dart';
 import '../../../../shared/services/pusher_websocket_service.dart';
+import '../models/incoming_call_data.dart';
 import '../../utils/call_signaling_log.dart';
 
 /// Agora token payload from backend.
@@ -67,10 +68,8 @@ class CallSignalingService {
     _subscription?.cancel();
     _subscription = _pusher.callEventStream.listen((event) {
       final payload = event.payload;
-      final eventCallId = payload['call_id'] ??
-          payload['callId'] ??
-          (payload['data'] is Map ? (payload['data'] as Map)['call_id'] : null);
-      if (eventCallId?.toString() != callId.toString()) return;
+      final eventCallId = IncomingCallData.callIdFromPayload(payload);
+      if (eventCallId != callId.toString()) return;
 
       CallSignalingLog.logDispatch(event.name, eventCallId);
       switch (event.name) {

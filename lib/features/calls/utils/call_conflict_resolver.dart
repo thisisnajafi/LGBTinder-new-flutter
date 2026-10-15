@@ -1,5 +1,6 @@
 import '../data/models/call.dart';
 import 'call_log_labels.dart';
+import 'call_rejoin_policy.dart';
 
 /// What the outgoing-call screen should do after
 /// "There is already an active call with this user".
@@ -48,6 +49,10 @@ class CallConflictResolver {
     final resolved = CallLogLabels.resolvedStatus(existing, now: now);
     if (_ringing.contains(raw) || CallLogLabels.isTerminalStatus(resolved)) {
       return CallConflictAction.clearAndRetry;
+    }
+
+    if (!CallRejoinPolicy.isActiveStatus(raw)) {
+      return CallConflictAction.giveUp;
     }
 
     return CallConflictAction.rejoin;

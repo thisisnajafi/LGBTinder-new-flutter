@@ -18,7 +18,9 @@ import '../data/services/callkit_pending_flusher.dart';
 import '../../../routes/app_router.dart';
 import '../pages/outgoing_call_page.dart';
 import '../presentation/widgets/call_permission_sheet.dart';
+import '../utils/call_busy_confirmation.dart';
 import '../utils/call_local_busy.dart';
+import '../utils/minimized_call_remote_end.dart';
 import '../utils/call_navigation.dart';
 import '../utils/call_ring_timeout.dart';
 import '../utils/call_signaling_log.dart';
@@ -85,10 +87,14 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
 
     if (state?.callId == data.callId) return;
     if (_isLocallyBusyFor(data.callId)) {
-      unawaited(_postBusy(data.callId));
+      unawaited(_presentOrBusy(data));
       return;
     }
 
+    _showIncoming(data);
+  }
+
+  void _showIncoming(IncomingCallData data) {
     unawaited(SoundService.instance.stopCallSounds());
     state = data;
     unawaited(IncomingCallHandler.persistShow(data));
@@ -104,6 +110,61 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       unawaited(SoundService.instance.startIncomingRingtone());
     } else {
       unawaited(CallKitService.instance.showIncoming(data));
+    }
+  }
+
+  /// Local state can stay "in a call" after the remote hang-up. Confirm with
+  /// `/calls/active` before answering the new invite as busy.
+  Future<void> _presentOrBusy(IncomingCallData data) async {
+    int? serverCallId;
+    String? serverStatus;
+    try {
+      final serverCall = await ref.read(callRepositoryProvider).getActiveCall();
+      serverCallId = serverCall?.id;
+      serverStatus = serverCall?.status;
+    } catch (e) {
+      AppLogger.warning(
+        'Active-call check before busy failed',
+        tag: CallSignalingLog.tag,
+        error: e,
+      );
+    }
+    if (state?.callId == data.callId || _acceptedCallId == data.callId) {
+      return;
+    }
+    if (CallBusyConfirmation.serverConfirmsBusy(
+      incomingCallId: data.callId,
+      serverCallId: serverCallId,
+      serverStatus: serverStatus,
+    )) {
+      await _postBusy(data.callId);
+      return;
+    }
+    await _dropStaleLocalCall();
+    if (state?.callId == data.callId || _acceptedCallId == data.callId) {
+      return;
+    }
+    _showIncoming(data);
+  }
+
+  Future<void> _dropStaleLocalCall() async {
+    final session = ref.read(activeCallSessionProvider);
+    if (session != null) {
+      await ref
+          .read(activeCallSessionProvider.notifier)
+          .hangUpFromSystem(postEnd: false);
+      return;
+    }
+    ref.read(callProvider.notifier).clearLocalActiveCall();
+    if (!AgoraService().isInCall) return;
+    try {
+      await AgoraService().dispose();
+    } catch (e) {
+      AppLogger.warning(
+        'Dispose stale Agora before incoming failed',
+        tag: CallSignalingLog.tag,
+        error: e,
+      );
     }
   }
 
@@ -476,6 +537,29 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
   }
 }
 
+/// Pusher already delivered remote end. Drop a minimized session and the
+/// in-memory active call so the next invite is not auto-answered as busy.
+void releaseMinimizedCallOnRemoteEnd(Ref ref, String? eventCallId) {
+  final active = ref.read(callProvider).activeCall;
+  if (active != null &&
+      (active.id.toString() == eventCallId || active.callId == eventCallId)) {
+    ref.read(callProvider.notifier).clearLocalActiveCall();
+  }
+  final session = ref.read(activeCallSessionProvider);
+  if (session == null || !session.minimized) return;
+  if (!MinimizedCallRemoteEnd.pusherMatches(
+    sessionCallId: session.callId,
+    eventCallId: eventCallId,
+  )) {
+    return;
+  }
+  unawaited(
+    ref.read(activeCallSessionProvider.notifier).hangUpFromSystem(
+          postEnd: false,
+        ),
+  );
+}
+
 /// Subscribes to Pusher call events while the user is logged in.
 final incomingCallListenerProvider = Provider<void>((ref) {
   final pusher = ref.watch(pusherWebSocketServiceProvider);
@@ -515,6 +599,7 @@ final incomingCallListenerProvider = Provider<void>((ref) {
             unawaited(pusher.unsubscribeCall(parsed));
           }
           unawaited(ref.read(incomingCallProvider.notifier).dismissRemote(callId));
+          releaseMinimizedCallOnRemoteEnd(ref, callId);
         }
         ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
               callId: int.tryParse(callId ?? '') ?? 0,

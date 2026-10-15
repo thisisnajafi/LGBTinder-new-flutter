@@ -11,6 +11,7 @@ import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/services/app_logger.dart';
 import '../../../../core/providers/startup_flow_provider.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
 import '../../../../shared/services/agora_service.dart';
@@ -18,9 +19,12 @@ import '../../../../shared/services/push_notification_service.dart';
 import '../../data/models/active_call_notification.dart';
 import '../../data/services/call_kit_service.dart';
 import '../../data/models/incoming_call_data.dart';
+import '../../data/models/active_call_session.dart';
 import '../../providers/active_call_session_provider.dart';
+import '../../providers/call_providers.dart';
 import '../../providers/incoming_call_provider.dart';
 import '../../utils/call_navigation.dart';
+import '../../utils/call_rejoin_policy.dart';
 import '../../../../shared/services/call_permissions.dart';
 import 'call_permission_sheet.dart';
 
@@ -360,9 +364,8 @@ class _IncomingCallForegroundLayer extends ConsumerWidget {
           child: MinimizedCallReturnBanner(
             peerName: minimized.peerName,
             isVideo: minimized.isVideo,
-            onTap: () => restoreActiveCallRoute(
-              GoRouter.of(context),
-              minimized,
+            onTap: () => unawaited(
+              _onMinimizedBannerTap(context, ref, minimized),
             ),
           ),
         ),
@@ -370,6 +373,47 @@ class _IncomingCallForegroundLayer extends ConsumerWidget {
     }
     return const SizedBox.shrink();
   }
+}
+
+/// Return to the live call, or drop the banner when the server says it ended.
+Future<void> _onMinimizedBannerTap(
+  BuildContext context,
+  WidgetRef ref,
+  ActiveCallSession session,
+) async {
+  var stillActive = true;
+  try {
+    final call = await ref
+        .read(callRepositoryProvider)
+        .getCall(session.callId.toString());
+    stillActive = CallRejoinPolicy.isActiveStatus(call.status);
+  } catch (e) {
+    AppLogger.warning(
+      'Minimized return status check failed',
+      tag: 'active_call_session',
+      error: e,
+    );
+  }
+  if (!context.mounted) return;
+  final current = ref.read(activeCallSessionProvider);
+  if (current == null || current.callId != session.callId) return;
+  if (!stillActive) {
+    await ref
+        .read(activeCallSessionProvider.notifier)
+        .hangUpFromSystem(postEnd: false);
+    return;
+  }
+  final router = GoRouter.of(context);
+  final uri = router.routerDelegate.currentConfiguration.uri;
+  if (ActiveCallLifecycle.isCurrentCallRoute(
+    path: uri.path,
+    callIdQuery: uri.queryParameters['callId'],
+    sessionCallId: current.callId,
+  )) {
+    ref.read(activeCallSessionProvider.notifier).reveal();
+    return;
+  }
+  restoreActiveCallRoute(router, current);
 }
 
 /// In-app return banner while the Agora session is minimized.
