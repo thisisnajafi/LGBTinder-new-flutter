@@ -78,6 +78,119 @@ fun Project.patchCallkitKilledHook() {
 
 patchCallkitKilledHook()
 
+// RT-016: flutter_callkit_incoming keeps one shared notification manager.
+// Detach of the killed-app decline engine (or the FCM isolate) was clearing
+// it while the main engine was still alive, so the next background invite
+// broadcast posted nothing. Idempotent; pub get restores the plugin sources.
+fun Project.patchCallkitBackgroundIncoming() {
+    val config = file("../.dart_tool/package_config.json")
+    if (!config.exists()) return
+    val json = config.readText()
+    val marker = "\"name\": \"flutter_callkit_incoming\""
+    val nameAt = json.indexOf(marker)
+    if (nameAt < 0) return
+    val rootKey = "\"rootUri\": \""
+    val rootAt = json.indexOf(rootKey, nameAt)
+    if (rootAt < 0 || rootAt - nameAt > 200) return
+    val uriStart = rootAt + rootKey.length
+    val uriEnd = json.indexOf('"', uriStart)
+    val rootUri = json.substring(uriStart, uriEnd)
+    val rawPath = java.net.URI(rootUri).path ?: return
+    val path = if (rawPath.length >= 3 && rawPath[0] == '/' && rawPath[2] == ':') {
+        rawPath.substring(1)
+    } else {
+        rawPath
+    }
+    val pluginRoot = file("$path/android/src/main/kotlin/com/hiennv/flutter_callkit_incoming")
+    val plugin = file("$pluginRoot/FlutterCallkitIncomingPlugin.kt")
+    if (plugin.exists()) {
+        var source = plugin.readText()
+        if (!source.contains("RT-016")) {
+            val initNeedle = """
+                |            if (!::instance.isInitialized) {
+                |                instance = FlutterCallkitIncomingPlugin()
+                |                instance.callkitSoundPlayerManager = CallkitSoundPlayerManager(context)
+                |                instance.callkitNotificationManager = CallkitNotificationManager(context, instance.callkitSoundPlayerManager)
+                |                instance.context = context
+                |            }
+            """.trimMargin()
+            val initHook = """
+                |            if (!::instance.isInitialized) {
+                |                instance = FlutterCallkitIncomingPlugin()
+                |            }
+                |            // RT-016: recreate the shared incoming UI if a secondary
+                |            // engine detach cleared it.
+                |            if (instance.callkitNotificationManager == null) {
+                |                instance.callkitSoundPlayerManager = CallkitSoundPlayerManager(context)
+                |                instance.callkitNotificationManager = CallkitNotificationManager(context, instance.callkitSoundPlayerManager)
+                |            }
+                |            if (instance.context == null) {
+                |                instance.context = context
+                |            }
+            """.trimMargin()
+            val detachNeedle = """
+                |        methodChannels.remove(binding.binaryMessenger)?.setMethodCallHandler(null)
+                |        eventChannels.remove(binding.binaryMessenger)?.setStreamHandler(null)
+                |        instance.callkitSoundPlayerManager?.destroy()
+                |        instance.callkitNotificationManager?.destroy()
+                |        instance.callkitSoundPlayerManager = null
+                |        instance.callkitNotificationManager = null
+            """.trimMargin()
+            val detachHook = """
+                |        methodChannels.remove(binding.binaryMessenger)?.setMethodCallHandler(null)
+                |        eventChannels.remove(binding.binaryMessenger)?.setStreamHandler(null)
+                |        // RT-016: the main and FCM engines share this manager.
+                |        if (methodChannels.isEmpty()) {
+                |            instance.callkitSoundPlayerManager?.destroy()
+                |            instance.callkitNotificationManager?.destroy()
+                |            instance.callkitSoundPlayerManager = null
+                |            instance.callkitNotificationManager = null
+                |        }
+            """.trimMargin()
+            val activityNeedle = """
+                |    override fun onDetachedFromActivity() {
+                |        instance.context = null
+                |        instance.activity = null
+                |    }
+            """.trimMargin()
+            val activityHook = """
+                |    override fun onDetachedFromActivity() {
+                |        // RT-016: keep the application context so a background FCM
+                |        // isolate can still broadcast the incoming call.
+                |        instance.activity = null
+                |    }
+            """.trimMargin()
+            if (!source.contains(initNeedle) || !source.contains(detachNeedle) || !source.contains(activityNeedle)) {
+                logger.warn("RT-016: CallKit plugin shape changed; background incoming patch skipped")
+            } else {
+                source = source.replace(initNeedle, initHook)
+                    .replace(detachNeedle, detachHook)
+                    .replace(activityNeedle, activityHook)
+                plugin.writeText(source)
+                logger.lifecycle("RT-016: patched CallKit plugin ${plugin.path}")
+            }
+        }
+    }
+    val receiver = file("$pluginRoot/CallkitIncomingBroadcastReceiver.kt")
+    if (receiver.exists()) {
+        val source = receiver.readText()
+        val needle = "callkitNotificationManager?.showIncomingNotification(data)"
+        if (!source.contains("RT-016 incoming manager") && source.contains(needle)) {
+            val hook = """
+                |val incomingManager = callkitNotificationManager
+                |                        ?: FlutterCallkitIncomingPlugin.getInstance()?.getCallkitNotificationManager()
+                |                        ?: CallkitNotificationManager(context, CallkitSoundPlayerManager(context))
+                |                    // RT-016 incoming manager
+                |                    incomingManager.showIncomingNotification(data)
+            """.trimMargin()
+            receiver.writeText(source.replace(needle, hook))
+            logger.lifecycle("RT-016: patched CallKit receiver ${receiver.path}")
+        }
+    }
+}
+
+patchCallkitBackgroundIncoming()
+
 allprojects {
     repositories {
         google()

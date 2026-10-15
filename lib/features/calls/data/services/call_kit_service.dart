@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -12,6 +13,7 @@ import '../models/incoming_call_data.dart';
 import '../../../settings/providers/sound_preferences_provider.dart';
 import '../../../../shared/services/background_auth_store.dart';
 import '../../../../shared/services/token_storage_service.dart';
+import '../../utils/background_callkit_show.dart';
 import '../../utils/call_permission_lifecycle.dart';
 import '../../utils/call_ring_timeout.dart';
 import 'call_kit_event_action.dart';
@@ -260,20 +262,66 @@ class CallKitService {
       ),
     );
 
-    await FlutterCallkitIncoming.showCallkitIncoming(params);
+    try {
+      await FlutterCallkitIncoming.showCallkitIncoming(params);
+    } catch (e) {
+      AppLogger.warning('showCallkitIncoming failed', tag: _tag, error: e);
+    }
   }
 
   /// Show CallKit from an FCM background isolate (no Riverpod / login wiring).
+  ///
+  /// The banner is shown before any secure-storage read. Waiting on the
+  /// keystore in this isolate hangs while the main process is alive, so the
+  /// incoming call times out with no banner (RT-016). The token is already
+  /// mirrored at login for a killed-app decline (RT-013).
   static Future<void> showIncomingFromIsolate(IncomingCallData data) async {
-    await _mirrorAuthForKilledDecline();
-    await IncomingCallHandler.persistShow(data);
+    final terminalIds = await _terminalCallIds();
+    if (!BackgroundCallKitShow.shouldShow(
+      callId: data.callId,
+      terminalCallIds: terminalIds,
+      permissionRequestInFlight: CallPermissionLifecycle.requestInFlight,
+    )) {
+      AppLogger.info(
+        'Skipped background CallKit callId=${data.callId}',
+        tag: _tag,
+      );
+      return;
+    }
     await instance.showIncoming(data);
+    unawaited(_mirrorAuthForKilledDecline());
+  }
+
+  /// Decline/timeout rows already stored. A different call id still rings.
+  static Future<Set<String>> _terminalCallIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 1),
+      );
+      return decodeCallKitPending(prefs.getString(kCallkitPendingActionsKey))
+          .map((action) => action.callId)
+          .toSet();
+    } catch (e) {
+      AppLogger.warning(
+        'Pending CallKit ids unreadable; showing the banner',
+        tag: _tag,
+        error: e,
+      );
+      return const {};
+    }
   }
 
   /// Bearer token must be on disk before the process can be killed again.
   static Future<void> _mirrorAuthForKilledDecline() async {
     try {
-      final token = await TokenStorageService().getAuthToken();
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 1),
+      );
+      final mirrored = prefs.getString(kBackgroundAuthTokenKey);
+      if (mirrored != null && mirrored.isNotEmpty) return;
+      final token = await TokenStorageService().getAuthToken().timeout(
+        const Duration(seconds: 2),
+      );
       await BackgroundAuthStore.mirror(token);
     } catch (e) {
       AppLogger.warning('Auth mirror for CallKit failed', tag: _tag, error: e);
