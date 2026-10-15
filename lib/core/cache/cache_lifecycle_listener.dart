@@ -7,6 +7,7 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/chat/providers/chat_active_backend_sync_provider.dart';
 import '../../features/chat/providers/chat_pusher_providers.dart';
 import '../services/app_logger.dart';
+import '../services/presence_lifecycle.dart';
 import '../services/presence_service.dart';
 import 'cache_manager.dart';
 
@@ -64,8 +65,8 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     AppLogger.info('App lifecycle: $state', tag: 'Lifecycle');
 
-    switch (state) {
-      case AppLifecycleState.resumed:
+    switch (presenceSignalForLifecycle(state)) {
+      case PresenceLifecycleSignal.online:
         if (_canMarkPresence) {
           // Mark online FIRST, then revalidate profile so is_online is fresh.
           unawaited(() async {
@@ -84,9 +85,7 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
           }());
         }
         break;
-      case AppLifecycleState.paused:
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
+      case PresenceLifecycleSignal.offline:
         if (_canMarkPresence) {
           AppLogger.info(
             'App lifecycle: $state → marking offline',
@@ -96,7 +95,7 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
           unawaited(ref.read(presenceServiceProvider).onBackground());
         }
         break;
-      case AppLifecycleState.inactive:
+      case PresenceLifecycleSignal.none:
         // Transitioning — do not flip presence.
         break;
     }

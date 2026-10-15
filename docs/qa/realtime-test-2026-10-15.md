@@ -88,7 +88,7 @@ Build: debug, --flavor production --target lib/main_production.dart
 - Feature: presence · Devices: phone (bg) → emulator (observer)
 - Steps: phone in thread → HOME; wait 25 s; read emulator header.
 - Expected: "Last seen…"/offline within a short grace.  Actual: still "Online" after 25 s (may be a deliberate grace period – confirm intended timeout).
-- Severity: Low/Medium · Status: Open (needs longer observation)
+- Severity: Low/Medium · Status: Fixed locally (7d6e2e720313f7faf63be0db1031da1f8f46d311, APP_HASH), pending deploy/retest
 
 ### RT-009 – FCM message received but no notification shown while app in background
 - Feature: push (FCM) · Devices: emulator sends, phone receives
@@ -153,7 +153,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 - Status: Reported; testing stopped here.
 
 ### Other observations
-- Presence: RT-008 still open. Incoming call on phone #67 right after app restart didn't show in-app (rang fine later) – possibly Pusher not yet subscribed; intermittent.
+- Presence: RT-008 fixed locally, pending deploy/retest. Incoming call on phone #67 right after app restart didn't show in-app (rang fine later) – possibly Pusher not yet subscribed; intermittent.
 - Phone shows "Network quality unknown" while emu shows "excellent" in the same call (minor).
 - Agora remote video briefly `Frozen (NetworkCongestion)` then recovered (network, not app).
 
@@ -177,3 +177,21 @@ How to verify after deploy:
 2. From the backend root, `php artisan schedule:list` shows `calls:update-missed` with expression `* * * * *`.
 3. `php artisan calls:update-missed` prints success and marks `ringing`/`initiating` rows with `started_at` older than 45 seconds as `missed`, and `active` rows with no activity older than 4 hours (`Call::ACTIVE_STALE_SECONDS`) as `ended`.
 4. `php artisan schedule:run` once, then confirm a fresh stale ringing row (or the log line `Call marked as missed`) updates. A row left `ringing` for days means this cron is not firing.
+
+### RT-008 – presence heartbeat expiry
+
+Do not change the production server from this change set. Chat "Online" now expires 20 seconds after the last heartbeat (`UserPresenceService::PRESENCE_TTL_SECONDS`). The app sends offline on `AppLifecycleState.paused` and online on resume, and the chat header switches to "Last seen" on that broadcast or when the 20s TTL elapses locally.
+
+`presence:expire-stale` broadcasts `user.status` (offline) for heartbeats older than that TTL. It is registered every minute in `routes/console.php` and `app/Console/Kernel.php`. It runs only when cron already invokes the scheduler. No new crontab line.
+
+Exact crontab line (same as RT-010; production path `/var/www/lgbtinder-backend`):
+
+```
+* * * * * cd /var/www/lgbtinder-backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+How to verify after the backend is deployed:
+
+1. `php artisan schedule:list` shows `presence:expire-stale` with expression `* * * * *`.
+2. `php artisan presence:expire-stale` prints `Expired N stale presence record(s).` and, for a user whose last heartbeat is older than 20 seconds, broadcasts `user.status` with `is_online: false` and the existing `last_seen`.
+3. With the scheduler cron firing, a peer who backgrounds (or whose offline POST never arrives) is no longer "Online" after the 20 second TTL plus at most one minute for the catch-up broadcast.

@@ -1,6 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:lgbtindernew/core/theme/app_theme.dart';
 import 'package:lgbtindernew/features/chat/utils/chat_presence_copy.dart';
+import 'package:lgbtindernew/widgets/chat/last_seen_widget.dart';
 
 void main() {
   final now = DateTime(2026, 9, 12, 14, 0);
@@ -53,5 +56,27 @@ void main() {
     expect(ChatPresenceCopy.hasLastMessage(null), isFalse);
     expect(ChatPresenceCopy.hasLastMessage('  '), isFalse);
     expect(ChatPresenceCopy.hasLastMessage('hey'), isTrue);
+  });
+
+  testWidgets('stale online presence shows Last seen', (tester) async {
+    final now = DateTime(2026, 10, 15, 19, 0, 25);
+    final seen = DateTime(2026, 10, 15, 19, 0, 0);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          body: LastSeenWidget(
+            isOnline: true,
+            lastSeenAt: seen,
+            presenceRefreshedAt: seen,
+            clock: () => now,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Online'), findsNothing);
+    expect(find.text('Last seen just now'), findsOneWidget);
   });
 }

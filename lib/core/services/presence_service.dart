@@ -14,7 +14,9 @@ class PresenceService {
   final Ref _ref;
   Timer? _heartbeatTimer;
 
-  static const Duration heartbeatInterval = Duration(seconds: 90);
+  /// Shorter than the server presence TTL (20s) so a foreground user keeps
+  /// receiving `user.status` heartbeats before peers expire them.
+  static const Duration heartbeatInterval = Duration(seconds: 8);
 
   Future<void> onForeground() async {
     try {
@@ -56,7 +58,10 @@ class PresenceService {
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
       unawaited(_reportSessionActivity());
     });
-    AppLogger.info('Heartbeat started (90s interval)', tag: 'Presence');
+    AppLogger.info(
+      'Heartbeat started (${heartbeatInterval.inSeconds}s interval)',
+      tag: 'Presence',
+    );
   }
 
   void stopHeartbeat() {

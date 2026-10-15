@@ -1,4 +1,6 @@
 // Widget: ChatHeader — premium conversation header
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +12,7 @@ import '../../core/widgets/premium/premium_design_system.dart';
 import '../../core/widgets/profile_image_widget.dart';
 import '../../features/chat/providers/chat_typing_providers.dart';
 import '../../features/chat/providers/user_presence_cache_provider.dart';
+import '../../features/chat/utils/presence_freshness.dart';
 import 'last_seen_widget.dart';
 import 'official_account_badge.dart';
 
@@ -50,6 +53,8 @@ class ChatHeader extends ConsumerWidget {
     );
     final liveOnline = presence?.isOnline ?? isOnline;
     final liveLastSeen = presence?.lastSeenAt ?? lastSeenAt;
+    final presenceRefreshedAt =
+        presence?.updatedAt ?? (liveOnline ? liveLastSeen : null);
     final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark
         ? AppColors.textPrimaryDark
@@ -79,7 +84,11 @@ class ChatHeader extends ConsumerWidget {
               PremiumTapScale(
                 onTap: onHeaderTap ?? onInfo ?? () {},
                 semanticLabel: 'Open $name profile',
-                child: _HeaderAvatar(imageUrl: avatarUrl, isOnline: liveOnline),
+                child: _HeaderAvatar(
+                  imageUrl: avatarUrl,
+                  isOnline: liveOnline,
+                  refreshedAt: presenceRefreshedAt,
+                ),
               ),
               const SizedBox(width: AppSpacing.spacingMD),
               Expanded(
@@ -120,6 +129,7 @@ class ChatHeader extends ConsumerWidget {
                             return LastSeenWidget(
                               isOnline: liveOnline,
                               lastSeenAt: liveLastSeen,
+                              presenceRefreshedAt: presenceRefreshedAt,
                               isTyping: isTyping,
                             );
                           },
@@ -161,15 +171,68 @@ class ChatHeader extends ConsumerWidget {
   }
 }
 
-class _HeaderAvatar extends ConsumerWidget {
-  const _HeaderAvatar({required this.imageUrl, required this.isOnline});
+class _HeaderAvatar extends StatefulWidget {
+  const _HeaderAvatar({
+    required this.imageUrl,
+    required this.isOnline,
+    this.refreshedAt,
+  });
 
   final String? imageUrl;
   final bool isOnline;
+  final DateTime? refreshedAt;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<_HeaderAvatar> createState() => _HeaderAvatarState();
+}
+
+class _HeaderAvatarState extends State<_HeaderAvatar> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTicker();
+  }
+
+  @override
+  void didUpdateWidget(_HeaderAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncTicker();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  bool get _online => PresenceFreshness.isEffectivelyOnline(
+        isOnline: widget.isOnline,
+        refreshedAt: widget.refreshedAt,
+        now: DateTime.now(),
+      );
+
+  void _syncTicker() {
+    if (!_online) {
+      _ticker?.cancel();
+      _ticker = null;
+      return;
+    }
+    _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (!_online) {
+        _ticker?.cancel();
+        _ticker = null;
+      }
+      setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isOnline = _online;
 
     return SizedBox(
       width: 48,
@@ -197,7 +260,7 @@ class _HeaderAvatar extends ConsumerWidget {
             ),
             child: ClipOval(
               child: ProfileImageWidget(
-                imageUrl: imageUrl,
+                imageUrl: widget.imageUrl,
                 width: 38,
                 height: 38,
                 fit: BoxFit.cover,

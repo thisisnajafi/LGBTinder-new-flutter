@@ -444,7 +444,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 userId: widget.userId,
                 isOnline: item.isOnline,
                 lastSeenAt: item.lastSeenAt,
-                timestamp: DateTime.now(),
+                timestamp: item.lastSeenAt ?? DateTime.now(),
               ),
             );
         break;
@@ -469,7 +469,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               userId: widget.userId,
               isOnline: profile.isOnline == true,
               lastSeenAt: profile.lastSeen,
-              timestamp: DateTime.now(),
+              timestamp: profile.lastSeen ?? DateTime.now(),
             ),
           );
     } catch (e) {
