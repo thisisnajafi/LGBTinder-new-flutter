@@ -7,6 +7,7 @@ void main() {
       expect(CallRingTimeout.seconds, 45);
       expect(CallRingTimeout.duration, const Duration(seconds: 45));
       expect(CallRingTimeout.milliseconds, 45000);
+      expect(CallRingTimeout.callerTimeoutReason, 'caller-timeout');
     });
   });
 }

@@ -131,7 +131,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 ### RT-011 – Unanswered call is never marked missed on server
 - Steps: emu calls phone (#67), nobody answers; caller UI gives up and returns to chat.
 - Actual: #67 still `ringing` minutes later; would cause RT-010 again. (Caller doesn't send cancel on timeout; cron not running.)
-- Severity: **High** · Evidence: history 16:07:47Z ringing, cleared manually → missed · Status: Open
+- Severity: **High** · Evidence: history 16:07:47Z ringing, cleared manually → missed · Status: Fixed locally (0b653479f46164ab0a299ee97c531f19128bd0d4), pending deploy/retest
 
 ### RT-012 – Accepting a video call while the camera permission prompt is up records the call as "rejected"
 - Steps: first-ever video call to emu; tap Accept → Android camera permission dialog → "While using the app".

@@ -50,6 +50,7 @@ import '../utils/call_log_labels.dart';
 import '../utils/call_audio_route.dart';
 import '../utils/call_navigation.dart';
 import '../utils/call_ring_timeout.dart';
+import '../utils/outgoing_call_end.dart';
 
 enum OutgoingCallType { voice, video }
 
@@ -95,6 +96,10 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   bool _hangupTonePlayed = false;
   bool _joiningAgora = false;
   bool _endPosted = false;
+  /// Server already stored a terminal status (decline, remote hang-up, missed).
+  bool _remoteSettled = false;
+  /// Outgoing ring timer fired while the call was still unanswered.
+  bool _ringTimedOut = false;
   /// Mirrors [liveCallUiProvider.connected] so dispose never reads [ref].
   bool _mediaConnected = false;
 
@@ -238,7 +243,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       callId: _callId,
       onAccepted: _onCallAccepted,
       onRejected: _onCallRejected,
-      onEnded: _onCallEnded,
+      onEnded: (payload) => _onCallEnded(payload),
       onBusy: _onCallRejected,
     );
   }
@@ -248,17 +253,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _ringTimeoutTimer?.cancel();
   }
 
-  /// Caller UI timeout only — never `POST reject` / `POST end`.
+  /// Ring timer: POST /calls/end with caller-timeout, then leave the UI.
   void _startRingTimeout() {
     _ringTimeoutTimer?.cancel();
     _ringTimeoutTimer = Timer(CallRingTimeout.duration, () async {
       if (!mounted || _sessionConnected() || _leaving || _callId <= 0) return;
+      String? status;
       try {
         final call = await ref
             .read(callRepositoryProvider)
             .getCall(_callId.toString());
         if (!mounted || _sessionConnected() || _leaving) return;
-        final status = call.status.toLowerCase();
+        status = call.status.toLowerCase();
         if (status == 'active' || status == 'connected') {
           unawaited(_onCallAccepted({}));
           return;
@@ -275,7 +281,19 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         );
         if (!mounted || _sessionConnected() || _leaving) return;
       }
-      _onCallEnded({'status': 'missed'});
+      if (!OutgoingCallEnd.shouldTreatAsCallerTimeout(
+        connected: _sessionConnected(),
+        alreadyLeft: _leaving,
+        serverStatus: status,
+      )) {
+        return;
+      }
+      _ringTimedOut = true;
+      await _postEndIfNeeded(
+        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: true),
+      );
+      if (!mounted || _leaving) return;
+      _onCallEnded({'status': 'missed'}, remote: false);
     });
   }
 
@@ -333,10 +351,28 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   void _leaveCallUi() {
+    _notifyServerOfLeave();
     if (!mounted) return;
     leaveCallRoute(
       context,
       callId: _callId > 0 ? _callId.toString() : null,
+    );
+  }
+
+  /// End/cancel on the server whenever this screen drops a call it still owns.
+  void _notifyServerOfLeave() {
+    if (!OutgoingCallEnd.shouldNotifyServer(
+      callId: _callId,
+      endAlreadyPosted: _endPosted,
+      remoteAlreadyTerminal: _remoteSettled,
+      keepingEngine: _preservingEngine,
+    )) {
+      return;
+    }
+    unawaited(
+      _postEndIfNeeded(
+        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut),
+      ),
     );
   }
 
@@ -1008,6 +1044,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   void _onCallRejected(Map<String, dynamic> payload) {
     if (_leaving) return;
+    _remoteSettled = true;
     _leaving = true;
     _preservingEngine = false;
     _clearActiveSession();
@@ -1026,8 +1063,9 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     );
   }
 
-  void _onCallEnded(Map<String, dynamic> payload) {
+  void _onCallEnded(Map<String, dynamic> payload, {bool remote = true}) {
     if (_leaving) return;
+    if (remote) _remoteSettled = true;
     _leaving = true;
     _preservingEngine = false;
     _clearActiveSession();
@@ -1090,7 +1128,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     }
 
     unawaited(_stopCallMedia());
-    unawaited(_postEndIfNeeded());
+    unawaited(
+      _postEndIfNeeded(
+        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut),
+      ),
+    );
     _presentEndSummary(
       CallEndSummary.resolve(
         wasConnected: connected,
@@ -1135,8 +1177,15 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     }
   }
 
-  Future<void> _postEndIfNeeded({dynamic notifier}) async {
-    if (_endPosted || _callId <= 0) return;
+  Future<void> _postEndIfNeeded({dynamic notifier, String? reason}) async {
+    if (!OutgoingCallEnd.shouldNotifyServer(
+      callId: _callId,
+      endAlreadyPosted: _endPosted,
+      remoteAlreadyTerminal: _remoteSettled,
+      keepingEngine: _preservingEngine,
+    )) {
+      return;
+    }
     _endPosted = true;
     final endCall = notifier ??
         (mounted ? ref.read(callProvider.notifier) : null);
@@ -1145,8 +1194,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       return;
     }
     try {
-      await endCall.endCall(CallActionRequest.end(_callId.toString()));
+      final result = await endCall.endCall(
+        CallActionRequest.end(_callId.toString(), reason: reason),
+      );
+      if (result != true) {
+        _endPosted = false;
+        AppLogger.warning(
+          'endCall API failed',
+          tag: 'outgoing_call_page',
+        );
+      }
     } catch (e) {
+      _endPosted = false;
       AppLogger.warning(
         'endCall API failed',
         tag: 'outgoing_call_page',
@@ -1205,7 +1264,13 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       super.dispose();
       return;
     }
-    final shouldEnd = !_leaving && !_endPosted && _callId > 0;
+    final shouldEnd = OutgoingCallEnd.shouldNotifyServer(
+      callId: _callId,
+      endAlreadyPosted: _endPosted,
+      remoteAlreadyTerminal: _remoteSettled,
+      keepingEngine: false,
+    );
+    final endReason = OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut);
     final callId = _callId;
     final wasConnected = _mediaConnected;
     final endNotifier = shouldEnd ? _callNotifier : null;
@@ -1246,7 +1311,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         }
       }
       if (endNotifier != null) {
-        await _postEndIfNeeded(notifier: endNotifier);
+        await _postEndIfNeeded(notifier: endNotifier, reason: endReason);
       }
       try {
         liveUi?.reset();
