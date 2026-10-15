@@ -126,7 +126,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 - Feature: calls · Devices: both
 - Evidence: `/api/calls/history` → call #62 (742→745 audio) `status=ringing` since 2026-09-05T08:00:30Z. Every new call either direction failed with "There is already an active call with this user" (emu 19:19, phone 19:21) until I ended #62 via `POST /api/calls/end` as the receiver (→ missed).
 - Root cause: (a) `CallService::assertNoLiveCallConflict` treats RINGING/INITIATING as live, but the app's `_rejoinActiveCall` uses `/calls/active`, which only returns ACTIVE → the app can't rejoin or clear it; (b) the `calls:update-missed` safety net (RING_TIMEOUT_SECONDS=45) is clearly not running on production (row 41 days old).
-- Expected: stale ringing calls expire after 45 s.  Severity: **Critical** (calls dead for that pair) · Status: Open (prod scheduler/cron + conflict check)
+- Expected: stale ringing calls expire after 45 s.  Severity: **Critical** (calls dead for that pair) · Status: Fixed locally (1f1162318058779da66d87b5f20f258775a464bf), pending deploy/retest
 
 ### RT-011 – Unanswered call is never marked missed on server
 - Steps: emu calls phone (#67), nobody answers; caller UI gives up and returns to chat.
@@ -156,3 +156,24 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 - Presence: RT-008 still open. Incoming call on phone #67 right after app restart didn't show in-app (rang fine later) – possibly Pusher not yet subscribed; intermittent.
 - Phone shows "Network quality unknown" while emu shows "excellent" in the same call (minor).
 - Agora remote video briefly `Frozen (NetworkCongestion)` then recovered (network, not app).
+
+## Needs deploy/approval
+
+### RT-010 – production scheduler cron
+
+Do not change the production server from this change set. After the backend commit `1f1162318058779da66d87b5f20f258775a464bf` is deployed, the Laravel app still only expires stale calls on a schedule when cron invokes the scheduler.
+
+Exact crontab line (every minute, from the Laravel root; production path used in the deploy checklist is `/var/www/lgbtinder-backend`):
+
+```
+* * * * * cd /var/www/lgbtinder-backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+The task's required command is `* * * * * php artisan schedule:run` (run as the app user, working directory = the deployed backend). `calls:update-missed` is already registered every minute in `routes/console.php` (the schedule Laravel 12 actually runs) and in `app/Console/Kernel.php`.
+
+How to verify after deploy:
+
+1. `crontab -l` (or `sudo crontab -l -u www-data`) contains `* * * * * php artisan schedule:run`.
+2. From the backend root, `php artisan schedule:list` shows `calls:update-missed` with expression `* * * * *`.
+3. `php artisan calls:update-missed` prints success and marks `ringing`/`initiating` rows with `started_at` older than 45 seconds as `missed`, and `active` rows with no activity older than 4 hours (`Call::ACTIVE_STALE_SECONDS`) as `ended`.
+4. `php artisan schedule:run` once, then confirm a fresh stale ringing row (or the log line `Call marked as missed`) updates. A row left `ringing` for days means this cron is not firing.

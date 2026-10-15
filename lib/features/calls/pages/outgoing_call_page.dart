@@ -45,6 +45,7 @@ import '../providers/call_provider.dart';
 import '../providers/call_providers.dart';
 import '../providers/live_call_ui_provider.dart';
 import '../providers/messenger_calls_provider.dart';
+import '../utils/call_conflict_resolver.dart';
 import '../utils/call_log_labels.dart';
 import '../utils/call_audio_route.dart';
 import '../utils/call_navigation.dart';
@@ -114,6 +115,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   final CallReconnectPolicy _reconnect = CallReconnectPolicy();
   CallRtcConnectionUi? _lastRtcConnection;
   bool _giveUpStarted = false;
+  bool _conflictCleared = false;
   bool _preservingEngine = false;
   String? _primaryPhotoUrl;
   String? _backdropPhotoUrl;
@@ -499,20 +501,85 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   Future<void> _rejoinActiveCall() async {
     _setStatus('Connecting...');
-    final existing = await ref.read(callRepositoryProvider).getActiveCall();
+    final existing = await _callBlockingThisPeer();
     if (!mounted) return;
-    if (existing == null || existing.id <= 0) {
+    switch (CallConflictResolver.decide(
+      existing: existing,
+      peerId: widget.recipientId,
+    )) {
+      case CallConflictAction.clearAndRetry:
+        await _clearRingingConflict(existing!);
+        return;
+      case CallConflictAction.rejoin:
+        await _attachExistingCall(existing!);
+        return;
+      case CallConflictAction.busyElsewhere:
+        _failOnPage("You're already in another call");
+        return;
+      case CallConflictAction.giveUp:
+        _failOnPage('There is already an active call with this user');
+        return;
+    }
+  }
+
+  /// `/calls/active` (ringing or active). History covers a server that only
+  /// returns ACTIVE, so a ringing conflict can still be cancelled.
+  Future<Call?> _callBlockingThisPeer() async {
+    final repo = ref.read(callRepositoryProvider);
+    final active = await repo.getActiveCall();
+    final activeDecision = CallConflictResolver.decide(
+      existing: active,
+      peerId: widget.recipientId,
+    );
+    if (activeDecision == CallConflictAction.rejoin ||
+        activeDecision == CallConflictAction.clearAndRetry ||
+        activeDecision == CallConflictAction.busyElsewhere) {
+      return active;
+    }
+    try {
+      final history = await repo.getCallHistory(
+        limit: 20,
+        peerUserId: widget.recipientId,
+      );
+      for (final call in history) {
+        final decision = CallConflictResolver.decide(
+          existing: call,
+          peerId: widget.recipientId,
+        );
+        if (decision == CallConflictAction.clearAndRetry ||
+            decision == CallConflictAction.rejoin) {
+          return call;
+        }
+      }
+    } catch (e) {
+      AppLogger.warning(
+        'Call history lookup failed while clearing a conflict',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
+    return null;
+  }
+
+  Future<void> _clearRingingConflict(Call existing) async {
+    if (_conflictCleared) {
       _failOnPage('There is already an active call with this user');
       return;
     }
-    final peer = widget.recipientId;
-    final involvesPeer =
-        existing.callerId == peer || existing.receiverId == peer;
-    if (!involvesPeer) {
-      _failOnPage("You're already in another call");
-      return;
+    _conflictCleared = true;
+    try {
+      await ref.read(callProvider.notifier).endCall(
+            CallActionRequest.end(existing.id.toString()),
+          );
+    } catch (e) {
+      AppLogger.warning(
+        'Could not clear ringing call',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
     }
-    await _attachExistingCall(existing);
+    if (!mounted) return;
+    await _startOutgoing();
   }
 
   Future<void> _attachExistingCall(Call existing) async {
