@@ -142,7 +142,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 ### RT-013 – Declining from CallKit when the app was killed doesn't reach the server
 - Steps: phone app killed (`am kill`), emu calls (#70); CallKit banner shows; tap Decline.
 - Actual: banner disappears, but #70 stays `ringing`, caller keeps "Ringing…" until its own timeout → stale row (RT-010).
-- Severity: **High** · Status: Open
+- Severity: **High** · Status: Fixed locally (043fc86f5abab418786c8f84ff9d98039c8e3141), pending deploy/retest
 
 ### RT-014 – Phone reported "busy" right after a video call ended remotely while call UI was minimized
 - Steps: video #65, phone minimized call ("Hide call and open chat"), emu hangs up. "Active call … Tap to return" banner stayed on phone; tapping it did nothing. Next call #66 → `busy` "User is busy"; emu retry then rejoined #66's dead channel and sat at "Connecting…".
