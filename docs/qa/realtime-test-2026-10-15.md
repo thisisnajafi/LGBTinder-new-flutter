@@ -223,4 +223,10 @@ Scheduler cron: NOT added – no SSH access to the VPS from the PC (deploy key/h
 ### RT-016 – Regression: no CallKit incoming banner while app is in background
 - Steps: after RT-013 test (app killed, declined from banner), phone HOME; emu calls (#78 23:49, #79 23:52).
 - Expected: CallKit heads-up (worked in session 3, #69). Actual: FCM delivered (`FLTFireMsgReceiver: broadcast received` 23:50:01, pid 2818) but no notification posted; call times out as missed. Foreground ringing still works (#72, #75).
-- Suspect: RT-013 (043fc86) / RT-012 (42cc63e) changes to the CallKit/background handler. Severity: **High** · Status: Open
+- Suspect: RT-013 (043fc86) / RT-012 (42cc63e) changes to the CallKit/background handler. Severity: **High** · Status: Fixed locally (06f03d8284d72f81e614c00eefb04a82937ce24d), pending deploy/retest
+
+### RT-017 – One background chat message posts two system notifications
+- Feature: push (FCM) · Devices: emulator sends, phone receives
+- Steps: phone app backgrounded; one chat message arrives.
+- Expected: one shade entry. Actual: two entries, both title "New Message! 💬" and body "Abolfazl Najafi sent you a message" (FCM notification payload plus the RT-009 local notification).
+- Severity: Medium · Evidence: dumpsys notification, ph-53-bg-push · Status: Fixed locally (5c5f68c9fdf8b0de7806aa662def992c4bb82d06), pending deploy/retest
