@@ -1,25 +1,35 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
-import '../../features/chat/providers/active_chat_peer_bridge.dart';
 import '../../features/chat/utils/chat_fcm_suppress.dart';
+import 'background_message_display.dart';
 
-/// Must match FCM `android.notification.channel_id` from the backend.
-const String kLgbtfinderFcmChannelId = 'lgbtfinder_channel';
+export 'background_message_display.dart'
+    show kLgbtfinderFcmChannelId, kLgbtfinderMessagesChannelId;
 
 /// FCM background isolate entrypoint. Must stay a top-level function.
 ///
 /// Killed-app incoming calls: data-only FCM → [IncomingCallData.fromPayload]
 /// → [CallKitService.showIncomingFromIsolate]. Android needs
 /// POST_NOTIFICATIONS (13+) and USE_FULL_SCREEN_INTENT (14) in the manifest.
+///
+/// Data-only chat (and other) pushes are shown here. A payload that already
+/// includes an OS notification is left to Android/iOS so it is not posted
+/// twice. This isolate does not run for the conversation that is open in the
+/// foreground, so a stored active-chat id must not hide the tray item.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
   try {
     await Firebase.initializeApp();
   } catch (_) {
@@ -44,79 +54,111 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     return;
   }
 
-  if (await _shouldSuppressBackgroundMessage(data)) {
+  if (!BackgroundMessageDisplay.shouldPostLocalNotification(
+    hasOsNotificationPayload: message.notification != null,
+    isCallPayload: false,
+  )) {
     AppLogger.info(
-      'Suppressed background FCM banner for the open chat',
+      'Background FCM left to the OS notification payload',
       tag: 'Notifications',
     );
     return;
   }
 
-  // Data-only message pushes: app must display (unless suppressed for open chat).
-  if (message.notification != null &&
-      (data['type']?.toString() ?? '') != 'message') {
+  await _showBackgroundLocalNotification(message, data);
+}
+
+Future<void> _showBackgroundLocalNotification(
+  RemoteMessage message,
+  Map<String, dynamic> data,
+) async {
+  final text = BackgroundMessageDisplay.resolveText(
+    notificationTitle: message.notification?.title,
+    notificationBody: message.notification?.body,
+    data: data,
+  );
+  if (text == null) {
+    AppLogger.warning(
+      'Background FCM had no title or body to display',
+      tag: 'Notifications',
+    );
     return;
   }
 
-  await _showBackgroundLocalNotification(message);
-}
+  try {
+    final plugin = FlutterLocalNotificationsPlugin();
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const iosSettings = DarwinInitializationSettings();
+    await plugin.initialize(
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+    );
 
-Future<bool> _shouldSuppressBackgroundMessage(Map<String, dynamic> data) async {
-  if (!ChatFcmSuppress.isChatPayload(data)) return false;
+    final androidPlugin = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    const channels = <AndroidNotificationChannel>[
+      AndroidNotificationChannel(
+        kLgbtfinderMessagesChannelId,
+        'Messages',
+        description: 'New chat messages',
+        importance: Importance.high,
+      ),
+      AndroidNotificationChannel(
+        kLgbtfinderFcmChannelId,
+        'LGBTFinder Notifications',
+        description: 'Notifications for LGBTFinder app',
+        importance: Importance.high,
+      ),
+    ];
+    for (final channel in channels) {
+      await androidPlugin?.createNotificationChannel(channel);
+    }
 
-  final activePeer = await ActiveChatPeerBridge.readActivePeerFromPrefs();
-  final activeConversation =
-      await ActiveChatPeerBridge.readActiveConversationFromPrefs();
-  return ChatFcmSuppress.matchesOpenChat(
-    data,
-    activePeerUserId: activePeer,
-    activeConversationId: activeConversation,
-  );
-}
+    final isChat = ChatFcmSuppress.isChatPayload(data);
+    final channelId = isChat
+        ? kLgbtfinderMessagesChannelId
+        : kLgbtfinderFcmChannelId;
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      isChat ? 'Messages' : 'LGBTFinder Notifications',
+      channelDescription: isChat
+          ? 'New chat messages'
+          : 'Notifications for LGBTFinder app',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
 
-Future<void> _showBackgroundLocalNotification(RemoteMessage message) async {
-  final title = message.notification?.title ??
-      message.data['title']?.toString() ??
-      message.data['headings']?.toString();
-  final body = message.notification?.body ??
-      message.data['body']?.toString() ??
-      message.data['message']?.toString();
-  if (title == null || body == null) return;
+    final id =
+        data['message_id']?.hashCode ??
+        message.messageId?.hashCode ??
+        DateTime.now().millisecondsSinceEpoch % 2147483647;
 
-  final plugin = FlutterLocalNotificationsPlugin();
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosSettings = DarwinInitializationSettings();
-  await plugin.initialize(
-    const InitializationSettings(android: androidSettings, iOS: iosSettings),
-  );
+    await plugin.show(
+      id,
+      text.title,
+      text.body,
+      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      payload: jsonEncode(data),
+    );
 
-  final androidDetails = AndroidNotificationDetails(
-    kLgbtfinderFcmChannelId,
-    'LGBTFinder Notifications',
-    channelDescription: 'Notifications for LGBTFinder app',
-    importance: Importance.high,
-    priority: Priority.high,
-  );
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-  );
-
-  final id = message.data['message_id']?.hashCode ??
-      message.messageId?.hashCode ??
-      DateTime.now().millisecondsSinceEpoch % 2147483647;
-
-  await plugin.show(
-    id,
-    title,
-    body,
-    NotificationDetails(android: androidDetails, iOS: iosDetails),
-    payload: jsonEncode(message.data),
-  );
-
-  AppLogger.debug(
-    'Background FCM displayed local notification ${message.messageId}',
-    tag: 'FCM',
-  );
+    AppLogger.info(
+      'Background FCM displayed local notification ${message.messageId}',
+      tag: 'FCM',
+    );
+  } catch (e, stack) {
+    AppLogger.error(
+      'Background FCM local notification failed',
+      tag: 'Notifications',
+      error: e,
+      stackTrace: stack,
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/app_logger.dart';
@@ -7,19 +8,35 @@ import '../utils/chat_active_heartbeat.dart';
 import 'active_chat_provider.dart';
 import 'chat_providers.dart';
 
+/// Lets app lifecycle clear the server "chat is open" flag without Riverpod.
+class ChatActiveBackendSyncBridge {
+  static Future<void> Function()? onAppBackground;
+  static Future<void> Function()? onAppResume;
+}
+
 /// POSTs `/chat/{id}/active` while a real conversation is open (CHAT-NOTIF-003).
 ///
 /// Not autoDispose: ChatPage may pop before the 900ms close debounce clears the session.
+/// Background and terminated apps must not keep the flag, or the server skips the
+/// message push the user should see in the tray (RT-009).
 final chatActiveBackendSyncProvider = Provider<void>((ref) {
   final chatService = ref.watch(chatServiceProvider);
   Timer? heartbeat;
   int? reportedId;
+  var appInForeground = _lifecycleIsForeground();
 
   Future<void> post(int conversationId, bool active) async {
+    final report =
+        active &&
+        ChatActiveHeartbeat.shouldReportActive(
+          appInForeground: appInForeground && _lifecycleIsForeground(),
+          conversationId: conversationId,
+          peerUserId: null,
+        );
     try {
       await chatService.setConversationActive(
         conversationId: conversationId,
-        active: active,
+        active: report,
       );
     } catch (e) {
       AppLogger.warning(
@@ -41,6 +58,20 @@ final chatActiveBackendSyncProvider = Provider<void>((ref) {
       unawaited(post(conversationId, true));
     });
   }
+
+  ChatActiveBackendSyncBridge.onAppBackground = () async {
+    appInForeground = false;
+    stopHeartbeat();
+    final id = reportedId;
+    if (id != null) await post(id, false);
+  };
+  ChatActiveBackendSyncBridge.onAppResume = () async {
+    appInForeground = true;
+    final id = reportedId;
+    if (id == null) return;
+    await post(id, true);
+    startHeartbeat(id);
+  };
 
   ref.listen<ActiveChatSession>(activeChatSessionProvider, (previous, next) {
     final nextId = ChatActiveHeartbeat.reportableConversationId(
@@ -68,6 +99,8 @@ final chatActiveBackendSyncProvider = Provider<void>((ref) {
 
   ref.onDispose(() {
     stopHeartbeat();
+    ChatActiveBackendSyncBridge.onAppBackground = null;
+    ChatActiveBackendSyncBridge.onAppResume = null;
     final id = reportedId;
     reportedId = null;
     if (id != null) {
@@ -75,3 +108,8 @@ final chatActiveBackendSyncProvider = Provider<void>((ref) {
     }
   });
 });
+
+bool _lifecycleIsForeground() {
+  final lifecycle = WidgetsBinding.instance.lifecycleState;
+  return lifecycle == null || lifecycle == AppLifecycleState.resumed;
+}

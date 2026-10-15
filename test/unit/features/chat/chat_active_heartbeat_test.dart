@@ -38,6 +38,28 @@ void main() {
       );
     });
 
+    test(
+      'reports the thread active only while the app is in the foreground',
+      () {
+        expect(
+          ChatActiveHeartbeat.shouldReportActive(
+            appInForeground: true,
+            conversationId: 99,
+            peerUserId: 42,
+          ),
+          isTrue,
+        );
+        expect(
+          ChatActiveHeartbeat.shouldReportActive(
+            appInForeground: false,
+            conversationId: 99,
+            peerUserId: 42,
+          ),
+          isFalse,
+        );
+      },
+    );
+
     test('heartbeat interval is 3 minutes', () {
       expect(ChatActiveHeartbeat.interval, const Duration(minutes: 3));
     });

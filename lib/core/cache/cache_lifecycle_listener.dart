@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/chat/providers/chat_active_backend_sync_provider.dart';
 import '../../features/chat/providers/chat_pusher_providers.dart';
 import '../services/app_logger.dart';
 import '../services/presence_service.dart';
@@ -12,10 +13,7 @@ import 'cache_manager.dart';
 /// Revalidates caches when the app returns to the foreground.
 /// Also drives presence markOnline / markOffline from app lifecycle.
 class CacheLifecycleListener extends ConsumerStatefulWidget {
-  const CacheLifecycleListener({
-    super.key,
-    required this.child,
-  });
+  const CacheLifecycleListener({super.key, required this.child});
 
   final Widget child;
 
@@ -76,6 +74,7 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
               tag: 'Lifecycle',
             );
             await ref.read(presenceServiceProvider).onForeground();
+            await ChatActiveBackendSyncBridge.onAppResume?.call();
             await ref.read(appCacheManagerProvider).revalidateAll();
             unawaited(
               ref
@@ -93,6 +92,7 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
             'App lifecycle: $state → marking offline',
             tag: 'Lifecycle',
           );
+          unawaited(ChatActiveBackendSyncBridge.onAppBackground?.call());
           unawaited(ref.read(presenceServiceProvider).onBackground());
         }
         break;
@@ -106,14 +106,11 @@ class _CacheLifecycleListenerState extends ConsumerState<CacheLifecycleListener>
   Widget build(BuildContext context) {
     // When auth completes after cold start, mark online immediately.
     ref.listen<AuthProviderState>(authProvider, (previous, next) {
-      final wasAuthed = previous?.isAuthenticated == true &&
-          previous?.isLoading == false;
+      final wasAuthed =
+          previous?.isAuthenticated == true && previous?.isLoading == false;
       final isAuthed = next.isAuthenticated && !next.isLoading;
       if (!wasAuthed && isAuthed) {
-        AppLogger.info(
-          'Auth confirmed → marking online',
-          tag: 'Lifecycle',
-        );
+        AppLogger.info('Auth confirmed → marking online', tag: 'Lifecycle');
         unawaited(ref.read(presenceServiceProvider).onForeground());
       }
     });

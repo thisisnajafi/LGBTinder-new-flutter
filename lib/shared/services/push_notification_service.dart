@@ -28,12 +28,14 @@ import 'package:lgbtindernew/core/services/app_logger.dart';
 
 /// Service for handling push notifications
 class PushNotificationService {
-  static final PushNotificationService _instance = PushNotificationService._internal();
+  static final PushNotificationService _instance =
+      PushNotificationService._internal();
   factory PushNotificationService() => _instance;
   PushNotificationService._internal();
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
   String? _fcmToken;
@@ -89,8 +91,7 @@ class PushNotificationService {
     _onPremiumAccessChanged = handler;
   }
 
-  bool _isPremiumAccessType(String type) =>
-      _premiumAccessTypes.contains(type);
+  bool _isPremiumAccessType(String type) => _premiumAccessTypes.contains(type);
 
   Future<void> _handlePremiumAccessNotification(
     Map<String, dynamic> data,
@@ -116,15 +117,15 @@ class PushNotificationService {
       final platform = Platform.isIOS ? 'ios' : 'android';
       final response = await _apiService!.post<Map<String, dynamic>>(
         ApiEndpoints.notificationsRegisterDevice,
-        data: {
-          'device_token': token,
-          'platform': platform,
-        },
+        data: {'device_token': token, 'platform': platform},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
       if (response.isSuccess) {
-        AppLogger.info('FCM token sent to backend successfully', tag: 'Notifications');
+        AppLogger.info(
+          'FCM token sent to backend successfully',
+          tag: 'Notifications',
+        );
       } else {
         AppLogger.error(
           'Failed to send FCM token to backend: ${response.message}',
@@ -219,10 +220,13 @@ class PushNotificationService {
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       AppLogger.debug('User granted notification permission');
-    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+    } else if (settings.authorizationStatus ==
+        AuthorizationStatus.provisional) {
       AppLogger.debug('User granted provisional notification permission');
     } else {
-      AppLogger.debug('User declined or has not accepted notification permission');
+      AppLogger.debug(
+        'User declined or has not accepted notification permission',
+      );
     }
 
     // Never show an OS banner while the app is open — in-app banners cover that.
@@ -235,7 +239,9 @@ class PushNotificationService {
 
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     final iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -247,16 +253,12 @@ class PushNotificationService {
             DarwinNotificationAction.plain(
               ActiveCallNotification.actionReturn,
               'Return',
-              options: {
-                DarwinNotificationActionOption.foreground,
-              },
+              options: {DarwinNotificationActionOption.foreground},
             ),
             DarwinNotificationAction.plain(
               ActiveCallNotification.actionHangup,
               'Hang up',
-              options: {
-                DarwinNotificationActionOption.destructive,
-              },
+              options: {DarwinNotificationActionOption.destructive},
             ),
           ],
         ),
@@ -275,8 +277,17 @@ class PushNotificationService {
 
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidPlugin?.requestNotificationsPermission();
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        kLgbtfinderMessagesChannelId,
+        'Messages',
+        description: 'New chat messages',
+        importance: Importance.high,
+      ),
+    );
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         kLgbtfinderFcmChannelId,
@@ -332,7 +343,9 @@ class PushNotificationService {
     // Handle notification tap when app is terminated
     _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        AppLogger.debug('App opened from terminated state: ${message.messageId}');
+        AppLogger.debug(
+          'App opened from terminated state: ${message.messageId}',
+        );
         _handleNotificationTap(message);
       }
     });
@@ -429,10 +442,12 @@ class PushNotificationService {
       return;
     }
 
-    final title = notification?.title ??
+    final title =
+        notification?.title ??
         data['title']?.toString() ??
         data['headings']?.toString();
-    final body = notification?.body ??
+    final body =
+        notification?.body ??
         data['body']?.toString() ??
         data['message']?.toString();
     if (title == null || body == null) return;
@@ -442,23 +457,25 @@ class PushNotificationService {
     if (_shouldSuppressMessageAlert(data)) {
       return;
     }
-    
+
     // Group notifications by type (messages from same user, etc.)
     String? groupKey;
     String? groupChannelId;
-    
+
     if (ChatFcmSuppress.isChatPayload(data)) {
-      final userId = data['user_id']?.toString() ?? data['sender_id']?.toString();
+      final userId =
+          data['user_id']?.toString() ?? data['sender_id']?.toString();
       if (userId != null) {
         groupKey = 'messages_$userId';
-        groupChannelId = 'lgbtfinder_messages';
+        groupChannelId = kLgbtfinderMessagesChannelId;
       }
     } else {
       groupChannelId = 'lgbtfinder_$type';
     }
 
     final payloadSound = _resolvePayloadSound(data);
-    final androidRaw = payloadSound ?? SoundService.instance.getNotificationAndroidRaw();
+    final androidRaw =
+        payloadSound ?? SoundService.instance.getNotificationAndroidRaw();
     final iosSound = androidRaw != null ? '$androidRaw.wav' : null;
 
     final androidDetails = AndroidNotificationDetails(
@@ -491,10 +508,11 @@ class PushNotificationService {
     );
 
     // Use message ID or timestamp as notification ID for uniqueness
-    final notificationId = data['message_id']?.hashCode ?? 
-                          data['notification_id']?.hashCode ?? 
-                          message.messageId?.hashCode ?? 
-                          DateTime.now().millisecondsSinceEpoch % 2147483647;
+    final notificationId =
+        data['message_id']?.hashCode ??
+        data['notification_id']?.hashCode ??
+        message.messageId?.hashCode ??
+        DateTime.now().millisecondsSinceEpoch % 2147483647;
 
     await _localNotifications.show(
       notificationId,
@@ -511,7 +529,10 @@ class PushNotificationService {
   }
 
   /// Show group summary notification (Android)
-  Future<void> _showGroupSummaryNotification(String groupKey, String type) async {
+  Future<void> _showGroupSummaryNotification(
+    String groupKey,
+    String type,
+  ) async {
     // This would show a summary like "5 new messages from John"
     // Implementation depends on tracking unread counts
     // For now, we'll skip this as it requires state management
@@ -666,7 +687,8 @@ class PushNotificationService {
   }
 
   String? _resolvePayloadSound(Map<String, dynamic> data) {
-    final raw = data['sound'] ??
+    final raw =
+        data['sound'] ??
         data['notification_sound'] ??
         data['ios_sound'] ??
         data['android_sound'];
@@ -783,4 +805,3 @@ class PushNotificationService {
     }
   }
 }
-
