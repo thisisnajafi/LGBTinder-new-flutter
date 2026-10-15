@@ -64,9 +64,95 @@ Build: debug, --flavor production --target lib/main_production.dart
 - Actual: app absent; install fails `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user` (2 attempts).
 - Severity: Blocker (env)
 - Evidence: ph-00-install.png, adb output
-- Status: Open – user must tap "Install" on the phone during install, or enable Developer options → "Install via USB" + "USB debugging (Security settings)" (latter also needed for adb taps/typing on MIUI).
+- Status: Resolved (19:07)
 
 ### RT-007 – uiautomator returns stale dump ("could not get idle state") on Discover
 - Feature: QA tooling, emulator. Discover screen animates continuously, so uiautomator never sees idle and returns the previous screen. Screenshots are reliable.
 - Severity: Low · Status: Info
 
+
+## Session 3 (19:04) – phone installed (debug build, install via USB accepted), asdasd@asd.com logged in; emulator = Google account "Abolfazl" (profnajafi3@gmail.com). Existing conversation between both reused. RT-006 → Resolved (adb input works).
+
+| Test | Result | Evidence |
+|---|---|---|
+| Presence: both show "Online" in list/header | PASS | emu-13-chats, ph-04-chats |
+| Typing emu→phone ("is typing" in phone header) | PASS | ph-06-typing |
+| Typing phone→emu | PASS | uiautomator header "asdasd · is typing" |
+| Chat emu→phone "RT test 1" live (~≤5s incl. tooling) | PASS | ph-07-recv1 |
+| Read receipt live on emu ("Message read") | PASS | emu-15-sent1 |
+| Chat phone→emu "RT test 2" + live "Message read" on phone | PASS | emu-17-recv2, ph-08-sent2 |
+| Presence goes offline when phone app backgrounded | FAIL | RT-008 |
+| FCM push, phone app backgrounded | FAIL | RT-009 |
+
+### RT-008 – Peer stays "Online" after app is backgrounded
+- Feature: presence · Devices: phone (bg) → emulator (observer)
+- Steps: phone in thread → HOME; wait 25 s; read emulator header.
+- Expected: "Last seen…"/offline within a short grace.  Actual: still "Online" after 25 s (may be a deliberate grace period – confirm intended timeout).
+- Severity: Low/Medium · Status: Open (needs longer observation)
+
+### RT-009 – FCM message received but no notification shown while app in background
+- Feature: push (FCM) · Devices: emulator sends, phone receives
+- Steps: phone app → HOME (once from thread, once from chat list); emulator sends "RT test 3" (19:15) / "RT test 4" (19:17).
+- Expected: system notification "Abolfazl: RT test …".
+- Actual: logcat shows `c2dm.intent.RECEIVE pkg=com.lgbtfinder` and `FLTFireMsgReceiver: broadcast received for message` at 19:15:24, but `dumpsys notification` has 0 entries for com.lgbtfinder; nothing in shade. POST_NOTIFICATIONS granted, app channel importance DEFAULT. Sender shows "Message delivered".
+- Likely cause: data-only FCM payload not turned into a local notification in the background isolate (or suppressed). Needs code check of background handler.
+- Severity: High · Evidence: ph-09-bg-notif, ph-11-bg-notif2, logcat · Status: Open
+
+
+## Session 3b – Calls (19:18–19:46)
+Note: chat and in-call screens set FLAG_SECURE → screenshots are black; evidence = uiautomator text, Agora logs, `/api/calls/history`.
+
+| Call test | Result | Evidence |
+|---|---|---|
+| Voice emu→phone, phone fg: in-app incoming screen, accept, both timers run | PASS (#63, 64 s) | ph-26-incoming-voice, uiautomator "00:08"/"00:11" |
+| Mute (phone) toggles to "Unmute microphone" | PASS (UI); no peer-side mute indicator | uiautomator |
+| Speaker toggle routes audio to speaker | PASS | dumpsys audio "Active communication device … type:speaker" |
+| Hang-up from phone ends both sides | PASS | #63 ended |
+| Video phone→emu, accept on emu | PASS on 2nd try (#65, 214 s); 1st try FAIL (RT-012) | Agora log `onRemoteVideoStateChanged … Decoding` on emu |
+| Remote video decoded (emu receives phone video) | PASS | emu Agora log 19:29:54 |
+| Camera off/on (emu) | PASS | Agora `localVideoStreamStateStopped` → `Capturing/Encoding`; peer UI "Camera is off" |
+| Flip camera | UI only, not verified (no log, secure screen) | – |
+| Hang-up from emu ends both | PASS (#65, #69) | history, ph-45-after-remote-hangup |
+| Decline (phone fg) → caller sees "Call Declined" | PASS (#68) | emu toast text |
+| Missed call (no answer) | FAIL server side (RT-011); client shows entry after manual end | #67 |
+| Call history / missed list on phone (Calls tab) | PASS | ph-42-calls-tab "Abolfazl Najafi, 3 missed calls" |
+| Incoming while phone app in background (CallKit heads-up, Accept) | PASS (#69) | ph-44-bg-incoming-callkit |
+| Incoming while phone app process killed (FCM wakes app, CallKit) | PASS ring | #70, pid restarted, notif posted |
+| Decline from CallKit while app was killed | FAIL (RT-013) | #70 stayed ringing |
+| Incoming with emu in background | NOT RUN (aborted, see RT-015) | – |
+| Video emu→phone, voice phone→emu (separately) | partially: video phone→emu, voice emu→phone done; reverse dirs not completed | – |
+
+### RT-010 – Stale "ringing" call blocks all calls between a pair ("There is already an active call with this user")
+- Feature: calls · Devices: both
+- Evidence: `/api/calls/history` → call #62 (742→745 audio) `status=ringing` since 2026-09-05T08:00:30Z. Every new call either direction failed with "There is already an active call with this user" (emu 19:19, phone 19:21) until I ended #62 via `POST /api/calls/end` as the receiver (→ missed).
+- Root cause: (a) `CallService::assertNoLiveCallConflict` treats RINGING/INITIATING as live, but the app's `_rejoinActiveCall` uses `/calls/active`, which only returns ACTIVE → the app can't rejoin or clear it; (b) the `calls:update-missed` safety net (RING_TIMEOUT_SECONDS=45) is clearly not running on production (row 41 days old).
+- Expected: stale ringing calls expire after 45 s.  Severity: **Critical** (calls dead for that pair) · Status: Open (prod scheduler/cron + conflict check)
+
+### RT-011 – Unanswered call is never marked missed on server
+- Steps: emu calls phone (#67), nobody answers; caller UI gives up and returns to chat.
+- Actual: #67 still `ringing` minutes later; would cause RT-010 again. (Caller doesn't send cancel on timeout; cron not running.)
+- Severity: **High** · Evidence: history 16:07:47Z ringing, cleared manually → missed · Status: Open
+
+### RT-012 – Accepting a video call while the camera permission prompt is up records the call as "rejected"
+- Steps: first-ever video call to emu; tap Accept → Android camera permission dialog → "While using the app".
+- Actual: call ends; server #64 `rejected`, "User rejected the call". Second call works.
+- Severity: Medium · Status: Open
+- Related: first voice call from emu while mic permission prompt was showing never rang the phone (19:18).
+
+### RT-013 – Declining from CallKit when the app was killed doesn't reach the server
+- Steps: phone app killed (`am kill`), emu calls (#70); CallKit banner shows; tap Decline.
+- Actual: banner disappears, but #70 stays `ringing`, caller keeps "Ringing…" until its own timeout → stale row (RT-010).
+- Severity: **High** · Status: Open
+
+### RT-014 – Phone reported "busy" right after a video call ended remotely while call UI was minimized
+- Steps: video #65, phone minimized call ("Hide call and open chat"), emu hangs up. "Active call … Tap to return" banner stayed on phone; tapping it did nothing. Next call #66 → `busy` "User is busy"; emu retry then rejoined #66's dead channel and sat at "Connecting…".
+- Workaround: force-stop the app. Severity: High · Status: Open
+
+### RT-015 – QA incident: test call placed to a non-test user
+- At 19:45 the phone chat list order had changed after an app restart; my coordinate tap opened "alireza" (user 743) instead of "Abolfazl", and a video call (#71) rang ~25 s before I cancelled it via API (→ cancelled). No message was sent. User 743 may see a missed/cancelled call from asdasd.
+- Status: Reported; testing stopped here.
+
+### Other observations
+- Presence: RT-008 still open. Incoming call on phone #67 right after app restart didn't show in-app (rang fine later) – possibly Pusher not yet subscribed; intermittent.
+- Phone shows "Network quality unknown" while emu shows "excellent" in the same call (minor).
+- Agora remote video briefly `Frozen (NetworkCongestion)` then recovered (network, not app).
