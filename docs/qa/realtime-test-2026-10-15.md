@@ -126,7 +126,7 @@ Note: chat and in-call screens set FLAG_SECURE → screenshots are black; eviden
 - Feature: calls · Devices: both
 - Evidence: `/api/calls/history` → call #62 (742→745 audio) `status=ringing` since 2026-09-05T08:00:30Z. Every new call either direction failed with "There is already an active call with this user" (emu 19:19, phone 19:21) until I ended #62 via `POST /api/calls/end` as the receiver (→ missed).
 - Root cause: (a) `CallService::assertNoLiveCallConflict` treats RINGING/INITIATING as live, but the app's `_rejoinActiveCall` uses `/calls/active`, which only returns ACTIVE → the app can't rejoin or clear it; (b) the `calls:update-missed` safety net (RING_TIMEOUT_SECONDS=45) is clearly not running on production (row 41 days old).
-- Expected: stale ringing calls expire after 45 s.  Severity: **Critical** (calls dead for that pair) · Status: Fixed locally (1f1162318058779da66d87b5f20f258775a464bf), pending deploy/retest
+- Expected: stale ringing calls expire after 45 s.  Severity: **Critical** (calls dead for that pair) · Status: Fixed locally (1f1162318058779da66d87b5f20f258775a464bf, 921c32fd65c1bd7db34b1fce46f09f3eecbdcf4a), pending deploy/retest
 
 ### RT-011 – Unanswered call is never marked missed on server
 - Steps: emu calls phone (#67), nobody answers; caller UI gives up and returns to chat.
