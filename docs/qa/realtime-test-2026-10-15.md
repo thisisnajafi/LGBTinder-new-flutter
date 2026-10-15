@@ -250,3 +250,15 @@ emulator-5554 Pixel_Play = user 742; emulator-5556 Pixel_Play13 = user 745 (asda
 | RT-012 accept after pm revoke (5554) | PARTIAL | accept from banner (#86) showed mic then camera prompts, both granted; ring timeout (45s) expired during prompts so not connected. Not an app bug per se; consider pausing ring timeout / longer window while prompting |
 
 Notes: #85 was auto-declined right after the revoke-relaunch (CallkitKilledAction "Persisted decline 85") with no decline tap — needs a look (possible stale queued decline). Presence `user.status` events arrive every ~2 s on 5554 (noisy). Screenshots: rt-shots/emu-*, emu2-*.
+
+### RT-018 – ring timeout during permission prompts
+- Accept (in-app or CallKit) now POSTs `/api/calls/{id}/accepting` before the mic/camera prompts. The row stores `accepting_at` and broadcasts `call.accepting`. Missed-call logic (`CheckMissedCall`, `markMissedIfUnanswered`, `calls:update-missed`) leaves the call ringing while `accepting_at` is within the last 60 seconds. The caller extends its ring timer by 60s and shows "Connecting…". A denied prompt rejects the call. A 404/405 (older backend) keeps the previous 45s timeout.
+- Needs migration `2026_10_16_012000_add_accepting_at_to_calls_table` and a backend deploy. App `8c52db9`. Backend `fbd1eec`.
+
+### RT-019 – stale persisted decline
+- A decline is stored only for an explicit Decline (notification button or in-app). Timeout, ended, dismiss, notification removal, and `endCall` on an unanswered row no longer persist or replay as decline. Replay drops a row older than 60s, a different call id than the current incoming call, or a call that is no longer ringing, then clears it.
+- App only (`e1420f5`). No backend deploy.
+
+### RT-020 – presence `user.status` spam
+- The backend broadcasts `user.status` only when online/offline actually changes. Heartbeats still update last seen (throttled to 30s) and do not broadcast. Presence TTL is 90s so a foreground heartbeat every 45s does not expire the user. The app heartbeats every 45s, waits 2s before sending a lifecycle online/offline flip, and ignores incoming `user.status` events that do not change that user's online/offline state. Last seen still comes from the offline event.
+- Needs a backend deploy (`0f99c4d`). No migration. `presence:expire-stale` still depends on the existing scheduler cron. App `e8863cc`.
