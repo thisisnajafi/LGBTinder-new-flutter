@@ -96,7 +96,7 @@ Build: debug, --flavor production --target lib/main_production.dart
 - Expected: system notification "Abolfazl: RT test …".
 - Actual: logcat shows `c2dm.intent.RECEIVE pkg=com.lgbtfinder` and `FLTFireMsgReceiver: broadcast received for message` at 19:15:24, but `dumpsys notification` has 0 entries for com.lgbtfinder; nothing in shade. POST_NOTIFICATIONS granted, app channel importance DEFAULT. Sender shows "Message delivered".
 - Likely cause: data-only FCM payload not turned into a local notification in the background isolate (or suppressed). Needs code check of background handler.
-- Severity: High · Evidence: ph-09-bg-notif, ph-11-bg-notif2, logcat · Status: Open
+- Severity: High · Evidence: ph-09-bg-notif, ph-11-bg-notif2, logcat · Status: Fixed locally (61ed02ca604f491cc83fac388d234483515c4840, 104f3d09ca2baa35a6d3b435d584a4fc24531b33), pending deploy/retest
 
 
 ## Session 3b – Calls (19:18–19:46)
