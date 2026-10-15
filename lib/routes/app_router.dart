@@ -730,12 +730,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final userId = state.uri.queryParameters['userId'];
           final userName = state.uri.queryParameters['userName'];
           final avatarUrl = state.uri.queryParameters['avatarUrl'];
+          final official = state.uri.queryParameters['official'];
           final child = userId == null
               ? const ChatListPage()
               : ChatPage(
                   userId: int.parse(userId),
                   userName: userName,
                   avatarUrl: avatarUrl,
+                  isOfficial: official == '1' || official == 'true',
                 );
           return platformPredictivePage(state, child);
         },

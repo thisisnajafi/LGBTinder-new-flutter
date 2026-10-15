@@ -84,6 +84,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   int? _tabletSelectedUserId;
   String? _tabletSelectedUserName;
   String? _tabletSelectedAvatarUrl;
+  bool _tabletSelectedOfficial = false;
 
   @override
   void initState() {
@@ -337,9 +338,16 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     );
   }
 
+  bool _isOfficialChat(Map<String, dynamic> chat) {
+    return chat['is_official'] == true ||
+        chat['is_official'] == 1 ||
+        chat['account_badge']?.toString() == 'official';
+  }
+
   void _handleChatTap(Map<String, dynamic> chat) {
+    final isOfficial = _isOfficialChat(chat);
     final isPremium = ref.read(isPremiumProvider);
-    if (!isPremium) {
+    if (!isPremium && !isOfficial) {
       ChatUpgradeBottomSheet.show(context);
       return;
     }
@@ -352,6 +360,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         _tabletSelectedUserId = userId;
         _tabletSelectedUserName = _displayNameFromMap(chat);
         _tabletSelectedAvatarUrl = chat['avatar_url'] as String?;
+        _tabletSelectedOfficial = isOfficial;
       });
       return;
     }
@@ -364,6 +373,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
           'userName': _displayNameFromMap(chat),
         if ((chat['avatar_url'] as String?)?.isNotEmpty == true)
           'avatarUrl': chat['avatar_url'] as String,
+        if (isOfficial) 'official': '1',
       },
     ).toString();
     context.push(target);
@@ -531,6 +541,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       _tabletSelectedUserId = null;
       _tabletSelectedUserName = null;
       _tabletSelectedAvatarUrl = null;
+      _tabletSelectedOfficial = false;
     });
   }
 
@@ -628,6 +639,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                 final chat = filtered[index];
                 final userId = chat['id'] as int;
                 final name = _displayNameFromMap(chat);
+                final isOfficial = _isOfficialChat(chat);
                 final muted =
                     mutedIds.contains(userId) || chat['is_muted'] == true;
                 final pinned =
@@ -675,7 +687,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                         isTyping: chat['is_typing'] == true,
                         isMuted: muted,
                         isPinned: pinned,
-                        hasPlan: hasPlan,
+                        hasPlan: hasPlan || isOfficial,
+                        isOfficial: isOfficial,
                         lastMessageFromMe: chat['last_message_from_me'] == true,
                         lastMessageIsRead: chat['last_message_is_read'] == true,
                         lastMessageIsDelivered:
@@ -853,6 +866,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                       userId: _tabletSelectedUserId!,
                       userName: _tabletSelectedUserName,
                       avatarUrl: _tabletSelectedAvatarUrl,
+                      isOfficial: _tabletSelectedOfficial,
                       embedded: true,
                       onEmbeddedClose: _clearTabletSelection,
                     )

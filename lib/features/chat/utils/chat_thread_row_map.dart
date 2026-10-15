@@ -21,6 +21,7 @@ class ChatThreadRowMap {
       'id': message.id,
       'client_id': message.clientId,
       'text': message.message,
+      if (message.metadata?['payload'] is Map) 'payload': message.metadata!['payload'],
       'is_sent': isSent,
       'sender_id': message.senderId,
       'timestamp': AppDateTime.toLocal(message.createdAt),

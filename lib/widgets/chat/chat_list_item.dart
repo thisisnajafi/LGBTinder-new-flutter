@@ -23,6 +23,7 @@ import 'typing_indicator.dart';
 import 'message_status_indicator.dart';
 import 'chat_search_highlight_text.dart';
 import 'chat_unread_badge.dart';
+import 'official_account_badge.dart';
 import 'chat_online_dot.dart';
 import '../../features/chat/data/models/message_delivery_status.dart';
 import '../../core/responsive/responsive.dart';
@@ -46,6 +47,7 @@ class ChatListItem extends ConsumerWidget {
   final DateTime? lastSeenAt;
   final String highlightQuery;
   final bool hasPlan;
+  final bool isOfficial;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -71,6 +73,7 @@ class ChatListItem extends ConsumerWidget {
     this.lastSeenAt,
     this.highlightQuery = '',
     required this.hasPlan,
+    this.isOfficial = false,
     this.onTap,
     this.onLongPress,
   });
@@ -169,7 +172,7 @@ class ChatListItem extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
                             child: ChatSearchHighlightText(
                               text: displayName,
                               query: highlightQuery,
@@ -180,6 +183,10 @@ class ChatListItem extends ConsumerWidget {
                               ),
                             ),
                           ),
+                          if (isOfficial) ...[
+                            const SizedBox(width: 6),
+                            const OfficialAccountBadge(),
+                          ],
                           if (pinned)
                             Padding(
                               padding: const EdgeInsets.only(left: 4),

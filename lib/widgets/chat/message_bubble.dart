@@ -234,6 +234,8 @@ class MessageBubble extends ConsumerWidget {
   /// Sharp outer corner (Telegram tail) only on the last bubble in a run.
   final bool isLastInGroup;
   final bool isFirstInGroup;
+  /// Upsell CTA from the message `payload` field (`cta.label`, `cta.deep_link`).
+  final Map<String, dynamic>? payload;
 
   const MessageBubble({
     super.key,
@@ -273,12 +275,59 @@ class MessageBubble extends ConsumerWidget {
     this.onVoiceListened,
     this.isLastInGroup = true,
     this.isFirstInGroup = true,
+    this.payload,
   });
 
   bool get _isDisappearingType =>
       messageType == 'disappearing_image' ||
       messageType == 'disappearing_video' ||
       messageType == 'self_destruct';
+
+  Widget? _ctaButton(BuildContext context) {
+    final cta = payload?['cta'];
+    if (cta is! Map) return null;
+    final label = cta['label']?.toString().trim() ?? '';
+    final raw = (cta['deep_link'] ?? cta['url'])?.toString().trim() ?? '';
+    if (label.isEmpty || raw.isEmpty) return null;
+
+    var path = raw;
+    if (!path.startsWith('/')) {
+      final uri = Uri.tryParse(raw);
+      path = (uri != null && uri.path.startsWith('/')) ? uri.path : '/$raw';
+    }
+
+    final theme = Theme.of(context);
+    final background = isSent
+        ? Colors.white.withValues(alpha: 0.22)
+        : theme.colorScheme.primary;
+    final foreground = Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.spacingSM),
+      child: SizedBox(
+        height: 44,
+        child: TextButton(
+          onPressed: () => context.push(path),
+          style: TextButton.styleFrom(
+            backgroundColor: background,
+            foregroundColor: foreground,
+            minimumSize: const Size(44, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+            ),
+          ),
+          child: Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -613,6 +662,7 @@ class MessageBubble extends ConsumerWidget {
                   isSent: isSent,
                 ),
             ],
+            if (_ctaButton(context) case final cta?) cta,
             if (remainingSeconds != null && remainingSeconds! > 0)
               Padding(
                 padding: EdgeInsets.only(top: AppSpacing.spacingXS),

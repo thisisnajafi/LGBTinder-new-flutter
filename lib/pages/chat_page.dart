@@ -109,6 +109,7 @@ class ChatPage extends ConsumerStatefulWidget {
   final int userId;
   final String? userName;
   final String? avatarUrl;
+  final bool isOfficial;
   final bool embedded;
   final VoidCallback? onEmbeddedClose;
 
@@ -117,6 +118,7 @@ class ChatPage extends ConsumerStatefulWidget {
     required this.userId,
     this.userName,
     this.avatarUrl,
+    this.isOfficial = false,
     this.embedded = false,
     this.onEmbeddedClose,
   }) : super(key: key);
@@ -176,6 +178,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   StreamSubscription<List<Message>>? _localMessagesSubscription;
   Timer? _realtimeFallbackTimer;
   String? _resolvedUserName;
+  bool _peerIsOfficial = false;
   String? _resolvedAvatarUrl;
   String? _resolvedPrimaryPhotoUrl;
   late final ChatTypingOutbound _typingOutbound;
@@ -206,6 +209,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     unawaited(ScreenshotProtection.acquire());
     _resolvedUserName = widget.userName;
     _resolvedAvatarUrl = widget.avatarUrl;
+    _peerIsOfficial = widget.isOfficial;
     _loadCurrentUserId();
     if (widget.userId > 0) {
       _openUnreadCount = _peekUnreadCount();
@@ -1054,6 +1058,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
       final history = await historyFuture;
       _ackIncomingDelivered(history.messages);
+      if (history.peerIsOfficial && mounted && !_peerIsOfficial) {
+        setState(() => _peerIsOfficial = true);
+      }
       List<Call> calls = const [];
       try {
         calls = await callsFuture;
@@ -3171,6 +3178,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return ChatThreadPageShell(
       peerUserId: widget.userId,
       peerDisplayName: _peerDisplayName,
+      peerIsOfficial: _peerIsOfficial,
       peerAvatarUrl: _peerAvatarUrl,
       peerCallPhotoUrl: _peerCallPhotoUrl,
       currentUserId: _currentUserId ?? 0,

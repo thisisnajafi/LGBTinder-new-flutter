@@ -305,6 +305,9 @@ class Message {
     } else if (json['sticker'] is Map) {
       metadata.addAll(Map<String, dynamic>.from(json['sticker'] as Map));
     }
+    if (json['payload'] is Map) {
+      metadata['payload'] = Map<String, dynamic>.from(json['payload'] as Map);
+    }
     if (json['sender'] is Map) {
       metadata['sender'] = Map<String, dynamic>.from(json['sender'] as Map);
     }

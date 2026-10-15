@@ -125,6 +125,7 @@ class ChatListPreviewItem {
   final bool lastMessageIsDelivered;
   final int lastMessageId;
   final DateTime? lastSeenAt;
+  final bool isOfficial;
 
   const ChatListPreviewItem({
     required this.id,
@@ -144,6 +145,7 @@ class ChatListPreviewItem {
     this.lastMessageIsDelivered = false,
     this.lastMessageId = 0,
     this.lastSeenAt,
+    this.isOfficial = false,
   });
 
   ChatListPreviewItem copyWith({
@@ -163,6 +165,7 @@ class ChatListPreviewItem {
     bool? lastMessageIsDelivered,
     int? lastMessageId,
     DateTime? lastSeenAt,
+    bool? isOfficial,
   }) {
     return ChatListPreviewItem(
       id: id,
@@ -183,6 +186,7 @@ class ChatListPreviewItem {
           lastMessageIsDelivered ?? this.lastMessageIsDelivered,
       lastMessageId: lastMessageId ?? this.lastMessageId,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      isOfficial: isOfficial ?? this.isOfficial,
     );
   }
 
@@ -204,6 +208,8 @@ class ChatListPreviewItem {
         'last_message_is_delivered': lastMessageIsDelivered,
         'last_message_id': lastMessageId,
         'last_seen': lastSeenAt,
+        'is_official': isOfficial,
+        if (isOfficial) 'account_badge': 'official',
       };
 
   factory ChatListPreviewItem.fromChat(Chat chat) {
@@ -232,6 +238,7 @@ class ChatListPreviewItem {
           false,
       lastMessageId: chat.lastMessage?.id ?? 0,
       lastSeenAt: chat.lastSeen,
+      isOfficial: chat.isOfficial,
     );
   }
 }
@@ -389,6 +396,9 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
       lastMessageIsRead: map['last_message_is_read'] == true,
       lastMessageIsDelivered: map['last_message_is_delivered'] == true,
       lastMessageId: map['last_message_id'] as int? ?? 0,
+      isOfficial: map['is_official'] == true ||
+          map['is_official'] == 1 ||
+          map['account_badge']?.toString() == 'official',
       lastSeenAt: map['last_seen'] is DateTime
           ? map['last_seen'] as DateTime
           : DateTime.tryParse(

@@ -24,6 +24,7 @@ class ChatThreadPageShell extends ConsumerWidget {
     super.key,
     required this.peerUserId,
     required this.peerDisplayName,
+    this.peerIsOfficial = false,
     required this.peerAvatarUrl,
     required this.peerCallPhotoUrl,
     required this.currentUserId,
@@ -69,6 +70,7 @@ class ChatThreadPageShell extends ConsumerWidget {
 
   final int peerUserId;
   final String peerDisplayName;
+  final bool peerIsOfficial;
   final String? peerAvatarUrl;
   final String? peerCallPhotoUrl;
   final int currentUserId;
@@ -158,6 +160,7 @@ class ChatThreadPageShell extends ConsumerWidget {
                       userId: peerUserId,
                       name: peerDisplayName,
                       avatarUrl: peerAvatarUrl,
+                      isOfficial: peerIsOfficial,
                       onBack: onLeave,
                       onHeaderTap: onHeaderTap,
                       onInfo: onHeaderTap,

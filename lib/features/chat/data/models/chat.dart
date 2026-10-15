@@ -17,6 +17,8 @@ class Chat {
   final bool isTyping;
   final bool isMuted;
   final bool isPinned;
+  /// API `is_official` or `account_badge=official`.
+  final bool isOfficial;
 
   Chat({
     required this.id,
@@ -32,6 +34,7 @@ class Chat {
     this.isTyping = false,
     this.isMuted = false,
     this.isPinned = false,
+    this.isOfficial = false,
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
@@ -105,6 +108,9 @@ class Chat {
       isTyping: json['is_typing'] == true || json['is_typing'] == 1,
       isMuted: json['is_muted'] == true || json['is_muted'] == 1,
       isPinned: json['is_pinned'] == true || json['is_pinned'] == 1,
+      isOfficial: json['is_official'] == true ||
+          json['is_official'] == 1 ||
+          json['account_badge']?.toString() == 'official',
     );
   }
 
@@ -132,6 +138,8 @@ class Chat {
       'is_typing': isTyping,
       'is_muted': isMuted,
       'is_pinned': isPinned,
+      'is_official': isOfficial,
+      if (isOfficial) 'account_badge': 'official',
     };
   }
 }

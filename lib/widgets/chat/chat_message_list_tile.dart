@@ -213,6 +213,9 @@ class _ChatMessageListTileState extends ConsumerState<ChatMessageListTile> {
           ? null
           : () => _invoke(widget.onJumpToReply),
       clientId: message['client_id']?.toString(),
+      payload: message['payload'] is Map
+          ? Map<String, dynamic>.from(message['payload'] as Map)
+          : null,
       isFirstInGroup: widget.group.isFirstInGroup,
       isLastInGroup: widget.group.isLastInGroup,
     );

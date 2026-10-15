@@ -11,6 +11,7 @@ import '../../core/widgets/profile_image_widget.dart';
 import '../../features/chat/providers/chat_typing_providers.dart';
 import '../../features/chat/providers/user_presence_cache_provider.dart';
 import 'last_seen_widget.dart';
+import 'official_account_badge.dart';
 
 /// Chat screen header with profile-aware premium styling.
 class ChatHeader extends ConsumerWidget {
@@ -24,6 +25,7 @@ class ChatHeader extends ConsumerWidget {
   final VoidCallback? onInfo;
   final VoidCallback? onCall;
   final VoidCallback? onVideoCall;
+  final bool isOfficial;
 
   const ChatHeader({
     super.key,
@@ -37,6 +39,7 @@ class ChatHeader extends ConsumerWidget {
     this.onInfo,
     this.onCall,
     this.onVideoCall,
+    this.isOfficial = false,
   });
 
   @override
@@ -91,14 +94,24 @@ class ChatHeader extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        AppText(
-                          name,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.2,
-                          ),
-                          maxLines: 1,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: AppText(
+                                name,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                              ),
+                            ),
+                            if (isOfficial) ...[
+                              const SizedBox(width: 6),
+                              const OfficialAccountBadge(),
+                            ],
+                          ],
                         ),
                         Consumer(
                           builder: (context, ref, _) {

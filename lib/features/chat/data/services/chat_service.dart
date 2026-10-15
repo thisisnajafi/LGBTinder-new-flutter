@@ -39,6 +39,7 @@ class ChatHistoryResult {
   final bool hasMore;
   final ChatHistoryCursor? nextCursor;
   final int? nextAfterId;
+  final bool peerIsOfficial;
 
   const ChatHistoryResult({
     required this.messages,
@@ -47,6 +48,7 @@ class ChatHistoryResult {
     this.hasMore = false,
     this.nextCursor,
     this.nextAfterId,
+    this.peerIsOfficial = false,
   });
 }
 
@@ -103,6 +105,7 @@ class ChatService {
     List<dynamic>? messageList;
     int? conversationId;
     int? otherUserId;
+    var peerIsOfficial = false;
     Map<String, dynamic>? metaMap = meta;
 
     if (raw is Map<String, dynamic>) {
@@ -113,6 +116,7 @@ class ChatService {
       if (envelope is Map<String, dynamic>) {
         conversationId = _parseInt(envelope['conversation_id']);
         otherUserId = _parseInt(envelope['other_user_id']);
+        peerIsOfficial = _peerIsOfficial(envelope['other_user']);
         final messages = envelope['messages'];
         if (messages is List) {
           messageList = messages;
@@ -155,7 +159,15 @@ class ChatService {
       hasMore: hasMore,
       nextCursor: nextCursor,
       nextAfterId: nextAfterId,
+      peerIsOfficial: peerIsOfficial,
     );
+  }
+
+  bool _peerIsOfficial(dynamic otherUser) {
+    if (otherUser is! Map) return false;
+    return otherUser['is_official'] == true ||
+        otherUser['is_official'] == 1 ||
+        otherUser['account_badge']?.toString() == 'official';
   }
 
   int? _parseInt(dynamic value) {
