@@ -1,11 +1,134 @@
+import AVFoundation
+import CallKit
 import Flutter
 import flutter_callkit_incoming
 import Photos
 import PushKit
 import UIKit
 
+/// RT-013: CallKit decline/timeout while Flutter is not listening.
+private enum CallKitKilledSignaling {
+  static let pendingKey = "flutter.lgbtfinder_callkit_pending_actions"
+  static let tokenKey = "flutter.lgbtfinder_bg_auth_token"
+  static let originKey = "flutter.lgbtfinder_bg_api_origin"
+
+  static func enqueueAndPost(kind: String, call: Call) {
+    guard let callId = serverCallId(call) else { return }
+    var actions = readPending()
+    if let index = actions.firstIndex(where: { $0["callId"] == callId }) {
+      let current = actions[index]["kind"]
+      if current == "decline" && kind == "timeout" {
+        // A decline already queued for this call wins.
+      } else {
+        actions[index] = ["callId": callId, "kind": kind]
+      }
+    } else {
+      actions.append(["callId": callId, "kind": kind])
+    }
+    writePending(actions)
+    postAll()
+  }
+
+  private static func serverCallId(_ call: Call) -> String? {
+    let uuid = call.data.uuid.trimmingCharacters(in: .whitespacesAndNewlines)
+    if Int(uuid) != nil { return uuid }
+    let extra = call.data.extra
+    let raw = (extra["call_id"] ?? extra["callId"]) as? String
+    let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return Int(trimmed) != nil ? trimmed : nil
+  }
+
+  private static func readPending() -> [[String: String]] {
+    guard let raw = UserDefaults.standard.string(forKey: pendingKey),
+          let data = raw.data(using: .utf8),
+          let decoded = try? JSONSerialization.jsonObject(with: data) as? [Any]
+    else {
+      return []
+    }
+    var actions: [[String: String]] = []
+    for item in decoded {
+      guard let row = item as? [String: Any] else { continue }
+      let callId = (row["callId"] as? String) ?? ""
+      let kind = (row["kind"] as? String) ?? ""
+      if callId.isEmpty || kind.isEmpty { continue }
+      actions.append(["callId": callId, "kind": kind])
+    }
+    return actions
+  }
+
+  private static func writePending(_ actions: [[String: String]]) {
+    if actions.isEmpty {
+      UserDefaults.standard.removeObject(forKey: pendingKey)
+      return
+    }
+    guard let data = try? JSONSerialization.data(withJSONObject: actions),
+          let raw = String(data: data, encoding: .utf8)
+    else {
+      return
+    }
+    UserDefaults.standard.set(raw, forKey: pendingKey)
+  }
+
+  private static func postAll() {
+    let defaults = UserDefaults.standard
+    let token = defaults.string(forKey: tokenKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    var origin = defaults.string(forKey: originKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    while origin.hasSuffix("/") { origin.removeLast() }
+    guard !token.isEmpty, !origin.isEmpty, let _ = URL(string: origin) else { return }
+    let snapshot = readPending()
+    guard !snapshot.isEmpty else { return }
+    let task = UIApplication.shared.beginBackgroundTask(withName: "callkit-terminal") {}
+    let group = DispatchGroup()
+    let lock = NSLock()
+    var remaining = snapshot
+    for action in snapshot {
+      guard let callId = action["callId"], let kind = action["kind"] else { continue }
+      let path: String
+      let reason: String
+      if kind == "decline" {
+        path = "/api/calls/\(callId)/reject"
+        reason = "User rejected the call"
+      } else if kind == "timeout" {
+        path = "/api/calls/\(callId)/end"
+        reason = "CallKit timeout"
+      } else {
+        continue
+      }
+      guard let url = URL(string: origin + path) else { continue }
+      var request = URLRequest(url: url)
+      request.httpMethod = "POST"
+      request.timeoutInterval = 12
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+      request.setValue("application/json", forHTTPHeaderField: "Accept")
+      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+      request.httpBody = try? JSONSerialization.data(withJSONObject: ["reason": reason])
+      group.enter()
+      URLSession.shared.dataTask(with: request) { _, response, _ in
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if shouldDrop(status) {
+          lock.lock()
+          remaining.removeAll { $0["callId"] == callId && $0["kind"] == kind }
+          lock.unlock()
+        }
+        group.leave()
+      }.resume()
+    }
+    group.notify(queue: .main) {
+      lock.lock()
+      writePending(remaining)
+      lock.unlock()
+      UIApplication.shared.endBackgroundTask(task)
+    }
+  }
+
+  private static func shouldDrop(_ status: Int) -> Bool {
+    if (200..<300).contains(status) { return true }
+    return status == 400 || status == 403 || status == 404 || status == 409 || status == 422
+  }
+}
+
 @main
-@objc class AppDelegate: FlutterAppDelegate, PKPushRegistryDelegate {
+@objc class AppDelegate: FlutterAppDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
   private var screenshotChannel: FlutterMethodChannel?
   private var screenshotObserver: NSObjectProtocol?
   private var voipRegistry: PKPushRegistry?
@@ -173,4 +296,25 @@ import UIKit
     }
     plugin.showCallkitIncoming(data, fromPushKit: true, completion: completion)
   }
+
+  public func onAccept(_ call: Call, _ action: CXAnswerCallAction) {
+    action.fulfill()
+  }
+
+  public func onDecline(_ call: Call, _ action: CXEndCallAction) {
+    CallKitKilledSignaling.enqueueAndPost(kind: "decline", call: call)
+    action.fulfill()
+  }
+
+  public func onEnd(_ call: Call, _ action: CXEndCallAction) {
+    action.fulfill()
+  }
+
+  public func onTimeOut(_ call: Call) {
+    CallKitKilledSignaling.enqueueAndPost(kind: "timeout", call: call)
+  }
+
+  public func didActivateAudioSession(_ audioSession: AVAudioSession) {}
+
+  public func didDeactivateAudioSession(_ audioSession: AVAudioSession) {}
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 
@@ -10,10 +10,23 @@ import '../../../../shared/services/incoming_call_handler.dart';
 import '../models/call_kit_restore.dart';
 import '../models/incoming_call_data.dart';
 import '../../../settings/providers/sound_preferences_provider.dart';
+import '../../../../shared/services/background_auth_store.dart';
+import '../../../../shared/services/token_storage_service.dart';
 import '../../utils/call_ring_timeout.dart';
 import 'call_kit_event_action.dart';
+import 'callkit_pending_flusher.dart';
+import 'callkit_terminal_request.dart';
 
 typedef CallKitActionHandler = Future<void> Function(String callId);
+
+class _CallKitResumeFlush extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(flushStoredCallKitActions());
+    }
+  }
+}
 
 class _QueuedCallKitAction {
   final CallKitEventAction action;
@@ -38,12 +51,15 @@ class CallKitService {
   bool _listening = false;
   bool _handlersAttached = false;
   final List<_QueuedCallKitAction> _queued = [];
+  final _CallKitResumeFlush _resumeFlush = _CallKitResumeFlush();
 
   /// Start the native event stream before splash / Riverpod handlers exist.
   Future<void> startListening() async {
     if (_listening) return;
     _eventSub = FlutterCallkitIncoming.onEvent.listen(_onNativeEvent);
     _listening = true;
+    WidgetsBinding.instance.addObserver(_resumeFlush);
+    await markCallKitDartListening(true);
     AppLogger.info('Listening for native events', tag: _tag);
   }
 
@@ -92,12 +108,28 @@ class CallKitService {
         }
         await _dispatch(CallKitEventAction.accept, callId);
       case CallKitEventAction.decline:
+        await enqueueCallKitPending(
+          CallKitPendingAction(
+            callId: callId,
+            kind: CallKitPendingKind.decline,
+          ),
+        );
         await _dispatch(CallKitEventAction.decline, callId);
+        if (_onDecline == null) {
+          unawaited(flushStoredCallKitActions());
+        }
       case CallKitEventAction.timeout:
+        await enqueueCallKitPending(
+          CallKitPendingAction(
+            callId: callId,
+            kind: CallKitPendingKind.timeout,
+          ),
+        );
+        unawaited(flushStoredCallKitActions());
         IncomingCallHandler.clearPendingCallData();
         unawaited(endCall(callId));
         AppLogger.info(
-          'Timeout $callId dismissed without reject',
+          'Timeout $callId posting end so the server stores missed',
           tag: _tag,
         );
         if (_onTimeout != null) {
@@ -173,6 +205,7 @@ class CallKitService {
 
   /// Show native incoming call UI.
   Future<void> showIncoming(IncomingCallData data) async {
+    unawaited(_mirrorAuthForKilledDecline());
     unawaited(IncomingCallHandler.persistShow(data));
     String? ringtone;
     try {
@@ -220,8 +253,19 @@ class CallKitService {
 
   /// Show CallKit from an FCM background isolate (no Riverpod / login wiring).
   static Future<void> showIncomingFromIsolate(IncomingCallData data) async {
+    await _mirrorAuthForKilledDecline();
     await IncomingCallHandler.persistShow(data);
     await instance.showIncoming(data);
+  }
+
+  /// Bearer token must be on disk before the process can be killed again.
+  static Future<void> _mirrorAuthForKilledDecline() async {
+    try {
+      final token = await TokenStorageService().getAuthToken();
+      await BackgroundAuthStore.mirror(token);
+    } catch (e) {
+      AppLogger.warning('Auth mirror for CallKit failed', tag: _tag, error: e);
+    }
   }
 
   Future<void> endCall(String callId) async {
@@ -242,6 +286,7 @@ class CallKitService {
   }
 
   void dispose() {
+    WidgetsBinding.instance.removeObserver(_resumeFlush);
     _eventSub?.cancel();
     _eventSub = null;
     _listening = false;
@@ -249,7 +294,9 @@ class CallKitService {
     _onAccept = null;
     _onDecline = null;
     _onCallback = null;
+    _onTimeout = null;
     _queued.clear();
+    unawaited(markCallKitDartListening(false));
   }
 
   static String _hex(Color color) {

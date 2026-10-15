@@ -17,6 +17,20 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.lgbtfinder/callkit_killed")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setListening" -> {
+                        CallkitKilledAction.dartListening = call.arguments == true
+                        result.success(null)
+                    }
+
+                    "completed" -> result.success(null)
+
+                    else -> result.notImplemented()
+                }
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, screenshotChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

@@ -14,7 +14,8 @@ enum CallKitEventAction {
 ///
 /// [Event.actionCallEnded] must not reject — cold-start Accept often
 /// dismisses the native UI and emits ended.
-/// [Event.actionCallTimeout] must not reject (missed is CALL-FEAT-003).
+/// [Event.actionCallTimeout] must not reject. The pending flusher
+/// POSTs `/calls/{id}/end` so the receiver row is stored as missed.
 CallKitEventAction classifyCallKitEvent(Event event) {
   switch (event) {
     case Event.actionCallAccept:

@@ -23,6 +23,8 @@
 
 # CallKit incoming
 -keep class com.hiennv.flutter_callkit_incoming.** { *; }
+# RT-013: plugin receiver looks this up by name when the process was killed.
+-keep class com.lgbtfinder.CallkitKilledAction { *; }
 
 # Pusher Channels (Java client + Flutter plugin; Gson used for event payloads)
 -keep class com.pusher.** { *; }

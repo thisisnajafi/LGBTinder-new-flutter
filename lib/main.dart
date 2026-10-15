@@ -20,7 +20,10 @@ import 'core/services/connectivity_service.dart';
 import 'routes/app_router.dart';
 import 'widgets/error_handling/error_boundary.dart';
 import 'widgets/error_handling/app_framework_error_view.dart';
+import 'features/calls/data/services/callkit_pending_flusher.dart';
+import 'shared/services/background_auth_store.dart';
 import 'shared/services/push_notification_service.dart';
+import 'shared/services/token_storage_service.dart';
 import 'shared/services/fcm_background_handler.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'core/providers/feature_flags_provider.dart';
@@ -190,6 +193,17 @@ Future<void> _bootstrap() async {
     tag: 'Init',
   );
   AppLogger.info('Flutter: ${Platform.operatingSystem}', tag: 'Init');
+
+  try {
+    await BackgroundAuthStore.mirror(await TokenStorageService().getAuthToken());
+    unawaited(flushStoredCallKitActions());
+  } catch (e) {
+    AppLogger.warning(
+      'CallKit pending flush skipped',
+      tag: 'Init',
+      error: e,
+    );
+  }
 
   startupLog('7. Calling runApp()...');
   runApp(

@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/stored_user_session.dart';
 import '../../features/auth/data/models/login_response.dart';
+import 'background_auth_store.dart';
 
 final Expando<int> _tokenStorageRevision = Expando<int>('authRevision');
 
@@ -35,6 +36,7 @@ class TokenStorageService {
   Future<void> saveAuthToken(String token) async {
     await _storage.write(key: _authTokenKey, value: token);
     bumpAuthRevision();
+    await BackgroundAuthStore.mirror(token);
   }
 
   /// Get authentication token
@@ -109,12 +111,14 @@ class TokenStorageService {
       _storage.delete(key: _userSessionKey),
     ]);
     bumpAuthRevision();
+    await BackgroundAuthStore.mirror(null);
   }
 
   /// Clear only auth token
   Future<void> clearAuthToken() async {
     await _storage.delete(key: _authTokenKey);
     bumpAuthRevision();
+    await BackgroundAuthStore.mirror(null);
   }
 
   /// Clear only profile completion token

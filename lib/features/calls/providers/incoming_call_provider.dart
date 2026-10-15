@@ -14,6 +14,7 @@ export '../../../shared/services/incoming_call_handler.dart' show IncomingCallBr
 import '../data/models/call_action_request.dart';
 import '../data/models/incoming_call_data.dart';
 import '../data/services/call_kit_service.dart';
+import '../data/services/callkit_pending_flusher.dart';
 import '../../../routes/app_router.dart';
 import '../pages/outgoing_call_page.dart';
 import '../presentation/widgets/call_permission_sheet.dart';
@@ -223,8 +224,10 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       await ref.read(callProvider.notifier).declineCall(
             CallActionRequest.reject(data.callId),
           );
+      await dropCallKitPending(data.callId);
     } catch (e) {
       CallSignalingLog.logHttpError('reject', data.callId, e);
+      unawaited(flushStoredCallKitActions());
     } finally {
       await CallKitService.instance.endCall(data.callId);
     }
@@ -375,6 +378,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       await ref.read(callProvider.notifier).declineCall(
             CallActionRequest.reject(callId),
           );
+      await dropCallKitPending(callId);
       final parsed = int.tryParse(callId) ?? 0;
       if (parsed > 0) {
         ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
@@ -384,6 +388,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       }
     } catch (e) {
       CallSignalingLog.logHttpError('reject', callId, e);
+      unawaited(flushStoredCallKitActions());
     } finally {
       IncomingCallHandler.clearPendingCallData();
       await CallKitService.instance.endCall(callId);
