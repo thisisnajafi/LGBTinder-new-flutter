@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/services/app_logger.dart';
 import '../../../../shared/services/background_auth_store.dart';
+import '../../../../shared/services/incoming_call_handler.dart';
 import '../../../../shared/services/token_storage_service.dart';
 import '../../utils/call_permission_lifecycle.dart';
 import 'callkit_terminal_request.dart';
@@ -73,7 +74,8 @@ Future<void> dropCallKitPending(String callId) async {
   );
 }
 
-/// Posts stored Decline (reject) and CallKit timeout (end → missed) rows.
+/// Posts a stored explicit Decline when it is still a ringing call.
+/// Timeouts and stale rows are removed and logged.
 Future<void> flushStoredCallKitActions() async {
   final prefs = await SharedPreferences.getInstance();
   final stored = decodeCallKitPending(
@@ -99,8 +101,56 @@ Future<void> flushStoredCallKitActions() async {
   final token = await _readToken(prefs);
   final origin = prefs.getString(kBackgroundApiOriginKey) ??
       (token == null ? null : ApiEndpoints.apiOrigin);
-  final remaining = await flushCallKitPending(
+  final currentIncoming =
+      (await IncomingCallHandler.loadPersisted())?.data.callId;
+  final statusChecked = token != null &&
+      token.isNotEmpty &&
+      origin != null &&
+      origin.isNotEmpty;
+  final statusByCallId = <String, String?>{};
+  if (statusChecked) {
+    for (final action in pending) {
+      if (action.kind != CallKitPendingKind.decline) continue;
+      try {
+        statusByCallId[action.callId] = await fetchCallRingStatus(
+          callId: action.callId,
+          token: token,
+          apiOrigin: origin,
+        );
+      } catch (e) {
+        AppLogger.warning(
+          'Call ${action.callId} ring check failed; decline stays until the next start',
+          tag: 'CallKit',
+          error: e,
+        );
+      }
+    }
+  }
+  final replay = declinesEligibleForReplay(
     actions: pending,
+    now: DateTime.now(),
+    currentIncomingCallId: currentIncoming,
+    statusByCallId: statusByCallId,
+    statusChecked: statusChecked,
+  );
+  for (final action in pending) {
+    final kept = replay.any(
+      (item) => item.callId == action.callId && item.kind == action.kind,
+    );
+    if (kept) continue;
+    AppLogger.info(
+      'Dropping stored CallKit ${action.kind} ${action.callId} '
+      'at=${action.recordedAt?.toIso8601String() ?? 'missing'} '
+      'current=$currentIncoming',
+      tag: 'CallKit',
+    );
+  }
+  if (replay.isEmpty) {
+    await prefs.remove(kCallkitPendingActionsKey);
+    return;
+  }
+  final remaining = await flushCallKitPending(
+    actions: replay,
     token: token,
     apiOrigin: origin,
     post: postCallKitTerminalRequest,
@@ -157,6 +207,41 @@ Future<List<CallKitPendingAction>> flushCallKitPending({
     }
   }
   return remaining;
+}
+
+/// GET /api/calls/{id}. Empty string means the call is not ringing.
+Future<String> fetchCallRingStatus({
+  required String callId,
+  required String token,
+  required String apiOrigin,
+}) async {
+  final origin = apiOrigin.trim().replaceAll(RegExp(r'/+$'), '');
+  final client = HttpClient();
+  client.connectionTimeout = const Duration(seconds: 8);
+  try {
+    final httpRequest = await client
+        .getUrl(Uri.parse('$origin/api/calls/$callId'))
+        .timeout(const Duration(seconds: 8));
+    httpRequest.headers.set('Authorization', 'Bearer $token');
+    httpRequest.headers.set('Accept', 'application/json');
+    final response =
+        await httpRequest.close().timeout(const Duration(seconds: 12));
+    final body = await response.transform(utf8.decoder).join();
+    if (response.statusCode == 404) return '';
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw HttpException('status ${response.statusCode}', uri: httpRequest.uri);
+    }
+    final decoded = jsonDecode(body);
+    if (decoded is Map) {
+      final data = decoded['data'];
+      if (data is Map && data['status'] != null) {
+        return data['status'].toString();
+      }
+    }
+    return '';
+  } finally {
+    client.close(force: true);
+  }
 }
 
 Future<int> postCallKitTerminalRequest(CallKitTerminalRequest request) async {

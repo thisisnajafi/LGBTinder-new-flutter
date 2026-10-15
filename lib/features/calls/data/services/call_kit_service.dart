@@ -126,6 +126,7 @@ class CallKitService {
           CallKitPendingAction(
             callId: callId,
             kind: CallKitPendingKind.decline,
+            recordedAt: DateTime.now(),
           ),
         );
         await _dispatch(CallKitEventAction.decline, callId);
@@ -133,19 +134,12 @@ class CallKitService {
           unawaited(flushStoredCallKitActions());
         }
       case CallKitEventAction.timeout:
-        await enqueueCallKitPending(
-          CallKitPendingAction(
-            callId: callId,
-            kind: CallKitPendingKind.timeout,
-          ),
-        );
-        unawaited(flushStoredCallKitActions());
-        IncomingCallHandler.clearPendingCallData();
-        unawaited(endCall(callId));
         AppLogger.info(
-          'Timeout $callId posting end so the server stores missed',
+          'Timeout $callId is not stored as a decline; the server ring timeout marks it missed',
           tag: _tag,
         );
+        IncomingCallHandler.clearPendingCallData();
+        unawaited(endCall(callId));
         if (_onTimeout != null) {
           await _onTimeout!(callId);
         }

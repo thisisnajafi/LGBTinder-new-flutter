@@ -291,6 +291,10 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     state = null;
     unawaited(SoundService.instance.stopCallSounds());
     IncomingCallHandler.clearPendingCallData();
+    AppLogger.info(
+      'Explicit in-app decline ${data.callId}',
+      tag: 'IncomingCall',
+    );
 
     try {
       await ref.read(callProvider.notifier).declineCall(

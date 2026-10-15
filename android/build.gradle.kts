@@ -191,6 +191,89 @@ fun Project.patchCallkitBackgroundIncoming() {
 
 patchCallkitBackgroundIncoming()
 
+// RT-019: endCall/endAllCalls broadcast DECLINE for an unanswered row.
+// Process death and notification teardown then look like the user tapped
+// Decline. Dismiss those rows with ENDED. The Decline button still uses
+// getIntentDecline from the notification action and the incoming activity.
+fun Project.patchCallkitExplicitDecline() {
+    val config = file("../.dart_tool/package_config.json")
+    if (!config.exists()) return
+    val json = config.readText()
+    val marker = "\"name\": \"flutter_callkit_incoming\""
+    val nameAt = json.indexOf(marker)
+    if (nameAt < 0) return
+    val rootKey = "\"rootUri\": \""
+    val rootAt = json.indexOf(rootKey, nameAt)
+    if (rootAt < 0 || rootAt - nameAt > 200) return
+    val uriStart = rootAt + rootKey.length
+    val uriEnd = json.indexOf('"', uriStart)
+    val rootUri = json.substring(uriStart, uriEnd)
+    val rawPath = java.net.URI(rootUri).path ?: return
+    val path = if (rawPath.length >= 3 && rawPath[0] == '/' && rawPath[2] == ':') {
+        rawPath.substring(1)
+    } else {
+        rawPath
+    }
+    val plugin = file(
+        "$path/android/src/main/kotlin/com/hiennv/flutter_callkit_incoming/FlutterCallkitIncomingPlugin.kt",
+    )
+    if (!plugin.exists()) return
+    val source = plugin.readText()
+    if (source.contains("RT-019")) return
+    val endCallNeedle = """
+        |}else {
+        |                            context?.sendBroadcast(
+        |                                CallkitIncomingBroadcastReceiver.getIntentDecline(
+        |                                    requireNotNull(context),
+        |                                    currentCall.toBundle()
+        |                                )
+        |                            )
+        |                        }
+    """.trimMargin()
+    val endCallHook = """
+        |}else {
+        |                            // RT-019: dismissing an unanswered call is not Decline.
+        |                            context?.sendBroadcast(
+        |                                CallkitIncomingBroadcastReceiver.getIntentEnded(
+        |                                    requireNotNull(context),
+        |                                    currentCall.toBundle()
+        |                                )
+        |                            )
+        |                        }
+    """.trimMargin()
+    val endAllNeedle = """
+        |} else {
+        |                            context?.sendBroadcast(
+        |                                CallkitIncomingBroadcastReceiver.getIntentDecline(
+        |                                    requireNotNull(context),
+        |                                    it.toBundle()
+        |                                )
+        |                            )
+        |                        }
+    """.trimMargin()
+    val endAllHook = """
+        |} else {
+        |                            // RT-019: dismissing an unanswered call is not Decline.
+        |                            context?.sendBroadcast(
+        |                                CallkitIncomingBroadcastReceiver.getIntentEnded(
+        |                                    requireNotNull(context),
+        |                                    it.toBundle()
+        |                                )
+        |                            )
+        |                        }
+    """.trimMargin()
+    if (!source.contains(endCallNeedle) || !source.contains(endAllNeedle)) {
+        logger.warn("RT-019: CallKit endCall shape changed; explicit-decline patch skipped")
+        return
+    }
+    plugin.writeText(
+        source.replace(endCallNeedle, endCallHook).replace(endAllNeedle, endAllHook),
+    )
+    logger.lifecycle("RT-019: unanswered endCall no longer broadcasts Decline (${plugin.path})")
+}
+
+patchCallkitExplicitDecline()
+
 allprojects {
     repositories {
         google()

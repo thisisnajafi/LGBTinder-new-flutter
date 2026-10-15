@@ -46,7 +46,12 @@ object CallkitKilledAction {
 
     @JvmStatic
     fun onCallkitAction(receiver: BroadcastReceiver, context: Context, intent: Intent) {
-        val kind = kindFor(intent.action ?: return) ?: return
+        val action = intent.action ?: return
+        val kind = kindFor(action)
+        if (kind == null) {
+            Log.i(TAG, "Ignoring $action (not an explicit Decline)")
+            return
+        }
         val callId = callIdFrom(intent) ?: return
         persist(context, callId, kind)
         if (dartListening) {
@@ -90,12 +95,14 @@ object CallkitKilledAction {
         }.start()
     }
 
+    /**
+     * Only the Decline button (notification action or in-call activity).
+     * Timeout, ended, dismiss, and notification removal must not be stored.
+     * [endCall] on an unanswered row used to broadcast DECLINE; the Gradle
+     * RT-019 patch sends ENDED for that path instead.
+     */
     private fun kindFor(action: String): String? {
-        return when {
-            action.endsWith("ACTION_CALL_DECLINE") -> "decline"
-            action.endsWith("ACTION_CALL_TIMEOUT") -> "timeout"
-            else -> null
-        }
+        return if (action.endsWith("ACTION_CALL_DECLINE")) "decline" else null
     }
 
     private fun callIdFrom(intent: Intent): String? {
@@ -124,18 +131,21 @@ object CallkitKilledAction {
                 next.put(row)
                 continue
             }
-            if (row.optString("kind") == "decline" && kind == "timeout") {
-                next.put(row)
-            } else {
-                next.put(JSONObject().put("callId", callId).put("kind", kind))
-            }
+            next.put(declineRow(callId))
             replaced = true
         }
         if (!replaced) {
-            next.put(JSONObject().put("callId", callId).put("kind", kind))
+            next.put(declineRow(callId))
         }
         prefs(context).edit().putString(PENDING_KEY, next.toString()).commit()
-        Log.i(TAG, "Persisted $kind $callId")
+        Log.i(TAG, "Persisted explicit $kind $callId")
+    }
+
+    private fun declineRow(callId: String): JSONObject {
+        return JSONObject()
+            .put("callId", callId)
+            .put("kind", "decline")
+            .put("at", System.currentTimeMillis())
     }
 
     private fun readPending(context: Context): JSONArray {
@@ -206,6 +216,15 @@ object CallkitKilledAction {
             val row = pending.optJSONObject(index) ?: continue
             val callId = row.optString("callId")
             val kind = row.optString("kind")
+            val recordedAt = row.optLong("at", 0L)
+            if (kind != "decline") {
+                Log.i(TAG, "Dropping stored $kind $callId (not an explicit Decline)")
+                continue
+            }
+            if (recordedAt <= 0L || System.currentTimeMillis() - recordedAt > 60_000L) {
+                Log.i(TAG, "Dropping stale decline $callId ageMs=${if (recordedAt <= 0L) -1 else System.currentTimeMillis() - recordedAt}")
+                continue
+            }
             val path = when (kind) {
                 "decline" -> "/api/calls/$callId/reject"
                 "timeout" -> "/api/calls/$callId/end"

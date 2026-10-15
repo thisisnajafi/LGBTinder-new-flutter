@@ -8,19 +8,25 @@ class CallKitPendingKind {
   static const Set<String> all = {decline, timeout};
 }
 
+/// Stored declines older than this are not replayed (RT-019).
+const Duration callKitDeclineReplayMaxAge = Duration(seconds: 60);
+
 /// One CallKit action that still needs to reach the API.
 class CallKitPendingAction {
   final String callId;
   final String kind;
+  final DateTime? recordedAt;
 
   const CallKitPendingAction({
     required this.callId,
     required this.kind,
+    this.recordedAt,
   });
 
-  Map<String, String> toJson() => {
+  Map<String, Object> toJson() => {
         'callId': callId,
         'kind': kind,
+        if (recordedAt != null) 'at': recordedAt!.millisecondsSinceEpoch,
       };
 
   static CallKitPendingAction? tryParse(Object? raw) {
@@ -29,8 +35,52 @@ class CallKitPendingAction {
     final kind = raw['kind']?.toString() ?? '';
     if (!RegExp(r'^[0-9]+$').hasMatch(callId)) return null;
     if (!CallKitPendingKind.all.contains(kind)) return null;
-    return CallKitPendingAction(callId: callId, kind: kind);
+    DateTime? recordedAt;
+    final at = raw['at'];
+    if (at is num) {
+      recordedAt = DateTime.fromMillisecondsSinceEpoch(at.toInt());
+    }
+    return CallKitPendingAction(
+      callId: callId,
+      kind: kind,
+      recordedAt: recordedAt,
+    );
   }
+}
+
+bool callStatusIsStillRinging(String? status) {
+  final value = status?.trim().toLowerCase() ?? '';
+  return value == 'ringing' || value == 'initiating';
+}
+
+/// Explicit declines that are still safe to POST.
+///
+/// Drops timeouts, rows older than 60s, rows with no timestamp, a call id
+/// that is not the current incoming call, and calls that are no longer ringing.
+/// A missing status entry is kept when [statusChecked] is false (offline).
+List<CallKitPendingAction> declinesEligibleForReplay({
+  required List<CallKitPendingAction> actions,
+  required DateTime now,
+  String? currentIncomingCallId,
+  Map<String, String?> statusByCallId = const {},
+  bool statusChecked = false,
+}) {
+  final incoming = currentIncomingCallId?.trim() ?? '';
+  final replay = <CallKitPendingAction>[];
+  for (final action in actions) {
+    if (action.kind != CallKitPendingKind.decline) continue;
+    final recordedAt = action.recordedAt;
+    if (recordedAt == null ||
+        now.difference(recordedAt) > callKitDeclineReplayMaxAge) {
+      continue;
+    }
+    if (incoming.isNotEmpty && incoming != action.callId) continue;
+    if (statusChecked && statusByCallId.containsKey(action.callId)) {
+      if (!callStatusIsStillRinging(statusByCallId[action.callId])) continue;
+    }
+    replay.add(action);
+  }
+  return replay;
 }
 
 /// A permission dialog can make CallKit emit decline. Drop those rows

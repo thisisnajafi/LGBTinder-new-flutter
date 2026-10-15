@@ -3,6 +3,7 @@ package com.lgbtfinder
 import android.content.ContentValues
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -22,6 +23,10 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "setListening" -> {
                         CallkitKilledAction.dartListening = call.arguments == true
+                        Log.i(
+                            "CallkitKilledAction",
+                            "Dart listening=${CallkitKilledAction.dartListening}; only explicit Decline is persisted",
+                        )
                         result.success(null)
                     }
 

@@ -56,6 +56,18 @@ void main() {
       expect(merged.single.kind, CallKitPendingKind.decline);
     });
 
+    test('round-trips the decline timestamp and drops a non-numeric id', () {
+      final at = DateTime.fromMillisecondsSinceEpoch(1_700_000_000_000);
+      final encoded = encodeCallKitPending([
+        CallKitPendingAction(
+          callId: '70',
+          kind: CallKitPendingKind.decline,
+          recordedAt: at,
+        ),
+      ]);
+      expect(decodeCallKitPending(encoded).single.recordedAt, at);
+    });
+
     test('round-trips through json and drops a non-numeric id', () {
       final encoded = encodeCallKitPending(const [
         CallKitPendingAction(callId: '70', kind: CallKitPendingKind.decline),
@@ -117,6 +129,52 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('declinesEligibleForReplay', () {
+    final now = DateTime.utc(2026, 10, 16, 1, 0, 0);
+
+    CallKitPendingAction decline(String id, {Duration age = const Duration(seconds: 5)}) {
+      return CallKitPendingAction(
+        callId: id,
+        kind: CallKitPendingKind.decline,
+        recordedAt: now.subtract(age),
+      );
+    }
+
+    test('replays a fresh decline for the current ringing call', () {
+      final kept = declinesEligibleForReplay(
+        actions: [decline('85')],
+        now: now,
+        currentIncomingCallId: '85',
+        statusByCallId: const {'85': 'ringing'},
+        statusChecked: true,
+      );
+      expect(kept.single.callId, '85');
+    });
+
+    test('drops timeout, stale, mismatched, and answered rows', () {
+      final kept = declinesEligibleForReplay(
+        actions: [
+          const CallKitPendingAction(
+            callId: '85',
+            kind: CallKitPendingKind.timeout,
+          ),
+          decline('85', age: const Duration(seconds: 61)),
+          decline('86'),
+          decline('87'),
+          CallKitPendingAction(
+            callId: '88',
+            kind: CallKitPendingKind.decline,
+          ),
+        ],
+        now: now,
+        currentIncomingCallId: '87',
+        statusByCallId: const {'87': 'active'},
+        statusChecked: true,
+      );
+      expect(kept, isEmpty);
     });
   });
 
