@@ -88,7 +88,7 @@ Build: debug, --flavor production --target lib/main_production.dart
 - Feature: presence · Devices: phone (bg) → emulator (observer)
 - Steps: phone in thread → HOME; wait 25 s; read emulator header.
 - Expected: "Last seen…"/offline within a short grace.  Actual: still "Online" after 25 s (may be a deliberate grace period – confirm intended timeout).
-- Severity: Low/Medium · Status: Fixed locally (7d6e2e720313f7faf63be0db1031da1f8f46d311, APP_HASH), pending deploy/retest
+- Severity: Low/Medium · Status: Fixed locally (7d6e2e720313f7faf63be0db1031da1f8f46d311, 5a55c7e9f4e63be8dddd71cc4831f4abb1168686), pending deploy/retest
 
 ### RT-009 – FCM message received but no notification shown while app in background
 - Feature: push (FCM) · Devices: emulator sends, phone receives
