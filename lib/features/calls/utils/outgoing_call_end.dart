@@ -4,9 +4,9 @@ import 'call_ring_timeout.dart';
 /// When the outgoing screen must POST `/calls/end`.
 ///
 /// Ring timeout uses [CallRingTimeout.callerTimeoutReason] so the server
-/// stores missed. Any other leave (back, dispose, permission exit) still
-/// posts end so a ringing row is not left behind. Minimize keeps the engine
-/// and does not end the call.
+/// stores missed. Any other leave (back, dispose, permission denied) still
+/// posts end so a ringing row is not left behind. The OS permission dialog
+/// pauses the app and must not cancel. Minimize keeps the engine.
 class OutgoingCallEnd {
   OutgoingCallEnd._();
 
@@ -15,7 +15,9 @@ class OutgoingCallEnd {
     required bool endAlreadyPosted,
     required bool remoteAlreadyTerminal,
     required bool keepingEngine,
+    bool permissionDialogVisible = false,
   }) {
+    if (permissionDialogVisible) return false;
     if (keepingEngine) return false;
     if (callId <= 0) return false;
     if (endAlreadyPosted || remoteAlreadyTerminal) return false;

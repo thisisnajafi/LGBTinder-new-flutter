@@ -3,6 +3,31 @@ import 'package:lgbtindernew/features/calls/data/services/callkit_pending_flushe
 import 'package:lgbtindernew/features/calls/data/services/callkit_terminal_request.dart';
 
 void main() {
+  group('stripDeclinesDuringPermissionPrompt', () {
+    test('drops a decline recorded while the permission dialog is up', () {
+      final kept = stripDeclinesDuringPermissionPrompt(
+        const [
+          CallKitPendingAction(callId: '64', kind: CallKitPendingKind.decline),
+          CallKitPendingAction(callId: '67', kind: CallKitPendingKind.timeout),
+        ],
+        permissionRequestInFlight: true,
+      );
+      expect(kept, hasLength(1));
+      expect(kept.single.kind, CallKitPendingKind.timeout);
+      expect(kept.single.callId, '67');
+    });
+
+    test('keeps a real decline when no permission dialog is up', () {
+      final kept = stripDeclinesDuringPermissionPrompt(
+        const [
+          CallKitPendingAction(callId: '64', kind: CallKitPendingKind.decline),
+        ],
+        permissionRequestInFlight: false,
+      );
+      expect(kept.single.kind, CallKitPendingKind.decline);
+    });
+  });
+
   group('mergeCallKitPending', () {
     test('decline replaces a timeout for the same call', () {
       final merged = mergeCallKitPending(

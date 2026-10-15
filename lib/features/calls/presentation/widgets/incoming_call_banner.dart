@@ -26,6 +26,7 @@ import '../../providers/incoming_call_provider.dart';
 import '../../utils/call_navigation.dart';
 import '../../utils/call_rejoin_policy.dart';
 import '../../../../shared/services/call_permissions.dart';
+import '../../utils/call_permission_lifecycle.dart';
 import 'call_permission_sheet.dart';
 
 /// Foreground incoming call banner — slides down from top.
@@ -248,9 +249,18 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
   }
 
   /// Lock screen and Home: promote the in-app banner to the native incoming UI.
+  ///
+  /// The camera/mic dialog also pauses the activity. Promoting then makes
+  /// CallKit broadcast decline and the server stores "rejected" (RT-012).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) return;
+    if (!CallPermissionLifecycle.shouldPromoteIncomingToCallKit(
+      state: state,
+      permissionRequestInFlight:
+          CallPermissionLifecycle.blocksCallTerminalActions,
+    )) {
+      return;
+    }
     final incoming = ref.read(incomingCallProvider);
     if (incoming == null) return;
     unawaited(CallKitService.instance.showIncoming(incoming));

@@ -50,6 +50,7 @@ import '../utils/call_rejoin_policy.dart';
 import '../utils/call_log_labels.dart';
 import '../utils/call_audio_route.dart';
 import '../utils/call_navigation.dart';
+import '../utils/call_permission_lifecycle.dart';
 import '../utils/call_ring_timeout.dart';
 import '../utils/outgoing_call_end.dart';
 
@@ -369,6 +370,8 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       endAlreadyPosted: _endPosted,
       remoteAlreadyTerminal: _remoteSettled,
       keepingEngine: _preservingEngine,
+      permissionDialogVisible:
+          CallPermissionLifecycle.blocksCallTerminalActions,
     )) {
       return;
     }
@@ -485,6 +488,8 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   Future<void> _startOutgoing() async {
     _setStatus('Connecting...');
     final isVideo = widget.type == OutgoingCallType.video;
+    // Mic/camera before POST /initiate. Starting during the prompt used to
+    // cancel on the pause and the callee never rang (RT-012).
     final allowed = await ensureCallMediaPermissions(context, video: isVideo);
     if (!allowed) {
       if (mounted) _leaveCallUi();
@@ -1226,6 +1231,8 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       endAlreadyPosted: _endPosted,
       remoteAlreadyTerminal: _remoteSettled,
       keepingEngine: _preservingEngine,
+      permissionDialogVisible:
+          CallPermissionLifecycle.blocksCallTerminalActions,
     )) {
       return;
     }
@@ -1312,6 +1319,8 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       endAlreadyPosted: _endPosted,
       remoteAlreadyTerminal: _remoteSettled,
       keepingEngine: false,
+      permissionDialogVisible:
+          CallPermissionLifecycle.blocksCallTerminalActions,
     );
     final endReason = OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut);
     final callId = _callId;

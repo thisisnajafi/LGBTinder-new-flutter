@@ -9,6 +9,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/services/app_logger.dart';
 import '../../../../shared/services/background_auth_store.dart';
 import '../../../../shared/services/token_storage_service.dart';
+import '../../utils/call_permission_lifecycle.dart';
 import 'callkit_terminal_request.dart';
 
 const MethodChannel callkitKilledChannel = MethodChannel(
@@ -75,9 +76,24 @@ Future<void> dropCallKitPending(String callId) async {
 /// Posts stored Decline (reject) and CallKit timeout (end → missed) rows.
 Future<void> flushStoredCallKitActions() async {
   final prefs = await SharedPreferences.getInstance();
-  final pending = decodeCallKitPending(
+  final stored = decodeCallKitPending(
     prefs.getString(kCallkitPendingActionsKey),
   );
+  final pending = stripDeclinesDuringPermissionPrompt(
+    stored,
+    permissionRequestInFlight:
+        CallPermissionLifecycle.blocksCallTerminalActions,
+  );
+  if (pending.length != stored.length) {
+    if (pending.isEmpty) {
+      await prefs.remove(kCallkitPendingActionsKey);
+    } else {
+      await prefs.setString(
+        kCallkitPendingActionsKey,
+        encodeCallKitPending(pending),
+      );
+    }
+  }
   if (pending.isEmpty) return;
 
   final token = await _readToken(prefs);

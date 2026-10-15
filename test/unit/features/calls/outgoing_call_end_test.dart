@@ -55,6 +55,19 @@ void main() {
         isFalse,
       );
     });
+
+    test('permission dialog pause does not cancel the outgoing call', () {
+      expect(
+        OutgoingCallEnd.shouldNotifyServer(
+          callId: 64,
+          endAlreadyPosted: false,
+          remoteAlreadyTerminal: false,
+          keepingEngine: false,
+          permissionDialogVisible: true,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('OutgoingCallEnd.reasonForLeave', () {

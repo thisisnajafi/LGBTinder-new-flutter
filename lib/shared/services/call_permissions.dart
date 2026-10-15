@@ -1,5 +1,7 @@
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../features/calls/utils/call_permission_lifecycle.dart';
+
 /// Result of a mic / camera pre-check for calls.
 enum CallPermissionResult {
   granted,
@@ -85,6 +87,13 @@ class CallPermissions {
     if (current == CallPermissionResult.permanentlyDenied) {
       return CallPermissionResult.permanentlyDenied;
     }
-    return interpret(await permission.request());
+    // The system dialog pauses the app. Hold that window so it is not
+    // stored as a decline or an outgoing cancel (RT-012).
+    CallPermissionLifecycle.beginRequest();
+    try {
+      return interpret(await permission.request());
+    } finally {
+      CallPermissionLifecycle.endRequest();
+    }
   }
 }

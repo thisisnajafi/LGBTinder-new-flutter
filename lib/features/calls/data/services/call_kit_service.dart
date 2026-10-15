@@ -12,6 +12,7 @@ import '../models/incoming_call_data.dart';
 import '../../../settings/providers/sound_preferences_provider.dart';
 import '../../../../shared/services/background_auth_store.dart';
 import '../../../../shared/services/token_storage_service.dart';
+import '../../utils/call_permission_lifecycle.dart';
 import '../../utils/call_ring_timeout.dart';
 import 'call_kit_event_action.dart';
 import 'callkit_pending_flusher.dart';
@@ -108,6 +109,17 @@ class CallKitService {
         }
         await _dispatch(CallKitEventAction.accept, callId);
       case CallKitEventAction.decline:
+        if (!CallPermissionLifecycle.shouldPostDecline(
+          permissionRequestInFlight:
+              CallPermissionLifecycle.blocksCallTerminalActions,
+        )) {
+          AppLogger.info(
+            'Ignoring decline during permission dialog callId=$callId',
+            tag: _tag,
+          );
+          await dropCallKitPending(callId);
+          break;
+        }
         await enqueueCallKitPending(
           CallKitPendingAction(
             callId: callId,

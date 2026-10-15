@@ -33,6 +33,19 @@ class CallKitPendingAction {
   }
 }
 
+/// A permission dialog can make CallKit emit decline. Drop those rows
+/// while the prompt is up so a later flush cannot POST reject.
+/// Timeouts stay so an unanswered call can still be stored as missed.
+List<CallKitPendingAction> stripDeclinesDuringPermissionPrompt(
+  List<CallKitPendingAction> actions, {
+  required bool permissionRequestInFlight,
+}) {
+  if (!permissionRequestInFlight) return actions;
+  return actions
+      .where((action) => action.kind != CallKitPendingKind.decline)
+      .toList();
+}
+
 /// Decline wins over a later timeout for the same call.
 List<CallKitPendingAction> mergeCallKitPending(
   List<CallKitPendingAction> existing,
