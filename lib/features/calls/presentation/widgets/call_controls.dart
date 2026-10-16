@@ -69,23 +69,11 @@ class CallControls extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final controlsRow = Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                mainAxisSize: MainAxisSize.min,
-                children: _buildControlButtons(context, ref),
-              );
-
-              if (constraints.maxWidth < 360) {
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: controlsRow,
-                );
-              }
-
-              return controlsRow;
-            },
+          Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: AppSpacing.spacingSM,
+            runSpacing: AppSpacing.spacingSM,
+            children: _buildControlButtons(context, ref),
           ),
 
           const SizedBox(height: 16),
@@ -217,7 +205,7 @@ class _ControlButton extends StatelessWidget {
         const SizedBox(height: 8),
 
         SizedBox(
-          width: size + 4,
+          width: size + 16 < 72 ? 72 : size + 16,
           child: AppText(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -225,7 +213,7 @@ class _ControlButton extends StatelessWidget {
               fontSize: 11,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2,
           ),
         ),
       ],

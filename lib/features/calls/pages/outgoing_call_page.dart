@@ -1592,8 +1592,10 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                 ),
               ),
               SizedBox(height: AppSpacing.spacingLG),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                spacing: AppSpacing.spacingMD,
+                runSpacing: AppSpacing.spacingSM,
                 children: [
                   CallMuteButton(onTap: _toggleMute, size: circle),
                   if (isVideo)
