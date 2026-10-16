@@ -16,6 +16,7 @@ import 'notification_quick_actions.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
 import 'notification_navigation.dart';
+import 'pending_launch_route.dart';
 import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/models/active_call_notification.dart';
 import '../../features/calls/data/models/active_call_session.dart';
@@ -331,9 +332,46 @@ class PushNotificationService {
         kLgbtfinderCallsChannelId,
         'Calls',
         description: 'Missed calls and call updates',
-        importance: Importance.high,
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
       ),
     );
+  }
+
+  /// Terminated-app tap. Reads FCM and the local notification plugin before
+  /// splash sends the user to Discover.
+  Future<void> captureTerminatedLaunch() {
+    return PendingLaunchRoute.capture(() async {
+      try {
+        await _initializeLocalNotifications();
+        final launch = await _localNotifications.getNotificationAppLaunchDetails();
+        final response = launch?.notificationResponse;
+        final launched = launch?.didNotificationLaunchApp ?? false;
+        PendingLaunchRoute.localLaunchCaptured = launched;
+        PendingLaunchRoute.store(
+          PendingLaunchRoute.payloadFromLocalLaunch(
+            didLaunchApp: launched,
+            payload: response?.payload,
+            actionId: response?.actionId,
+          ),
+        );
+      } catch (e) {
+        AppLogger.debug('Local notification launch details failed: $e');
+      }
+
+      try {
+        final message = await _firebaseMessaging.getInitialMessage();
+        PendingLaunchRoute.initialMessageCaptured = true;
+        PendingLaunchRoute.store(
+          PendingLaunchRoute.payloadFromFcmData(
+            message == null ? null : Map<String, dynamic>.from(message.data),
+          ),
+        );
+      } catch (e) {
+        AppLogger.debug('FCM initial message failed: $e');
+      }
+    });
   }
 
   /// Get FCM token
@@ -368,12 +406,21 @@ class PushNotificationService {
       _handleNotificationTap(message);
     });
 
-    // Handle notification tap when app is terminated
+    // Terminated taps are stored by [captureTerminatedLaunch] and applied
+    // after splash. A second getInitialMessage() is empty once consumed.
     _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
-      if (message != null) {
-        AppLogger.debug(
-          'App opened from terminated state: ${message.messageId}',
-        );
+      if (PendingLaunchRoute.initialMessageCaptured || message == null) return;
+      AppLogger.debug(
+        'App opened from terminated state: ${message.messageId}',
+      );
+      final data = PendingLaunchRoute.payloadFromFcmData(
+        Map<String, dynamic>.from(message.data),
+      );
+      if (!PendingLaunchRoute.navigationReady) {
+        PendingLaunchRoute.store(data);
+        return;
+      }
+      if (data != null) {
         _handleNotificationTap(message);
       }
     });
@@ -487,41 +534,48 @@ class PushNotificationService {
     final channelId = mapped.channelId;
     final groupKey = mapped.groupKey;
     final isChat = mapped.style == TrayStyleKind.messaging;
-    final avatarPng = await NotificationAvatarBitmap.pngFor(mapped.avatarUrl);
+    final avatar = await NotificationAvatarBitmap.load(mapped.avatarUrl);
 
     final payloadSound = _resolvePayloadSound(data);
     final androidRaw =
         payloadSound ?? SoundService.instance.getNotificationAndroidRaw();
     final iosSound = androidRaw != null ? '$androidRaw.wav' : null;
 
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      notificationChannelLabel(channelId),
-      channelDescription: notificationChannelDescription(channelId),
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@drawable/ic_stat_lgbtfinder',
-      color: const Color(0xFFEC4899),
-      largeIcon: NotificationAvatarBitmap.largeIcon(avatarPng),
-      showWhen: true,
-      groupKey: groupKey,
-      tag: mapped.tag,
-      setAsGroupSummary: false,
-      styleInformation: messageTrayStyle(
-        chat: isChat,
-        title: title,
-        body: body,
-        senderKey:
-            mapped.data['sender_id']?.toString() ??
-            mapped.data['user_id']?.toString(),
-        avatarPng: avatarPng,
-      ),
-      actions: trayActionsFor(type),
-      sound: androidRaw != null
-          ? RawResourceAndroidNotificationSound(androidRaw)
-          : null,
-      enableVibration: SoundService.instance.vibrationEnabled,
-    );
+    final androidDetails = mapped.callBack
+        ? missedCallAndroidDetails(
+            title: title,
+            body: body,
+            tag: mapped.tag,
+            largeIcon: NotificationAvatarBitmap.largeIcon(avatar),
+          )
+        : AndroidNotificationDetails(
+            channelId,
+            notificationChannelLabel(channelId),
+            channelDescription: notificationChannelDescription(channelId),
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_lgbtfinder',
+            color: const Color(0xFFEC4899),
+            largeIcon: NotificationAvatarBitmap.largeIcon(avatar),
+            showWhen: true,
+            groupKey: groupKey,
+            tag: mapped.tag,
+            setAsGroupSummary: false,
+            styleInformation: messageTrayStyle(
+              chat: isChat,
+              title: title,
+              body: body,
+              senderKey:
+                  mapped.data['sender_id']?.toString() ??
+                  mapped.data['user_id']?.toString(),
+              avatarPng: avatar?.png,
+            ),
+            actions: trayActionsFor(type),
+            sound: androidRaw != null
+                ? RawResourceAndroidNotificationSound(androidRaw)
+                : null,
+            enableVibration: SoundService.instance.vibrationEnabled,
+          );
 
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
@@ -544,16 +598,26 @@ class PushNotificationService {
         message.messageId?.hashCode ??
         mapped.tag.hashCode;
 
+    final encodedPayload = jsonEncode(mapped.data);
     await _localNotifications.show(
       notificationId,
       title,
       body,
       details,
-      payload: jsonEncode(mapped.data),
+      payload: encodedPayload,
     );
 
+    if (mapped.callBack && Platform.isAndroid) {
+      await showMissedCallGroupSummary(
+        plugin: _localNotifications,
+        title: title,
+        body: body,
+        payload: encodedPayload,
+      );
+    }
+
     // Show summary notification for grouped messages (Android)
-    if (groupKey != null && Platform.isAndroid) {
+    if (groupKey != null && !mapped.callBack && Platform.isAndroid) {
       await _showGroupSummaryNotification(
         groupKey: groupKey,
         channelId: channelId,
@@ -679,6 +743,28 @@ class PushNotificationService {
 
   /// Handle local notification tap (foreground FCM shown as local notification).
   void _onNotificationTapped(NotificationResponse response) {
+    final parsed = NotificationNavigation.parseLocalNotificationPayload(
+      response.payload,
+    );
+    if (parsed != null &&
+        response.actionId != null &&
+        response.actionId!.isNotEmpty) {
+      parsed['action'] = response.actionId;
+    }
+    if (PendingLaunchRoute.localLaunchCaptured) {
+      PendingLaunchRoute.localLaunchCaptured = false;
+      if (!PendingLaunchRoute.navigationReady) {
+        PendingLaunchRoute.store(parsed);
+      }
+      return;
+    }
+    if (PendingLaunchRoute.wasJustConsumed(parsed)) {
+      return;
+    }
+    if (!PendingLaunchRoute.navigationReady) {
+      PendingLaunchRoute.store(parsed);
+      return;
+    }
     if (response.actionId == kNotificationActionCallBack) {
       final payload = NotificationNavigation.parseLocalNotificationPayload(
         response.payload,

@@ -18,6 +18,19 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.lgbtfinder/incoming_call_alerts",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "ensure" -> {
+                    IncomingCallChannel.ensure(this)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.lgbtfinder/callkit_killed")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

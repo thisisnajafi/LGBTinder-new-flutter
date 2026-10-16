@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lgbtindernew/features/notifications/data/foreground_push_policy.dart';
 import 'package:lgbtindernew/shared/services/background_message_display.dart';
 import 'package:lgbtindernew/shared/services/notification_payload_map.dart';
+import 'package:lgbtindernew/shared/services/notification_quick_actions.dart';
 
 void main() {
   group('NotificationPayloadMap', () {
@@ -106,6 +107,7 @@ void main() {
       expect(mapped!.channelId, kLgbtfinderCallsChannelId);
       expect(mapped.callBack, isTrue);
       expect(mapped.reply, isFalse);
+      expect(mapped.groupKey, kMissedCallGroupKey);
       expect(mapped.tag, 'lgbtfinder-missed_call-15');
       expect(mapped.avatarUrl, 'https://cdn.example/notification-avatars/call.jpg');
     });

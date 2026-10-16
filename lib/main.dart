@@ -169,6 +169,8 @@ Future<void> _bootstrap() async {
     startupLog('4. Firebase init failed (non-fatal): $e');
   }
 
+  unawaited(PushNotificationService().captureTerminatedLaunch());
+
   startupLog('5. Loading SharedPreferences...');
   SharedPreferences? prefs;
   try {

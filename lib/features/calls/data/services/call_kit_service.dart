@@ -7,7 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/services/incoming_call_channel.dart';
 import '../../../../shared/services/incoming_call_handler.dart';
+import '../../../../shared/services/notification_navigation.dart';
+import '../../../../shared/services/pending_launch_route.dart';
 import '../models/call_kit_restore.dart';
 import '../models/incoming_call_data.dart';
 import '../../../settings/providers/sound_preferences_provider.dart';
@@ -144,12 +147,31 @@ class CallKitService {
           await _onTimeout!(callId);
         }
       case CallKitEventAction.callback:
+        final target = parsed ?? await _storedCall(callId);
+        if (target != null && target.callerId > 0) {
+          PendingLaunchRoute.store(
+            NotificationNavigation.callBackPayload(
+              userId: target.callerId,
+              userName: target.callerName,
+              callType: target.callType,
+              avatarUrl: target.callerAvatar,
+            ),
+          );
+        }
         await _dispatch(CallKitEventAction.callback, callId);
       case CallKitEventAction.dismissOnly:
         AppLogger.info('Ended $callId (UI dismiss only)', tag: _tag);
       case CallKitEventAction.ignore:
         break;
     }
+  }
+
+  Future<IncomingCallData?> _storedCall(String callId) async {
+    final persisted = await IncomingCallHandler.loadPersisted();
+    if (persisted != null && persisted.data.callId == callId) {
+      return persisted.data;
+    }
+    return null;
   }
 
   Future<void> _dispatch(CallKitEventAction action, String callId) async {
@@ -246,37 +268,18 @@ class CallKitService {
     }
 
     final avatar = data.callerAvatar;
-    final params = CallKitParams(
-      id: data.callId,
-      nameCaller: data.callerName,
-      appName: 'LGBTFinder',
+    await IncomingCallChannel.ensure();
+    final params = buildIncomingCallKitParams(
+      data: data,
+      ringtone: ringtone,
       avatar: (avatar != null && avatar.isNotEmpty) ? avatar : null,
-      handle: data.callKitSubtitle,
-      type: data.isVideo ? 1 : 0,
-      textAccept: 'Accept',
-      textDecline: 'Decline',
-      duration: CallRingTimeout.milliseconds,
-      extra: data.toExtras(),
-      android: AndroidParams(
-        isCustomNotification: true,
-        isShowLogo: false,
-        ringtonePath: ringtone,
-        backgroundColor: _hex(AppColors.backgroundDark),
-        actionColor: _hex(AppColors.primaryLight),
-        textColor: '#FFFFFF',
-        incomingCallNotificationChannelName: 'Incoming Calls',
-        missedCallNotificationChannelName: 'Missed Calls',
-      ),
-      ios: IOSParams(
-        iconName: 'CallKitLogo', // ios/Runner/Assets.xcassets/CallKitLogo
-        handleType: 'generic',
-        supportsVideo: data.isVideo,
-        ringtonePath: ringtone,
-      ),
+      backgroundColor: _hex(AppColors.backgroundDark),
+      actionColor: _hex(AppColors.primaryLight),
     );
 
     try {
       await FlutterCallkitIncoming.showCallkitIncoming(params);
+      await IncomingCallChannel.ensure();
     } catch (e) {
       AppLogger.warning('showCallkitIncoming failed', tag: _tag, error: e);
     }
@@ -376,4 +379,50 @@ class CallKitService {
     final value = color.toARGB32() & 0xFFFFFF;
     return '#${value.toRadixString(16).padLeft(6, '0').toUpperCase()}';
   }
+}
+
+/// Native incoming-call UI. High-importance channel, full-screen intent, and
+/// a missed-call action that stays on the notification.
+CallKitParams buildIncomingCallKitParams({
+  required IncomingCallData data,
+  required String? ringtone,
+  required String? avatar,
+  required String backgroundColor,
+  required String actionColor,
+}) {
+  return CallKitParams(
+    id: data.callId,
+    nameCaller: data.callerName,
+    appName: 'LGBTFinder',
+    avatar: avatar,
+    handle: data.callKitSubtitle,
+    type: data.isVideo ? 1 : 0,
+    textAccept: 'Accept',
+    textDecline: 'Decline',
+    duration: CallRingTimeout.milliseconds,
+    extra: data.toExtras(),
+    missedCallNotification: const NotificationParams(
+      showNotification: true,
+      isShowCallback: true,
+      callbackText: 'Call back',
+    ),
+    android: AndroidParams(
+      isCustomNotification: true,
+      isShowFullLockedScreen: true,
+      isImportant: true,
+      isShowLogo: false,
+      ringtonePath: ringtone,
+      backgroundColor: backgroundColor,
+      actionColor: actionColor,
+      textColor: '#FFFFFF',
+      incomingCallNotificationChannelName: 'Incoming Calls',
+      missedCallNotificationChannelName: 'Missed Calls',
+    ),
+    ios: IOSParams(
+      iconName: 'CallKitLogo',
+      handleType: 'generic',
+      supportsVideo: data.isVideo,
+      ringtonePath: ringtone,
+    ),
+  );
 }

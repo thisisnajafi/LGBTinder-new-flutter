@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../features/calls/providers/incoming_call_provider.dart';
+import '../../features/calls/utils/full_screen_intent_gate.dart';
 import '../../features/payments/providers/payment_providers.dart';
 import '../../shared/services/deep_linking_service.dart';
 import '../../shared/services/push_notification_service.dart';
@@ -41,6 +41,7 @@ class _SessionSideEffectsHostState extends ConsumerState<SessionSideEffectsHost>
     ref.listen<AuthProviderState>(authProvider, (previous, next) {
       if (next.isAuthenticated && previous?.isAuthenticated != true) {
         _attachCallKit();
+        unawaited(FullScreenIntentGate.promptOnceAfterLogin());
       }
     });
 
@@ -90,7 +91,9 @@ class _SessionSideEffectsHostState extends ConsumerState<SessionSideEffectsHost>
       }
     });
     _attachCallKit();
-    unawaited(FlutterCallkitIncoming.requestFullIntentPermission());
+    if (ref.read(authProvider).isAuthenticated) {
+      unawaited(FullScreenIntentGate.promptOnceAfterLogin());
+    }
   }
 
   void _attachCallKit() {
