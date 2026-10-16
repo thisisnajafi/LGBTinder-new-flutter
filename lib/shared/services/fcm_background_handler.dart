@@ -86,7 +86,7 @@ Future<void> _showBackgroundLocalNotification(
   try {
     final plugin = FlutterLocalNotificationsPlugin();
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@drawable/ic_stat_lgbtfinder',
     );
     const iosSettings = DarwinInitializationSettings();
     await plugin.initialize(
@@ -151,6 +151,8 @@ Future<void> _showBackgroundLocalNotification(
           : 'Notifications for LGBTFinder app',
       importance: Importance.high,
       priority: Priority.high,
+      icon: '@drawable/ic_stat_lgbtfinder',
+      color: const Color(0xFFEC4899),
       tag: tag,
     );
     const iosDetails = DarwinNotificationDetails(

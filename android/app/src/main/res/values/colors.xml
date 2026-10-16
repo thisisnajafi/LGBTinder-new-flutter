@@ -2,4 +2,5 @@
 <resources>
     <!-- Pride gradient blue band — matches splash_gradient.xml centerColor -->
     <color name="splash_background">#457B9D</color>
+    <color name="notification_color">#EC4899</color>
 </resources>

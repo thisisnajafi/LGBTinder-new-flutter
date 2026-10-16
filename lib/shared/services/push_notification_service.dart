@@ -3,7 +3,7 @@
 /// Handles Firebase Cloud Messaging (FCM) integration
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -240,7 +240,7 @@ class PushNotificationService {
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@drawable/ic_stat_lgbtfinder',
     );
     final iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -484,6 +484,8 @@ class PushNotificationService {
       channelDescription: 'Notifications for LGBTFinder app',
       importance: Importance.high,
       priority: Priority.high,
+      icon: '@drawable/ic_stat_lgbtfinder',
+      color: const Color(0xFFEC4899),
       showWhen: true,
       groupKey: groupKey,
       setAsGroupSummary: false,
