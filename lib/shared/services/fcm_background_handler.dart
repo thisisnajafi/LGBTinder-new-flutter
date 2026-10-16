@@ -197,7 +197,7 @@ Future<void> _showBackgroundLocalNotification(
         senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
         avatarPng: avatarPng,
       ),
-      actions: isChat ? messageTrayActions() : null,
+      actions: trayActionsFor(data['type']?.toString() ?? ''),
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,

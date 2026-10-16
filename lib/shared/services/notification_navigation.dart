@@ -113,6 +113,23 @@ class NotificationNavigation {
     final name = userName ?? data['user_name']?.toString();
     final avatar = avatarUrl ?? data['avatar_url']?.toString() ?? data['user_avatar']?.toString();
 
+    if (data['action']?.toString() == 'call_back' &&
+        userId != null &&
+        userId > 0) {
+      final kind = data['call_type']?.toString() ?? '';
+      return Uri(
+        path: AppRoutes.outgoingCall,
+        queryParameters: {
+          'callId': '0',
+          'recipientId': userId.toString(),
+          'recipientName': (name == null || name.trim().isEmpty) ? 'User' : name,
+          if (avatar != null && avatar.isNotEmpty) 'avatarUrl': avatar,
+          'type': kind.contains('video') ? 'video' : 'voice',
+          'initiate': '1',
+        },
+      ).toString();
+    }
+
     if (userId != null && userId > 0 && _chatThreadTypes.contains(normalized)) {
       return chatThreadLocation(
             userId: userId,

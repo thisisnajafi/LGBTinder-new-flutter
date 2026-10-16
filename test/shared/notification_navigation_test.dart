@@ -197,6 +197,19 @@ void main() {
       }
     });
 
+    test('missed call Call back starts an outgoing call', () {
+      final route = NotificationNavigation.resolveDestination(
+        type: 'missed_call',
+        peerUserId: 4,
+        userName: 'Alex',
+        data: {'action': 'call_back', 'call_type': 'video'},
+      );
+      expect(route, contains(AppRoutes.outgoingCall));
+      expect(route, contains('initiate=1'));
+      expect(route, contains('recipientId=4'));
+      expect(route, contains('type=video'));
+    });
+
     test('missed call opens peer call history', () {
       expect(
         NotificationNavigation.resolveDestination(

@@ -523,7 +523,7 @@ class PushNotificationService {
         senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
         avatarPng: avatarPng,
       ),
-      actions: isChat ? messageTrayActions() : null,
+      actions: trayActionsFor(type),
       sound: androidRaw != null
           ? RawResourceAndroidNotificationSound(androidRaw)
           : null,
@@ -684,6 +684,16 @@ class PushNotificationService {
 
   /// Handle local notification tap (foreground FCM shown as local notification).
   void _onNotificationTapped(NotificationResponse response) {
+    if (response.actionId == kNotificationActionCallBack) {
+      final payload = NotificationNavigation.parseLocalNotificationPayload(
+        response.payload,
+      );
+      if (payload != null) {
+        payload['action'] = kNotificationActionCallBack;
+        unawaited(DeepLinkingService().handleDeepLink(payload));
+      }
+      return;
+    }
     if (response.actionId == kNotificationActionReply ||
         response.actionId == kNotificationActionMarkRead) {
       unawaited(NotificationQuickActions.handle(response));

@@ -79,6 +79,23 @@ class NotificationQuickActions {
   }
 }
 
+List<AndroidNotificationAction>? trayActionsFor(String type) {
+  if (type == 'message' || type == 'chat' || type == 'new_message') {
+    return messageTrayActions();
+  }
+  if (type == 'missed_call') {
+    return const [
+      AndroidNotificationAction(
+        kNotificationActionCallBack,
+        'Call back',
+        showsUserInterface: true,
+        cancelNotification: true,
+      ),
+    ];
+  }
+  return null;
+}
+
 List<AndroidNotificationAction> messageTrayActions() {
   return [
     const AndroidNotificationAction(
