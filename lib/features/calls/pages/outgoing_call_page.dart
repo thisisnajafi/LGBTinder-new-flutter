@@ -9,6 +9,7 @@ import '../../../core/services/app_logger.dart';
 import '../../../core/utils/screenshot_protection.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/typography.dart';
 import '../../../core/responsive/responsive.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
@@ -30,6 +31,7 @@ import '../data/models/call_reconnect_policy.dart';
 import '../data/models/call_wake_lock.dart';
 import '../data/models/active_call_session.dart';
 import '../data/services/call_signaling_service.dart';
+import '../presentation/widgets/call_blurred_backdrop.dart';
 import '../presentation/widgets/call_end_overlay.dart';
 import '../presentation/widgets/call_connect_transition.dart';
 import '../presentation/widgets/call_hud.dart';
@@ -140,7 +142,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _qualityMonitor = CallQualityMonitor(_agoraService);
     _signaling = ref.read(callSignalingServiceProvider);
     _callId = widget.callId;
-    _statusLabel = 'Connecting...';
+    _statusLabel = widget.shouldInitiate ? 'Calling…' : 'Connecting…';
     unawaited(_wakeLock.enable());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -499,7 +501,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   Future<void> _startOutgoing() async {
-    _setStatus('Connecting...');
+    _setStatus('Calling…');
     final isVideo = widget.type == OutgoingCallType.video;
     // Mic/camera before POST /initiate. Starting during the prompt used to
     // cancel on the pause and the callee never rang (RT-012).
@@ -537,7 +539,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       unawaited(_joinAgoraChannel());
       _startAcceptPoll();
       _startRingTimeout();
-      _setStatus('Ringing...');
+      _setStatus('Ringing…');
     } on CallInitiateException catch (e) {
       if (e.alreadyInCall) {
         await _rejoinActiveCall();
@@ -1433,6 +1435,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
               return Stack(
                 fit: StackFit.expand,
                 children: [
+                  if (!showVideoLayer)
+                    CallBlurredBackdrop(
+                      userId: widget.recipientId,
+                      imageUrl: _displayBackdropUrl,
+                    ),
                   CallConnectStage(
                     child: showVideoLayer
                         ? RepaintBoundary(
@@ -1473,15 +1480,31 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                             },
                           ),
                   ),
-                  if (showRingChrome)
+                  if (showRingChrome && !connected)
                     IgnorePointer(
                       child: Center(
-                        child: CallConnectPulse(
-                          child: CallOutgoingPulseAvatar(
-                            active: !connected,
-                            userId: widget.recipientId,
-                            imageUrl: _headerPhotoUrl,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CallConnectPulse(
+                              child: CallOutgoingPulseAvatar(
+                                active: true,
+                                userId: widget.recipientId,
+                                imageUrl: _headerPhotoUrl,
+                                avatarSize: 176,
+                              ),
+                            ),
+                            SizedBox(height: AppSpacing.spacingLG),
+                            Text(
+                              _statusLabel ??
+                                  (widget.shouldInitiate
+                                      ? 'Calling…'
+                                      : 'Connecting…'),
+                              style: AppTypography.headlineSmall.copyWith(
+                                color: AppColors.textPrimaryDark,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
