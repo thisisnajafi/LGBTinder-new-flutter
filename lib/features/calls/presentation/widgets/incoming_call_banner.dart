@@ -30,9 +30,9 @@ import '../../../../routes/app_router.dart';
 import '../../utils/call_permission_lifecycle.dart';
 import 'call_permission_sheet.dart';
 
-/// Foreground incoming call banner — slides down from top.
+/// Foreground incoming call banner Ã¢â‚¬â€ slides down from top.
 ///
-/// Content row is avatar + padding = 80px (48 + [AppSpacing.spacingLG] × 2).
+/// Content row is avatar + padding = 80px (48 + [AppSpacing.spacingLG] Ãƒâ€” 2).
 /// Full-screen call UI opens only after accept.
 class IncomingCallBanner extends ConsumerStatefulWidget {
   static const double avatarSize = 48;
@@ -58,7 +58,7 @@ class _IncomingCallBannerState extends ConsumerState<IncomingCallBanner>
   @override
   void initState() {
     super.initState();
-    // Do not use MediaQuery/Theme here — that depends on InheritedWidgets
+    // Do not use MediaQuery/Theme here Ã¢â‚¬â€ that depends on InheritedWidgets
     // before initState completes and crashes the Calls tab overlay.
     final disableAnimations =
         WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
@@ -287,7 +287,7 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
     final session = ref.read(activeCallSessionProvider);
     if (session != null) {
       if (!mounted) return;
-      restoreActiveCallRoute(GoRouter.of(context), session);
+      restoreActiveCallRoute(ref.read(appRouterProvider), session);
       return;
     }
 
@@ -348,7 +348,7 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
       ref.read(incomingCallProvider.notifier).adoptRinging(ringing);
     }
     if (!mounted || ref.read(incomingCallProvider) == null) return;
-    final router = GoRouter.of(context);
+    final router = ref.read(appRouterProvider);
     final path = router.routerDelegate.currentConfiguration.uri.path;
     if (path == AppRoutes.incomingCall || path == AppRoutes.outgoingCall) {
       return;
