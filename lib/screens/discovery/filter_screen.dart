@@ -284,7 +284,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
               children: [
                 titleBlock,
                 SizedBox(height: AppSpacing.spacingMD),
-                segments,
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: segments,
+                ),
               ],
             );
           }
