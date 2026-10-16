@@ -106,3 +106,53 @@ const String kLgbtfinderFcmChannelId = 'lgbtfinder_channel';
 /// High-importance chat channel. Distinct from [kLgbtfinderFcmChannelId],
 /// which production devices already have stuck at DEFAULT importance.
 const String kLgbtfinderMessagesChannelId = 'lgbtfinder_messages';
+
+const String kLgbtfinderLikesChannelId = 'lgbtfinder_likes';
+
+const String kLgbtfinderMatchesChannelId = 'lgbtfinder_matches';
+
+const String kLgbtfinderCallsChannelId = 'lgbtfinder_calls';
+
+/// Android channel id shared with FCM `android.notification.channel_id`.
+String notificationChannelIdFor(String? type) {
+  switch (type) {
+    case 'message':
+    case 'chat':
+    case 'new_message':
+      return kLgbtfinderMessagesChannelId;
+    case 'like':
+    case 'superlike':
+    case 'profile_view':
+    case 'story_like':
+    case 'feed_like':
+      return kLgbtfinderLikesChannelId;
+    case 'match':
+      return kLgbtfinderMatchesChannelId;
+    case 'call':
+    case 'incoming_call':
+    case 'incoming_call_audio':
+    case 'incoming_call_video':
+    case 'missed_call':
+    case 'call_declined':
+    case 'call_not_answered':
+      return kLgbtfinderCallsChannelId;
+    default:
+      return kLgbtfinderFcmChannelId;
+  }
+}
+
+/// User-visible channel name for [notificationChannelIdFor].
+String notificationChannelLabel(String channelId) {
+  switch (channelId) {
+    case kLgbtfinderMessagesChannelId:
+      return 'Messages';
+    case kLgbtfinderLikesChannelId:
+      return 'Likes';
+    case kLgbtfinderMatchesChannelId:
+      return 'Matches';
+    case kLgbtfinderCallsChannelId:
+      return 'Calls';
+    default:
+      return 'LGBTFinder Notifications';
+  }
+}

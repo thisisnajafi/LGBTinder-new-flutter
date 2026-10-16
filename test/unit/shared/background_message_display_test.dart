@@ -3,6 +3,16 @@ import 'package:lgbtindernew/shared/services/background_message_display.dart';
 
 void main() {
   group('BackgroundMessageDisplay', () {
+    test('likes, matches, calls, and messages use their own channels', () {
+      expect(notificationChannelIdFor('like'), kLgbtfinderLikesChannelId);
+      expect(notificationChannelIdFor('superlike'), kLgbtfinderLikesChannelId);
+      expect(notificationChannelIdFor('match'), kLgbtfinderMatchesChannelId);
+      expect(notificationChannelIdFor('missed_call'), kLgbtfinderCallsChannelId);
+      expect(notificationChannelIdFor('message'), kLgbtfinderMessagesChannelId);
+      expect(notificationChannelLabel(kLgbtfinderLikesChannelId), 'Likes');
+      expect(notificationChannelLabel(kLgbtfinderMatchesChannelId), 'Matches');
+    });
+
     test(
       'data-only chat posts a local notification in the background isolate',
       () {

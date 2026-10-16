@@ -306,6 +306,30 @@ class PushNotificationService {
         enableVibration: false,
       ),
     );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        kLgbtfinderLikesChannelId,
+        'Likes',
+        description: 'Likes and Super Likes',
+        importance: Importance.high,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        kLgbtfinderMatchesChannelId,
+        'Matches',
+        description: 'New matches',
+        importance: Importance.high,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        kLgbtfinderCallsChannelId,
+        'Calls',
+        description: 'Missed calls and call updates',
+        importance: Importance.high,
+      ),
+    );
   }
 
   /// Get FCM token
@@ -458,19 +482,19 @@ class PushNotificationService {
       return;
     }
 
-    // Group notifications by type (messages from same user, etc.)
     String? groupKey;
-    String? groupChannelId;
 
+    final channelId = notificationChannelIdFor(type);
     if (ChatFcmSuppress.isChatPayload(data)) {
+      final conversationId = data['conversation_id']?.toString();
       final userId =
           data['user_id']?.toString() ?? data['sender_id']?.toString();
-      if (userId != null) {
-        groupKey = 'messages_$userId';
-        groupChannelId = kLgbtfinderMessagesChannelId;
+      final groupId = (conversationId != null && conversationId.isNotEmpty)
+          ? conversationId
+          : userId;
+      if (groupId != null) {
+        groupKey = 'messages_$groupId';
       }
-    } else {
-      groupChannelId = 'lgbtfinder_$type';
     }
 
     final payloadSound = _resolvePayloadSound(data);
@@ -479,8 +503,8 @@ class PushNotificationService {
     final iosSound = androidRaw != null ? '$androidRaw.wav' : null;
 
     final androidDetails = AndroidNotificationDetails(
-      groupChannelId ?? kLgbtfinderFcmChannelId,
-      'LGBTFinder Notifications',
+      channelId,
+      notificationChannelLabel(channelId),
       channelDescription: 'Notifications for LGBTFinder app',
       importance: Importance.high,
       priority: Priority.high,

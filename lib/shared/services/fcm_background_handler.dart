@@ -9,11 +9,17 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
-import '../../features/chat/utils/chat_fcm_suppress.dart';
 import 'background_message_display.dart';
 
 export 'background_message_display.dart'
-    show kLgbtfinderFcmChannelId, kLgbtfinderMessagesChannelId;
+    show
+        kLgbtfinderFcmChannelId,
+        kLgbtfinderMessagesChannelId,
+        kLgbtfinderLikesChannelId,
+        kLgbtfinderMatchesChannelId,
+        kLgbtfinderCallsChannelId,
+        notificationChannelIdFor,
+        notificationChannelLabel;
 
 /// FCM background isolate entrypoint. Must stay a top-level function.
 ///
@@ -134,19 +140,34 @@ Future<void> _showBackgroundLocalNotification(
         description: 'Notifications for LGBTFinder app',
         importance: Importance.high,
       ),
+      AndroidNotificationChannel(
+        kLgbtfinderLikesChannelId,
+        'Likes',
+        description: 'Likes and Super Likes',
+        importance: Importance.high,
+      ),
+      AndroidNotificationChannel(
+        kLgbtfinderMatchesChannelId,
+        'Matches',
+        description: 'New matches',
+        importance: Importance.high,
+      ),
+      AndroidNotificationChannel(
+        kLgbtfinderCallsChannelId,
+        'Calls',
+        description: 'Missed calls and call updates',
+        importance: Importance.high,
+      ),
     ];
     for (final channel in channels) {
       await androidPlugin?.createNotificationChannel(channel);
     }
 
-    final isChat = ChatFcmSuppress.isChatPayload(data);
-    final channelId = isChat
-        ? kLgbtfinderMessagesChannelId
-        : kLgbtfinderFcmChannelId;
+    final channelId = notificationChannelIdFor(data['type']?.toString());
     final androidDetails = AndroidNotificationDetails(
       channelId,
-      isChat ? 'Messages' : 'LGBTFinder Notifications',
-      channelDescription: isChat
+      notificationChannelLabel(channelId),
+      channelDescription: channelId == kLgbtfinderMessagesChannelId
           ? 'New chat messages'
           : 'Notifications for LGBTFinder app',
       importance: Importance.high,
