@@ -114,13 +114,11 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
             );
           }
 
-          return PremiumRefreshIndicator(
-            onRefresh: () async {
-              await ref.read(appCacheManagerProvider).revalidateAll();
-              await _refreshMatches();
-            },
-            child: AppSettingsDetailList(
-              children: [
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final columns =
+                  constraints.maxWidth >= AppBreakpoints.expanded ? 2 : 1;
+              final rows = <Widget>[
                 Padding(
                   padding: ResponsivePadding.horizontal(context).add(
                     const EdgeInsets.only(bottom: AppSpacing.spacingSM),
@@ -131,19 +129,43 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                         '${matches.length} ${matches.length == 1 ? 'match' : 'matches'}',
                   ),
                 ),
-                for (final match in matches)
-                  RepaintBoundary(
-                    child: Padding(
-                      padding: ResponsivePadding.horizontal(context),
-                      child: _MatchRow(
-                        match: match,
-                        formatDate: _formatDate,
-                        onTap: () => _openChat(match),
-                      ),
+              ];
+              for (var i = 0; i < matches.length; i += columns) {
+                rows.add(
+                  Padding(
+                    padding: ResponsivePadding.horizontal(context),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (var column = 0; column < columns; column++) ...[
+                          if (column > 0)
+                            const SizedBox(width: AppSpacing.spacingMD),
+                          Expanded(
+                            child: i + column < matches.length
+                                ? RepaintBoundary(
+                                    child: _MatchRow(
+                                      match: matches[i + column],
+                                      formatDate: _formatDate,
+                                      onTap: () =>
+                                          _openChat(matches[i + column]),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-              ],
-            ),
+                );
+              }
+              return PremiumRefreshIndicator(
+                onRefresh: () async {
+                  await ref.read(appCacheManagerProvider).revalidateAll();
+                  await _refreshMatches();
+                },
+                child: AppSettingsDetailList(children: rows),
+              );
+            },
           );
         },
       ),

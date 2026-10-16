@@ -303,43 +303,69 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
       );
     }
 
-    return PremiumRefreshIndicator(
-      onRefresh: _loadLikes,
-      child: AppListView.builder(
-        key: const ValueKey('likes_received_list'),
-        padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
-        itemCount: _likes.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.spacingLG,
-                AppSpacing.spacingMD,
-                AppSpacing.spacingLG,
-                AppSpacing.spacingSM,
-              ),
-              child: PremiumSectionHeader(
-                title: 'Pending likes',
-                subtitle:
-                    '${_likes.length} ${_likes.length == 1 ? 'person' : 'people'}',
-              ),
-            );
-          }
-          final like = _likes[index - 1];
-          return RepaintBoundary(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
-              child: LikesReceivedCard(
-                like: like,
-                formatTime: _formatTime,
-                onProfileTap: () => _handleProfileTap(like['user_id'] as int),
-                onPass: () => _handleDislike(like['id'] as int),
-                onAccept: () => _handleLike(like['id'] as int),
-              ),
-            ),
-          );
-        },
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= AppBreakpoints.expanded ? 2 : 1;
+        final rowCount = (_likes.length / columns).ceil();
+        return PremiumRefreshIndicator(
+          onRefresh: _loadLikes,
+          child: AppListView.builder(
+            key: const ValueKey('likes_received_list'),
+            padding: const EdgeInsets.only(bottom: AppSpacing.spacingXXL),
+            itemCount: rowCount + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingMD,
+                    AppSpacing.spacingLG,
+                    AppSpacing.spacingSM,
+                  ),
+                  child: PremiumSectionHeader(
+                    title: 'Pending likes',
+                    subtitle:
+                        '${_likes.length} ${_likes.length == 1 ? 'person' : 'people'}',
+                  ),
+                );
+              }
+              final start = (index - 1) * columns;
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spacingLG,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var column = 0; column < columns; column++) ...[
+                      if (column > 0) const SizedBox(width: AppSpacing.spacingMD),
+                      Expanded(
+                        child: start + column < _likes.length
+                            ? RepaintBoundary(
+                                child: LikesReceivedCard(
+                                  like: _likes[start + column],
+                                  formatTime: _formatTime,
+                                  onProfileTap: () => _handleProfileTap(
+                                    _likes[start + column]['user_id'] as int,
+                                  ),
+                                  onPass: () => _handleDislike(
+                                    _likes[start + column]['id'] as int,
+                                  ),
+                                  onAccept: () => _handleLike(
+                                    _likes[start + column]['id'] as int,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
