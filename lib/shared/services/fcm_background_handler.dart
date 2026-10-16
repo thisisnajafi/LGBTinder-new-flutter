@@ -10,6 +10,7 @@ import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
 import 'background_message_display.dart';
+import 'notification_quick_actions.dart';
 
 export 'background_message_display.dart'
     show
@@ -72,12 +73,12 @@ Future<void> _showBackgroundLocalNotification(
   Map<String, dynamic> data, {
   required bool hasOsNotificationPayload,
 }) async {
-  final text = BackgroundMessageDisplay.resolveText(
+  final resolved = BackgroundMessageDisplay.resolveText(
     notificationTitle: message.notification?.title,
     notificationBody: message.notification?.body,
     data: data,
   );
-  if (text == null) {
+  if (resolved == null) {
     AppLogger.warning(
       'Background FCM had no title or body to display',
       tag: 'Notifications',
@@ -85,6 +86,11 @@ Future<void> _showBackgroundLocalNotification(
     return;
   }
 
+  final text = BackgroundMessageDisplay.chatTrayCopy(
+    title: resolved.title,
+    body: resolved.body,
+    data: data,
+  );
   final tag = BackgroundMessageDisplay.trayTagForMessage(
     data['message_id'] ?? message.messageId,
   );
@@ -97,6 +103,7 @@ Future<void> _showBackgroundLocalNotification(
     const iosSettings = DarwinInitializationSettings();
     await plugin.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),
+      onDidReceiveBackgroundNotificationResponse: onBackgroundNotificationAction,
     );
 
     final active = await _readTray(plugin);
@@ -164,10 +171,12 @@ Future<void> _showBackgroundLocalNotification(
     }
 
     final channelId = notificationChannelIdFor(data['type']?.toString());
+    final isChat = channelId == kLgbtfinderMessagesChannelId;
+    final groupKey = BackgroundMessageDisplay.messageGroupKey(data);
     final androidDetails = AndroidNotificationDetails(
       channelId,
       notificationChannelLabel(channelId),
-      channelDescription: channelId == kLgbtfinderMessagesChannelId
+      channelDescription: isChat
           ? 'New chat messages'
           : 'Notifications for LGBTFinder app',
       importance: Importance.high,
@@ -175,6 +184,14 @@ Future<void> _showBackgroundLocalNotification(
       icon: '@drawable/ic_stat_lgbtfinder',
       color: const Color(0xFFEC4899),
       tag: tag,
+      groupKey: groupKey,
+      styleInformation: messageTrayStyle(
+        chat: isChat,
+        title: text.title,
+        body: text.body,
+        senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
+      ),
+      actions: isChat ? messageTrayActions() : null,
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,

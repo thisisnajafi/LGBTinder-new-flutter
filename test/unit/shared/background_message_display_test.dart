@@ -3,6 +3,43 @@ import 'package:lgbtindernew/shared/services/background_message_display.dart';
 
 void main() {
   group('BackgroundMessageDisplay', () {
+    test('chat tray uses the sender name and message preview', () {
+      final copy = BackgroundMessageDisplay.chatTrayCopy(
+        title: 'New message',
+        body: 'Alex sent you a message',
+        data: {
+          'type': 'message',
+          'user_name': 'Alex',
+          'message_preview': 'Hello there',
+          'conversation_id': '44',
+        },
+      );
+      expect(copy.title, 'Alex');
+      expect(copy.body, 'Hello there');
+      expect(
+        BackgroundMessageDisplay.messageGroupKey({
+          'type': 'message',
+          'conversation_id': '44',
+        }),
+        'messages_44',
+      );
+    });
+
+    test('redacted chat keeps the generic tray copy', () {
+      final copy = BackgroundMessageDisplay.chatTrayCopy(
+        title: 'New message',
+        body: 'You have a new message. Upgrade to read it.',
+        data: {
+          'type': 'message',
+          'user_name': 'Alex',
+          'message_preview': 'secret',
+          'content_redacted': '1',
+        },
+      );
+      expect(copy.title, 'New message');
+      expect(copy.body, 'You have a new message. Upgrade to read it.');
+    });
+
     test('likes, matches, calls, and messages use their own channels', () {
       expect(notificationChannelIdFor('like'), kLgbtfinderLikesChannelId);
       expect(notificationChannelIdFor('superlike'), kLgbtfinderLikesChannelId);

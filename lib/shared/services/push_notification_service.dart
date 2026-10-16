@@ -9,7 +9,8 @@ import 'dart:convert';
 import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
-import 'fcm_background_handler.dart';
+import 'background_message_display.dart';
+import 'notification_quick_actions.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
 import 'notification_navigation.dart';
@@ -273,6 +274,7 @@ class PushNotificationService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
+      onDidReceiveBackgroundNotificationResponse: onBackgroundNotificationAction,
     );
 
     final androidPlugin = _localNotifications
@@ -466,15 +468,22 @@ class PushNotificationService {
       return;
     }
 
-    final title =
+    final rawTitle =
         notification?.title ??
         data['title']?.toString() ??
         data['headings']?.toString();
-    final body =
+    final rawBody =
         notification?.body ??
         data['body']?.toString() ??
         data['message']?.toString();
-    if (title == null || body == null) return;
+    if (rawTitle == null || rawBody == null) return;
+    final copy = BackgroundMessageDisplay.chatTrayCopy(
+      title: rawTitle,
+      body: rawBody,
+      data: data,
+    );
+    final title = copy.title;
+    final body = copy.body;
 
     final type = data['type']?.toString() ?? 'general';
 
@@ -482,20 +491,9 @@ class PushNotificationService {
       return;
     }
 
-    String? groupKey;
-
     final channelId = notificationChannelIdFor(type);
-    if (ChatFcmSuppress.isChatPayload(data)) {
-      final conversationId = data['conversation_id']?.toString();
-      final userId =
-          data['user_id']?.toString() ?? data['sender_id']?.toString();
-      final groupId = (conversationId != null && conversationId.isNotEmpty)
-          ? conversationId
-          : userId;
-      if (groupId != null) {
-        groupKey = 'messages_$groupId';
-      }
-    }
+    final groupKey = BackgroundMessageDisplay.messageGroupKey(data);
+    final isChat = ChatFcmSuppress.isChatPayload(data);
 
     final payloadSound = _resolvePayloadSound(data);
     final androidRaw =
@@ -513,7 +511,13 @@ class PushNotificationService {
       showWhen: true,
       groupKey: groupKey,
       setAsGroupSummary: false,
-      styleInformation: const BigTextStyleInformation(''),
+      styleInformation: messageTrayStyle(
+        chat: isChat,
+        title: title,
+        body: body,
+        senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
+      ),
+      actions: isChat ? messageTrayActions() : null,
       sound: androidRaw != null
           ? RawResourceAndroidNotificationSound(androidRaw)
           : null,
@@ -550,18 +554,48 @@ class PushNotificationService {
 
     // Show summary notification for grouped messages (Android)
     if (groupKey != null && Platform.isAndroid) {
-      await _showGroupSummaryNotification(groupKey, type);
+      await _showGroupSummaryNotification(
+        groupKey: groupKey,
+        channelId: channelId,
+        title: title,
+        body: body,
+      );
     }
   }
 
-  /// Show group summary notification (Android)
-  Future<void> _showGroupSummaryNotification(
-    String groupKey,
-    String type,
-  ) async {
-    // This would show a summary like "5 new messages from John"
-    // Implementation depends on tracking unread counts
-    // For now, we'll skip this as it requires state management
+  /// Android group header for one conversation. Silent so it does not add a second alert.
+  Future<void> _showGroupSummaryNotification({
+    required String groupKey,
+    required String channelId,
+    required String title,
+    required String body,
+  }) async {
+    final summary = AndroidNotificationDetails(
+      channelId,
+      notificationChannelLabel(channelId),
+      channelDescription: 'Notifications for LGBTFinder app',
+      importance: Importance.low,
+      priority: Priority.low,
+      icon: '@drawable/ic_stat_lgbtfinder',
+      color: const Color(0xFFEC4899),
+      groupKey: groupKey,
+      setAsGroupSummary: true,
+      playSound: false,
+      enableVibration: false,
+      onlyAlertOnce: true,
+      styleInformation: InboxStyleInformation(
+        [body],
+        contentTitle: title,
+        summaryText: 'Messages',
+      ),
+    );
+    await _localNotifications.show(
+      groupKey.hashCode,
+      title,
+      body,
+      NotificationDetails(android: summary),
+      payload: jsonEncode({'type': 'message', 'group': groupKey}),
+    );
   }
 
   /// Handle notification tap
@@ -644,6 +678,11 @@ class PushNotificationService {
 
   /// Handle local notification tap (foreground FCM shown as local notification).
   void _onNotificationTapped(NotificationResponse response) {
+    if (response.actionId == kNotificationActionReply ||
+        response.actionId == kNotificationActionMarkRead) {
+      unawaited(NotificationQuickActions.handle(response));
+      if (response.actionId == kNotificationActionMarkRead) return;
+    }
     if (ActiveCallNotification.isHangupAction(response.actionId) ||
         ActiveCallNotification.isReturnAction(
           response.actionId,

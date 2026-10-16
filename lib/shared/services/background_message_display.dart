@@ -92,6 +92,38 @@ class BackgroundMessageDisplay {
     return (title: title, body: body);
   }
 
+  /// Chat shade copy: sender name as the title and the message text as the body.
+  ///
+  /// A redacted push keeps the generic title and body the server already chose.
+  static ({String title, String body}) chatTrayCopy({
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) {
+    final redacted = data['content_redacted']?.toString() == '1';
+    if (redacted) return (title: title, body: body);
+    final type = data['type']?.toString() ?? '';
+    final isChat = type == 'message' || type == 'chat' || type == 'new_message';
+    if (!isChat) return (title: title, body: body);
+    final name = _nonEmpty(data['user_name']);
+    final preview = _nonEmpty(data['message_preview']);
+    return (
+      title: name ?? title,
+      body: preview ?? body,
+    );
+  }
+
+  static String? messageGroupKey(Map<String, dynamic> data) {
+    final type = data['type']?.toString() ?? '';
+    final isChat = type == 'message' || type == 'chat' || type == 'new_message';
+    if (!isChat) return null;
+    final conversationId = _nonEmpty(data['conversation_id']);
+    final userId = _nonEmpty(data['user_id']) ?? _nonEmpty(data['sender_id']);
+    final groupId = conversationId ?? userId;
+    if (groupId == null) return null;
+    return 'messages_$groupId';
+  }
+
   static String? _nonEmpty(Object? raw) {
     if (raw == null) return null;
     final value = raw.toString().trim();
