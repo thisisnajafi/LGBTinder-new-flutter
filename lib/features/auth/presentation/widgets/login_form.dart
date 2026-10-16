@@ -89,44 +89,59 @@ class _LoginRememberForgotRowState extends State<LoginRememberForgotRow> {
     final textColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
-    return Row(
+    final remember = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Flexible(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Checkbox(
-                value: _rememberMe,
-                onChanged: (value) {
-                  setState(() => _rememberMe = value ?? false);
-                },
-                activeColor: AppColors.accentPurple,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              Flexible(
-                child: AppText(
-                  'Remember me',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: textColor,
-                  ),
-                  maxLines: 1,
-                ),
-              ),
-            ],
-          ),
+        Checkbox(
+          value: _rememberMe,
+          onChanged: (value) {
+            setState(() => _rememberMe = value ?? false);
+          },
+          activeColor: AppColors.accentPurple,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        TextButton(
-          onPressed: () => context.push(AppRoutes.forgotPassword),
+        Flexible(
           child: AppText(
-            'Forgot Password?',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: AppColors.accentViolet,
-              fontWeight: FontWeight.w600,
+            'Remember me',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: textColor,
             ),
-            maxLines: 1,
+            maxLines: 2,
           ),
         ),
       ],
+    );
+    final forgot = TextButton(
+      onPressed: () => context.push(AppRoutes.forgotPassword),
+      child: AppText(
+        'Forgot Password?',
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: AppColors.accentViolet,
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 2,
+        textAlign: TextAlign.end,
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 400) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              remember,
+              Align(alignment: Alignment.centerLeft, child: forgot),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: remember),
+            Flexible(child: forgot),
+          ],
+        );
+      },
     );
   }
 }
