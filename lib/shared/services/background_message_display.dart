@@ -82,6 +82,7 @@ class BackgroundMessageDisplay {
         _nonEmpty(notificationTitle) ??
         _nonEmpty(data['title']) ??
         _nonEmpty(data['headings']) ??
+        _nonEmpty(data['sender_name']) ??
         _nonEmpty(data['user_name']);
     final body =
         _nonEmpty(notificationBody) ??
@@ -105,7 +106,7 @@ class BackgroundMessageDisplay {
     final type = data['type']?.toString() ?? '';
     final isChat = type == 'message' || type == 'chat' || type == 'new_message';
     if (!isChat) return (title: title, body: body);
-    final name = _nonEmpty(data['user_name']);
+    final name = _nonEmpty(data['sender_name']) ?? _nonEmpty(data['user_name']);
     final preview = _nonEmpty(data['message_preview']);
     return (
       title: name ?? title,
@@ -154,6 +155,7 @@ String notificationChannelIdFor(String? type) {
       return kLgbtfinderMessagesChannelId;
     case 'like':
     case 'superlike':
+    case 'super_like':
     case 'profile_view':
     case 'story_like':
     case 'feed_like':
@@ -170,6 +172,22 @@ String notificationChannelIdFor(String? type) {
       return kLgbtfinderCallsChannelId;
     default:
       return kLgbtfinderFcmChannelId;
+  }
+}
+
+/// Channel description shown in system settings.
+String notificationChannelDescription(String channelId) {
+  switch (channelId) {
+    case kLgbtfinderMessagesChannelId:
+      return 'New chat messages';
+    case kLgbtfinderLikesChannelId:
+      return 'Likes and Super Likes';
+    case kLgbtfinderMatchesChannelId:
+      return 'New matches';
+    case kLgbtfinderCallsChannelId:
+      return 'Missed calls and call updates';
+    default:
+      return 'Notifications for LGBTFinder app';
   }
 }
 

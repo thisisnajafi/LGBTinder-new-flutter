@@ -11,6 +11,7 @@ import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
 import 'background_message_display.dart';
 import 'notification_avatar_bitmap.dart';
+import 'notification_payload_map.dart';
 import 'notification_quick_actions.dart';
 
 export 'background_message_display.dart'
@@ -74,12 +75,13 @@ Future<void> _showBackgroundLocalNotification(
   Map<String, dynamic> data, {
   required bool hasOsNotificationPayload,
 }) async {
-  final resolved = BackgroundMessageDisplay.resolveText(
+  final mapped = MappedTrayNotification.from(
     notificationTitle: message.notification?.title,
     notificationBody: message.notification?.body,
     data: data,
+    fallbackId: message.messageId,
   );
-  if (resolved == null) {
+  if (mapped == null) {
     AppLogger.warning(
       'Background FCM had no title or body to display',
       tag: 'Notifications',
@@ -87,14 +89,9 @@ Future<void> _showBackgroundLocalNotification(
     return;
   }
 
-  final text = BackgroundMessageDisplay.chatTrayCopy(
-    title: resolved.title,
-    body: resolved.body,
-    data: data,
-  );
-  final tag = BackgroundMessageDisplay.trayTagForMessage(
-    data['message_id'] ?? message.messageId,
-  );
+  final textTitle = mapped.title;
+  final textBody = mapped.body;
+  final tag = mapped.tag;
 
   try {
     final plugin = FlutterLocalNotificationsPlugin();
@@ -112,8 +109,8 @@ Future<void> _showBackgroundLocalNotification(
       hasOsNotificationPayload: hasOsNotificationPayload,
       isCallPayload: false,
       trayAlreadyShowsMessage: BackgroundMessageDisplay.trayAlreadyShowsMessage(
-        title: text.title,
-        body: text.body,
+        title: textTitle,
+        body: textBody,
         active: active,
       ),
     );
@@ -124,8 +121,8 @@ Future<void> _showBackgroundLocalNotification(
       );
       await _collapseDuplicateTrayRows(
         plugin,
-        title: text.title,
-        body: text.body,
+        title: textTitle,
+        body: textBody,
         keepTag: tag,
       );
       return;
@@ -171,33 +168,28 @@ Future<void> _showBackgroundLocalNotification(
       await androidPlugin?.createNotificationChannel(channel);
     }
 
-    final channelId = notificationChannelIdFor(data['type']?.toString());
-    final isChat = channelId == kLgbtfinderMessagesChannelId;
-    final avatarPng = await NotificationAvatarBitmap.pngFor(
-      data['avatar_url']?.toString(),
-    );
-    final groupKey = BackgroundMessageDisplay.messageGroupKey(data);
+    final channelId = mapped.channelId;
+    final isChat = mapped.style == TrayStyleKind.messaging;
+    final avatarPng = await NotificationAvatarBitmap.pngFor(mapped.avatarUrl);
     final androidDetails = AndroidNotificationDetails(
       channelId,
       notificationChannelLabel(channelId),
-      channelDescription: isChat
-          ? 'New chat messages'
-          : 'Notifications for LGBTFinder app',
+      channelDescription: notificationChannelDescription(channelId),
       importance: Importance.high,
       priority: Priority.high,
       icon: '@drawable/ic_stat_lgbtfinder',
       color: const Color(0xFFEC4899),
       largeIcon: NotificationAvatarBitmap.largeIcon(avatarPng),
       tag: tag,
-      groupKey: groupKey,
+      groupKey: mapped.groupKey,
       styleInformation: messageTrayStyle(
         chat: isChat,
-        title: text.title,
-        body: text.body,
+        title: textTitle,
+        body: textBody,
         senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
         avatarPng: avatarPng,
       ),
-      actions: trayActionsFor(data['type']?.toString() ?? ''),
+      actions: trayActionsFor(mapped.type),
     );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
@@ -207,23 +199,24 @@ Future<void> _showBackgroundLocalNotification(
 
     final id =
         data['message_id']?.hashCode ??
+        data['call_id']?.hashCode ??
         message.messageId?.hashCode ??
-        DateTime.now().millisecondsSinceEpoch % 2147483647;
+        tag.hashCode;
 
     await plugin.show(
       id,
-      text.title,
-      text.body,
+      textTitle,
+      textBody,
       NotificationDetails(android: androidDetails, iOS: iosDetails),
-      payload: jsonEncode(data),
+      payload: jsonEncode(mapped.data),
     );
     // The OS may still be inserting the FCM notification row. Wait so the
     // collapse sees both and leaves one.
     await Future<void>.delayed(const Duration(milliseconds: 350));
     await _collapseDuplicateTrayRows(
       plugin,
-      title: text.title,
-      body: text.body,
+      title: textTitle,
+      body: textBody,
       keepTag: tag,
     );
 

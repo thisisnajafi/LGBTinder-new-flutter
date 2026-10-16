@@ -11,6 +11,7 @@ import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
 import 'background_message_display.dart';
 import 'notification_avatar_bitmap.dart';
+import 'notification_payload_map.dart';
 import 'notification_quick_actions.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
@@ -462,42 +463,31 @@ class PushNotificationService {
   /// Show local notification
   /// FEATURE ENHANCEMENT (Task 9.1.2): Added notification grouping
   Future<void> _showLocalNotification(RemoteMessage message) async {
-    final notification = message.notification;
     final data = message.data;
     if (_isIncomingCallPayload(data)) {
       _handleIncomingCall(data);
       return;
     }
 
-    final rawTitle =
-        notification?.title ??
-        data['title']?.toString() ??
-        data['headings']?.toString();
-    final rawBody =
-        notification?.body ??
-        data['body']?.toString() ??
-        data['message']?.toString();
-    if (rawTitle == null || rawBody == null) return;
-    final copy = BackgroundMessageDisplay.chatTrayCopy(
-      title: rawTitle,
-      body: rawBody,
+    final mapped = MappedTrayNotification.from(
+      notificationTitle: message.notification?.title,
+      notificationBody: message.notification?.body,
       data: data,
+      fallbackId: message.messageId,
     );
-    final title = copy.title;
-    final body = copy.body;
+    if (mapped == null) return;
+    final title = mapped.title;
+    final body = mapped.body;
+    final type = mapped.type;
 
-    final type = data['type']?.toString() ?? 'general';
-
-    if (_shouldSuppressMessageAlert(data)) {
+    if (_shouldSuppressMessageAlert(mapped.data)) {
       return;
     }
 
-    final channelId = notificationChannelIdFor(type);
-    final groupKey = BackgroundMessageDisplay.messageGroupKey(data);
-    final isChat = ChatFcmSuppress.isChatPayload(data);
-    final avatarPng = await NotificationAvatarBitmap.pngFor(
-      data['avatar_url']?.toString(),
-    );
+    final channelId = mapped.channelId;
+    final groupKey = mapped.groupKey;
+    final isChat = mapped.style == TrayStyleKind.messaging;
+    final avatarPng = await NotificationAvatarBitmap.pngFor(mapped.avatarUrl);
 
     final payloadSound = _resolvePayloadSound(data);
     final androidRaw =
@@ -507,7 +497,7 @@ class PushNotificationService {
     final androidDetails = AndroidNotificationDetails(
       channelId,
       notificationChannelLabel(channelId),
-      channelDescription: 'Notifications for LGBTFinder app',
+      channelDescription: notificationChannelDescription(channelId),
       importance: Importance.high,
       priority: Priority.high,
       icon: '@drawable/ic_stat_lgbtfinder',
@@ -515,12 +505,15 @@ class PushNotificationService {
       largeIcon: NotificationAvatarBitmap.largeIcon(avatarPng),
       showWhen: true,
       groupKey: groupKey,
+      tag: mapped.tag,
       setAsGroupSummary: false,
       styleInformation: messageTrayStyle(
         chat: isChat,
         title: title,
         body: body,
-        senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
+        senderKey:
+            mapped.data['sender_id']?.toString() ??
+            mapped.data['user_id']?.toString(),
         avatarPng: avatarPng,
       ),
       actions: trayActionsFor(type),
@@ -545,17 +538,18 @@ class PushNotificationService {
 
     // Use message ID or timestamp as notification ID for uniqueness
     final notificationId =
-        data['message_id']?.hashCode ??
-        data['notification_id']?.hashCode ??
+        mapped.data['message_id']?.hashCode ??
+        mapped.data['call_id']?.hashCode ??
+        mapped.data['notification_id']?.hashCode ??
         message.messageId?.hashCode ??
-        DateTime.now().millisecondsSinceEpoch % 2147483647;
+        mapped.tag.hashCode;
 
     await _localNotifications.show(
       notificationId,
       title,
       body,
       details,
-      payload: jsonEncode(message.data),
+      payload: jsonEncode(mapped.data),
     );
 
     // Show summary notification for grouped messages (Android)
@@ -640,6 +634,7 @@ class PushNotificationService {
         _navigateToMatch?.call();
         break;
       case 'superlike':
+      case 'super_like':
         if (userId != null && _navigateToChat != null) {
           _navigateToChat!.call(userId.toString());
         } else {

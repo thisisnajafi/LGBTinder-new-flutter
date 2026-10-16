@@ -20,6 +20,7 @@ class NotificationNavigation {
     'message',
     'chat',
     'superlike',
+    'super_like',
     'superlike_sent',
   };
 
@@ -151,6 +152,7 @@ class NotificationNavigation {
       case 'like':
         return '${AppRoutes.home}/matches';
       case 'superlike':
+      case 'super_like':
       case 'superlike_sent':
       case 'superlike_received':
         if (userId != null && userId > 0) {
@@ -251,6 +253,7 @@ class NotificationNavigation {
     'match',
     'like',
     'superlike',
+    'super_like',
     'superlike_sent',
     'superlike_received',
     'call',
@@ -392,8 +395,10 @@ class NotificationNavigation {
   static Map<String, dynamic> normalizePayload(Map<String, dynamic> raw) {
     final normalized = Map<String, dynamic>.from(raw);
     final type = normalized['type']?.toString();
-    if (type == 'chat') {
+    if (type == 'chat' || type == 'new_message') {
       normalized['type'] = 'message';
+    } else if (type == 'super_like') {
+      normalized['type'] = 'superlike';
     }
     return normalized;
   }
