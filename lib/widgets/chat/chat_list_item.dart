@@ -170,26 +170,29 @@ class ChatListItem extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: ChatSearchHighlightText(
+                          text: displayName,
+                          query: highlightQuery,
+                          maxLines: 1,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.spacingXS),
                       Row(
                         children: [
-                          Flexible(
-                            child: ChatSearchHighlightText(
-                              text: displayName,
-                              query: highlightQuery,
-                              maxLines: 1,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
                           if (isOfficial) ...[
-                            const SizedBox(width: 6),
                             const OfficialAccountBadge(),
+                            const SizedBox(width: 6),
                           ],
                           if (pinned)
                             Padding(
-                              padding: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.only(right: 4),
                               child: AppSvgIcon(
                                 key: ChatListItem.pinIconKey,
                                 assetPath: AppIcons.bookmark,
@@ -199,64 +202,64 @@ class ChatListItem extends ConsumerWidget {
                             ),
                           if (muted)
                             Padding(
-                              padding: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.only(right: 4),
                               child: AppSvgIcon(
                                 assetPath: AppIcons.bellSlash,
                                 size: 14,
                                 color: mutedColor,
                               ),
                             ),
+                          Expanded(
+                            child: _MessagePreview(
+                              isTyping: typing,
+                              lastMessage: lastMessage,
+                              lastMessageType: lastMessageType,
+                              isOnline: liveOnline,
+                              lastSeenAt: seenAt,
+                              isLocked: isLocked,
+                              mutedColor: mutedColor,
+                              highlightQuery: highlightQuery,
+                            ),
+                          ),
+                          if (lastMessageTime != null) ...[
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: AppText(
+                                _formatTime(lastMessageTime!),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: mutedColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ],
-                      ),
-                      const SizedBox(height: AppSpacing.spacingXS),
-                      _MessagePreview(
-                        isTyping: typing,
-                        lastMessage: lastMessage,
-                        lastMessageType: lastMessageType,
-                        isOnline: liveOnline,
-                        lastSeenAt: seenAt,
-                        isLocked: isLocked,
-                        mutedColor: mutedColor,
-                        highlightQuery: highlightQuery,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.spacingSM),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (lastMessageTime != null)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (lastMessageFromMe && unreadCount == 0) ...[
-                            MessageStatusIndicator(
-                              isRead: lastMessageIsRead,
-                              isDelivered: lastMessageIsDelivered,
-                              deliveryStatus: MessageDeliveryStatus.sent,
-                              messageId: 1,
-                              sentColor: mutedColor,
-                              readColor: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          AppText(
-                            _formatTime(lastMessageTime!),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: mutedColor,
-                            ),
-                            maxLines: 1,
-                          ),
-                        ],
-                      ),
-                    if (unreadCount > 0) ...[
-                      const SizedBox(height: AppSpacing.spacingXS),
-                      ChatUnreadBadge(count: unreadCount),
+                if (unreadCount > 0 ||
+                    (lastMessageFromMe && lastMessageTime != null)) ...[
+                  const SizedBox(width: AppSpacing.spacingSM),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (lastMessageFromMe && unreadCount == 0)
+                        MessageStatusIndicator(
+                          isRead: lastMessageIsRead,
+                          isDelivered: lastMessageIsDelivered,
+                          deliveryStatus: MessageDeliveryStatus.sent,
+                          messageId: 1,
+                          sentColor: mutedColor,
+                          readColor: theme.colorScheme.primary,
+                        ),
+                      if (unreadCount > 0)
+                        ChatUnreadBadge(count: unreadCount),
                     ],
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
       ),
