@@ -23,4 +23,38 @@ class BackgroundAuthStore {
       await prefs.setString(kBackgroundApiOriginKey, ApiEndpoints.apiOrigin);
     } catch (_) {}
   }
+
+  /// Bearer token copied for a background isolate. Secure storage is not
+  /// reliable after the app process has been killed.
+  static Future<String?> readToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString(kBackgroundAuthTokenKey)?.trim() ?? '';
+      if (value.isEmpty) return null;
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> readApiOrigin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = prefs.getString(kBackgroundApiOriginKey)?.trim() ?? '';
+      if (value.isEmpty) return null;
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// Background isolate token wins. Secure storage is the fallback while the
+/// app process is still alive.
+String? preferStoredAuthToken(String? backgroundToken, String? secureToken) {
+  final background = backgroundToken?.trim() ?? '';
+  if (background.isNotEmpty) return background;
+  final secure = secureToken?.trim() ?? '';
+  if (secure.isEmpty) return null;
+  return secure;
 }

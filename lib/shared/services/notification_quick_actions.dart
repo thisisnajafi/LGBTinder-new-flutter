@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/constants/api_endpoints.dart';
 import '../../core/services/app_logger.dart';
+import 'background_auth_store.dart';
 import 'notification_navigation.dart';
 import 'token_storage_service.dart';
 
@@ -17,6 +20,8 @@ const String kNotificationActionCallBack = 'call_back';
 /// Reply and mark-read from a message notification, including a background isolate.
 @pragma('vm:entry-point')
 void onBackgroundNotificationAction(NotificationResponse response) {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
   unawaited(NotificationQuickActions.handle(response));
 }
 
@@ -52,10 +57,16 @@ class NotificationQuickActions {
 
   static Future<void> _post(String path, Map<String, dynamic> body) async {
     try {
-      final token = await TokenStorageService().getAuthToken();
-      if (token == null || token.isEmpty) return;
+      final backgroundToken = await BackgroundAuthStore.readToken();
+      final secureToken = await TokenStorageService().getAuthToken();
+      final token = preferStoredAuthToken(backgroundToken, secureToken);
+      if (token == null) return;
+      final origin = await BackgroundAuthStore.readApiOrigin();
+      final base = (origin == null || origin.isEmpty)
+          ? ApiEndpoints.baseUrl
+          : '$origin/api';
       final response = await http.post(
-        Uri.parse('${ApiEndpoints.baseUrl}$path'),
+        Uri.parse('$base$path'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -101,7 +112,7 @@ List<AndroidNotificationAction> messageTrayActions() {
     const AndroidNotificationAction(
       kNotificationActionReply,
       'Reply',
-      showsUserInterface: true,
+      showsUserInterface: false,
       allowGeneratedReplies: true,
       cancelNotification: false,
       inputs: [AndroidNotificationActionInput(label: 'Message')],
