@@ -18,6 +18,7 @@ import '../screens/auth/password_reset_flow_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../pages/profile_wizard_page.dart';
 import '../screens/onboarding/onboarding_preferences_screen.dart';
+import '../features/calls/pages/incoming_call_page.dart';
 import '../features/calls/pages/outgoing_call_page.dart';
 import '../features/calls/pages/peer_call_history_page.dart';
 import '../pages/chat_list_page.dart';
@@ -67,6 +68,7 @@ class AppRoutes {
   static const String home = '/home';
   static const String chat = '/chat';
   static const String outgoingCall = '/call/outgoing';
+  static const String incomingCall = '/call/incoming';
   static const String peerCallHistory = '/calls/history';
   static const String profileEdit = '/profile/edit';
   static const String profileVerification = '/profile/verification';
@@ -173,6 +175,7 @@ const Set<String> _authOnlyTopLevelRoutes = {
   AppRoutes.subscriptionPlans,
   AppRoutes.chat,
   AppRoutes.outgoingCall,
+  AppRoutes.incomingCall,
   AppRoutes.peerCallHistory,
   AppRoutes.featureLocked,
   AppRoutes.tierComparison,
@@ -669,6 +672,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'subscription-management',
         pageBuilder: (context, state) =>
             slideFadePage(state, const SubscriptionManagementPage()),
+      ),
+
+      GoRoute(
+        path: AppRoutes.incomingCall,
+        name: 'incoming-call',
+        pageBuilder: (context, state) =>
+            slideFadePage(state, const IncomingCallPage()),
       ),
 
       // Outgoing / active call (requires auth)

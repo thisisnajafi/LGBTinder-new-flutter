@@ -2,10 +2,14 @@ import '../models/incoming_call_data.dart';
 
 class CallKitRestorePick {
   final IncomingCallData? accepted;
+
+  /// Newest unanswered CallKit row when nothing has been accepted.
+  final IncomingCallData? ringing;
   final List<String> staleIds;
 
   const CallKitRestorePick({
     this.accepted,
+    this.ringing,
     this.staleIds = const [],
   });
 }
@@ -15,9 +19,13 @@ class CallKitRestore {
   CallKitRestore._();
 
   /// Newest accepted native call from [FlutterCallkitIncoming.activeCalls].
-  /// Older / unanswered rows are [CallKitRestorePick.staleIds].
+  ///
+  /// When an accepted call exists, every other row is stale. When nothing
+  /// is accepted, the newest unanswered row stays [CallKitRestorePick.ringing]
+  /// so launch does not hang up a live incoming call.
   static CallKitRestorePick pick(Iterable<dynamic> calls) {
-    IncomingCallData? newest;
+    IncomingCallData? newestAccepted;
+    final unanswered = <IncomingCallData>[];
     final staleIds = <String>[];
     for (final item in calls) {
       if (item is! Map) continue;
@@ -27,19 +35,37 @@ class CallKitRestore {
       final accepted =
           map['isAccepted'] == true || map['accepted'] == true;
       if (!accepted) {
-        staleIds.add(data.callId);
+        unanswered.add(data);
         continue;
       }
-      final newestId = int.tryParse(newest?.callId ?? '') ?? -1;
+      final newestId = int.tryParse(newestAccepted?.callId ?? '') ?? -1;
       final thisId = int.tryParse(data.callId) ?? -1;
-      if (newest == null || thisId >= newestId) {
-        if (newest != null) staleIds.add(newest.callId);
-        newest = data;
+      if (newestAccepted == null || thisId >= newestId) {
+        if (newestAccepted != null) staleIds.add(newestAccepted.callId);
+        newestAccepted = data;
       } else {
         staleIds.add(data.callId);
       }
     }
-    return CallKitRestorePick(accepted: newest, staleIds: staleIds);
+    if (newestAccepted != null) {
+      for (final row in unanswered) {
+        staleIds.add(row.callId);
+      }
+      return CallKitRestorePick(accepted: newestAccepted, staleIds: staleIds);
+    }
+
+    IncomingCallData? newestRinging;
+    for (final row in unanswered) {
+      final newestId = int.tryParse(newestRinging?.callId ?? '') ?? -1;
+      final thisId = int.tryParse(row.callId) ?? -1;
+      if (newestRinging == null || thisId >= newestId) {
+        if (newestRinging != null) staleIds.add(newestRinging.callId);
+        newestRinging = row;
+      } else {
+        staleIds.add(row.callId);
+      }
+    }
+    return CallKitRestorePick(ringing: newestRinging, staleIds: staleIds);
   }
 
   static IncomingCallData? newestAccepted(Iterable<dynamic> calls) =>

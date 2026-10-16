@@ -49,6 +49,7 @@ void main() {
     test('does not swallow the real outgoing call route', () {
       final r = RouteRedirector();
       expect(r.resolveLegacyRoute(Uri.parse(AppRoutes.outgoingCall)), isNull);
+      expect(r.resolveLegacyRoute(Uri.parse(AppRoutes.incomingCall)), isNull);
       expect(
         r.resolveLegacyRoute(
           Uri.parse('${AppRoutes.outgoingCall}?callId=7&type=video'),

@@ -26,6 +26,7 @@ import '../../providers/incoming_call_provider.dart';
 import '../../utils/call_navigation.dart';
 import '../../utils/call_rejoin_policy.dart';
 import '../../../../shared/services/call_permissions.dart';
+import '../../../../routes/app_router.dart';
 import '../../utils/call_permission_lifecycle.dart';
 import 'call_permission_sheet.dart';
 
@@ -227,6 +228,7 @@ class IncomingCallHost extends ConsumerStatefulWidget {
 class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
     with WidgetsBindingObserver {
   bool _showingPermissionSheet = false;
+  bool _openingIncoming = false;
 
   @override
   void initState() {
@@ -238,6 +240,7 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
       ActiveCallBridge.consumePending();
       if (!ref.read(startupFlowCompleteProvider)) return;
       ref.read(incomingCallProvider.notifier).consumePendingNavigation(context);
+      unawaited(_adoptAndOpenIncoming());
     });
   }
 
@@ -254,6 +257,9 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
   /// CallKit broadcast decline and the server stores "rejected" (RT-012).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_adoptAndOpenIncoming());
+    }
     if (!CallPermissionLifecycle.shouldPromoteIncomingToCallKit(
       state: state,
       permissionRequestInFlight:
@@ -297,6 +303,7 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ref.read(incomingCallProvider.notifier).consumePendingNavigation(context);
+        unawaited(_adoptAndOpenIncoming());
       });
     });
     ref.listen(incomingCallProvider, (previous, next) {
@@ -306,6 +313,11 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
         if (notifier.hasPendingNavigation &&
             ref.read(startupFlowCompleteProvider)) {
           notifier.consumePendingNavigation(context);
+        }
+        if (next != null &&
+            ref.read(startupFlowCompleteProvider) &&
+            !CallPermissionLifecycle.blocksCallTerminalActions) {
+          unawaited(_adoptAndOpenIncoming());
         }
         if (notifier.hasBlockedPermission &&
             ref.read(startupFlowCompleteProvider) &&
@@ -321,6 +333,30 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
         const _IncomingCallForegroundLayer(),
       ],
     );
+  }
+
+  /// Read a live unanswered CallKit row and open [IncomingCallPage].
+  /// A permission dialog pause does not count as bringing the app forward.
+  Future<void> _adoptAndOpenIncoming() async {
+    if (!mounted || _openingIncoming) return;
+    if (CallPermissionLifecycle.blocksCallTerminalActions) return;
+    if (!ref.read(startupFlowCompleteProvider)) return;
+    if (ref.read(incomingCallProvider) == null) {
+      final ringing = await CallKitService.instance.currentRingingCall();
+      if (!mounted || ringing == null) return;
+      if (CallPermissionLifecycle.blocksCallTerminalActions) return;
+      ref.read(incomingCallProvider.notifier).adoptRinging(ringing);
+    }
+    if (!mounted || ref.read(incomingCallProvider) == null) return;
+    final router = GoRouter.of(context);
+    final path = router.routerDelegate.currentConfiguration.uri.path;
+    if (path == AppRoutes.incomingCall || path == AppRoutes.outgoingCall) {
+      return;
+    }
+    _openingIncoming = true;
+    ref.read(incomingCallProvider.notifier).markIncomingPageOpen(true);
+    router.push(AppRoutes.incomingCall);
+    _openingIncoming = false;
   }
 
   Future<void> _showBlockedPermissionSheet() async {
@@ -354,7 +390,9 @@ class _IncomingCallForegroundLayer extends ConsumerWidget {
     final notifier = ref.read(incomingCallProvider.notifier);
     final minimized = ref.watch(activeCallSessionProvider);
 
-    if (incoming != null && notifier.isAppForeground) {
+    if (incoming != null &&
+        notifier.isAppForeground &&
+        !notifier.incomingPageOpen) {
       return Positioned(
         top: 0,
         left: 0,

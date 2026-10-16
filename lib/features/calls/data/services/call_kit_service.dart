@@ -211,6 +211,25 @@ class CallKitService {
     return null;
   }
 
+  /// Unanswered CallKit row that is still ringing. Not ended on launch.
+  Future<IncomingCallData?> currentRingingCall() async {
+    try {
+      final calls = await FlutterCallkitIncoming.activeCalls();
+      if (calls is List) {
+        final ringing = CallKitRestore.pick(calls).ringing;
+        if (ringing != null) return ringing;
+      }
+    } catch (e) {
+      AppLogger.warning('currentRingingCall failed', tag: _tag, error: e);
+    }
+
+    final persisted = await IncomingCallHandler.loadPersisted();
+    if (persisted != null && !persisted.accepted) {
+      return persisted.data;
+    }
+    return null;
+  }
+
   /// Show native incoming call UI.
   Future<void> showIncoming(IncomingCallData data) async {
     unawaited(_mirrorAuthForKilledDecline());

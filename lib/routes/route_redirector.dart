@@ -9,6 +9,7 @@ class RouteRedirector {
   /// App routes under `/call/...` that must not be treated as legacy call links.
   static const Set<String> _reservedCallSegments = {
     'outgoing',
+    'incoming',
   };
 
   /// App routes under `/profile/...` that must not be treated as `/profile/:userId`.

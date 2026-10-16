@@ -48,10 +48,11 @@ void main() {
       expect(picked.accepted!.callType, 'video');
       expect(picked.accepted!.callerAvatar, 'https://cdn.example/a.png');
       expect(picked.accepted!.channelName, 'call_5_9_1');
+      expect(picked.ringing, isNull);
       expect(picked.staleIds, containsAll(['10', '12']));
     });
 
-    test('returns null when nothing was accepted', () {
+    test('keeps the newest unanswered call ringing', () {
       final picked = CallKitRestore.pick([
         {
           'id': '10',
@@ -63,8 +64,20 @@ void main() {
             'callerName': 'Old',
           },
         },
+        {
+          'id': '14',
+          'isAccepted': false,
+          'extra': {
+            'callId': '14',
+            'callerId': 3,
+            'callType': 'video',
+            'callerName': 'Riley',
+          },
+        },
       ]);
       expect(picked.accepted, isNull);
+      expect(picked.ringing, isNotNull);
+      expect(picked.ringing!.callId, '14');
       expect(picked.staleIds, ['10']);
     });
   });

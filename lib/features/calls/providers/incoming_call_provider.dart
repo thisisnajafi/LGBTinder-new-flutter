@@ -44,6 +44,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
   String? _acceptedCallId;
   CallPermissionResult? _blockedPermission;
   bool _blockedPermissionVideo = false;
+  bool _incomingPageOpen = false;
 
   @override
   IncomingCallData? build() {
@@ -57,6 +58,29 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
   }
 
   bool get hasPendingNavigation => _pendingNavigation != null;
+
+  bool get incomingPageOpen => _incomingPageOpen;
+
+  void markIncomingPageOpen(bool open) {
+    if (_incomingPageOpen == open) return;
+    _incomingPageOpen = open;
+    ref.notifyListeners();
+  }
+
+  /// Adopt a CallKit row that is still ringing. Does not start another
+  /// ringtone or post a second native incoming UI.
+  void adoptRinging(IncomingCallData data) {
+    if (_acceptedCallId == data.callId) return;
+    if (state?.callId == data.callId) return;
+    _autoDismissTimer?.cancel();
+    state = data;
+    _autoDismissTimer = Timer(CallRingTimeout.duration, () {
+      if (_acceptedCallId == data.callId) return;
+      if (state?.callId == data.callId) {
+        unawaited(timeoutDismiss());
+      }
+    });
+  }
 
   bool get hasBlockedPermission => _blockedPermission != null;
 
