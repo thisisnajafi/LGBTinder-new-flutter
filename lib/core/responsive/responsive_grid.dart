@@ -36,8 +36,8 @@ class ResponsiveGrid {
       AppBreakpoints.value(
         context,
         phone: double.infinity,
-        tablet: 420.0,
-        desktop: 420.0,
+        tablet: 560.0,
+        desktop: 560.0,
       );
 
   /// Chat master panel width on tablet.

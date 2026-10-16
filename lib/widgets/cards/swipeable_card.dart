@@ -91,8 +91,15 @@ class SwipeableCard extends ConsumerStatefulWidget {
 
     final maxCardHeight =
         (maxHeight - minimumVerticalMargin).clamp(0.0, maxHeight);
-    final idealHeight = maxWidth / cardAspectRatio;
-    return Size(maxWidth, idealHeight.clamp(0.0, maxCardHeight));
+    if (maxCardHeight <= 0) return Size.zero;
+
+    var width = maxWidth;
+    var height = width / cardAspectRatio;
+    if (height > maxCardHeight) {
+      height = maxCardHeight;
+      width = height * cardAspectRatio;
+    }
+    return Size(width, height);
   }
 
   @override

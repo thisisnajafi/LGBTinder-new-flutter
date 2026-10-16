@@ -41,122 +41,152 @@ class DiscoverEmptyState extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final reduceMotion = !AppAnimations.animationsEnabled(context);
 
-    return Center(
-      child: ResponsiveGrid.constrained(
-        context,
-        Padding(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final dense = constraints.maxHeight < 640 ||
+            constraints.maxWidth < AppBreakpoints.compact ||
+            textScale > 1.15;
+        final gap = dense ? AppSpacing.spacingMD : AppSpacing.spacingXL;
+        final minHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 0.0;
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
             horizontal: PremiumPageHeader.horizontalPadding,
+            vertical: AppSpacing.spacingSM,
           ),
-          child: PremiumShell(
-            margin: EdgeInsets.zero,
-            padding: const EdgeInsets.all(AppSpacing.spacingXL),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _EmptyIllustration(
-                  animate: !reduceMotion,
-                  iconPath: iconPath ?? AppIcons.search,
-                ),
-                const SizedBox(height: AppSpacing.spacingXL),
-                AppText(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    height: 1.2,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Center(
+              child: ResponsiveGrid.constrained(
+                context,
+                PremiumShell(
+                  margin: EdgeInsets.zero,
+                  padding: EdgeInsets.all(
+                    dense ? AppSpacing.spacingMD : AppSpacing.spacingXL,
                   ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                AppText(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
-                    height: 1.45,
-                  ),
-                  maxLines: 4,
-                ),
-                const SizedBox(height: AppSpacing.spacingXL),
-                if (onPrimaryAction != null)
-                  GradientButton(
-                    text: primaryActionLabel,
-                    iconPath: AppIcons.filter,
-                    onPressed: onPrimaryAction,
-                    isFullWidth: true,
-                  ),
-                if (secondaryActionLabel != null && onSecondaryAction != null) ...[
-                  const SizedBox(height: AppSpacing.spacingSM),
-                  PremiumTapScale(
-                    onTap: onSecondaryAction!,
-                    semanticLabel: secondaryActionLabel!,
-                    child: Container(
-                      width: double.infinity,
-                      height: 48,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.radiusRound),
-                        border: Border.all(
-                          color: AppColors.accentViolet.withValues(alpha: 0.35),
-                        ),
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.04)
-                            : AppColors.accentViolet.withValues(alpha: 0.06),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _EmptyIllustration(
+                        animate: !reduceMotion,
+                        iconPath: iconPath ?? AppIcons.search,
+                        dense: dense,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AppSvgIcon(
-                            assetPath: AppIcons.location,
-                            size: 18,
-                            color: AppColors.accentViolet,
+                      SizedBox(height: gap),
+                      AppText(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          height: 1.2,
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: AppSpacing.spacingSM),
+                      AppText(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.58),
+                          height: 1.45,
+                        ),
+                        maxLines: 4,
+                      ),
+                      SizedBox(height: gap),
+                      if (onPrimaryAction != null)
+                        GradientButton(
+                          text: primaryActionLabel,
+                          iconPath: AppIcons.filter,
+                          onPressed: onPrimaryAction,
+                          isFullWidth: true,
+                        ),
+                      if (secondaryActionLabel != null &&
+                          onSecondaryAction != null) ...[
+                        const SizedBox(height: AppSpacing.spacingSM),
+                        PremiumTapScale(
+                          onTap: onSecondaryAction!,
+                          semanticLabel: secondaryActionLabel!,
+                          child: Container(
+                            width: double.infinity,
+                            constraints: const BoxConstraints(minHeight: 48),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.spacingMD,
+                              vertical: AppSpacing.spacingSM,
+                            ),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.radiusRound,
+                              ),
+                              border: Border.all(
+                                color: AppColors.accentViolet
+                                    .withValues(alpha: 0.35),
+                              ),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.04)
+                                  : AppColors.accentViolet
+                                      .withValues(alpha: 0.06),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AppSvgIcon(
+                                  assetPath: AppIcons.location,
+                                  size: 18,
+                                  color: AppColors.accentViolet,
+                                ),
+                                const SizedBox(width: AppSpacing.spacingSM),
+                                Flexible(
+                                  child: AppText(
+                                    secondaryActionLabel!,
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: AppColors.accentViolet,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 2,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: AppSpacing.spacingSM),
-                          Flexible(
+                        ),
+                      ],
+                      if (tertiaryActionLabel != null &&
+                          onTertiaryAction != null) ...[
+                        const SizedBox(height: AppSpacing.spacingSM),
+                        PremiumTapScale(
+                          onTap: onTertiaryAction!,
+                          semanticLabel: tertiaryActionLabel!,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.spacingXS,
+                            ),
                             child: AppText(
-                              secondaryActionLabel!,
+                              tertiaryActionLabel!,
                               style: theme.textTheme.labelLarge?.copyWith(
-                                color: AppColors.accentViolet,
+                                color: AppColors.accentRose,
                                 fontWeight: FontWeight.w700,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               textAlign: TextAlign.center,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                if (tertiaryActionLabel != null && onTertiaryAction != null) ...[
-                  const SizedBox(height: AppSpacing.spacingSM),
-                  PremiumTapScale(
-                    onTap: onTertiaryAction!,
-                    semanticLabel: tertiaryActionLabel!,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.spacingXS,
-                      ),
-                      child: AppText(
-                        tertiaryActionLabel!,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: AppColors.accentRose,
-                          fontWeight: FontWeight.w700,
                         ),
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
-                ],
-              ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -165,10 +195,12 @@ class _EmptyIllustration extends StatefulWidget {
   const _EmptyIllustration({
     required this.animate,
     required this.iconPath,
+    required this.dense,
   });
 
   final bool animate;
   final String iconPath;
+  final bool dense;
 
   @override
   State<_EmptyIllustration> createState() => _EmptyIllustrationState();
@@ -205,8 +237,8 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
         return Transform.scale(scale: scale, child: child);
       },
       child: Container(
-        width: 104,
-        height: 104,
+        width: widget.dense ? 72 : 104,
+        height: widget.dense ? 72 : 104,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
@@ -230,8 +262,8 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
         ),
         child: Center(
           child: Container(
-            width: 60,
-            height: 60,
+            width: widget.dense ? 44 : 60,
+            height: widget.dense ? 44 : 60,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: AppColors.brandGradient,
@@ -239,7 +271,7 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
             child: Center(
               child: AppSvgIcon(
                 assetPath: widget.iconPath,
-                size: 28,
+                size: widget.dense ? 22 : 28,
                 color: Colors.white,
               ),
             ),

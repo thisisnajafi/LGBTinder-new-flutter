@@ -1216,7 +1216,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
-          child: Stack(
+          child: ResponsiveCenter(
+            maxWidth: 720,
+            child: Stack(
             clipBehavior: Clip.none,
             fit: StackFit.expand,
             children: [
@@ -1317,12 +1319,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                             ),
                         ],
                       ),
-                      tablet: 420,
+                      tablet: ResponsiveGrid.discoverCardMaxWidth(context),
                     ),
                   ),
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

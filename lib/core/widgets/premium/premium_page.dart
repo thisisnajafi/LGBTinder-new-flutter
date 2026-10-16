@@ -59,38 +59,44 @@ class PremiumPageHeader extends StatelessWidget {
           : null,
       coverImageUrl: coverImageUrl,
       transparentSides: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  title,
-                  style: (showBackButton
-                          ? theme.textTheme.titleLarge
-                          : theme.textTheme.headlineMedium)
-                      ?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                    letterSpacing: -0.4,
-                    height: 1.15,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ClampedTextScale(
+                  child: AppText(
+                    title,
+                    style: (showBackButton
+                            ? theme.textTheme.titleLarge
+                            : theme.textTheme.headlineMedium)
+                        ?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                      letterSpacing: -0.4,
+                      height: 1.15,
+                    ),
+                    maxLines: 1,
                   ),
-                  maxLines: 2,
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  AppText(
-                    subtitle!,
-                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                    maxLines: 2,
-                  ),
-                ],
-              ],
-            ),
+              ),
+              if (action != null) action!,
+            ],
           ),
-          if (action != null) action!,
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: AppText(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                maxLines: 1,
+              ),
+            ),
+          ],
         ],
       ),
     );
