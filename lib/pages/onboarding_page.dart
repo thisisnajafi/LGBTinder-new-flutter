@@ -268,14 +268,16 @@ class _SlideContent extends StatelessWidget {
                   OnboardingTypingDots(animate: isCurrent && motion),
                 ],
                 SizedBox(height: AppSpacing.spacingXL),
-                AppText(
-                  slide.title,
-                  style: textTheme.displayMedium?.copyWith(
-                    color: AppColors.textPrimaryDark,
-                    fontWeight: FontWeight.w800,
+                ClampedTextScale(
+                  child: AppText(
+                    slide.title,
+                    style: textTheme.displayMedium?.copyWith(
+                      color: AppColors.textPrimaryDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
                 ),
                 SizedBox(height: AppSpacing.spacingMD),
                 AppText(
