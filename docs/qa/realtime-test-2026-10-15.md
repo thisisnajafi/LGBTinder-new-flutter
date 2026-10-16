@@ -278,3 +278,17 @@ App build 7232452 on emulator-5554 (742) + emulator-5556 (745), against PRODUCTI
 | Video call | PASS | #87 |
 Note: #88 missed only because the tester was slow (caller timeout), banner was shown.
 Build fix: 7232452 (presence onForeground/onBackground made Future<void>).
+
+## Session 7 — post-deploy check (2026-10-16 ~11:00–11:20 Tehran)
+Backend 0f99c4d deployed (run 38820814412, accepting_at migration DONE). App build 7232452 (already installed). emulator-5554=742, emulator-5556=745. Calls #90-#92, all 742->745.
+
+| Test | Result | Evidence |
+|---|---|---|
+| Presence events / 120 s | PASS | 0 on 5554, 0 on 5556 (was 7 pre-deploy, ~60 originally); header still "Online" |
+| /calls/{id}/accepting | PASS | no 404/failure logged; server broadcast `call.accepting` to both apps (#90, #91) |
+| Ring held during prompts | PASS | #91 still ringing at 56 s after start (> 45 s), caller shows "Connecting…" |
+| Connects after granting | PASS | #91 active at 73 s, Agora onUserJoined, ended dur=27 |
+| Hold window limit | INFO | #90 prompts left open 63 s after accept -> missed (extension is 60 s by design) |
+| Background banner | PASS | callkit_incoming notification for #92 |
+| Single message notification | PASS | 1 lgbtfinder_messages record for "RT_test_4" |
+Notes: on snapshot boot 5556 showed a leftover call screen for already-ended #89 with no server call (/calls/active null); cleared by force-stop. Banner decline not re-run (notification group collapsed); #92 timed out as missed.
