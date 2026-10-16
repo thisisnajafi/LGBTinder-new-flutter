@@ -174,4 +174,21 @@ void main() {
     expect(location, contains('callee=1'));
     expect(location, contains('callId=9'));
   });
+
+  test('CallKit subtitle names the call type and the app', () {
+    const voice = IncomingCallData(
+      callId: '1',
+      callType: 'audio',
+      callerId: 2,
+      callerName: 'Alex',
+    );
+    const video = IncomingCallData(
+      callId: '1',
+      callType: 'video',
+      callerId: 2,
+      callerName: 'Alex',
+    );
+    expect(voice.callKitSubtitle, 'Incoming voice call · LGBTFinder');
+    expect(video.callKitSubtitle, 'Incoming video call · LGBTFinder');
+  });
 }

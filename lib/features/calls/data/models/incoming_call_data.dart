@@ -20,6 +20,11 @@ class IncomingCallData {
       callType == 'video' ||
       callType.contains('video');
 
+  /// Line under the name on the native incoming-call banner.
+  String get callKitSubtitle => isVideo
+      ? 'Incoming video call · LGBTFinder'
+      : 'Incoming voice call · LGBTFinder';
+
   static bool isCallPayload(Map<String, dynamic> data) {
     final type = data['type']?.toString() ?? '';
     if (_nonCallTypes.contains(type)) {
