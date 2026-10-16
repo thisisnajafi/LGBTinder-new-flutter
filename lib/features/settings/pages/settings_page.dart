@@ -263,7 +263,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return PremiumTabPageLayout(
       title: 'Settings',
       subtitle: 'Your account, privacy, and preferences',
-      wideContentMaxWidth: 1120,
+      wideContentMaxWidth: 720,
       onRefresh: () async {
         await ref.read(appCacheManagerProvider).revalidateAll();
         await _loadVersion();
