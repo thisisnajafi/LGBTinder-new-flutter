@@ -5,8 +5,30 @@ class AppBreakpoints {
   AppBreakpoints._();
 
   static const double phone = 0;
+
+  /// Widths below this are compact phones (320dp class).
+  static const double compact = 360;
+
   static const double tablet = 600;
+
+  /// Same threshold as [tablet]. Expanded layouts start here.
+  static const double expanded = tablet;
+
   static const double desktop = 900;
+
+  static bool isCompact(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < compact;
+
+  static bool isExpanded(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= expanded;
+
+  /// Compact under 360, medium through 599, expanded at 600 and up.
+  static AppWindowSize windowSize(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < compact) return AppWindowSize.compact;
+    if (width < expanded) return AppWindowSize.medium;
+    return AppWindowSize.expanded;
+  }
 
   static bool isPhone(BuildContext context) =>
       MediaQuery.sizeOf(context).width < tablet;
@@ -38,3 +60,6 @@ class AppBreakpoints {
     return phone;
   }
 }
+
+/// Width class used by responsive wrappers.
+enum AppWindowSize { compact, medium, expanded }
