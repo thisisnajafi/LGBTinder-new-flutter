@@ -704,7 +704,7 @@ class _PlanCard extends StatelessWidget {
                                   color: textColor,
                                   fontWeight: FontWeight.w700,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                               ),
                               if (isCurrent)
                                 Container(
