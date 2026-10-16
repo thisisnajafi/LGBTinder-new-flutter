@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
@@ -102,11 +103,16 @@ StyleInformation messageTrayStyle({
   required String title,
   required String body,
   String? senderKey,
+  Uint8List? avatarPng,
 }) {
   if (!chat) {
     return BigTextStyleInformation(body);
   }
-  final person = Person(name: title, key: senderKey);
+  final person = Person(
+    name: title,
+    key: senderKey,
+    icon: avatarPng == null ? null : ByteArrayAndroidIcon(avatarPng),
+  );
   return MessagingStyleInformation(
     person,
     conversationTitle: title,

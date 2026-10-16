@@ -10,6 +10,7 @@ import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
 import '../services/api_service.dart';
 import 'background_message_display.dart';
+import 'notification_avatar_bitmap.dart';
 import 'notification_quick_actions.dart';
 import 'incoming_call_handler.dart';
 import 'deep_linking_service.dart';
@@ -494,6 +495,9 @@ class PushNotificationService {
     final channelId = notificationChannelIdFor(type);
     final groupKey = BackgroundMessageDisplay.messageGroupKey(data);
     final isChat = ChatFcmSuppress.isChatPayload(data);
+    final avatarPng = await NotificationAvatarBitmap.pngFor(
+      data['avatar_url']?.toString(),
+    );
 
     final payloadSound = _resolvePayloadSound(data);
     final androidRaw =
@@ -508,6 +512,7 @@ class PushNotificationService {
       priority: Priority.high,
       icon: '@drawable/ic_stat_lgbtfinder',
       color: const Color(0xFFEC4899),
+      largeIcon: NotificationAvatarBitmap.largeIcon(avatarPng),
       showWhen: true,
       groupKey: groupKey,
       setAsGroupSummary: false,
@@ -516,6 +521,7 @@ class PushNotificationService {
         title: title,
         body: body,
         senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
+        avatarPng: avatarPng,
       ),
       actions: isChat ? messageTrayActions() : null,
       sound: androidRaw != null

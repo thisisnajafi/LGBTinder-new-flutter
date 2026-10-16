@@ -96,12 +96,12 @@ class IncomingCallData {
             'Unknown')
         .toString();
 
-    final avatar = (data['primary_image_url'] ??
-            callerMap?['primary_image_url'] ??
-            data['caller_avatar'] ??
+    final avatar = (data['caller_avatar'] ??
             data['callerAvatar'] ??
             data['avatar_url'] ??
-            callerMap?['avatar_url'])
+            callerMap?['avatar_url'] ??
+            data['primary_image_url'] ??
+            callerMap?['primary_image_url'])
         ?.toString();
 
     return IncomingCallData(

@@ -10,6 +10,7 @@ import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
 import 'background_message_display.dart';
+import 'notification_avatar_bitmap.dart';
 import 'notification_quick_actions.dart';
 
 export 'background_message_display.dart'
@@ -172,6 +173,9 @@ Future<void> _showBackgroundLocalNotification(
 
     final channelId = notificationChannelIdFor(data['type']?.toString());
     final isChat = channelId == kLgbtfinderMessagesChannelId;
+    final avatarPng = await NotificationAvatarBitmap.pngFor(
+      data['avatar_url']?.toString(),
+    );
     final groupKey = BackgroundMessageDisplay.messageGroupKey(data);
     final androidDetails = AndroidNotificationDetails(
       channelId,
@@ -183,6 +187,7 @@ Future<void> _showBackgroundLocalNotification(
       priority: Priority.high,
       icon: '@drawable/ic_stat_lgbtfinder',
       color: const Color(0xFFEC4899),
+      largeIcon: NotificationAvatarBitmap.largeIcon(avatarPng),
       tag: tag,
       groupKey: groupKey,
       styleInformation: messageTrayStyle(
@@ -190,6 +195,7 @@ Future<void> _showBackgroundLocalNotification(
         title: text.title,
         body: text.body,
         senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
+        avatarPng: avatarPng,
       ),
       actions: isChat ? messageTrayActions() : null,
     );
