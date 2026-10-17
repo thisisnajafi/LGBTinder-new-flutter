@@ -704,6 +704,61 @@ class AuthService {
     }
   }
 
+  /// Sign in with Apple identity token (native iOS flow).
+  ///
+  /// [rawNonce] is the nonce whose SHA-256 was sent to Apple. Apple returns the
+  /// name only on the first authorization, so it is forwarded when present.
+  Future<SocialAuthResponse> signInWithApple({
+    required String identityToken,
+    required String rawNonce,
+    String? givenName,
+    String? familyName,
+    String? authorizationCode,
+    String? deviceName,
+  }) async {
+    final response = await _apiService.post<Map<String, dynamic>>(
+      ApiEndpoints.appleAuth,
+      data: {
+        'identity_token': identityToken,
+        'nonce': rawNonce,
+        if (givenName != null && givenName.isNotEmpty) 'first_name': givenName,
+        if (familyName != null && familyName.isNotEmpty)
+          'last_name': familyName,
+        if (authorizationCode != null && authorizationCode.isNotEmpty)
+          'authorization_code': authorizationCode,
+        if (deviceName != null && deviceName.isNotEmpty)
+          'device_name': deviceName,
+      },
+      fromJson: (json) => json as Map<String, dynamic>,
+      queueIfOffline: false,
+    );
+
+    if (response.data != null) {
+      final socialResponse = SocialAuthResponse.fromJson({
+        'status': response.status,
+        'message': response.message,
+        'data': response.data,
+      });
+
+      if (socialResponse.token != null) {
+        await _saveAuthTokensForLogin(
+          token: socialResponse.token!,
+          profileCompleted: socialResponse.profileCompleted,
+          userState: socialResponse.userState,
+        );
+      }
+      await _persistSocialResponse(socialResponse);
+
+      return socialResponse;
+    }
+
+    throw Exception(
+      response.message.isNotEmpty
+          ? response.message
+          : 'Apple authentication failed',
+    );
+  }
+
   /// Get Google OAuth authorization URL
   Future<ApiResponse<Map<String, dynamic>>> getGoogleAuthUrl() async {
     try {

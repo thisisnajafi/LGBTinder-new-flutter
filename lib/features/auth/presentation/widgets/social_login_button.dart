@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,11 +13,14 @@ import '../../../../shared/services/error_handler_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/auth_service_provider.dart';
 import '../../utils/auth_navigation.dart';
+import 'apple_login_button.dart';
 import '../../../../core/responsive/responsive.dart';
 
 typedef GoogleSignInCallback = Future<void> Function();
 
-/// Production Google sign-in button (native SDK + backend ID token verification).
+/// Social sign-in button: Sign in with Apple on iOS, Google everywhere else.
+///
+/// iOS ships without Google sign-in, so the Google button is never shown there.
 class SocialLoginButton extends ConsumerStatefulWidget {
   const SocialLoginButton({
     super.key,
@@ -40,8 +44,21 @@ class SocialLoginButton extends ConsumerStatefulWidget {
 class _SocialLoginButtonState extends ConsumerState<SocialLoginButton> {
   bool _isLoading = false;
 
+  static bool get _useApple =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   @override
   Widget build(BuildContext context) {
+    if (_useApple) {
+      return AppleLoginButton(
+        onSuccess: widget.onSuccess,
+        onError: widget.onError,
+        onBeforeAuth: widget.onBeforeAuth,
+        getDeviceName: widget.getDeviceName,
+        lightStyle: widget.lightStyle,
+      );
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final Color backgroundColor;
