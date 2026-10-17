@@ -4,6 +4,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/widgets.dart';
+import 'package:notification_launch/notification_launch.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -147,13 +148,17 @@ class PushNotificationService {
   /// Initialize push notification service.
   /// Yields between steps so the main thread is never blocked for >1s (avoids ANR).
   Future<void> initialize() async {
-    if (_isInitialized) return;
-
+    PendingLaunchRoute.onDeliver ??= _deliverLaunch;
+    // The background isolate may already have created a plugin instance.
+    // This engine still has to register the tap callback and read the launch
+    // intent. A static "initialized" flag in that other isolate must not skip it.
     try {
       await _initializeLocalNotifications();
     } catch (e) {
       AppLogger.debug('Local notifications init failed: $e');
     }
+    await _captureLaunchRoutes('main-engine');
+    if (_isInitialized) return;
 
     try {
       await SoundService.instance.initialize();
@@ -342,36 +347,89 @@ class PushNotificationService {
   /// Terminated-app tap. Reads FCM and the local notification plugin before
   /// splash sends the user to Discover.
   Future<void> captureTerminatedLaunch() {
+    PendingLaunchRoute.onDeliver ??= _deliverLaunch;
     return PendingLaunchRoute.capture(() async {
-      try {
-        await _initializeLocalNotifications();
-        final launch = await _localNotifications.getNotificationAppLaunchDetails();
-        final response = launch?.notificationResponse;
-        final launched = launch?.didNotificationLaunchApp ?? false;
-        PendingLaunchRoute.localLaunchCaptured = launched;
-        PendingLaunchRoute.store(
-          PendingLaunchRoute.payloadFromLocalLaunch(
-            didLaunchApp: launched,
-            payload: response?.payload,
-            actionId: response?.actionId,
-          ),
-        );
-      } catch (e) {
-        AppLogger.debug('Local notification launch details failed: $e');
-      }
-
-      try {
-        final message = await _firebaseMessaging.getInitialMessage();
-        PendingLaunchRoute.initialMessageCaptured = true;
-        PendingLaunchRoute.store(
-          PendingLaunchRoute.payloadFromFcmData(
-            message == null ? null : Map<String, dynamic>.from(message.data),
-          ),
-        );
-      } catch (e) {
-        AppLogger.debug('FCM initial message failed: $e');
-      }
+      await _captureLaunchRoutes('startup');
     });
+  }
+
+  /// Every main-engine start. Not skipped when a background isolate already
+  /// initialized the native plugin.
+  Future<void> _captureLaunchRoutes(String source) async {
+    debugPrint('[LaunchRoute] capture start source=$source');
+    try {
+      await _initializeLocalNotifications();
+      final launch = await _localNotifications.getNotificationAppLaunchDetails();
+      final response = launch?.notificationResponse;
+      final launched = launch?.didNotificationLaunchApp ?? false;
+      if (launched) PendingLaunchRoute.localLaunchCaptured = true;
+      debugPrint(
+        '[LaunchRoute] capture plugin source=$source didLaunch=$launched payload=${response?.payload}',
+      );
+      PendingLaunchRoute.storeLaunch(
+        PendingLaunchRoute.payloadFromLocalLaunch(
+          didLaunchApp: launched,
+          payload: response?.payload,
+          actionId: response?.actionId,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[LaunchRoute] capture plugin failed: $e');
+    }
+
+    try {
+      final native = await NotificationLaunch.takePayload();
+      debugPrint('[LaunchRoute] capture native source=$source payload=$native');
+      if (native != null && native.isNotEmpty) {
+        PendingLaunchRoute.storeLaunch(
+          PendingLaunchRoute.payloadFromLocalLaunch(
+            didLaunchApp: true,
+            payload: native,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[LaunchRoute] capture native failed: $e');
+    }
+
+    if (PendingLaunchRoute.initialMessageCaptured) return;
+    try {
+      final message = await _firebaseMessaging.getInitialMessage();
+      PendingLaunchRoute.initialMessageCaptured = true;
+      debugPrint(
+        '[LaunchRoute] capture fcm source=$source id=${message?.messageId} data=${message?.data}',
+      );
+      PendingLaunchRoute.storeLaunch(
+        PendingLaunchRoute.payloadFromFcmData(
+          message == null ? null : Map<String, dynamic>.from(message.data),
+        ),
+      );
+    } catch (e) {
+      debugPrint('[LaunchRoute] capture fcm failed: $e');
+    }
+  }
+
+  /// Activity already existed (app backgrounded). The new intent is stashed
+  /// in onNewIntent; read it once the engine is resumed.
+  Future<void> deliverResumeIntent() async {
+    try {
+      final native = await NotificationLaunch.takePayload();
+      if (native == null || native.isEmpty) return;
+      debugPrint('[LaunchRoute] capture resume payload=$native');
+      PendingLaunchRoute.storeLaunch(
+        PendingLaunchRoute.payloadFromLocalLaunch(
+          didLaunchApp: true,
+          payload: native,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[LaunchRoute] capture resume failed: $e');
+    }
+  }
+
+  void _deliverLaunch(Map<String, dynamic> payload) {
+    debugPrint('[LaunchRoute] navigate type=${payload['type']}');
+    unawaited(DeepLinkingService().handleDeepLink(payload));
   }
 
   /// Get FCM token
@@ -743,6 +801,9 @@ class PushNotificationService {
 
   /// Handle local notification tap (foreground FCM shown as local notification).
   void _onNotificationTapped(NotificationResponse response) {
+    debugPrint(
+      '[LaunchRoute] capture tap action=${response.actionId} payload=${response.payload}',
+    );
     final parsed = NotificationNavigation.parseLocalNotificationPayload(
       response.payload,
     );
@@ -807,6 +868,8 @@ class PushNotificationService {
     unawaited(_handlePremiumAccessNotification(payload));
 
     try {
+      PendingLaunchRoute.markDelivered(payload);
+      debugPrint('[LaunchRoute] navigate type=${payload['type']}');
       DeepLinkingService().handleDeepLink(payload);
     } catch (e) {
       AppLogger.debug('Local notification deep link failed: $e');

@@ -9,6 +9,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/utils/app_icons.dart';
 import '../pages/splash_page.dart';
+import '../shared/services/pending_launch_route.dart';
 import '../pages/home_page.dart';
 import '../pages/onboarding_page.dart';
 import '../screens/auth/welcome_screen.dart';
@@ -272,9 +273,15 @@ _GuardDecision evaluateGuardDecision({
   required bool isAuthEntryRoute,
   required bool isProtectedRoute,
   required bool hasPendingProtectedRoute,
+  String? launchRoute,
 }) {
   if (location == AppRoutes.splash && hasLeftStartupFlow) {
     if (authStage == AuthStage.authenticated) {
+      if (launchRoute != null &&
+          launchRoute.isNotEmpty &&
+          launchRoute != AppRoutes.home) {
+        return _GuardDecision(redirectTo: launchRoute);
+      }
       return const _GuardDecision(redirectTo: AppRoutes.home);
     }
     return const _GuardDecision(redirectTo: AppRoutes.welcome);
@@ -346,6 +353,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         isAuthEntryRoute: _authEntryRoutes.contains(loc),
         isProtectedRoute: _isProtectedRoute(loc),
         hasPendingProtectedRoute: pending != null,
+        launchRoute: PendingLaunchRoute.peekArmed(),
       );
 
       if (decision.storePending) {
@@ -370,6 +378,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           routeLog('redirect: $loc (already left startup) → ${AppRoutes.welcome}');
         } else if (decision.redirectTo == AppRoutes.home && _authEntryRoutes.contains(loc)) {
           routeLog('redirect: authenticated user at $loc → ${AppRoutes.home}');
+        } else if (loc == AppRoutes.splash &&
+            decision.redirectTo != AppRoutes.home &&
+            decision.redirectTo != AppRoutes.welcome) {
+          debugPrint('[LaunchRoute] navigate ${decision.redirectTo}');
         }
         return decision.redirectTo;
       }

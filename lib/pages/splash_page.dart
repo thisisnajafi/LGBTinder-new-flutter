@@ -204,6 +204,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
     markStartupFlowLeft(ref);
     await navigate();
     PendingLaunchRoute.markNavigationReady();
+    PendingLaunchRoute.flushIfReady();
   }
 
   Future<void> _goToOnboarding() async {
@@ -253,16 +254,23 @@ class _SplashPageState extends ConsumerState<SplashPage>
       }
       if (!mounted) return;
       final pending = PendingLaunchRoute.consume();
-      PendingLaunchRoute.markNavigationReady();
       final location = _locationForPendingLaunch(pending);
-      if (location == null) {
-        routeLog('go(${AppRoutes.home})');
-        router.go(AppRoutes.home);
-        return;
+      if (location != null) {
+        PendingLaunchRoute.arm(location);
       }
-      routeLog('go(${AppRoutes.home}) then push($location)');
-      router.go(AppRoutes.home);
-      router.push(location);
+      final target = routeAfterAuthenticatedSplash(location);
+      debugPrint('[LaunchRoute] navigate $target');
+      routeLog('go($target)');
+      router.go(target);
+      if (location != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final current = router.routerDelegate.currentConfiguration.uri.toString();
+          final armed = PendingLaunchRoute.peekArmed();
+          if (armed != null && (current == armed || current.startsWith(armed))) {
+            PendingLaunchRoute.clearArmed();
+          }
+        });
+      }
     });
   }
 
@@ -723,6 +731,17 @@ Future<({bool hasSeenIntro, bool hasToken})> splashLoadGate({
 @visibleForTesting
 Duration splashBrandingDelay({required bool hasCachedAuth}) {
   return hasCachedAuth ? Duration.zero : const Duration(milliseconds: 400);
+}
+
+/// Where splash should send a signed-in user.
+///
+/// A pending chat wins over Discover. The home redirect must not drop it.
+@visibleForTesting
+String routeAfterAuthenticatedSplash(String? pendingLocation) {
+  if (pendingLocation != null && pendingLocation.isNotEmpty) {
+    return pendingLocation;
+  }
+  return AppRoutes.home;
 }
 
 /// Chat or call-back route saved from a terminated notification tap.

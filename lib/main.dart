@@ -275,6 +275,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     AppLogger.info('App lifecycle: $state', tag: 'Lifecycle');
+    if (state == AppLifecycleState.resumed) {
+      unawaited(PushNotificationService().deliverResumeIntent());
+    }
   }
 
   @override

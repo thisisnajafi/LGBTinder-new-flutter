@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:notification_launch/notification_launch.dart';
 
 import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
@@ -221,6 +222,7 @@ Future<void> _showBackgroundLocalNotification(
       NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
+    await NotificationLaunch.bindTapIntent(id: id, tag: tag, payload: payload);
     // The OS may still be inserting the FCM notification row. Wait so the
     // collapse sees both and leaves one. The group summary is posted after
     // that so it is not treated as a duplicate row.
@@ -231,6 +233,7 @@ Future<void> _showBackgroundLocalNotification(
       body: textBody,
       keepTag: tag,
     );
+    await NotificationLaunch.bindTapIntent(id: id, tag: tag, payload: payload);
     if (mapped.callBack) {
       await showMissedCallGroupSummary(
         plugin: plugin,

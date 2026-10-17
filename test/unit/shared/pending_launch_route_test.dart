@@ -3,6 +3,7 @@ import 'package:lgbtindernew/routes/app_router.dart';
 import 'package:lgbtindernew/shared/services/notification_navigation.dart';
 import 'package:lgbtindernew/shared/services/pending_launch_route.dart';
 import 'package:lgbtindernew/pages/splash_page.dart';
+import 'package:notification_launch/notification_launch.dart';
 
 void main() {
   setUp(PendingLaunchRoute.reset);
@@ -83,6 +84,54 @@ void main() {
   test('splash ignores an empty pending route', () {
     expect(locationForPendingLaunch(null), isNull);
     expect(locationForPendingLaunch({'type': ''}), isNull);
+  });
+
+  test('authenticated splash opens the chat instead of dropping it on home', () {
+    final location = locationForPendingLaunch({
+      'type': 'message',
+      'user_id': '12',
+      'message_id': '9',
+    });
+    expect(routeAfterAuthenticatedSplash(null), AppRoutes.home);
+    expect(routeAfterAuthenticatedSplash(location), contains('userId=12'));
+    expect(routeAfterAuthenticatedSplash(location), isNot(AppRoutes.home));
+
+    PendingLaunchRoute.arm(location);
+    final decision = evaluateGuardDecision(
+      location: AppRoutes.splash,
+      hasLeftStartupFlow: true,
+      authStage: AuthStage.authenticated,
+      isPublicRoute: true,
+      isAuthEntryRoute: false,
+      isProtectedRoute: false,
+      hasPendingProtectedRoute: false,
+      launchRoute: PendingLaunchRoute.peekArmed(),
+    );
+    expect(decision.redirectTo, contains('userId=12'));
+    expect(PendingLaunchRoute.peekArmed(), contains('userId=12'));
+  });
+
+  test('a second launch read of the same tap is ignored', () {
+    final payload = {'type': 'message', 'user_id': 5, 'message_id': 1};
+    PendingLaunchRoute.storeLaunch(payload);
+    PendingLaunchRoute.storeLaunch(Map<String, dynamic>.from(payload));
+    expect(PendingLaunchRoute.peek()?['message_id'], 1);
+    PendingLaunchRoute.consume();
+    PendingLaunchRoute.storeLaunch(Map<String, dynamic>.from(payload));
+    expect(PendingLaunchRoute.hasPayload, isFalse);
+  });
+
+  test('notification tap request codes stay unique per tag', () {
+    expect(notificationLaunchRequestCode(7, null), 7);
+    expect(notificationLaunchRequestCode(7, ''), 7);
+    expect(
+      notificationLaunchRequestCode(7, 'lgbtfinder-message-4'),
+      isNot(notificationLaunchRequestCode(7, 'lgbtfinder-message-8')),
+    );
+    expect(
+      notificationLaunchRequestCode(7, 'lgbtfinder-message-4'),
+      notificationLaunchRequestCode(7, 'lgbtfinder-message-4'),
+    );
   });
 
   test('a consumed launch is not stored again immediately', () {
