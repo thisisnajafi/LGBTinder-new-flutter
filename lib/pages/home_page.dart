@@ -24,6 +24,8 @@ import '../core/utils/app_logger.dart';
 import '../core/location/location_providers.dart';
 import '../core/providers/api_providers.dart';
 import '../routes/home_tab_routes.dart';
+import '../features/calls/utils/full_screen_intent_gate.dart';
+import '../shared/services/pending_launch_route.dart';
 
 /// Notifications + Settings unmount after this idle window (PERF-PAGE-HOME-004).
 @visibleForTesting
@@ -77,6 +79,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           .read(pusherWebSocketServiceProvider)
           .matchStream
           .listen(_onRemoteMatch);
+      final armed = PendingLaunchRoute.takeArmed();
+      if (armed != null && armed.isNotEmpty) {
+        debugPrint('[LaunchRoute] navigate $armed');
+        context.push(armed);
+      }
+      unawaited(FullScreenIntentGate.promptOnceAfterLogin(context));
     });
   }
 

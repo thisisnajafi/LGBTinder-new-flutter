@@ -29,6 +29,21 @@ void main() {
     expect(params.missedCallNotification?.showNotification, isTrue);
   });
 
+  test('full-screen intent is asked once for a denied signed-in user', () {
+    final session = FullScreenIntentPromptSession();
+    expect(session.shouldAsk(canUseFullScreenIntent: false), isTrue);
+    expect(session.shouldAsk(canUseFullScreenIntent: true), isFalse);
+
+    session.remember(FullScreenIntentChoice.notNow);
+    expect(session.shouldAsk(canUseFullScreenIntent: false), isFalse);
+
+    final opened = FullScreenIntentPromptSession();
+    expect(opened.shouldAsk(canUseFullScreenIntent: false), isTrue);
+    opened.remember(FullScreenIntentChoice.openSettings);
+    expect(opened.shouldAsk(canUseFullScreenIntent: false), isFalse);
+    expect(opened.shouldAsk(canUseFullScreenIntent: true), isFalse);
+  });
+
   test('full-screen intent settings open once when the permission is missing', () {
     expect(
       shouldPromptFullScreenIntent(
