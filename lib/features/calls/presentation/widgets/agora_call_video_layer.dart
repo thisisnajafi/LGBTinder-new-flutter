@@ -70,6 +70,12 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
   String? _boundChannel;
   int? _boundRemoteUid;
 
+  /// One key for the local video so the view is moved, not rebuilt, when the
+  /// remote joins and local goes from full screen to the PiP. A rebuilt view
+  /// disposes the shared controller's texture after the new one starts, which
+  /// left the caller's PiP black.
+  final GlobalKey _localVideoKey = GlobalKey(debugLabel: 'agora-local-video');
+
   bool get _hasRemote => widget.remoteUid != null && widget.remoteUid! > 0;
 
   @override
@@ -193,7 +199,7 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
       return ColoredBox(
         color: Colors.black,
         child: RepaintBoundary(
-          key: const ValueKey('agora-local-video'),
+          key: _localVideoKey,
           child: AgoraVideoView(controller: _localController!),
         ),
       );
