@@ -163,7 +163,21 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
+  /// Root back handling for the home shell (Discover is tab 0).
+  ///
+  /// Sheets, dialogs and pushed pages are routes above this one, so Android
+  /// back closes them first and never reaches here. On another tab, back
+  /// returns to Discover. On Discover, the first press only shows
+  /// "Press back again to exit"; a second press within [_exitConfirmWindow]
+  /// exits.
+  ///
+  /// Note: `android:enableOnBackInvokedCallback` is false in the manifest.
+  /// With predictive back on, Android 14+ could finish the activity on the
+  /// first press from the root route without asking Flutter, so the double
+  /// press never happened.
   void _handleSystemBack(int currentIndex, double navBarReserve) {
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return;
     if (currentIndex != 0) {
       _navigateToTab(0);
       return;
