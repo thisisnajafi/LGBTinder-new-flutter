@@ -8,7 +8,6 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
-import '../../core/widgets/premium/premium_design_system.dart';
 import '../../features/chat/providers/chat_connection_ui_provider.dart';
 import '../../features/chat/providers/chat_pusher_providers.dart';
 import '../../features/chat/utils/chat_connection_ui.dart';
@@ -142,6 +141,10 @@ class _ChatConnectionBannerState extends ConsumerState<ChatConnectionBanner> {
         : AppColors.textSecondaryLight;
     final bg = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
 
+    final accent = _shown == ChatConnectionBannerKind.waitingForNetwork
+        ? AppColors.feedbackWarning
+        : AppColors.accentPurple;
+
     return AnimatedOpacity(
       duration: duration,
       opacity: visible ? 1 : 0,
@@ -149,36 +152,50 @@ class _ChatConnectionBannerState extends ConsumerState<ChatConnectionBanner> {
           ? Semantics(
               label: label,
               button: tappable,
-              child: Material(
-                color: bg,
-                child: InkWell(
-                  onTap: tappable ? _handleTap : null,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: PremiumPageHeader.horizontalPadding,
-                        vertical: AppSpacing.spacingSM,
-                      ),
-                      child: Row(
-                        children: [
-                          AppSvgIcon(
-                            assetPath: _iconPath(_shown),
-                            size: 18,
-                            color: iconColor,
-                          ),
-                          const SizedBox(width: AppSpacing.spacingSM),
-                          Expanded(
-                            child: AppText(
-                              label,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: iconColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.spacingMD,
+                  AppSpacing.spacingSM,
+                  AppSpacing.spacingMD,
+                  0,
+                ),
+                child: Material(
+                  color: bg,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.spacingMD),
+                    side: BorderSide(color: accent.withValues(alpha: 0.35)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: tappable ? _handleTap : null,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.spacingMD,
+                          vertical: AppSpacing.spacingSM,
+                        ),
+                        child: Row(
+                          children: [
+                            AppSvgIcon(
+                              assetPath: _iconPath(_shown),
+                              size: 18,
+                              color: accent,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.spacingSM),
+                            Expanded(
+                              child: AppText(
+                                label,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: iconColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

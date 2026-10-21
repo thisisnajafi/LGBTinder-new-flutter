@@ -31,9 +31,9 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('Connecting… copy is visible', (tester) async {
+  testWidgets('Reconnecting… copy is visible', (tester) async {
     await pumpBanner(tester, kind: ChatConnectionBannerKind.connecting);
-    expect(find.text('Connecting…'), findsOneWidget);
+    expect(find.text('Reconnecting…'), findsOneWidget);
     expect(find.text('Tap to reconnect'), findsNothing);
   });
 
@@ -44,7 +44,7 @@ void main() {
 
   testWidgets('hidden kind renders no label', (tester) async {
     await pumpBanner(tester, kind: ChatConnectionBannerKind.hidden);
-    expect(find.text('Connecting…'), findsNothing);
+    expect(find.text('Reconnecting…'), findsNothing);
     expect(find.text('Tap to reconnect'), findsNothing);
     expect(find.text('Waiting for network'), findsNothing);
   });
@@ -62,14 +62,14 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('Connecting… is not tappable', (tester) async {
+  testWidgets('Reconnecting… is not tappable', (tester) async {
     var taps = 0;
     await pumpBanner(
       tester,
       kind: ChatConnectionBannerKind.connecting,
       onReconnect: () => taps++,
     );
-    await tester.tap(find.text('Connecting…'));
+    await tester.tap(find.text('Reconnecting…'));
     await tester.pump();
     expect(taps, 0);
   });
