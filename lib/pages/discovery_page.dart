@@ -41,7 +41,6 @@ import '../core/cache/cache_manager.dart'
     show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
 import '../features/discover/widgets/discover_active_filters_bar.dart';
-import '../features/discover/widgets/discover_swipe_limit_banner.dart';
 import '../features/discover/widgets/discover_ambient_background.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../core/location/location_providers.dart';
@@ -1030,17 +1029,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     context.push(target);
   }
 
-  /// Build limit indicator showing remaining swipes
-  Widget _buildLimitIndicator() {
-    final planLimits = ref.watch(planLimitsProvider);
-
-    return planLimits.when(
-      data: (limits) => DiscoverSwipeLimitBanner(limits: limits),
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
   Future<void> _openPassport() async {
     final changed = await context.push<bool>(AppRoutes.passport);
     if (!mounted || changed != true) return;
@@ -1229,8 +1217,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                     title: 'Discover',
                     subtitle: 'Swipe and connect with people nearby',
                     action: _buildHeaderActions(context),
+                    compact: true,
                   ),
-                  const SizedBox(height: AppSpacing.spacingMD),
+                  const SizedBox(height: AppSpacing.spacingSM),
                   const RepaintBoundary(child: DiscoverGreetingWidget()),
                   DiscoverActiveFiltersBar(
                     labels: DiscoverActiveFilterLabels.fromMap(
@@ -1244,7 +1233,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                     isClearing: _isClearingPassport,
                     onReturnHome: _returnFromPassport,
                   ),
-                  _buildLimitIndicator(),
                   Expanded(
                     child: ResponsiveGrid.constrainedTo(
                       context,

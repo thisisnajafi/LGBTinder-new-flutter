@@ -64,6 +64,7 @@ class _SkeletonDiscoveryState extends State<SkeletonDiscovery>
         final cardSize = SwipeableCard.fitSize(
           maxWidth: constraints.maxWidth,
           maxHeight: constraints.maxHeight,
+          minimumVerticalMargin: 16,
         );
         final nameW = (cardSize.width * 0.44).clamp(100.0, 150.0);
         final subW = (cardSize.width * 0.29).clamp(72.0, 100.0);

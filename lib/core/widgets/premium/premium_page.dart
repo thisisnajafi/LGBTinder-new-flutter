@@ -21,11 +21,15 @@ class PremiumPageHeader extends StatelessWidget {
     this.showBackButton = false,
     this.onBack,
     this.coverImageUrl,
+    this.compact = false,
   });
 
   final String title;
   final String? subtitle;
   final Widget? action;
+  /// Smaller title/subtitle and tighter padding (e.g. Discover, where the
+  /// vertical space belongs to the swipe card).
+  final bool compact;
   final bool showBackButton;
   final VoidCallback? onBack;
   final String? coverImageUrl;
@@ -59,6 +63,19 @@ class PremiumPageHeader extends StatelessWidget {
           : null,
       coverImageUrl: coverImageUrl,
       transparentSides: true,
+      padding: compact
+          ? const EdgeInsets.fromLTRB(
+              AppSpacing.spacingLG,
+              AppSpacing.spacingXS,
+              AppSpacing.spacingSM,
+              AppSpacing.spacingXS,
+            )
+          : const EdgeInsets.fromLTRB(
+              AppSpacing.spacingLG,
+              AppSpacing.spacingMD,
+              AppSpacing.spacingLG,
+              AppSpacing.spacingMD,
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -69,8 +86,11 @@ class PremiumPageHeader extends StatelessWidget {
                 child: ClampedTextScale(
                   child: AppText(
                     title,
-                    style: (showBackButton
-                            ? theme.textTheme.titleLarge
+                    style: (showBackButton || compact
+                            ? (compact &&
+                                    MediaQuery.sizeOf(context).height < 700
+                                ? theme.textTheme.titleMedium
+                                : theme.textTheme.titleLarge)
                             : theme.textTheme.headlineMedium)
                         ?.copyWith(
                       fontWeight: FontWeight.w800,
@@ -86,13 +106,16 @@ class PremiumPageHeader extends StatelessWidget {
             ],
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: compact ? 0 : 4),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: AppText(
                 subtitle!,
-                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                style: (compact
+                        ? theme.textTheme.labelSmall
+                        : theme.textTheme.bodySmall)
+                    ?.copyWith(color: muted),
                 maxLines: 1,
               ),
             ),

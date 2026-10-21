@@ -82,10 +82,18 @@ class SwipeableCard extends ConsumerStatefulWidget {
   static const Duration imageCarouselInterval = Duration(seconds: 5);
 
   /// Uses full [maxWidth]; height follows aspect ratio, capped so vertical centering keeps margin.
+  /// Tallest allowed card shape (width / height). Between this and
+  /// [cardAspectRatio] the card stretches to fill the available height, so
+  /// tall phones get a much bigger card instead of a small letterboxed one.
+  static const double minCardAspectRatio = 0.56;
+
+  /// Largest card that fits [maxWidth] x [maxHeight] (minus
+  /// [minimumVerticalMargin]). Uses the full width, and the full height as long
+  /// as the shape stays between [minCardAspectRatio] and [cardAspectRatio].
   static Size fitSize({
     required double maxWidth,
     required double maxHeight,
-    double minimumVerticalMargin = 32,
+    double minimumVerticalMargin = 0,
   }) {
     if (maxWidth <= 0 || maxHeight <= 0) return Size.zero;
 
@@ -94,9 +102,11 @@ class SwipeableCard extends ConsumerStatefulWidget {
     if (maxCardHeight <= 0) return Size.zero;
 
     var width = maxWidth;
-    var height = width / cardAspectRatio;
-    if (height > maxCardHeight) {
-      height = maxCardHeight;
+    final tallest = width / minCardAspectRatio;
+    final shortest = width / cardAspectRatio;
+    var height = maxCardHeight.clamp(0.0, tallest);
+    if (height < shortest) {
+      // Not enough height even for the widest shape: shrink the width.
       width = height * cardAspectRatio;
     }
     return Size(width, height);
