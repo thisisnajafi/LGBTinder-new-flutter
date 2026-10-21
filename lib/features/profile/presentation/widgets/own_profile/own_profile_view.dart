@@ -279,7 +279,7 @@ class OwnProfileView extends ConsumerWidget {
       ProfileHubActionData(
         iconPath: AppIcons.flash,
         title: 'Boost',
-        subtitle: boostUnlocked ? 'Get more views' : 'Golden feature',
+        subtitle: boostUnlocked ? 'Get more views' : 'Gold feature',
         locked: !boostUnlocked,
         onTap: () {
           if (!boostUnlocked) {
@@ -287,7 +287,7 @@ class OwnProfileView extends ConsumerWidget {
               FeatureLockedScreen.location(
                 title: 'Boost',
                 description:
-                    'Boost your profile to get more views. Available on Golden.',
+                    'Boost your profile to get more views. Available on Gold.',
                 minTier: minimumTierForFeature(TierGatedFeature.boost),
               ),
             );

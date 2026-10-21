@@ -109,7 +109,7 @@ class PremiumFeaturesScreen extends ConsumerWidget {
                 SizedBox(height: AppSpacing.spacingSM),
                 Text(
                   isPremium
-                      ? 'Some features require Golden tier'
+                      ? 'Some features require Gold tier'
                       : 'Unlock more features and get more matches',
                   style: AppTypography.body.copyWith(
                     color: Colors.white70,

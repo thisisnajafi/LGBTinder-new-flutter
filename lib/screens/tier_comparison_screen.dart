@@ -117,7 +117,7 @@ class TierComparisonScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.spacingLG),
               _TierCard(
-                title: 'Golden',
+                title: 'Gold',
                 subtitle: _priceFor(plans, UserTier.golden).isEmpty
                     ? 'Everything unlocked'
                     : _priceFor(plans, UserTier.golden),

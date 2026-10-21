@@ -311,7 +311,7 @@ class PlanGuard {
       }
 
       return PlanGuardResult.denied(
-        message: 'Video calls are a Golden feature. Upgrade to connect face-to-face!',
+        message: 'Video calls are a Gold feature. Upgrade to connect face-to-face!',
         errorCode: 'FEATURE_NOT_AVAILABLE',
         featureName: 'video_calls',
         upgradeRequired: true,

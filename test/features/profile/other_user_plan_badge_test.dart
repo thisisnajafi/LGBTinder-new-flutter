@@ -24,7 +24,7 @@ void main() {
     test('uses plan_type Golden', () {
       final profile = _profile({'plan_type': 'Golden', 'is_premium': true});
       expect(tierFromUserProfile(profile), UserTier.golden);
-      expect(planBadgeLabelFromUserProfile(profile), 'Golden');
+      expect(planBadgeLabelFromUserProfile(profile), 'Gold');
     });
 
     test('falls back to is_premium when plan title is missing', () {

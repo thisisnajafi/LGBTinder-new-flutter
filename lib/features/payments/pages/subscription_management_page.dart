@@ -312,7 +312,8 @@ class _SubscriptionManagementPageState
       case 'silver':
         return 'Silver';
       case 'golden':
-        return 'Golden';
+      case 'gold':
+        return 'Gold';
       case 'basic':
       case 'basid':
         return 'Free';
@@ -494,7 +495,7 @@ class _SubscriptionManagementPageState
         const SizedBox(height: AppSpacing.spacingSM),
         ..._planOptions.map((subPlan) {
           final isYearly = (subPlan.durationDays ?? 0) >= 365;
-          final tierName = subPlan.planId == 3 ? 'Golden' : 'Silver';
+          final tierName = subPlan.planId == 3 ? 'Gold' : 'Silver';
 
           return Card(
             margin: const EdgeInsets.symmetric(
