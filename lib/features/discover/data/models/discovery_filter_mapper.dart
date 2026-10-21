@@ -25,6 +25,14 @@ class DiscoveryFilterMapper {
   };
 
   /// Build GET query params from stored filter map (API format).
+  /// `gender_ids` value meaning "every gender" (backend skips the
+  /// preferred-genders default).
+  static const String allGendersValue = 'all';
+
+  /// True when [api] carries an explicit gender choice (ids or "all").
+  static bool hasExplicitGenders(Map<String, dynamic>? api) =>
+      api != null && (api.containsKey('gender_ids') || api.containsKey('genders'));
+
   static Map<String, dynamic> toQueryParameters(Map<String, dynamic>? filters) {
     if (filters == null || filters.isEmpty) return {};
 
@@ -124,6 +132,10 @@ class DiscoveryFilterMapper {
     final genderIds = ui['genderIds'];
     if (genderIds is List<int> && genderIds.isNotEmpty) {
       api['gender_ids'] = genderIds.join(',');
+    } else if (genderIds is List<int>) {
+      // "All" chosen explicitly: tell the backend not to fall back to the
+      // user's preferred genders.
+      api['gender_ids'] = allGendersValue;
     }
 
     if (isPremium) {

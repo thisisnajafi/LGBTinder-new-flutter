@@ -21,6 +21,7 @@ import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../core/subscription/subscription_access.dart';
 import '../../shared/utils/plan_guard.dart';
 import '../../routes/app_router.dart';
+import '../../features/profile/providers/profile_page_cache_provider.dart';
 
 /// Discovery filters — basic for all users, advanced for premium.
 class FilterScreen extends ConsumerStatefulWidget {
@@ -66,6 +67,9 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     _ageRange = ValueNotifier(seed['ageRange'] as RangeValues);
     _maxDistance = ValueNotifier(seed['maxDistance'] as double);
     _applySeed(seed);
+    if (!DiscoveryFilterMapper.hasExplicitGenders(widget.initialFilters)) {
+      _selectedGenderIds = _profilePreferredGenderIds();
+    }
     unawaited(_loadPreferredDefaultDistance());
   }
 
@@ -92,6 +96,18 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     _matchSmoke = seed['matchSmoke'] as bool?;
     _matchDrink = seed['matchDrink'] as bool?;
     _matchGym = seed['matchGym'] as bool?;
+  }
+
+  /// The user's preferred genders from their profile; the default gender
+  /// filter when they have not picked one yet (matches what the backend
+  /// applies when `gender_ids` is omitted).
+  List<int> _profilePreferredGenderIds() {
+    final ids = ref
+        .read(profilePageCacheProvider)
+        .valueOrNull
+        ?.profile
+        .preferredGenders;
+    return ids == null ? <int>[] : List<int>.from(ids);
   }
 
   Future<void> _loadPreferredDefaultDistance() async {
@@ -158,7 +174,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     _ageRange.value = defaults['ageRange'] as RangeValues;
     _maxDistance.value = defaults['maxDistance'] as double;
     setState(() {
-      _selectedGenderIds = [];
+      _selectedGenderIds = _profilePreferredGenderIds();
       _showVerifiedOnly = false;
       _showOnlineOnly = false;
       _showPremiumOnly = false;
