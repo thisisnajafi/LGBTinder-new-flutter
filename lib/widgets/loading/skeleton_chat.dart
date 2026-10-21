@@ -50,7 +50,8 @@ class SkeletonChat extends StatelessWidget {
             child: SkeletonLoader(
               width: maxWidth * widthFactor,
               height: height,
-              borderRadius: MessageBubbleChrome.radius(isSent: isSent),
+              borderRadius: MessageBubbleChrome.radius(isSent: isSent)
+                  .resolve(Directionality.of(context)),
             ),
           ),
         );

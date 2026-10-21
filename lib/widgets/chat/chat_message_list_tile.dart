@@ -224,7 +224,11 @@ class _ChatMessageListTileState extends ConsumerState<ChatMessageListTile> {
 
     if (!isDeleted && !reactions.isEmpty) {
       bubble = Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.only(
+          bottom: MessageBubbleChrome.reactionSlotPadding(
+            isLastInGroup: widget.group.isLastInGroup,
+          ),
+        ),
         child: Stack(
           clipBehavior: Clip.none,
           alignment: isSent
@@ -233,7 +237,9 @@ class _ChatMessageListTileState extends ConsumerState<ChatMessageListTile> {
           children: [
             bubble,
             PositionedDirectional(
-              bottom: -10,
+              bottom: MessageBubbleChrome.reactionPillBottom(
+                isLastInGroup: widget.group.isLastInGroup,
+              ),
               start: isSent ? null : 12,
               end: isSent ? 12 : null,
               child: ChatReactionChips(
