@@ -267,14 +267,16 @@ class CallKitService {
       ringtone = null;
     }
 
-    final avatar = data.callerAvatar;
+    final avatar = data.callerAvatar?.trim();
     await IncomingCallChannel.ensure();
     final params = buildIncomingCallKitParams(
       data: data,
       ringtone: ringtone,
-      avatar: (avatar != null && avatar.isNotEmpty) ? avatar : null,
+      avatar: (avatar != null && avatar.isNotEmpty)
+          ? avatar
+          : kIncomingCallBrandLogoAsset,
       backgroundColor: _hex(AppColors.backgroundDark),
-      actionColor: _hex(AppColors.primaryLight),
+      actionColor: _hex(AppColors.accentRose),
     );
 
     try {
@@ -381,8 +383,24 @@ class CallKitService {
   }
 }
 
+/// Network photo used as the full-screen incoming-call backdrop.
+String? _httpMediaUrl(String? raw) {
+  final value = raw?.trim() ?? '';
+  if (value.startsWith('https://') || value.startsWith('http://')) {
+    return value;
+  }
+  return null;
+}
+
+/// Flutter asset shown as the CallKit logo and as the avatar fallback.
+const String kIncomingCallBrandLogoAsset = 'assets/images/logo/logo.png';
+
 /// Native incoming-call UI. High-importance channel, full-screen intent, and
 /// a missed-call action that stays on the notification.
+///
+/// `isShowCallID` is required: the plugin hides [CallKitParams.handle] (the
+/// "Incoming video/voice call" line) and keeps the avatar invisible until a
+/// URL is set. `isShowLogo` paints the LGBTFinder mark on the lock screen.
 CallKitParams buildIncomingCallKitParams({
   required IncomingCallData data,
   required String? ringtone,
@@ -408,11 +426,15 @@ CallKitParams buildIncomingCallKitParams({
     ),
     android: AndroidParams(
       isCustomNotification: true,
+      isCustomSmallExNotification: true,
       isShowFullLockedScreen: true,
       isImportant: true,
-      isShowLogo: false,
+      isShowLogo: true,
+      logoUrl: kIncomingCallBrandLogoAsset,
+      isShowCallID: true,
       ringtonePath: ringtone,
       backgroundColor: backgroundColor,
+      backgroundUrl: _httpMediaUrl(avatar),
       actionColor: actionColor,
       textColor: '#FFFFFF',
       incomingCallNotificationChannelName: 'Incoming Calls',

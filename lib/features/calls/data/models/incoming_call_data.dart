@@ -21,9 +21,9 @@ class IncomingCallData {
       callType.contains('video');
 
   /// Line under the name on the native incoming-call banner.
-  String get callKitSubtitle => isVideo
-      ? 'Incoming video call · LGBTFinder'
-      : 'Incoming voice call · LGBTFinder';
+  /// flutter_callkit_incoming only paints this when Android `isShowCallID` is true.
+  String get callKitSubtitle =>
+      isVideo ? 'Incoming video call' : 'Incoming voice call';
 
   static bool isCallPayload(Map<String, dynamic> data) {
     final type = data['type']?.toString() ?? '';

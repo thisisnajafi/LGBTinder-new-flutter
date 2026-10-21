@@ -22,6 +22,14 @@ void main() {
 
     expect(params.android?.isCustomNotification, isTrue);
     expect(params.android?.isShowFullLockedScreen, isTrue);
+    expect(params.android?.isShowCallID, isTrue);
+    expect(params.android?.isShowLogo, isTrue);
+    expect(params.android?.logoUrl, kIncomingCallBrandLogoAsset);
+    expect(params.handle, 'Incoming video call');
+    expect(params.avatar, 'https://cdn.example/a.jpg');
+    expect(params.android?.backgroundUrl, 'https://cdn.example/a.jpg');
+    expect(params.android?.actionColor, '#EC4899');
+    expect(params.appName, 'LGBTFinder');
     expect(params.android?.isImportant, isTrue);
     expect(params.android?.ringtonePath, 'call_ringtone');
     expect(params.missedCallNotification?.isShowCallback, isTrue);
