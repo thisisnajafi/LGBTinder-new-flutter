@@ -812,11 +812,38 @@ class PusherWebSocketService {
     }
   }
 
+  /// The realtime payload is delivered to both people. Prefer the participant
+  /// who is not the signed-in user when the nested profile points at ourselves.
+  Map<String, dynamic> _peerMatchProfile(
+    Map<String, dynamic> data,
+    Map<String, dynamic> matched,
+  ) {
+    final selfId = _currentUserId;
+    final participants = data['participants'];
+    if (selfId == null || selfId <= 0 || participants is! List) {
+      return matched;
+    }
+    final matchedId = int.tryParse(matched['id']?.toString() ?? '');
+    if (matchedId != null && matchedId > 0 && matchedId != selfId) {
+      return matched;
+    }
+    for (final raw in participants) {
+      if (raw is! Map) continue;
+      final map = Map<String, dynamic>.from(raw);
+      final id = int.tryParse(map['id']?.toString() ?? '');
+      if (id != null && id > 0 && id != selfId) {
+        return map;
+      }
+    }
+    return matched;
+  }
+
   void _handleNewMatch(Map<String, dynamic> data) {
     final matchedUser = data['matched_user'];
-    final matchedMap = matchedUser is Map
+    var matchedMap = matchedUser is Map
         ? Map<String, dynamic>.from(matchedUser)
         : <String, dynamic>{};
+    matchedMap = _peerMatchProfile(data, matchedMap);
     final matchedUserId = int.tryParse(matchedMap['id']?.toString() ?? '');
     _matchController.add(MatchEvent(
       matchId: int.tryParse(data['match_id']?.toString() ?? '') ??
