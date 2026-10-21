@@ -53,10 +53,10 @@ void main() {
 
     await tester.pumpWidget(host(hasText: true));
     await tester.pump();
-    expect(iconPaths(tester), contains(AppIcons.send));
+    expect(iconPaths(tester), contains(AppIcons.send2));
 
     await tester.pumpAndSettle();
-    expect(iconPaths(tester), [AppIcons.send]);
+    expect(iconPaths(tester), [AppIcons.send2]);
   });
 
   testWidgets('morph fades and scales over 180ms', (tester) async {
@@ -84,7 +84,7 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(iconPaths(tester), [AppIcons.send]);
+    expect(iconPaths(tester), [AppIcons.send2]);
   });
 
   testWidgets('Reduce Motion swaps instantly without scale or fade',
@@ -111,7 +111,7 @@ void main() {
       ),
       findsNothing,
     );
-    expect(iconPaths(tester), [AppIcons.send]);
+    expect(iconPaths(tester), [AppIcons.send2]);
   });
 
   testWidgets('edit mode morphs send to the check SVG', (tester) async {
