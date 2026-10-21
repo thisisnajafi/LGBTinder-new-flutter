@@ -95,7 +95,9 @@ class _MessageReplyWidgetState extends State<MessageReplyWidget> {
                   color: surfaceColor,
                   borderRadius: BorderRadius.circular(AppRadius.radiusMD),
                   border: Border.all(
-                    color: borderColor.withValues(alpha: 0.28),
+                    color: borderColor.withValues(
+                      alpha: widget.isEditing ? 0.55 : 0.28,
+                    ),
                   ),
                 ),
                 child: ClipRRect(
@@ -108,11 +110,20 @@ class _MessageReplyWidgetState extends State<MessageReplyWidget> {
                       ),
                       SizedBox(width: AppSpacing.spacingMD),
                       if (widget.isEditing) ...[
-                        AppSvgIcon(
-                          key: const ValueKey('chat-edit-pencil'),
-                          assetPath: AppIcons.edit,
-                          size: 16,
-                          color: borderColor,
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: borderColor.withValues(alpha: 0.16),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: AppSvgIcon(
+                              key: const ValueKey('chat-edit-pencil'),
+                              assetPath: AppIcons.edit,
+                              size: 14,
+                              color: borderColor,
+                            ),
+                          ),
                         ),
                         SizedBox(width: AppSpacing.spacingSM),
                       ],
