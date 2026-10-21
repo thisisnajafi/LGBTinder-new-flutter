@@ -232,10 +232,14 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
           context,
           fraction: 0.72,
         );
-        final width = ChatVoiceBubbleLayout.width(
+        final scaled = ChatVoiceBubbleLayout.width(
           durationSeconds: displayDuration.inSeconds,
           maxWidth: cap,
         );
+        // Short clips still need room for play, duration, and the speed chip.
+        final width = scaled < 220 && cap >= 220
+            ? 220.0
+            : (scaled > cap ? cap : scaled);
 
         return SizedBox(
           width: width,
@@ -321,6 +325,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                                   letterSpacing: 0.15,
                                 ),
                                 maxLines: 1,
+                                overflow: TextOverflow.fade,
                               ),
                             ),
                             const SizedBox(width: AppSpacing.spacingSM),
