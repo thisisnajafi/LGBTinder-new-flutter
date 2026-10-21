@@ -581,6 +581,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       message: message,
       peerUserId: widget.userId,
       currentUserId: _currentUserId,
+      conversationReadable: _peerMessagesReadable,
     );
     if (result.updatedExistingServerRow) {
       if (message.senderId == widget.userId) {
@@ -977,6 +978,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       callRows: _cachedCallMaps(),
       previousRows: _messages,
       replyPreview: _replyPreviewForId,
+      conversationReadable: _peerMessagesReadable,
     );
     _thread.setRows(next);
   }
@@ -1406,12 +1408,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  bool get _peerMessagesReadable =>
+      ref.read(chatListPreviewProvider).peerMessagesReadable(widget.userId);
+
   Map<String, dynamic> _messageToMap(Message message) {
     return ChatThreadRowMap.fromMessage(
       message,
       peerUserId: widget.userId,
       currentUserId: _currentUserId,
       replyPreview: _replyPreviewForId,
+      conversationReadable: _peerMessagesReadable,
     );
   }
 

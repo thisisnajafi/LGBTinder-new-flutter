@@ -21,6 +21,7 @@ import '../core/constants/api_endpoints.dart';
 import '../core/services/app_logger.dart';
 import '../features/chat/data/local/chat_database_provider.dart';
 import '../features/chat/utils/chat_message_search.dart';
+import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../pages/chat_page.dart';
 
 /// Message search screen - Search messages
@@ -327,6 +328,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
     final secondaryTextColor =
         theme.colorScheme.onSurface.withValues(alpha: 0.55);
     final hasPlan = ref.watch(isPremiumProvider);
+    final previews = ref.watch(chatListPreviewProvider).items;
 
     return PremiumDetailScaffold(
       title: 'Search Messages',
@@ -569,6 +571,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                                 );
                               }
                               final result = _hits[index];
+                              final readable = previews.any(
+                                (item) =>
+                                    item.id == result.otherUserId &&
+                                    (item.isMatch || item.isOfficial),
+                              );
                               return RepaintBoundary(
                                 child: ChatListItem(
                                   userId: result.otherUserId,
@@ -579,6 +586,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                                   unreadCount: 0,
                                   isOnline: false,
                                   hasPlan: hasPlan,
+                                  isMatch: readable,
                                   onTap: () => _handleChatTap(result.otherUserId),
                                 ),
                               );

@@ -15,6 +15,7 @@ class ChatThreadLocalApply {
     required List<Map<String, dynamic>> callRows,
     required List<Map<String, dynamic>> previousRows,
     String? Function(int? replyToId)? replyPreview,
+    bool conversationReadable = false,
   }) {
     final previousById = <int, Map<String, dynamic>>{
       for (final row in previousRows)
@@ -28,6 +29,7 @@ class ChatThreadLocalApply {
             peerUserId: peerUserId,
             currentUserId: currentUserId,
             replyPreview: replyPreview,
+            conversationReadable: conversationReadable,
           ),
           previousById[_numericId(message.id)],
         ),

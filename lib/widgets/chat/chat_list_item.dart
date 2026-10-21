@@ -48,6 +48,8 @@ class ChatListItem extends ConsumerWidget {
   final String highlightQuery;
   final bool hasPlan;
   final bool isOfficial;
+  /// Matched peers stay readable on the free plan.
+  final bool isMatch;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -74,6 +76,7 @@ class ChatListItem extends ConsumerWidget {
     this.highlightQuery = '',
     required this.hasPlan,
     this.isOfficial = false,
+    this.isMatch = false,
     this.onTap,
     this.onLongPress,
   });
@@ -82,7 +85,7 @@ class ChatListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isLocked = !hasPlan;
+    final isLocked = !hasPlan && !isMatch && !isOfficial && !lastMessageFromMe;
     final cacheMuted = ref.watch(
       conversationMuteCacheProvider.select((ids) => ids.contains(userId)),
     );

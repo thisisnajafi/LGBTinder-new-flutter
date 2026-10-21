@@ -687,8 +687,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                         isTyping: chat['is_typing'] == true,
                         isMuted: muted,
                         isPinned: pinned,
-                        hasPlan: hasPlan || isOfficial,
+                        hasPlan: hasPlan,
                         isOfficial: isOfficial,
+                        isMatch: chat['is_match'] == true ||
+                            chat['is_match'] == 1 ||
+                            chat['type']?.toString() == 'match' ||
+                            isOfficial,
                         lastMessageFromMe: chat['last_message_from_me'] == true,
                         lastMessageIsRead: chat['last_message_is_read'] == true,
                         lastMessageIsDelivered:
