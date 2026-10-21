@@ -28,14 +28,17 @@ class AccountManagementScreen extends ConsumerStatefulWidget {
 class _AccountManagementScreenState extends ConsumerState<AccountManagementScreen> {
   final _emailController = TextEditingController();
   final _emailPasswordController = TextEditingController();
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
 
-  static final _passwordComplexity = RegExp(
-    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$',
-  );
+  bool get _requiresCurrentPassword {
+    final profile = ref.read(profilePageCacheProvider).valueOrNull?.profile;
+    final data = profile?.additionalData;
+    final raw = data == null ? null : data['requires_current_password'];
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    if (raw is String) return raw != 'false' && raw != '0';
+    return true;
+  }
 
   @override
   void initState() {
@@ -58,9 +61,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
   void dispose() {
     _emailController.dispose();
     _emailPasswordController.dispose();
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -73,7 +73,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       );
       return;
     }
-    if (password.isEmpty) {
+    if (_requiresCurrentPassword && password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter your current password to change email')),
       );
@@ -88,7 +88,10 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       final apiService = ref.read(apiServiceProvider);
       final response = await apiService.post<Map<String, dynamic>>(
         ApiEndpoints.changeEmail,
-        data: {'new_email': newEmail, 'password': password},
+        data: {
+          'new_email': newEmail,
+          if (_requiresCurrentPassword) 'password': password,
+        },
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -122,95 +125,30 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     }
   }
 
-  void _showMessage(String text) {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(text),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  Future<void> _handleChangePassword() async {
-    if (_isLoading) return;
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      _showMessage('Passwords do not match');
-      return;
-    }
-
-    if (_newPasswordController.text.length < 8 ||
-        !_passwordComplexity.hasMatch(_newPasswordController.text)) {
-      _showMessage(
-        'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol',
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final apiService = ref.read(apiServiceProvider);
-      await apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.changePassword,
-        data: {
-          'old_password': _currentPasswordController.text,
-          'new_password': _newPasswordController.text,
-          'new_password_confirmation': _confirmPasswordController.text,
-        },
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (mounted) {
-        _currentPasswordController.clear();
-        _newPasswordController.clear();
-        _confirmPasswordController.clear();
-        AlertDialogCustom.show(
-          context,
-          title: 'Password Changed',
-          message: 'Your password has been successfully updated',
-          iconPath: AppIcons.checkCircle,
-          iconColor: AppColors.onlineGreen,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        _showMessage('Failed to change password: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
 
     return AppSettingsDetailScaffold(
-      title: 'Account management',
-      subtitle: 'Update email and password',
+      title: 'Email & account settings',
+      subtitle: 'Update your email and account options',
       body: AppSettingsDetailList(
               children: [
                 PremiumSettingsGroup(
                   title: 'Email address',
                   children: [
-                    PremiumTextField(
-                      controller: _emailPasswordController,
-                      label: 'Current password',
-                      hintText: 'Enter your current password',
-                      obscureText: true,
-                      prefixIconPath: AppIcons.lock,
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                    ),
-                    const SizedBox(height: AppSpacing.spacingMD),
+                    if (_requiresCurrentPassword) ...[
+                      PremiumTextField(
+                        controller: _emailPasswordController,
+                        label: 'Current password',
+                        hintText: 'Enter your current password',
+                        obscureText: true,
+                        prefixIconPath: AppIcons.lock,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                      ),
+                      const SizedBox(height: AppSpacing.spacingMD),
+                    ],
                     PremiumTextField(
                       controller: _emailController,
                       label: 'Email',
@@ -236,57 +174,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     isLoading: _isLoading,
                     isFullWidth: true,
                     iconPath: AppIcons.save,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.spacingXL),
-                PremiumSettingsGroup(
-                  title: 'Change password',
-                  children: [
-                    PremiumTextField(
-                      controller: _currentPasswordController,
-                      label: 'Current password',
-                      hintText: 'Enter your current password',
-                      obscureText: true,
-                      prefixIconPath: AppIcons.lockOutline,
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                    ),
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    PremiumTextField(
-                      controller: _newPasswordController,
-                      label: 'New password',
-                      hintText: 'At least 8 characters',
-                      obscureText: true,
-                      prefixIconPath: AppIcons.lock,
-                      textInputAction: TextInputAction.next,
-                      autocorrect: false,
-                    ),
-                    const SizedBox(height: AppSpacing.spacingMD),
-                    PremiumTextField(
-                      controller: _confirmPasswordController,
-                      label: 'Confirm new password',
-                      hintText: 'Re-enter the new password',
-                      obscureText: true,
-                      prefixIconPath: AppIcons.lock,
-                      textInputAction: TextInputAction.done,
-                      autocorrect: false,
-                      onSubmitted: (_) => _handleChangePassword(),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSettingsLayout.horizontalPadding,
-                    AppSpacing.spacingXL,
-                    AppSettingsLayout.horizontalPadding,
-                    0,
-                  ),
-                  child: GradientButton(
-                    text: 'Change password',
-                    onPressed: _isLoading ? null : _handleChangePassword,
-                    isLoading: _isLoading,
-                    isFullWidth: true,
-                    iconPath: AppIcons.lockReset,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.spacingXL),
