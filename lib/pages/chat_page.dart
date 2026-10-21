@@ -46,13 +46,11 @@ import '../features/chat/utils/chat_thread_remote_ingest.dart';
 import '../features/chat/providers/chat_active_backend_sync_provider.dart';
 import '../features/chat/providers/active_chat_peer_bridge.dart';
 import '../shared/services/pusher_websocket_service.dart';
-import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/user/providers/user_providers.dart';
 import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
-import '../shared/utils/plan_guard.dart';
 import '../features/calls/data/models/call.dart';
 import '../features/calls/pages/outgoing_call_page.dart';
 import '../features/calls/providers/call_providers.dart';
@@ -1397,8 +1395,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       isVideo: call.isVideoCall,
     );
     if (!confirmed || !mounted) return;
-    if (call.isVideoCall && !await _ensureVideoCallAccess()) return;
-    if (!mounted) return;
     await startOutgoingCall(
       context: context,
       ref: ref,
@@ -3267,29 +3263,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     router?.go('${AppRoutes.home}/chat-list');
   }
 
-  Future<bool> _ensureVideoCallAccess() async {
-    final guard = PlanGuard(ref.read(planLimitsServiceProvider));
-    final access = await guard.canMakeVideoCall();
-    if (!mounted) return false;
-    if (!access.isAllowed) {
-      final target = Uri(
-        path: AppRoutes.featureLocked,
-        queryParameters: {
-          'title': 'Video calls',
-          'desc':
-              access.errorMessage ??
-              'Upgrade to unlock face-to-face video calling.',
-          'minTier': 'golden',
-        },
-      ).toString();
-      context.push(target);
-      return false;
-    }
-    return true;
-  }
-
   Future<void> _handleVideoCallTap() async {
-    if (!await _ensureVideoCallAccess()) return;
     await startOutgoingCall(
       context: context,
       ref: ref,

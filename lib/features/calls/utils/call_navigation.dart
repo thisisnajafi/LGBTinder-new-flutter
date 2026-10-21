@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/payments/data/services/plan_limits_service.dart';
 import '../../../routes/app_router.dart';
+import '../../../shared/utils/plan_guard.dart';
 import '../../../shared/services/agora_service.dart';
 import '../../../shared/services/incoming_call_handler.dart';
 import '../data/models/active_call_session.dart';
@@ -76,6 +78,19 @@ Future<void> startOutgoingCall({
   required OutgoingCallType type,
 }) async {
   if (!context.mounted) return;
+  final guard = PlanGuard(ref.read(planLimitsServiceProvider));
+  final access = type == OutgoingCallType.video
+      ? await guard.canMakeVideoCall()
+      : await guard.canMakeVoiceCall();
+  if (!context.mounted) return;
+  if (!access.isAllowed) {
+    _openCallUpgrade(
+      context,
+      video: type == OutgoingCallType.video,
+      message: access.errorMessage,
+    );
+    return;
+  }
   final allowed = await ensureCallMediaPermissions(
     context,
     video: type == OutgoingCallType.video,
@@ -92,6 +107,55 @@ Future<void> startOutgoingCall({
           'avatarUrl': recipientAvatarUrl,
         'type': type == OutgoingCallType.video ? 'video' : 'voice',
         'initiate': '1',
+      },
+    ).toString(),
+  );
+}
+
+void _openCallUpgrade(
+  BuildContext context, {
+  required bool video,
+  String? message,
+}) {
+  context.push(
+    Uri(
+      path: AppRoutes.featureLocked,
+      queryParameters: {
+        'title': video ? 'Video calls' : 'Voice calls',
+        'desc': message ??
+            (video
+                ? 'Video calls require Golden. Upgrade to connect face-to-face.'
+                : 'Voice calls require Premium. Upgrade to talk live.'),
+        'minTier': video ? 'golden' : 'silder',
+      },
+    ).toString(),
+  );
+}
+
+/// Opens the upgrade screen for a server call-tier rejection, then leaves
+/// the call route when one is already showing.
+void openCallTierUpgrade(
+  BuildContext context, {
+  required String errorCode,
+  String? message,
+}) {
+  if (!context.mounted) return;
+  final router = GoRouter.of(context);
+  final video = errorCode == 'VIDEO_CALL_REQUIRES_GOLDEN';
+  final onCall = GoRouterState.of(context).uri.path == AppRoutes.outgoingCall;
+  if (onCall) {
+    leaveCallRoute(context);
+  }
+  router.push(
+    Uri(
+      path: AppRoutes.featureLocked,
+      queryParameters: {
+        'title': video ? 'Video calls' : 'Voice calls',
+        'desc': message ??
+            (video
+                ? 'Video calls require Golden. Upgrade to connect face-to-face.'
+                : 'Voice calls require Premium. Upgrade to talk live.'),
+        'minTier': video ? 'golden' : 'silder',
       },
     ).toString(),
   );

@@ -488,6 +488,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     if (mounted) setState(() {});
   }
 
+  bool _isCallTierError(String? code) {
+    return code == 'VOICE_CALL_REQUIRES_PREMIUM' ||
+        code == 'VIDEO_CALL_REQUIRES_GOLDEN';
+  }
+
   void _failOnPage(String message) {
     unawaited(SoundService.instance.stopCallSounds());
     if (!mounted) return;
@@ -545,10 +550,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         await _rejoinActiveCall();
         return;
       }
+      if (_isCallTierError(e.errorCode)) {
+        openCallTierUpgrade(context, errorCode: e.errorCode!, message: e.message);
+        return;
+      }
       _failOnPage(e.message);
     } on ApiError catch (e) {
       if (e.message.toLowerCase().contains('already an active call')) {
         await _rejoinActiveCall();
+        return;
+      }
+      if (_isCallTierError(e.errorCode)) {
+        openCallTierUpgrade(context, errorCode: e.errorCode!, message: e.message);
         return;
       }
       _failOnPage(e.message);

@@ -33,6 +33,7 @@ class InitiateCallUseCase {
           eligibility.reason ?? 'Unable to initiate call',
           upgradeRequired: eligibility.isPremiumRequired,
           matchRequired: eligibility.isMatchRequired,
+          errorCode: eligibility.errorCode,
         );
       }
 

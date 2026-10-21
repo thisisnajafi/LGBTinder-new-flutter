@@ -397,11 +397,15 @@ class ApiError {
       errorCode == 'SWIPE_LIMIT_REACHED' ||
       errorCode == 'SUPERLIKE_LIMIT_REACHED' ||
       errorCode == 'MESSAGE_LIMIT_REACHED' ||
-      errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED';
+      errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED' ||
+      errorCode == 'VOICE_CALL_REQUIRES_PREMIUM' ||
+      errorCode == 'VIDEO_CALL_REQUIRES_GOLDEN';
 
   bool get upgradeRequired =>
       responseData?['upgrade_required'] == true ||
       errorCode == 'CHAT_DAILY_SEND_LIMIT_REACHED' ||
+      errorCode == 'VOICE_CALL_REQUIRES_PREMIUM' ||
+      errorCode == 'VIDEO_CALL_REQUIRES_GOLDEN' ||
       errorCode == 'STICKER_PACK_LOCKED';
   
   /// Check if error is a validation error

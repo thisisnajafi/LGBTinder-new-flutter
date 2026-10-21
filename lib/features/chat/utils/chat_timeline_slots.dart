@@ -4,7 +4,7 @@ import '../../calls/data/models/call.dart';
 ///
 /// Equality ignores message body so a delivery/edit patch does not rebuild
 /// the [ListView] parent — only the tile that `select`s that row.
-enum ChatTimelineSlotKind { date, unread, call, message }
+enum ChatTimelineSlotKind { date, unread, call, message, upgradeOlder }
 
 class ChatTimelineSlot {
   final ChatTimelineSlotKind kind;
@@ -71,12 +71,39 @@ class ChatTimelineSlots {
     return null;
   }
 
+  static const String upgradeOlderKey = 'upgrade-older-messages';
+
+  /// Drops blurred history rows. [collapsed] is true when at least one was removed.
+  static ({List<Map<String, dynamic>> rows, bool collapsed}) droppingBlurred(
+    List<Map<String, dynamic>> rows,
+  ) {
+    var collapsed = false;
+    final kept = <Map<String, dynamic>>[];
+    for (final row in rows) {
+      if (row['is_blurred'] == true) {
+        collapsed = true;
+        continue;
+      }
+      kept.add(row);
+    }
+    return (rows: collapsed ? kept : rows, collapsed: collapsed);
+  }
+
   static List<ChatTimelineSlot> build({
     required List<Map<String, dynamic>> decoratedRows,
+    bool prependOlderUpgrade = false,
   }) {
-    return [
+    final slots = [
       for (var i = 0; i < decoratedRows.length; i++)
         _slotOf(decoratedRows[i], i),
+    ];
+    if (!prependOlderUpgrade) return slots;
+    return [
+      const ChatTimelineSlot(
+        kind: ChatTimelineSlotKind.upgradeOlder,
+        key: upgradeOlderKey,
+      ),
+      ...slots,
     ];
   }
 
