@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'premium/premium_page.dart';
 
-/// Flat page header — aliases [PremiumPageHeader] so leftover screens match.
+/// Page title bar. Aliases [PremiumPageHeader], which is [CompactPageHeader].
 class AppPageHeader extends StatelessWidget {
   final String title;
   final Widget? action;

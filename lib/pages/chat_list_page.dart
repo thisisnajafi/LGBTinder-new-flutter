@@ -13,7 +13,6 @@ import '../core/constants/animation_constants.dart';
 import '../core/utils/media_url.dart';
 import '../core/cache/peer_avatar_cache.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
-import '../core/widgets/compact_page_header.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/staggered_list_item.dart';
 import '../widgets/chat/chat_connection_banner.dart';
@@ -937,14 +936,10 @@ class _MessengerSearchAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return IconButton(
-      icon: AppSvgIcon(
-        assetPath: AppIcons.search,
-        size: 24,
-        color: theme.colorScheme.onSurface,
-      ),
+    return CompactHeaderIconButton(
+      iconPath: AppIcons.search,
       tooltip: searchOpen ? 'Close search' : 'Search',
+      semanticLabel: searchOpen ? 'Close search' : 'Search',
       onPressed: onPressed,
     );
   }

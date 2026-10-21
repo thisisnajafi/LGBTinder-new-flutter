@@ -119,14 +119,11 @@ class _GooglePlayPurchaseHistoryScreenState
       title: 'Purchase History',
       showBackButton: true,
       backgroundColor: backgroundColor,
-      action: IconButton(
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
         tooltip: 'Refresh',
         onPressed: _isLoading ? null : () => _loadPurchases(refresh: true),
-        icon: AppSvgIcon(
-          assetPath: AppIcons.refreshCircle,
-          size: 22,
-          color: theme.colorScheme.onSurface,
-        ),
       ),
       body: Column(
         children: [

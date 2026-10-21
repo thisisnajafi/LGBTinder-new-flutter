@@ -152,12 +152,10 @@ class _ReportHistoryScreenState extends ConsumerState<ReportHistoryScreen> {
       title: 'Report history',
       subtitle: 'Reports you have submitted',
       onRefresh: _isLoading ? null : _loadReports,
-      action: IconButton(
-        icon: AppSvgIcon(
-          assetPath: AppIcons.getIconPath('refresh'),
-          size: 22,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
+        tooltip: 'Refresh',
         onPressed: _loadReports,
       ),
       body: _isLoading

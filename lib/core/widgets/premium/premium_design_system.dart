@@ -1,6 +1,7 @@
 /// Unified premium design system — source of truth for profile ecosystem UI.
 library;
 
+export '../compact_page_header.dart';
 export 'premium_filter_section.dart';
 export 'premium_hero_header.dart';
 export 'premium_hub.dart';

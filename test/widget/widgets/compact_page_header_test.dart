@@ -47,22 +47,7 @@ void main() {
     expect((title.center.dy - row.center.dy).abs(), lessThan(1));
   });
 
-  testWidgets('subtitle is smaller and dropped on a narrow width', (tester) async {
-    await pumpHeader(
-      tester,
-      surface: const Size(320, 800),
-      header: const CompactPageHeader(
-        title: 'Notifications',
-        subtitle: 'Your social activity hub',
-      ),
-    );
-
-    expect(find.text('Your social activity hub'), findsNothing);
-    expect(
-      tester.getSize(find.byKey(CompactPageHeader.rowKey)).height,
-      CompactPageHeader.minHeight,
-    );
-
+  testWidgets('subtitle stays off the bar so every header is one row', (tester) async {
     await pumpHeader(
       tester,
       surface: const Size(800, 800),
@@ -72,20 +57,40 @@ void main() {
       ),
     );
 
-    expect(find.text('Your social activity hub'), findsOneWidget);
-    final titleSize = tester.getSize(find.text('Notifications'));
-    final subtitleSize = tester.getSize(find.text('Your social activity hub'));
-    expect(subtitleSize.height, lessThan(titleSize.height));
+    expect(find.text('Your social activity hub'), findsNothing);
+    expect(find.text('Notifications'), findsOneWidget);
     expect(
       tester.getSize(find.byKey(CompactPageHeader.rowKey)).height,
-      CompactPageHeader.maxHeight,
+      CompactPageHeader.minHeight,
     );
 
     final row = tester.getRect(find.byKey(CompactPageHeader.rowKey));
     final title = tester.getRect(find.text('Notifications'));
-    final subtitle = tester.getRect(find.text('Your social activity hub'));
-    final blockCenter = (title.top + subtitle.bottom) / 2;
-    expect((blockCenter - row.center.dy).abs(), lessThan(2));
+    expect((title.center.dy - row.center.dy).abs(), lessThan(1));
+  });
+
+  testWidgets('back button is a round control and flips to the start in RTL', (tester) async {
+    await pumpHeader(
+      tester,
+      direction: TextDirection.rtl,
+      header: CompactPageHeader(
+        title: 'Account details',
+        onBack: () {},
+      ),
+    );
+
+    final back = tester.getRect(find.byKey(CompactPageHeader.backKey));
+    final title = tester.getRect(find.text('Account details'));
+    final card = tester.getRect(find.byKey(CompactPageHeader.cardKey));
+
+    expect(back.width, CompactHeaderIconButton.touchSize);
+    expect(back.height, CompactHeaderIconButton.touchSize);
+    expect(title.center.dx, lessThan(back.center.dx));
+    expect(back.right, lessThanOrEqualTo(card.right));
+    expect(
+      tester.getSize(find.byKey(CompactPageHeader.rowKey)).height,
+      CompactPageHeader.minHeight,
+    );
   });
 
   testWidgets('action icons are end-aligned with equal gaps', (tester) async {

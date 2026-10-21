@@ -81,18 +81,15 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final matchesAsync = ref.watch(cachedMatchesProvider);
 
     return AppSettingsDetailScaffold(
       title: 'Matches',
       subtitle: 'People you\'ve matched with',
-      action: IconButton(
-        icon: AppSvgIcon(
-          assetPath: AppIcons.getIconPath('refresh'),
-          size: 22,
-          color: theme.colorScheme.onSurface,
-        ),
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
+        tooltip: 'Refresh',
         onPressed: _refreshMatches,
       ),
       body: matchesAsync.when(

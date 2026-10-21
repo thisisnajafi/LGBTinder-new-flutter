@@ -151,12 +151,10 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
     return AppSettingsDetailScaffold(
       title: 'Blocked users',
       subtitle: 'People you have blocked from contacting you',
-      action: IconButton(
-        icon: AppSvgIcon(
-          assetPath: AppIcons.getIconPath('refresh'),
-          size: 22,
-          color: theme.colorScheme.onSurface,
-        ),
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
+        tooltip: 'Refresh',
         onPressed: _loadBlockedUsers,
       ),
       body: _isLoading

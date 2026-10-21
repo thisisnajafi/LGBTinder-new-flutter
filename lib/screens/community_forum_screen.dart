@@ -138,17 +138,11 @@ class _CommunityForumScreenState extends ConsumerState<CommunityForumScreen> {
     return PremiumDetailScaffold(
       title: 'Community Forum',
       subtitle: 'Join the conversation',
-      action: PremiumTapScale(
-        onTap: _showCreatePostDialog,
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.add,
         semanticLabel: 'Create post',
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.spacingSM),
-          child: AppSvgIcon(
-            assetPath: AppIcons.add,
-            size: 22,
-            color: textColor,
-          ),
-        ),
+        tooltip: 'Create post',
+        onPressed: _showCreatePostDialog,
       ),
       body: Column(
         children: [

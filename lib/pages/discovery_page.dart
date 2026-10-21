@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/responsive/responsive.dart';
-import '../core/widgets/compact_page_header.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
@@ -1065,11 +1064,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     return [
       if (canUsePassport)
-        _buildHeaderIconButton(
-          context: context,
+        CompactHeaderIconButton(
           iconPath: AppIcons.map,
           semanticLabel: 'Passport — change discovery location',
-          onTap: _openPassport,
+          onPressed: _openPassport,
           showBadge: ref.watch(passportLocationProvider).active,
         ),
       Consumer(
@@ -1079,85 +1077,21 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               (async) => (async.asData?.value ?? 0) > 0,
             ),
           );
-          return _buildHeaderIconButton(
-            context: context,
+          return CompactHeaderIconButton(
             iconPath: AppIcons.notification,
             semanticLabel: 'Notifications',
-            onTap: () => context.go('${AppRoutes.home}/notifications'),
+            onPressed: () => context.go('${AppRoutes.home}/notifications'),
             showBadge: hasUnreadNotifications,
           );
         },
       ),
-      _buildHeaderIconButton(
-        context: context,
+      CompactHeaderIconButton(
         iconPath: AppIcons.filter,
         semanticLabel: 'Open filters',
-        onTap: _openFilters,
+        onPressed: _openFilters,
         showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
       ),
     ];
-  }
-
-  Widget _buildHeaderIconButton({
-    required BuildContext context,
-    required String iconPath,
-    required String semanticLabel,
-    required VoidCallback onTap,
-    bool showBadge = false,
-  }) {
-    final theme = Theme.of(context);
-
-    return PremiumTapScale(
-      onTap: onTap,
-      semanticLabel: semanticLabel,
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentViolet.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: AppColors.accentViolet.withValues(alpha: 0.16),
-                ),
-              ),
-              child: Center(
-                child: AppSvgIcon(
-                  assetPath: iconPath,
-                  size: 20,
-                  color: AppColors.accentViolet,
-                ),
-              ),
-            ),
-            if (showBadge)
-              PositionedDirectional(
-                top: 4,
-                end: 4,
-                child: RepaintBoundary(
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentRose,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: theme.colorScheme.surface,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override

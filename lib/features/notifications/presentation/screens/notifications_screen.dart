@@ -370,14 +370,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   ) {
     if (notifications.isEmpty) return null;
 
-    final theme = Theme.of(context);
-
     return PopupMenuButton<String>(
-      icon: AppSvgIcon(
-        assetPath: AppIcons.more,
-        size: 24,
-        color: theme.colorScheme.onSurface,
-      ),
+      padding: EdgeInsets.zero,
+      tooltip: 'Notification actions',
+      child: const CompactHeaderIconFace(iconPath: AppIcons.more),
       onSelected: (value) {
         switch (value) {
           case 'read':
