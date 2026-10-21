@@ -27,6 +27,7 @@ import 'shared/services/token_storage_service.dart';
 import 'shared/services/fcm_background_handler.dart';
 import 'shared/services/incoming_call_handler.dart';
 import 'core/providers/feature_flags_provider.dart';
+import 'core/providers/subscription_provider.dart';
 import 'core/providers/app_motion_prefs_provider.dart';
 import 'core/providers/theme_mode_provider.dart';
 import 'core/localization/locale_provider.dart';
@@ -277,7 +278,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     AppLogger.info('App lifecycle: $state', tag: 'Lifecycle');
     if (state == AppLifecycleState.resumed) {
       unawaited(PushNotificationService().deliverResumeIntent());
+      unawaited(_refreshMembershipOnResume());
     }
+  }
+
+  Future<void> _refreshMembershipOnResume() async {
+    final token = await TokenStorageService().getAuthToken();
+    if (token == null || token.isEmpty || !mounted) return;
+    await ref.read(subscriptionRefreshProvider).refresh();
   }
 
   @override
