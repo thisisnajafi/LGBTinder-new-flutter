@@ -266,6 +266,7 @@ class _ReactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.headlineSmall;
+    final reduced = !AppAnimations.animationsEnabled(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.spacingXS,
@@ -273,29 +274,66 @@ class _ReactRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (final emoji in ChatMessageSheetActions.reactEmojis)
+          for (var i = 0; i < ChatMessageSheetActions.reactEmojis.length; i++)
             Expanded(
-              child: Semantics(
-                button: true,
-                label: 'React $emoji',
-                child: InkWell(
-                  onTap: onReact == null
-                      ? null
-                      : () {
-                          Navigator.of(context).pop();
-                          onReact!(emoji);
-                        },
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Center(
-                      child: Text(emoji, style: style),
-                    ),
-                  ),
-                ),
+              child: _ReactEmojiButton(
+                emoji: ChatMessageSheetActions.reactEmojis[i],
+                index: i,
+                style: style,
+                reduced: reduced,
+                onReact: onReact,
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ReactEmojiButton extends StatelessWidget {
+  final String emoji;
+  final int index;
+  final TextStyle? style;
+  final bool reduced;
+  final ValueChanged<String>? onReact;
+
+  const _ReactEmojiButton({
+    required this.emoji,
+    required this.index,
+    required this.style,
+    required this.reduced,
+    required this.onReact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: reduced ? 1 : 0.55, end: 1),
+      duration: reduced
+          ? Duration.zero
+          : Duration(milliseconds: 160 + index * 35),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
+      child: Semantics(
+        button: true,
+        label: 'React $emoji',
+        child: InkWell(
+          onTap: onReact == null
+              ? null
+              : () {
+                  Navigator.of(context).pop();
+                  onReact!(emoji);
+                },
+          borderRadius: BorderRadius.circular(AppRadius.radiusSM),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Center(
+              child: Text(emoji, style: style),
+            ),
+          ),
+        ),
       ),
     );
   }

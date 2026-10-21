@@ -113,6 +113,7 @@ class ChatMessageList extends ConsumerWidget {
         Expanded(
           child: _ChatMessageTimeline(
             peerUserId: peerUserId,
+            peerDisplayName: peerDisplayName,
             currentUserId: currentUserId,
             unreadCount: showUnreadSeparator ? openUnreadCount : 0,
             scrollController: scrollController,
@@ -138,6 +139,7 @@ class ChatMessageList extends ConsumerWidget {
 
 class _ChatMessageTimeline extends ConsumerWidget {
   final int peerUserId;
+  final String peerDisplayName;
   final int currentUserId;
   final int unreadCount;
   final ScrollController scrollController;
@@ -157,6 +159,7 @@ class _ChatMessageTimeline extends ConsumerWidget {
 
   const _ChatMessageTimeline({
     required this.peerUserId,
+    required this.peerDisplayName,
     required this.currentUserId,
     required this.unreadCount,
     required this.scrollController,
@@ -251,6 +254,7 @@ class _ChatMessageTimeline extends ConsumerWidget {
                       return MessageRow(
                         key: ValueKey(slot.key),
                         peerUserId: peerUserId,
+                        peerName: peerDisplayName,
                         rowKey: slot.key,
                         group: grouping[slot.key] ?? ChatBubbleGroup.isolated,
                         onRetry: onRetryFailed,
