@@ -84,7 +84,10 @@ class PremiumSwitch extends StatelessWidget {
   }
 }
 
-/// Boolean trailing control — same pink switch as profile edit.
+/// Trailing selection indicator for single-select lists (pickers, language,
+/// payment method). Shows a subtle check when selected and nothing otherwise;
+/// it is NOT a switch, because only one option can be chosen.
+/// Use [PremiumSwitch] for real on/off or multi-select rows.
 class PremiumCheckbox extends StatelessWidget {
   const PremiumCheckbox({
     super.key,
@@ -99,7 +102,23 @@ class PremiumCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PremiumSwitch(value: selected, onChanged: onChanged);
+    final indicator = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 150),
+      child: selected
+          ? Icon(
+              Icons.check_rounded,
+              key: const ValueKey('sel'),
+              size: size,
+              color: AppColors.accentPurple,
+            )
+          : SizedBox(key: const ValueKey('unsel'), width: size, height: size),
+    );
+    if (onChanged == null) return indicator;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged!(!selected),
+      child: indicator,
+    );
   }
 }
 
