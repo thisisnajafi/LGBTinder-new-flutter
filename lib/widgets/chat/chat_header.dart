@@ -9,10 +9,10 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
-import '../../core/widgets/profile_image_widget.dart';
 import '../../features/chat/providers/chat_typing_providers.dart';
 import '../../features/chat/providers/user_presence_cache_provider.dart';
 import '../../features/chat/utils/presence_freshness.dart';
+import 'chat_peer_avatar.dart';
 import 'last_seen_widget.dart';
 import 'official_account_badge.dart';
 
@@ -88,6 +88,7 @@ class ChatHeader extends ConsumerWidget {
                   imageUrl: avatarUrl,
                   isOnline: liveOnline,
                   refreshedAt: presenceRefreshedAt,
+                  isOfficial: isOfficial,
                 ),
               ),
               const SizedBox(width: AppSpacing.spacingMD),
@@ -176,11 +177,13 @@ class _HeaderAvatar extends StatefulWidget {
     required this.imageUrl,
     required this.isOnline,
     this.refreshedAt,
+    this.isOfficial = false,
   });
 
   final String? imageUrl;
   final bool isOnline;
   final DateTime? refreshedAt;
+  final bool isOfficial;
 
   @override
   State<_HeaderAvatar> createState() => _HeaderAvatarState();
@@ -259,11 +262,10 @@ class _HeaderAvatarState extends State<_HeaderAvatar> {
               color: theme.colorScheme.surface,
             ),
             child: ClipOval(
-              child: ProfileImageWidget(
+              child: ChatPeerAvatar(
                 imageUrl: widget.imageUrl,
-                width: 38,
-                height: 38,
-                fit: BoxFit.cover,
+                size: 38,
+                isOfficial: widget.isOfficial,
               ),
             ),
           ),

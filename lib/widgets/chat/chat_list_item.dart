@@ -12,7 +12,6 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/utils/media_url.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
-import '../../core/widgets/profile_image_widget.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/chat/providers/conversation_pin_cache_provider.dart';
 import '../../features/chat/providers/user_presence_cache_provider.dart';
@@ -23,6 +22,7 @@ import 'typing_indicator.dart';
 import 'message_status_indicator.dart';
 import 'chat_search_highlight_text.dart';
 import 'chat_unread_badge.dart';
+import 'chat_peer_avatar.dart';
 import 'official_account_badge.dart';
 import 'chat_online_dot.dart';
 import '../../features/chat/data/models/message_delivery_status.dart';
@@ -147,12 +147,11 @@ class ChatListItem extends ConsumerWidget {
                   clipBehavior: Clip.none,
                   children: [
                     ClipOval(
-                      child: ProfileImageWidget(
+                      child: ChatPeerAvatar(
                         imageUrl: resolvedAvatar,
                         userId: userId,
-                        width: 52,
-                        height: 52,
-                        fit: BoxFit.cover,
+                        size: 52,
+                        isOfficial: isOfficial,
                       ),
                     ),
                     if (liveOnline)
