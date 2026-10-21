@@ -1,4 +1,5 @@
 import 'package:in_app_purchase/in_app_purchase.dart';
+import '../../data/play_billing_ids.dart';
 import '../../data/services/google_play_billing_service.dart';
 import '../repositories/google_play_repository.dart';
 
@@ -17,11 +18,16 @@ class InitiateGooglePurchaseUseCase {
         );
       }
 
-      final products = await _repository.queryProducts({productId});
+      final products = await _repository.queryProducts(
+        PlayBillingIds.productQueryIds(productId),
+      );
+      final basePlanId = isSubscription && offerId != null
+          ? PlayBillingIds.canonicalBasePlanId(offerId)
+          : null;
       var productDetails = GooglePlayBillingService.matchCatalogProduct(
         products,
         productId,
-        basePlanId: isSubscription ? offerId : null,
+        basePlanId: basePlanId,
       );
       // Product exists but the base plan ID differs from the backend's
       // google_offer_id: fall back to the product's first active base plan

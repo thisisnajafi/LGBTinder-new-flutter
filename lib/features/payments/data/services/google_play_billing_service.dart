@@ -9,6 +9,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../core/services/offline_payment_service.dart';
 import '../../../../core/services/app_logger.dart';
+import '../play_billing_ids.dart';
 import 'marketing_attribution_service.dart';
 
 /// Server-confirmed outcome for one Play purchase.
@@ -89,7 +90,14 @@ class GooglePlayBillingService {
     String productId, {
     String? basePlanId,
   }) {
-    final matches = products.where((product) => product.id == productId).toList();
+    final acceptedIds = PlayBillingIds.productQueryIds(productId);
+    final canonical = PlayBillingIds.canonicalProductId(productId);
+    final matches = products.where((product) => acceptedIds.contains(product.id)).toList()
+      ..sort((a, b) {
+        if (a.id == canonical) return -1;
+        if (b.id == canonical) return 1;
+        return 0;
+      });
     if (matches.isEmpty) return null;
 
     final wanted = basePlanId?.trim();
@@ -100,7 +108,9 @@ class GooglePlayBillingService {
       final index = product.subscriptionIndex;
       final offers = product.productDetails.subscriptionOfferDetails;
       if (index == null || offers == null || index >= offers.length) continue;
-      if (offers[index].basePlanId == wanted) return product;
+      if (PlayBillingIds.sameBasePlan(offers[index].basePlanId, wanted)) {
+        return product;
+      }
     }
 
     return null;
