@@ -641,7 +641,10 @@ class MessageBubble extends ConsumerWidget {
                   onListened: isSent ? null : onVoiceListened,
                 ),
               ),
-            if (message.isNotEmpty && messageType == 'text') ...[
+            if (message.isNotEmpty &&
+                (messageType == 'text' || messageType == 'image')) ...[
+              if (messageType == 'image')
+                const SizedBox(height: AppSpacing.spacingSM),
               ChatLinkedText(
                 text: message,
                 style: AppTypography.body.copyWith(
