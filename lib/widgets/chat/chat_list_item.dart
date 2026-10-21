@@ -51,6 +51,7 @@ class ChatListItem extends ConsumerWidget {
   /// Matched peers stay readable on the free plan.
   final bool isMatch;
   final VoidCallback? onTap;
+  final VoidCallback? onAvatarTap;
   final VoidCallback? onLongPress;
 
   static const pinIconKey = ValueKey('chat-list-pin-icon');
@@ -78,6 +79,7 @@ class ChatListItem extends ConsumerWidget {
     this.isOfficial = false,
     this.isMatch = false,
     this.onTap,
+    this.onAvatarTap,
     this.onLongPress,
   });
 
@@ -146,12 +148,18 @@ class ChatListItem extends ConsumerWidget {
             Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    ClipOval(
-                      child: ChatPeerAvatar(
-                        imageUrl: resolvedAvatar,
-                        userId: userId,
-                        size: 52,
-                        isOfficial: isOfficial,
+                    GestureDetector(
+                      onTap: onAvatarTap,
+                      behavior: onAvatarTap == null
+                          ? HitTestBehavior.deferToChild
+                          : HitTestBehavior.opaque,
+                      child: ClipOval(
+                        child: ChatPeerAvatar(
+                          imageUrl: resolvedAvatar,
+                          userId: userId,
+                          size: 52,
+                          isOfficial: isOfficial,
+                        ),
                       ),
                     ),
                     if (liveOnline)

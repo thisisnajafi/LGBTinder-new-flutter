@@ -19,6 +19,7 @@ import '../widgets/chat/chat_date_badge.dart';
 import '../widgets/chat/chat_unread_separator_bar.dart';
 import '../widgets/chat/chat_video_viewer.dart';
 import 'chat_conversation_info_page.dart';
+import '../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/data/services/chat_outbound_queue_service.dart';
@@ -108,6 +109,7 @@ class ChatPage extends ConsumerStatefulWidget {
   final String? userName;
   final String? avatarUrl;
   final bool isOfficial;
+  final bool isSystemOfficial;
   final bool embedded;
   final VoidCallback? onEmbeddedClose;
 
@@ -117,6 +119,7 @@ class ChatPage extends ConsumerStatefulWidget {
     this.userName,
     this.avatarUrl,
     this.isOfficial = false,
+    this.isSystemOfficial = false,
     this.embedded = false,
     this.onEmbeddedClose,
   }) : super(key: key);
@@ -177,6 +180,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Timer? _realtimeFallbackTimer;
   String? _resolvedUserName;
   bool _peerIsOfficial = false;
+  bool _peerIsSystemOfficial = false;
   String? _resolvedAvatarUrl;
   String? _resolvedPrimaryPhotoUrl;
   late final ChatTypingOutbound _typingOutbound;
@@ -208,6 +212,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _resolvedUserName = widget.userName;
     _resolvedAvatarUrl = widget.avatarUrl;
     _peerIsOfficial = widget.isOfficial;
+    _peerIsSystemOfficial = widget.isSystemOfficial;
     _loadCurrentUserId();
     if (widget.userId > 0) {
       _openUnreadCount = _peekUnreadCount();
@@ -335,6 +340,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _openConversationInfo() {
+    if (_peerIsSystemOfficial) {
+      OfficialTeamProfilePage.open(
+        context,
+        userId: widget.userId,
+        openedFromChat: true,
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ChatConversationInfoPage(
@@ -1059,8 +1072,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
       final history = await historyFuture;
       _ackIncomingDelivered(history.messages);
-      if (history.peerIsOfficial && mounted && !_peerIsOfficial) {
-        setState(() => _peerIsOfficial = true);
+      if (mounted &&
+          (history.peerIsOfficial && !_peerIsOfficial ||
+              history.peerIsSystemOfficial && !_peerIsSystemOfficial)) {
+        setState(() {
+          if (history.peerIsOfficial) _peerIsOfficial = true;
+          if (history.peerIsSystemOfficial) _peerIsSystemOfficial = true;
+        });
       }
       List<Call> calls = const [];
       try {

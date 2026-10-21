@@ -13,6 +13,7 @@ import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
 import '../widgets/loading/skeleton_discovery.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
+import '../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../features/discover/providers/discovery_filters_provider.dart';
 import '../features/discover/utils/discover_active_filter_labels.dart';
 import '../features/discover/utils/discovery_image_prefetch.dart';
@@ -130,6 +131,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final stack = ref.read(discoverCacheProvider).stack;
     final sheetProfile = _sheetProfileFromStack(stack);
     if (sheetProfile == null) return;
+    if (sheetProfile.isSystemOfficial) {
+      final userId = ref.read(discoverCacheProvider).stack.first.id;
+      await OfficialTeamProfilePage.open(context, userId: userId);
+      return;
+    }
 
     setState(() => _isProfileSheetOpen = true);
     await showModalBottomSheet<void>(
@@ -226,6 +232,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       bio: profile.profileBio,
       isVerified: profile.isVerified ?? false,
       isOfficial: profile.isOfficial ?? false,
+      isSystemOfficial: profile.isSystemOfficial ?? false,
       verification: profile.verification,
       isOnline: profile.isOnline ?? false,
       matchPercentage: profile.matchPercentage ?? profile.compatibilityScore,

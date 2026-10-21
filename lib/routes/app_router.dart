@@ -596,9 +596,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (userId == null) {
             return slideFadePage(state, const HomePage());
           }
+          final systemOfficial = state.uri.queryParameters['systemOfficial'];
           return platformPredictivePage(
             state,
-            ProfileDetailScreen(userId: int.parse(userId)),
+            ProfileDetailScreen(
+              userId: int.parse(userId),
+              isSystemOfficial:
+                  systemOfficial == '1' || systemOfficial == 'true',
+            ),
           );
         },
       ),
@@ -753,6 +758,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final userName = state.uri.queryParameters['userName'];
           final avatarUrl = state.uri.queryParameters['avatarUrl'];
           final official = state.uri.queryParameters['official'];
+          final systemOfficial = state.uri.queryParameters['systemOfficial'];
           final child = userId == null
               ? const ChatListPage()
               : ChatPage(
@@ -760,6 +766,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   userName: userName,
                   avatarUrl: avatarUrl,
                   isOfficial: official == '1' || official == 'true',
+                  isSystemOfficial:
+                      systemOfficial == '1' || systemOfficial == 'true',
                 );
           return platformPredictivePage(state, child);
         },

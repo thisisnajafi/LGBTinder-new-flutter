@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/responsive/responsive.dart';
 import '../../features/profile/data/models/user_profile.dart';
+import '../../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
 import '../../features/profile/presentation/widgets/other_user_profile/profile_more_options_sheet.dart';
 import '../../features/profile/providers/profile_providers.dart';
@@ -34,10 +35,14 @@ class ProfileDetailScreen extends ConsumerStatefulWidget {
   /// Defaults to false for messenger and chat profile views.
   final bool showInteractionActions;
 
+  /// Opens the Team page immediately when the caller already knows the flag.
+  final bool isSystemOfficial;
+
   const ProfileDetailScreen({
     super.key,
     required this.userId,
     this.showInteractionActions = false,
+    this.isSystemOfficial = false,
   });
 
   @override
@@ -264,6 +269,9 @@ class _ProfileDetailScreenState extends ConsumerState<ProfileDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final profile = _profile;
+    if (widget.isSystemOfficial || profile?.isSystemOfficial == true) {
+      return OfficialTeamProfilePage(userId: widget.userId);
+    }
 
     if (_isLoading) {
       return PremiumDetailScaffold(

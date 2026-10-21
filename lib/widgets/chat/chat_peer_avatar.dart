@@ -22,7 +22,7 @@ class ChatPeerAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isOfficial) {
-      return _OfficialLogo(size: size);
+      return OfficialTeamLogo(size: size);
     }
 
     return ProfileImageWidget(
@@ -35,12 +35,12 @@ class ChatPeerAvatar extends StatelessWidget {
   }
 }
 
-/// Full wordmark inside the circle. Cover-cropping the wide logo shows only
+/// Full wordmark inside the avatar. Cover-cropping the wide logo shows only
 /// the yellow center, so the mark is contained with even padding.
-class _OfficialLogo extends StatelessWidget {
+class OfficialTeamLogo extends StatelessWidget {
   final double size;
 
-  const _OfficialLogo({required this.size});
+  const OfficialTeamLogo({super.key, required this.size});
 
   @override
   Widget build(BuildContext context) {

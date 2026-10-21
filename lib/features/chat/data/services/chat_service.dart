@@ -40,6 +40,7 @@ class ChatHistoryResult {
   final ChatHistoryCursor? nextCursor;
   final int? nextAfterId;
   final bool peerIsOfficial;
+  final bool peerIsSystemOfficial;
 
   const ChatHistoryResult({
     required this.messages,
@@ -49,6 +50,7 @@ class ChatHistoryResult {
     this.nextCursor,
     this.nextAfterId,
     this.peerIsOfficial = false,
+    this.peerIsSystemOfficial = false,
   });
 }
 
@@ -106,6 +108,7 @@ class ChatService {
     int? conversationId;
     int? otherUserId;
     var peerIsOfficial = false;
+    var peerIsSystemOfficial = false;
     Map<String, dynamic>? metaMap = meta;
 
     if (raw is Map<String, dynamic>) {
@@ -117,6 +120,7 @@ class ChatService {
         conversationId = _parseInt(envelope['conversation_id']);
         otherUserId = _parseInt(envelope['other_user_id']);
         peerIsOfficial = _peerIsOfficial(envelope['other_user']);
+        peerIsSystemOfficial = _peerIsSystemOfficial(envelope['other_user']);
         final messages = envelope['messages'];
         if (messages is List) {
           messageList = messages;
@@ -160,7 +164,14 @@ class ChatService {
       nextCursor: nextCursor,
       nextAfterId: nextAfterId,
       peerIsOfficial: peerIsOfficial,
+      peerIsSystemOfficial: peerIsSystemOfficial,
     );
+  }
+
+  bool _peerIsSystemOfficial(dynamic otherUser) {
+    if (otherUser is! Map) return false;
+    final raw = otherUser['is_system_official'];
+    return raw == true || raw == 1 || raw?.toString() == 'true';
   }
 
   bool _peerIsOfficial(dynamic otherUser) {

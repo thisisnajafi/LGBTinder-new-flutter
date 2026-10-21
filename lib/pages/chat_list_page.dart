@@ -18,6 +18,7 @@ import '../core/widgets/staggered_list_item.dart';
 import '../widgets/chat/chat_connection_banner.dart';
 import '../widgets/chat/chat_matches_row.dart';
 import '../features/matching/data/models/match.dart';
+import '../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../features/matching/providers/likes_providers.dart';
 import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
 import '../widgets/chat/chat_list_item.dart';
@@ -85,6 +86,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   String? _tabletSelectedUserName;
   String? _tabletSelectedAvatarUrl;
   bool _tabletSelectedOfficial = false;
+  bool _tabletSelectedSystemOfficial = false;
 
   @override
   void initState() {
@@ -344,6 +346,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         chat['account_badge']?.toString() == 'official';
   }
 
+  bool _isSystemOfficialChat(Map<String, dynamic> chat) {
+    final raw = chat['is_system_official'];
+    return raw == true || raw == 1 || raw?.toString() == 'true';
+  }
+
   void _handleChatTap(Map<String, dynamic> chat) {
     final isOfficial = _isOfficialChat(chat);
     final isPremium = ref.read(isPremiumProvider);
@@ -361,6 +368,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         _tabletSelectedUserName = _displayNameFromMap(chat);
         _tabletSelectedAvatarUrl = chat['avatar_url'] as String?;
         _tabletSelectedOfficial = isOfficial;
+        _tabletSelectedSystemOfficial = _isSystemOfficialChat(chat);
       });
       return;
     }
@@ -374,6 +382,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         if ((chat['avatar_url'] as String?)?.isNotEmpty == true)
           'avatarUrl': chat['avatar_url'] as String,
         if (isOfficial) 'official': '1',
+        if (_isSystemOfficialChat(chat)) 'systemOfficial': '1',
       },
     ).toString();
     context.push(target);
@@ -542,6 +551,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       _tabletSelectedUserName = null;
       _tabletSelectedAvatarUrl = null;
       _tabletSelectedOfficial = false;
+      _tabletSelectedSystemOfficial = false;
     });
   }
 
@@ -699,6 +709,12 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                             chat['last_message_is_delivered'] == true,
                         highlightQuery: _searchQuery,
                         onTap: () => _handleChatTap(chat),
+                        onAvatarTap: _isSystemOfficialChat(chat)
+                            ? () => OfficialTeamProfilePage.open(
+                                  context,
+                                  userId: userId,
+                                )
+                            : null,
                         onLongPress: () => _showConversationActions(
                           userId: userId,
                           name: name,
@@ -871,6 +887,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                       userName: _tabletSelectedUserName,
                       avatarUrl: _tabletSelectedAvatarUrl,
                       isOfficial: _tabletSelectedOfficial,
+                      isSystemOfficial: _tabletSelectedSystemOfficial,
                       embedded: true,
                       onEmbeddedClose: _clearTabletSelection,
                     )
