@@ -1215,7 +1215,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                 children: [
                   PremiumPageHeader(
                     title: 'Discover',
-                    subtitle: 'Swipe and connect with people nearby',
                     action: _buildHeaderActions(context),
                     compact: true,
                   ),

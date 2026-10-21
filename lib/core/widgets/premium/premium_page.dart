@@ -105,17 +105,14 @@ class PremiumPageHeader extends StatelessWidget {
               if (action != null) action!,
             ],
           ),
-          if (subtitle != null) ...[
-            SizedBox(height: compact ? 0 : 4),
+          if (!compact && subtitle != null) ...[
+            const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: AppText(
                 subtitle!,
-                style: (compact
-                        ? theme.textTheme.labelSmall
-                        : theme.textTheme.bodySmall)
-                    ?.copyWith(color: muted),
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
                 maxLines: 1,
               ),
             ),
