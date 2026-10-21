@@ -4,6 +4,7 @@ import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
+import '../../../../core/widgets/compact_page_header.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../core/widgets/profile_age_badge.dart';
 import '../../../../core/widgets/profile_image_widget.dart';
@@ -38,7 +39,7 @@ class ProfileHubView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PremiumPageHeader(
+              CompactPageHeader(
                 title: 'Profile',
                 action: TextButton(
                   onPressed: onViewProfile,

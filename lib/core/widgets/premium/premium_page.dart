@@ -5,6 +5,7 @@ import '../../responsive/responsive.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/spacing_constants.dart';
 import '../../../routes/app_router.dart';
+import '../compact_page_header.dart';
 import 'premium_hero_header.dart';
 import 'premium_layout.dart';
 import 'premium_refresh.dart';
@@ -155,7 +156,7 @@ class PremiumTabPageLayout extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PremiumPageHeader(
+              CompactPageHeader(
                 title: title,
                 subtitle: subtitle,
                 action: action,

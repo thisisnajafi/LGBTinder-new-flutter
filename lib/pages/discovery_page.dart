@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/responsive/responsive.dart';
+import '../core/widgets/compact_page_header.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
@@ -1058,49 +1059,43 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     }
   }
 
-  Widget _buildHeaderActions(BuildContext context) {
+  List<Widget> _buildHeaderActions(BuildContext context) {
     final canUsePassport =
         ref.watch(planLimitsProvider).valueOrNull?.features.passport ?? false;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (canUsePassport) ...[
-          _buildHeaderIconButton(
-            context: context,
-            iconPath: AppIcons.map,
-            semanticLabel: 'Passport — change discovery location',
-            onTap: _openPassport,
-            showBadge: ref.watch(passportLocationProvider).active,
-          ),
-          const SizedBox(width: AppSpacing.spacingXS),
-        ],
-        Consumer(
-          builder: (context, ref, child) {
-            final hasUnreadNotifications = ref.watch(
-              unreadNotificationCountProvider.select(
-                (async) => (async.asData?.value ?? 0) > 0,
-              ),
-            );
-            return _buildHeaderIconButton(
-              context: context,
-              iconPath: AppIcons.notification,
-              semanticLabel: 'Notifications',
-              onTap: () => context.go('${AppRoutes.home}/notifications'),
-              showBadge: hasUnreadNotifications,
-            );
-          },
-        ),
-        const SizedBox(width: AppSpacing.spacingXS),
+    return [
+      if (canUsePassport)
         _buildHeaderIconButton(
           context: context,
-          iconPath: AppIcons.filter,
-          semanticLabel: 'Open filters',
-          onTap: _openFilters,
-          showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
+          iconPath: AppIcons.map,
+          semanticLabel: 'Passport — change discovery location',
+          onTap: _openPassport,
+          showBadge: ref.watch(passportLocationProvider).active,
         ),
-      ],
-    );
+      Consumer(
+        builder: (context, ref, child) {
+          final hasUnreadNotifications = ref.watch(
+            unreadNotificationCountProvider.select(
+              (async) => (async.asData?.value ?? 0) > 0,
+            ),
+          );
+          return _buildHeaderIconButton(
+            context: context,
+            iconPath: AppIcons.notification,
+            semanticLabel: 'Notifications',
+            onTap: () => context.go('${AppRoutes.home}/notifications'),
+            showBadge: hasUnreadNotifications,
+          );
+        },
+      ),
+      _buildHeaderIconButton(
+        context: context,
+        iconPath: AppIcons.filter,
+        semanticLabel: 'Open filters',
+        onTap: _openFilters,
+        showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
+      ),
+    ];
   }
 
   Widget _buildHeaderIconButton({
@@ -1141,9 +1136,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               ),
             ),
             if (showBadge)
-              Positioned(
+              PositionedDirectional(
                 top: 4,
-                right: 4,
+                end: 4,
                 child: RepaintBoundary(
                   child: Container(
                     width: 9,
@@ -1213,10 +1208,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  PremiumPageHeader(
+                  CompactPageHeader(
                     title: 'Discover',
-                    action: _buildHeaderActions(context),
-                    compact: true,
+                    actions: _buildHeaderActions(context),
                   ),
                   const SizedBox(height: AppSpacing.spacingSM),
                   const RepaintBoundary(child: DiscoverGreetingWidget()),

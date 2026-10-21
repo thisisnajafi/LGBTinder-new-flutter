@@ -13,6 +13,7 @@ import '../core/constants/animation_constants.dart';
 import '../core/utils/media_url.dart';
 import '../core/cache/peer_avatar_cache.dart';
 import '../core/widgets/app_action_bottom_sheet.dart';
+import '../core/widgets/compact_page_header.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/staggered_list_item.dart';
 import '../widgets/chat/chat_connection_banner.dart';
@@ -841,7 +842,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
               width: ResponsiveGrid.chatMasterPanelWidth,
               child: PremiumRefreshScope(
                 onRefresh: _refreshMessenger,
-                header: PremiumPageHeader(
+                header: CompactPageHeader(
                   title: 'Messenger',
                   subtitle: _section == _MessengerSection.calls
                       ? 'Voice and video recents'
