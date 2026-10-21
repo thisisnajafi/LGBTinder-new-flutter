@@ -2810,8 +2810,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  void _releaseComposerFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   Future<void> _pickAndSendVoiceFile() async {
+    _releaseComposerFocus();
     final result = await FilePicker.platform.pickFiles(type: FileType.audio);
+    _releaseComposerFocus();
     if (result == null || !mounted) return;
     final path = result.files.single.path;
     if (path == null || path.isEmpty) return;
@@ -2819,7 +2825,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _pickAndSendDocument() async {
+    _releaseComposerFocus();
     final result = await FilePicker.platform.pickFiles();
+    _releaseComposerFocus();
     if (result == null || !mounted) return;
     final picked = result.files.single;
     final path = picked.path;
@@ -2985,11 +2993,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final allowed = await ensureChatMediaPermission(context, kind);
     if (!allowed || !mounted) return;
 
+    _releaseComposerFocus();
     try {
       final picker = ImagePicker();
       final file = type == 'video'
           ? await picker.pickVideo(source: source)
           : await picker.pickImage(source: source);
+      _releaseComposerFocus();
       if (file == null || !mounted) return;
       await _sendMediaFile(
         File(file.path),
