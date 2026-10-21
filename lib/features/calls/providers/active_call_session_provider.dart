@@ -242,6 +242,11 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
       rtc.remoteUserLeft(uid, reason);
       noteRemoteOffline(reason);
     };
+    agora.onRemoteAudioMuted = (uid, muted) {
+      final current = _ref.read(agoraRtcSessionProvider).remoteUid;
+      if (current != null && uid != current) return;
+      rtc.setRemoteAudioMuted(muted);
+    };
     agora.onRemoteVideoMuted = (uid, muted) {
       final current = _ref.read(agoraRtcSessionProvider).remoteUid;
       if (current != null && uid != current) return;

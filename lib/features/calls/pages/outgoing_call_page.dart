@@ -761,6 +761,12 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
           });
         }
       };
+      _agoraService.onRemoteAudioMuted = (uid, muted) {
+        if (!mounted) return;
+        final current = ref.read(agoraRtcSessionProvider).remoteUid;
+        if (current != null && uid != current) return;
+        rtc.setRemoteAudioMuted(muted);
+      };
       _agoraService.onRemoteVideoMuted = (uid, muted) {
         if (!mounted) return;
         final current = ref.read(agoraRtcSessionProvider).remoteUid;
@@ -1474,12 +1480,21 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                                 child: CallStagePlaceholder(
                                   userId: widget.recipientId,
                                   imageUrl: _displayBackdropUrl,
-                                  caption: failed ? caption : 'Camera is off',
+                                  caption: failed
+                                      ? caption
+                                      : (isVideo ? 'Camera is off' : widget.recipientName),
+                                  speakingTarget: CallSpeakingTarget.remote,
                                 ),
                               );
                             },
                           ),
                   ),
+                  if (!showVideoLayer && connected)
+                    Positioned(
+                      left: AppSpacing.spacingLG,
+                      bottom: bottomPad + 108,
+                      child: const CallParticipantMuteBadge(local: true),
+                    ),
                   if (showRingChrome && !connected)
                     IgnorePointer(
                       child: Center(

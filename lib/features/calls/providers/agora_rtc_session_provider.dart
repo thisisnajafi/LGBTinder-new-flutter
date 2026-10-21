@@ -32,6 +32,12 @@ final remoteSpeakingProvider = Provider<bool>((ref) {
   );
 });
 
+final remoteAudioMutedProvider = Provider<bool>((ref) {
+  return ref.watch(
+    agoraRtcSessionProvider.select((state) => state.remoteAudioMuted),
+  );
+});
+
 class AgoraRtcSessionNotifier extends StateNotifier<AgoraRtcSession> {
   AgoraRtcSessionNotifier() : super(const AgoraRtcSession());
 
@@ -58,6 +64,7 @@ class AgoraRtcSessionNotifier extends StateNotifier<AgoraRtcSession> {
       remoteUid: uid,
       clearRemoteLeaveReason: true,
       remoteCameraOn: true,
+      remoteAudioMuted: false,
       remoteVideoFrozen: false,
     );
   }
@@ -68,7 +75,13 @@ class AgoraRtcSessionNotifier extends StateNotifier<AgoraRtcSession> {
       clearRemoteUid: true,
       remoteLeaveReason: reason,
       remoteCameraOn: false,
+      remoteAudioMuted: false,
     );
+  }
+
+  void setRemoteAudioMuted(bool muted) {
+    if (state.remoteAudioMuted == muted) return;
+    state = state.copyWith(remoteAudioMuted: muted);
   }
 
   void setRemoteCameraOn(bool on) {

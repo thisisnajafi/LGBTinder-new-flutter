@@ -19,6 +19,7 @@ import 'call_connect_transition.dart';
 import 'call_network_signal.dart';
 import 'call_reconnecting_overlay.dart';
 import 'call_speaking_ring.dart';
+import 'call_stage_placeholder.dart';
 
 typedef _RtcHeaderSlice = ({
   bool reconnecting,
@@ -126,18 +127,32 @@ class OutgoingCallHeader extends ConsumerWidget {
 
     return Row(
       children: [
-        CallSpeakingRing(
-          active: remoteSpeaking,
-          diameter: 40,
-          child: ClipOval(
-            child: ProfileImageWidget(
-              imageUrl: photoUrl,
-              userId: recipientId,
-              width: 40,
-              height: 40,
-              fit: BoxFit.cover,
-              borderRadius: BorderRadius.circular(20),
-            ),
+        SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CallSpeakingRing(
+                active: remoteSpeaking,
+                diameter: 40,
+                child: ClipOval(
+                  child: ProfileImageWidget(
+                    imageUrl: photoUrl,
+                    userId: recipientId,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+              const Positioned(
+                right: -2,
+                bottom: -2,
+                child: CallParticipantMuteBadge(local: false, compact: true),
+              ),
+            ],
           ),
         ),
         SizedBox(width: AppSpacing.spacingSM),

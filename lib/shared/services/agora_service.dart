@@ -73,6 +73,7 @@ class AgoraService {
   AgoraRemoteUserCallback? onRemoteUserLeft;
   AgoraRemoteOfflineCallback? onRemoteUserOffline;
   void Function(int uid, bool muted)? onRemoteVideoMuted;
+  void Function(int uid, bool muted)? onRemoteAudioMuted;
   Function(String message)? onError;
   AgoraNetworkQualityCallback? onNetworkQuality;
   AgoraTokenRefreshCallback? onTokenRefreshRequired;
@@ -217,6 +218,28 @@ class AgoraService {
       onUserMuteAudio: (RtcConnection connection, int uid, bool muted) {
         _emitUi(() {
           AppLogger.info('onUserMuteAudio uid=$uid muted=$muted', tag: _tag);
+          onRemoteAudioMuted?.call(uid, muted);
+        });
+      },
+      onRemoteAudioStateChanged: (
+        RtcConnection connection,
+        int remoteUid,
+        RemoteAudioState state,
+        RemoteAudioStateReason reason,
+        int elapsed,
+      ) {
+        final bool? muted = switch (reason) {
+          RemoteAudioStateReason.remoteAudioReasonRemoteMuted => true,
+          RemoteAudioStateReason.remoteAudioReasonRemoteUnmuted => false,
+          _ => null,
+        };
+        if (muted == null) return;
+        _emitUi(() {
+          AppLogger.info(
+            'onRemoteAudioStateChanged uid=$remoteUid state=$state reason=$reason muted=$muted',
+            tag: _tag,
+          );
+          onRemoteAudioMuted?.call(remoteUid, muted);
         });
       },
       onError: (ErrorCodeType err, String msg) {
@@ -879,6 +902,7 @@ class AgoraService {
     onRemoteUserLeft = null;
     onRemoteUserOffline = null;
     onRemoteVideoMuted = null;
+    onRemoteAudioMuted = null;
     onError = null;
     onNetworkQuality = null;
     if (!keepTokenRefresh) {
