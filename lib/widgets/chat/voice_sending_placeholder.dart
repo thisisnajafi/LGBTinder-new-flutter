@@ -44,7 +44,7 @@ class VoiceSendingPlaceholder extends StatelessWidget {
           durationSeconds: durationSeconds,
           maxWidth: cap,
         );
-        final width = math.min(cap, math.max(scaled, 220));
+        final width = math.min(cap, math.max(scaled, 220)).toDouble();
 
         return SizedBox(
           width: width,
