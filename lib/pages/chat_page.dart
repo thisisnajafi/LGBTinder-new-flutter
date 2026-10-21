@@ -218,6 +218,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _resolvePeerDisplayIfNeeded();
       _bindLocalMessageStream();
       _loadMessages();
+      unawaited(_prewarmVoiceCapture());
       _initializePusherListeners();
       _loadConversationMuteStatus();
       _seedInitialPeerPresence();
@@ -2395,6 +2396,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final text = message['text']?.toString() ?? '';
     if (text.isEmpty) return;
     unawaited(_handleSend(text, existingClientId: clientId));
+  }
+
+  Future<void> _prewarmVoiceCapture() async {
+    try {
+      await ChatMediaPermissions.ensure(ChatMediaPermissionKind.microphone);
+      await _voiceRecorder.hasPermission();
+    } catch (e) {
+      AppLogger.warning('Voice capture prewarm failed', tag: 'Chat', error: e);
+    }
   }
 
   Future<bool> _handleVoiceRecordStart() async {

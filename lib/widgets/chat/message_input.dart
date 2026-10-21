@@ -68,6 +68,8 @@ class _MessageInputState extends ConsumerState<MessageInput>
   bool _isHoldingToRecord = false;
   bool _isRecordingLocked = false;
   bool _didCancelRecordingBySlide = false;
+  bool _recordStartInFlight = false;
+  int _recordStartToken = 0;
   bool _sendLocked = false;
   double _holdStartX = 0;
   double _holdStartY = 0;
@@ -172,33 +174,46 @@ class _MessageInputState extends ConsumerState<MessageInput>
   }
 
   Future<void> _startRecordingHold(LongPressStartDetails details) async {
-    if (_isHoldingToRecord) return;
+    if (_isHoldingToRecord || _recordStartInFlight) return;
     if (!widget.enabled || _controller.text.trim().isNotEmpty) return;
     if (widget.onVoiceRecordStart == null) return;
     _holdStartX = details.globalPosition.dx;
     _holdStartY = details.globalPosition.dy;
     _didCancelRecordingBySlide = false;
     _isRecordingLocked = false;
+    final token = ++_recordStartToken;
+    _recordStartInFlight = true;
+    AppHaptics.medium();
+    setState(() => _isHoldingToRecord = true);
+    if (AppAnimations.animationsEnabled(context)) {
+      _micPulseController.repeat(reverse: true);
+    } else {
+      _micPulseController.value = 1;
+    }
 
+    var started = false;
     try {
-      final started = await widget.onVoiceRecordStart!.call();
-      if (!started) return;
+      started = await widget.onVoiceRecordStart!.call();
     } catch (e) {
       AppLogger.warning(
         'Voice record start failed',
         tag: 'Chat',
         error: e,
       );
+    }
+    _recordStartInFlight = false;
+    if (!mounted || token != _recordStartToken) {
+      if (started) {
+        await widget.onVoiceRecordCancel?.call();
+      }
       return;
     }
-    if (!mounted) return;
-    setState(() {
-      _isHoldingToRecord = true;
-    });
-    if (AppAnimations.animationsEnabled(context)) {
-      _micPulseController.repeat(reverse: true);
-    } else {
-      _micPulseController.value = 1;
+    if (!started || _didCancelRecordingBySlide) {
+      if (started) {
+        await widget.onVoiceRecordCancel?.call();
+      }
+      _resetRecordingUi();
+      return;
     }
   }
 
@@ -213,6 +228,12 @@ class _MessageInputState extends ConsumerState<MessageInput>
 
   Future<void> _onHoldEnd() async {
     if (_isRecordingLocked) return;
+    if (_recordStartInFlight) {
+      _recordStartToken++;
+      _didCancelRecordingBySlide = true;
+      _resetRecordingUi();
+      return;
+    }
     await _sendRecording();
   }
 
