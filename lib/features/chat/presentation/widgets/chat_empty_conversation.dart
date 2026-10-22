@@ -6,9 +6,7 @@ import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
-import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
-import '../../../../widgets/animations/lottie_animations.dart';
 
 /// Empty match conversation: tappable Lottie heart opener + inspiration chips.
 /// Hidden by the parent as soon as the thread has any messages.
@@ -56,10 +54,7 @@ class ChatEmptyConversation extends StatelessWidget {
                 child: SizedBox(
                   width: 148,
                   height: 148,
-                  child: AppLottieAnimations.chatHeart(
-                    size: 148,
-                    fallback: const _BeatingHeartFallback(size: 88),
-                  ),
+                  child: const _BeatingHeartFallback(size: 96),
                 ),
               ),
               const SizedBox(height: AppSpacing.spacingMD),
@@ -206,12 +201,68 @@ class _BeatingHeartFallbackState extends State<_BeatingHeartFallback>
     return ScaleTransition(
       scale: _scale,
       child: Center(
-        child: AppSvgIcon(
-          assetPath: AppIcons.getIconBold('heart'),
-          size: widget.size,
-          color: AppColors.accentRose,
+        child: SizedBox(
+          width: widget.size,
+          height: widget.size,
+          child: const CustomPaint(painter: _GradientHeartPainter()),
         ),
       ),
     );
   }
+}
+
+/// Smooth vector heart (two cubic lobes) with the app's pink → rose → violet
+/// gradient and a soft glow. Replaces the old hand-built Lottie path, which
+/// rendered as a jagged blob.
+class _GradientHeartPainter extends CustomPainter {
+  const _GradientHeartPainter();
+
+  static Path _heart(Size s) {
+    final w = s.width;
+    final h = s.height;
+    return Path()
+      ..moveTo(w * 0.5, h * 0.92)
+      ..cubicTo(w * 0.18, h * 0.70, w * 0.02, h * 0.50, w * 0.04, h * 0.32)
+      ..cubicTo(w * 0.06, h * 0.14, w * 0.22, h * 0.06, w * 0.34, h * 0.08)
+      ..cubicTo(w * 0.42, h * 0.09, w * 0.47, h * 0.14, w * 0.5, h * 0.22)
+      ..cubicTo(w * 0.53, h * 0.14, w * 0.58, h * 0.09, w * 0.66, h * 0.08)
+      ..cubicTo(w * 0.78, h * 0.06, w * 0.94, h * 0.14, w * 0.96, h * 0.32)
+      ..cubicTo(w * 0.98, h * 0.50, w * 0.82, h * 0.70, w * 0.5, h * 0.92)
+      ..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _heart(size);
+    final rect = Offset.zero & size;
+    canvas.drawPath(
+      path.shift(Offset(0, size.height * 0.03)),
+      Paint()
+        ..color = AppColors.accentRose.withValues(alpha: 0.35)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.06),
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..isAntiAlias = true
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.accentPink,
+            AppColors.accentRose,
+            AppColors.accentViolet,
+          ],
+        ).createShader(rect),
+    );
+    // Subtle highlight on the left lobe.
+    canvas.drawOval(
+      Rect.fromLTWH(size.width * 0.16, size.height * 0.18,
+          size.width * 0.16, size.height * 0.10),
+      Paint()..color = Colors.white.withValues(alpha: 0.35),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GradientHeartPainter oldDelegate) => false;
 }
