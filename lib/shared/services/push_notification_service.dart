@@ -28,6 +28,7 @@ import '../../features/chat/providers/active_chat_peer_bridge.dart';
 import '../../features/chat/providers/in_app_chat_banner_provider.dart';
 import '../../features/chat/utils/chat_fcm_suppress.dart';
 import '../../features/chat/utils/in_app_chat_banner.dart';
+import '../../features/matching/widgets/match_celebration_launcher.dart';
 import '../../features/notifications/data/foreground_push_policy.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
 
@@ -521,6 +522,19 @@ class PushNotificationService {
         'Suppressed FCM banner for muted user / quiet hours / disabled type ($type)',
         tag: 'Notifications',
       );
+      return;
+    }
+
+    if ((type == 'match' || type == 'new_match') &&
+        MatchCelebrationDedupe.shouldSuppressBanner(
+          matchId: int.tryParse(message.data['match_id']?.toString() ?? ''),
+          peerUserId: fromUserId,
+        )) {
+      AppLogger.info(
+        'Suppressed match banner: celebration overlay already shown',
+        tag: 'Notifications',
+      );
+      ForegroundPushPolicy.bumpUnread?.call();
       return;
     }
 

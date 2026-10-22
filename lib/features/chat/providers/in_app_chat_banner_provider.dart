@@ -7,6 +7,7 @@ import '../../../core/constants/animation_constants.dart';
 import '../../../core/providers/subscription_provider.dart';
 import '../../../core/services/app_logger.dart';
 import '../../../shared/services/push_notification_service.dart';
+import '../../matching/widgets/match_celebration_launcher.dart';
 import '../../user/providers/user_providers.dart';
 import '../data/models/message.dart';
 import '../utils/chat_fcm_suppress.dart';
@@ -53,6 +54,14 @@ class InAppChatBannerNotifier extends Notifier<List<InAppChatBannerItem>> {
 
   bool show(InAppChatBannerItem item) {
     if (item.isChat && item.peerUserId <= 0) return false;
+    if ((item.type == 'match' || item.type == 'new_match') &&
+        MatchCelebrationDedupe.shouldSuppressBanner(
+          matchId: int.tryParse(item.routeData['match_id']?.toString() ?? ''),
+          peerUserId: item.peerUserId,
+        )) {
+      // The match overlay is (or was just) on screen for this match.
+      return true;
+    }
     if (_seenIds.contains(item.id)) return false;
     _seenIds.add(item.id);
     if (_seenIds.length > 40) {
