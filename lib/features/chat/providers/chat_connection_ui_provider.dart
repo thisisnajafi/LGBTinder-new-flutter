@@ -26,9 +26,15 @@ final chatConnectionBannerProvider = Provider<ChatConnectionBannerKind>((ref) {
   final flushingQueue = ref.watch(
     chatOutboxUiProvider.select((state) => state.flushing),
   );
+  final failures = ref.watch(
+    chatPusherLifecycleProvider.select(
+      (state) => state.consecutiveReconnectFailures,
+    ),
+  );
   return ChatConnectionUi.resolve(
     pusher: pusher,
     networkOnline: networkOnline,
     flushingQueue: flushingQueue,
+    consecutiveReconnectFailures: failures,
   );
 });

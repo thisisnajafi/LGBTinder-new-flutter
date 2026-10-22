@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -90,7 +89,6 @@ class _SessionSideEffectsHostState extends ConsumerState<SessionSideEffectsHost>
       }
     });
     _attachCallKit();
-    unawaited(FlutterCallkitIncoming.requestFullIntentPermission());
   }
 
   void _attachCallKit() {

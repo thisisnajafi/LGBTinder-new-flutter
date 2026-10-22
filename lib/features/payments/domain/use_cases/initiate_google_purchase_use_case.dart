@@ -1,4 +1,5 @@
 import 'package:in_app_purchase/in_app_purchase.dart';
+import '../../data/play_billing_ids.dart';
 import '../../data/services/google_play_billing_service.dart';
 import '../repositories/google_play_repository.dart';
 
@@ -11,16 +12,36 @@ class InitiateGooglePurchaseUseCase {
   /// Execute the use case
   Future<PurchaseResult> execute(String productId, bool isSubscription, {String? offerId}) async {
     try {
-      final products = await _repository.queryProducts({productId});
-      final productDetails = GooglePlayBillingService.matchCatalogProduct(
+      if (!await _repository.isBillingAvailable()) {
+        return PurchaseResult.failure(
+          GooglePlayBillingService.billingUnavailableMessage,
+        );
+      }
+
+      final products = await _repository.queryProducts(
+        PlayBillingIds.productQueryIds(productId),
+      );
+      final basePlanId = isSubscription && offerId != null
+          ? PlayBillingIds.canonicalBasePlanId(offerId)
+          : null;
+      var productDetails = GooglePlayBillingService.matchCatalogProduct(
         products,
         productId,
-        basePlanId: isSubscription ? offerId : null,
+        basePlanId: basePlanId,
       );
+      // Product exists but the base plan ID differs from the backend's
+      // google_offer_id: fall back to the product's first active base plan
+      // rather than failing the purchase.
+      if (productDetails == null && isSubscription) {
+        productDetails =
+            GooglePlayBillingService.matchCatalogProduct(products, productId);
+      }
 
       if (productDetails == null) {
-        final period = (offerId == null || offerId.isEmpty) ? '' : ' ($offerId)';
-        throw Exception('Product not found: $productId$period');
+        return PurchaseResult.failure(
+          _repository.lastFailureMessage ??
+              GooglePlayBillingService.productNotFoundMessage(productId),
+        );
       }
 
       // Launch billing flow
@@ -31,10 +52,12 @@ class InitiateGooglePurchaseUseCase {
       if (success) {
         return PurchaseResult.success(productDetails);
       } else {
-        return PurchaseResult.failure('Failed to launch billing flow');
+        return PurchaseResult.failure(
+          'Google Play could not open the purchase screen. Please try again.',
+        );
       }
     } catch (e) {
-      return PurchaseResult.failure('Purchase initiation failed: $e');
+      return PurchaseResult.failure('Could not start the Google Play purchase: $e');
     }
   }
 }

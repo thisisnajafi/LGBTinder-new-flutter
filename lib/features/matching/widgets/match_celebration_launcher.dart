@@ -39,6 +39,9 @@ class MatchCelebrationLauncher {
     String? matchedAvatarUrl,
   }) async {
     final userInfo = ref.read(cachedCurrentUserProvider).valueOrNull;
+    if (userInfo != null && userInfo.id > 0 && match.userId == userInfo.id) {
+      return;
+    }
     final currentProfile = _userInfoToProfile(userInfo);
     final matchedProfile = UserProfile(
       id: match.userId,

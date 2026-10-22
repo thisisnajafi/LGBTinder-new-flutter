@@ -5,13 +5,12 @@ import '../../responsive/responsive.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/spacing_constants.dart';
 import '../../../routes/app_router.dart';
-import 'premium_hero_header.dart';
+import '../compact_page_header.dart';
 import 'premium_layout.dart';
 import 'premium_refresh.dart';
 import 'premium_shell.dart';
 
-/// Premium header for main-tab and detail screens.
-/// Uses [PremiumHeroHeader] (same card as the profile hero).
+/// Page title bar. Every tab and detail screen uses [CompactPageHeader].
 class PremiumPageHeader extends StatelessWidget {
   const PremiumPageHeader({
     super.key,
@@ -21,16 +20,20 @@ class PremiumPageHeader extends StatelessWidget {
     this.showBackButton = false,
     this.onBack,
     this.coverImageUrl,
+    this.compact = false,
   });
 
   final String title;
   final String? subtitle;
   final Widget? action;
+  /// Smaller title/subtitle and tighter padding (e.g. Discover, where the
+  /// vertical space belongs to the swipe card).
+  final bool compact;
   final bool showBackButton;
   final VoidCallback? onBack;
   final String? coverImageUrl;
 
-  static const double horizontalPadding = PremiumHeroHeader.horizontalPadding;
+  static const double horizontalPadding = CompactPageHeader.horizontalMargin;
 
   static void defaultBack(BuildContext context) {
     if (Navigator.of(context).canPop()) {
@@ -46,59 +49,11 @@ class PremiumPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final muted =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-
-    return PremiumHeroHeader(
-      onBack: showBackButton
-          ? (onBack ?? () => defaultBack(context))
-          : null,
-      coverImageUrl: coverImageUrl,
-      transparentSides: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: ClampedTextScale(
-                  child: AppText(
-                    title,
-                    style: (showBackButton
-                            ? theme.textTheme.titleLarge
-                            : theme.textTheme.headlineMedium)
-                        ?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: textColor,
-                      letterSpacing: -0.4,
-                      height: 1.15,
-                    ),
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-              if (action != null) action!,
-            ],
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: AppText(
-                subtitle!,
-                style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                maxLines: 1,
-              ),
-            ),
-          ],
-        ],
-      ),
+    return CompactPageHeader(
+      title: title,
+      subtitle: subtitle,
+      action: action,
+      onBack: showBackButton ? (onBack ?? () => defaultBack(context)) : null,
     );
   }
 }
@@ -135,7 +90,7 @@ class PremiumTabPageLayout extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PremiumPageHeader(
+              CompactPageHeader(
                 title: title,
                 subtitle: subtitle,
                 action: action,

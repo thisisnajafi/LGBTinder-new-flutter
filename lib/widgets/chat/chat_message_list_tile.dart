@@ -33,6 +33,7 @@ typedef ChatMessageLongPressCallback = Future<void> Function(
 /// tick does not rebuild this bubble.
 class ChatMessageListTile extends ConsumerStatefulWidget {
   final int peerUserId;
+  final String peerName;
   final String rowKey;
   final void Function(Map<String, dynamic> message)? onRetry;
   final void Function(Map<String, dynamic> message)? onReply;
@@ -48,6 +49,7 @@ class ChatMessageListTile extends ConsumerStatefulWidget {
   const ChatMessageListTile({
     super.key,
     required this.peerUserId,
+    this.peerName = '',
     required this.rowKey,
     this.onRetry,
     this.onReply,
@@ -221,24 +223,40 @@ class _ChatMessageListTileState extends ConsumerState<ChatMessageListTile> {
     );
 
     if (!isDeleted && !reactions.isEmpty) {
-      bubble = Column(
-        crossAxisAlignment:
-            isSent ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          bubble,
-          ChatReactionChips(
-            counts: reactions.counts,
-            mine: reactions.mine,
-            isSent: isSent,
-            onTap: widget.onReact == null
-                ? null
-                : (emoji) {
-                    final current = _rowId.read(ref);
-                    if (current != null) widget.onReact!(current, emoji);
-                  },
+      bubble = Padding(
+        padding: EdgeInsets.only(
+          bottom: MessageBubbleChrome.reactionSlotPadding(
+            isLastInGroup: widget.group.isLastInGroup,
           ),
-        ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: isSent
+              ? AlignmentDirectional.bottomEnd
+              : AlignmentDirectional.bottomStart,
+          children: [
+            bubble,
+            PositionedDirectional(
+              bottom: MessageBubbleChrome.reactionPillBottom(
+                isLastInGroup: widget.group.isLastInGroup,
+              ),
+              start: isSent ? null : 12,
+              end: isSent ? 12 : null,
+              child: ChatReactionChips(
+                counts: reactions.counts,
+                mine: reactions.mine,
+                isSent: isSent,
+                peerName: widget.peerName,
+                onTap: widget.onReact == null
+                    ? null
+                    : (emoji) {
+                        final current = _rowId.read(ref);
+                        if (current != null) widget.onReact!(current, emoji);
+                      },
+              ),
+            ),
+          ],
+        ),
       );
     }
 

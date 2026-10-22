@@ -371,7 +371,8 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
           final cardSize = SwipeableCard.fitSize(
             maxWidth: constraints.maxWidth,
             maxHeight: constraints.maxHeight,
-            minimumVerticalMargin: AppSpacing.spacingLG * 2,
+            // Small margin for the stacked cards peeking out below the top one.
+            minimumVerticalMargin: AppSpacing.spacingMD,
           );
 
           final exitingId = _exitingCardSnapshot?['id'];

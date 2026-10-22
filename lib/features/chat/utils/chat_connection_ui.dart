@@ -15,10 +15,14 @@ class ChatConnectionUi {
   /// Show delay so a 200ms blip does not flash; still well under 1s.
   static const Duration showDelay = Duration(milliseconds: 400);
 
+  /// Reconnecting / tap-to-reconnect stays hidden until this many failures.
+  static const int reconnectFailuresBeforeBanner = 3;
+
   static ChatConnectionBannerKind resolve({
     required ConnectionStatus pusher,
     required bool networkOnline,
     bool flushingQueue = false,
+    int consecutiveReconnectFailures = 0,
   }) {
     if (!networkOnline) {
       return ChatConnectionBannerKind.waitingForNetwork;
@@ -26,13 +30,17 @@ class ChatConnectionUi {
     if (flushingQueue) {
       return ChatConnectionBannerKind.sendingQueued;
     }
+    final quietReconnect = consecutiveReconnectFailures <
+        reconnectFailuresBeforeBanner;
     switch (pusher) {
       case ConnectionStatus.connected:
         return ChatConnectionBannerKind.hidden;
       case ConnectionStatus.connecting:
       case ConnectionStatus.reconnecting:
+        if (quietReconnect) return ChatConnectionBannerKind.hidden;
         return ChatConnectionBannerKind.connecting;
       case ConnectionStatus.disconnected:
+        if (quietReconnect) return ChatConnectionBannerKind.hidden;
         return ChatConnectionBannerKind.tapToReconnect;
     }
   }
@@ -44,7 +52,7 @@ class ChatConnectionUi {
       case ChatConnectionBannerKind.waitingForNetwork:
         return 'Waiting for network';
       case ChatConnectionBannerKind.connecting:
-        return 'Connecting…';
+        return 'Reconnecting…';
       case ChatConnectionBannerKind.tapToReconnect:
         return 'Tap to reconnect';
       case ChatConnectionBannerKind.sendingQueued:

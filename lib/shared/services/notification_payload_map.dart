@@ -1,4 +1,5 @@
 import 'background_message_display.dart';
+import 'notification_quick_actions.dart';
 
 enum TrayStyleKind { messaging, bigText }
 
@@ -74,8 +75,11 @@ class MappedTrayNotification {
       channelId: channelId,
       title: text.title,
       body: text.body,
-      avatarUrl: _avatarUrl(copy['avatar_url']),
-      groupKey: BackgroundMessageDisplay.messageGroupKey(copy),
+      avatarUrl: _avatarUrl(copy['avatar_url']) ??
+          _avatarUrl(copy['sender_avatar_url']),
+      groupKey: type == 'missed_call'
+          ? kMissedCallGroupKey
+          : BackgroundMessageDisplay.messageGroupKey(copy),
       tag: isChat
           ? BackgroundMessageDisplay.trayTagForMessage(
               copy['message_id'] ?? fallbackId,

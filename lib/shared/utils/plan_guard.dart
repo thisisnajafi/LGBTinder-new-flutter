@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/payments/data/models/plan_limits.dart';
+import '../models/user_tier.dart';
 
 /// Plan Guard Result
 /// 
@@ -301,18 +302,42 @@ class PlanGuard {
     }
   }
 
-  /// Check if user can make video calls
-  Future<PlanGuardResult> canMakeVideoCall() async {
+  /// Voice calls start at Premium (Silver). Basic and Free are blocked.
+  Future<PlanGuardResult> canMakeVoiceCall() async {
     try {
       final limits = await _planLimitsService.getPlanLimits(forceRefresh: true);
-
-      if (limits.features.videoCalls) {
+      final tier = _tierOf(limits);
+      if (limits.features.voiceCalls ||
+          tier == UserTier.silder ||
+          tier == UserTier.golden) {
         return PlanGuardResult.allowed();
       }
 
       return PlanGuardResult.denied(
-        message: 'Video calls are a Golden feature. Upgrade to connect face-to-face!',
-        errorCode: 'FEATURE_NOT_AVAILABLE',
+        message: 'Voice calls require Premium. Upgrade to talk live.',
+        errorCode: 'VOICE_CALL_REQUIRES_PREMIUM',
+        featureName: 'voice_calls',
+        upgradeRequired: true,
+      );
+    } catch (e) {
+      return PlanGuardResult.denied(
+        message: 'Unable to verify feature access. Please try again.',
+        upgradeRequired: false,
+      );
+    }
+  }
+
+  /// Video calls are Golden only. Silver still sees the button, then this prompt.
+  Future<PlanGuardResult> canMakeVideoCall() async {
+    try {
+      final limits = await _planLimitsService.getPlanLimits(forceRefresh: true);
+      if (_tierOf(limits) == UserTier.golden) {
+        return PlanGuardResult.allowed();
+      }
+
+      return PlanGuardResult.denied(
+        message: 'Video calls require Golden. Upgrade to connect face-to-face.',
+        errorCode: 'VIDEO_CALL_REQUIRES_GOLDEN',
         featureName: 'video_calls',
         upgradeRequired: true,
       );
@@ -388,6 +413,18 @@ class PlanGuard {
     } catch (e) {
       return null;
     }
+  }
+
+  UserTier _tierOf(PlanLimits limits) {
+    final raw = limits.planInfo.tier?.toLowerCase().trim();
+    if (raw == null || raw.isEmpty || raw == 'free') {
+      if (!limits.planInfo.isPremium) return UserTier.basid;
+      return userTierFromPlan(
+        planId: limits.planInfo.planId,
+        planName: limits.planInfo.planName,
+      );
+    }
+    return userTierFromApiKey(raw);
   }
 
   /// Record usage after successful action (optimistic local update)

@@ -30,7 +30,12 @@ void main() {
         body: ChatKeyboardInsetPad(
           onBottomInsetChanged: onBottomInsetChanged,
           onInsetTick: onInsetTick,
-          child: child ?? const SizedBox.expand(),
+          child: Column(
+            children: [
+              const TextField(autofocus: true),
+              Expanded(child: child ?? const SizedBox.shrink()),
+            ],
+          ),
         ),
       ),
     );
@@ -42,6 +47,29 @@ void main() {
     );
   }
 
+  testWidgets('ignores a stale inset when the composer is not focused',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChatKeyboardInsetPad(
+            child: const SizedBox.expand(),
+          ),
+        ),
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              viewInsets: const EdgeInsets.only(bottom: 320),
+            ),
+            child: child!,
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    expect(padOf(tester).padding, EdgeInsets.zero);
+  });
+
   testWidgets('pads viewInsets.bottom over transitionModal', (tester) async {
     final insets = <double>[];
     await tester.pumpWidget(host(inset: 0, onBottomInsetChanged: insets.add));
@@ -50,7 +78,7 @@ void main() {
     expect(padOf(tester).curve, AppAnimations.curveDefault);
 
     await tester.pumpWidget(host(inset: 280, onBottomInsetChanged: insets.add));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(padOf(tester).padding, const EdgeInsets.only(bottom: 280));
     expect(insets, containsAll([0, 280]));
   });
@@ -58,13 +86,14 @@ void main() {
   testWidgets('Reduce Motion snaps padding', (tester) async {
     await tester.pumpWidget(host(inset: 0, reduceMotion: true));
     await tester.pumpWidget(host(inset: 200, reduceMotion: true));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(padOf(tester).duration, Duration.zero);
     expect(padOf(tester).padding, const EdgeInsets.only(bottom: 200));
   });
 
   testWidgets('does not add a second inset on top of Scaffold', (tester) async {
     await tester.pumpWidget(host(inset: 120));
+    await tester.pumpAndSettle();
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.resizeToAvoidBottomInset, isFalse);
     expect(padOf(tester).padding, const EdgeInsets.only(bottom: 120));

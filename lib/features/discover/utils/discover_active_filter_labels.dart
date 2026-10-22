@@ -68,6 +68,7 @@ class DiscoverActiveFilterLabels {
       return value.where((e) => e != null && e.toString().trim().isNotEmpty).length;
     }
     if (value is String) {
+      if (value.trim().toLowerCase() == 'all') return 0;
       return value
           .split(',')
           .map((part) => part.trim())

@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/animation_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../features/chat/utils/chat_reaction_summary.dart';
 
-/// Theme-aware reaction chips under a bubble (CHAT-FEAT-003 / CHAT-UX-005).
-class ChatReactionChips extends StatelessWidget {
+/// Compact reaction pill that overlaps the bottom edge of a bubble.
+class ChatReactionChips extends StatefulWidget {
   final Map<String, int> counts;
   final String? mine;
   final bool isSent;
+
+  /// The other person in this 1:1 thread. Used by the long-press list.
+  final String peerName;
   final ValueChanged<String>? onTap;
 
   const ChatReactionChips({
@@ -18,79 +20,24 @@ class ChatReactionChips extends StatelessWidget {
     required this.counts,
     this.mine,
     this.isSent = false,
+    this.peerName = '',
     this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (counts.isEmpty) return const SizedBox.shrink();
-
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final ordered = <MapEntry<String, int>>[
-      for (final emoji in ChatReactionSummary.allowed)
-        if ((counts[emoji] ?? 0) > 0) MapEntry(emoji, counts[emoji]!),
-      ...counts.entries.where(
-        (e) => !ChatReactionSummary.allowed.contains(e.key) && e.value > 0,
-      ),
-    ];
-
-    return Padding(
-      padding: EdgeInsets.only(
-        top: AppSpacing.spacingXS,
-        left: isSent ? 0 : AppSpacing.spacingLG,
-        right: isSent ? AppSpacing.spacingLG : 0,
-      ),
-      child: Wrap(
-        alignment: isSent ? WrapAlignment.end : WrapAlignment.start,
-        spacing: AppSpacing.spacingXS,
-        runSpacing: AppSpacing.spacingXS,
-        children: [
-          for (final entry in ordered)
-            _Chip(
-              key: ValueKey(entry.key),
-              emoji: entry.key,
-              count: entry.value,
-              selected: mine == entry.key,
-              isDark: isDark,
-              textStyle: theme.textTheme.labelSmall,
-              onTap: onTap,
-            ),
-        ],
-      ),
-    );
-  }
+  State<ChatReactionChips> createState() => _ChatReactionChipsState();
 }
 
-class _Chip extends StatefulWidget {
-  final String emoji;
-  final int count;
-  final bool selected;
-  final bool isDark;
-  final TextStyle? textStyle;
-  final ValueChanged<String>? onTap;
-
-  const _Chip({
-    super.key,
-    required this.emoji,
-    required this.count,
-    required this.selected,
-    required this.isDark,
-    required this.textStyle,
-    required this.onTap,
-  });
-
-  @override
-  State<_Chip> createState() => _ChipState();
-}
-
-class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
+class _ChatReactionChipsState extends State<ChatReactionChips>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scale;
+  int _lastTotal = 0;
 
   @override
   void initState() {
     super.initState();
+    _lastTotal = _total;
     _controller = AnimationController(
       vsync: this,
       duration: AppAnimations.chatReactionPop,
@@ -104,27 +51,30 @@ class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
         curve: AppAnimations.chatReactionPopCurve,
       ),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _controller.duration = AppAnimations.chatReactionPopDuration(context);
-      if (_controller.duration == Duration.zero) {
-        _controller.value = 1;
-      } else {
-        _controller.forward();
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _play());
   }
 
-  @override
-  void didUpdateWidget(_Chip oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.count == widget.count) return;
+  int get _total =>
+      widget.counts.values.fold<int>(0, (sum, count) => sum + count);
+
+  void _play() {
+    if (!mounted) return;
     _controller.duration = AppAnimations.chatReactionPopDuration(context);
     if (_controller.duration == Duration.zero) {
       _controller.value = 1;
-      return;
+    } else {
+      _controller.forward(from: 0);
     }
-    _controller.forward(from: 0);
+  }
+
+  @override
+  void didUpdateWidget(ChatReactionChips oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = _total;
+    if (next > _lastTotal) {
+      _play();
+    }
+    _lastTotal = next;
   }
 
   @override
@@ -133,52 +83,168 @@ class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  List<MapEntry<String, int>> get _ordered {
+    return <MapEntry<String, int>>[
+      for (final emoji in ChatReactionSummary.allowed)
+        if ((widget.counts[emoji] ?? 0) > 0) MapEntry(emoji, widget.counts[emoji]!),
+      ...widget.counts.entries.where(
+        (e) => !ChatReactionSummary.allowed.contains(e.key) && e.value > 0,
+      ),
+    ];
+  }
+
+  List<String> _namesFor(String emoji, int count) {
+    final names = <String>[];
+    final mine = widget.mine == emoji;
+    if (mine) names.add('You');
+    final others = count - (mine ? 1 : 0);
+    if (others > 0) {
+      final peer = widget.peerName.trim();
+      names.add(peer.isEmpty ? 'Them' : peer);
+    }
+    return names;
+  }
+
+  Future<void> _showWho() async {
+    final entries = _ordered;
+    if (entries.isEmpty || !mounted) return;
+    final theme = Theme.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.spacingLG,
+              0,
+              AppSpacing.spacingLG,
+              AppSpacing.spacingLG,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Reactions',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.spacingSM),
+                for (final entry in entries)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.spacingXS,
+                    ),
+                    child: Row(
+                      children: [
+                        Text(entry.key, style: theme.textTheme.titleMedium),
+                        const SizedBox(width: AppSpacing.spacingMD),
+                        Expanded(
+                          child: Text(
+                            _namesFor(entry.key, entry.value).join(', '),
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ordered = _ordered;
+    if (ordered.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final canvas = theme.scaffoldBackgroundColor;
+    final fill = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+
+    final pill = ScaleTransition(
+      key: const ValueKey('chat-reaction-pill'),
+      scale: _scale,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onLongPress: _showWho,
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: canvas, width: 2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < ordered.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 4),
+                  _EmojiBit(
+                    emoji: ordered[i].key,
+                    count: ordered[i].value,
+                    selected: widget.mine == ordered[i].key,
+                    onTap: widget.onTap,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return pill;
+  }
+}
+
+class _EmojiBit extends StatelessWidget {
+  final String emoji;
+  final int count;
+  final bool selected;
+  final ValueChanged<String>? onTap;
+
+  const _EmojiBit({
+    required this.emoji,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final border = widget.selected
-        ? theme.colorScheme.primary
-        : (widget.isDark
-            ? AppColors.borderMediumDark
-            : AppColors.borderMediumLight);
-    final fill = widget.selected
-        ? theme.colorScheme.primary.withValues(alpha: 0.16)
-        : (widget.isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
-
+    final label = count > 1 ? '$emoji $count' : emoji;
     return Semantics(
-      button: widget.onTap != null,
-      selected: widget.selected,
-      label: 'React ${widget.emoji}, ${widget.count}',
-      child: ScaleTransition(
-        key: ValueKey('chat-reaction-pop-${widget.emoji}'),
-        scale: _scale,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap == null ? null : () => widget.onTap!(widget.emoji),
-            borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.spacingSM,
-                  vertical: AppSpacing.spacingXS,
-                ),
-                decoration: BoxDecoration(
-                  color: fill,
-                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                  border: Border.all(color: border),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${widget.emoji} ${widget.count}',
-                  style: (widget.textStyle ?? theme.textTheme.labelSmall)?.copyWith(
-                    color: widget.isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-              ),
+      button: onTap != null,
+      selected: selected,
+      label: count > 1 ? 'React $emoji, $count' : 'React $emoji',
+      child: InkWell(
+        onTap: onTap == null ? null : () => onTap!(emoji),
+        borderRadius: BorderRadius.circular(99),
+        child: AnimatedContainer(
+          duration: AppAnimations.chatReactionPopDuration(context),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: selected
+                ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Text(
+            label,
+            key: ValueKey('chat-reaction-pop-$emoji'),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ),

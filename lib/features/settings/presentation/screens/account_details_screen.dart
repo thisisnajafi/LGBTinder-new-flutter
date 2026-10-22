@@ -7,6 +7,7 @@ import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/app_settings_detail.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../screens/settings/account_management_screen.dart';
+import '../../../../screens/settings/change_password_screen.dart';
 import '../../../../core/utils/country_phone_utils.dart';
 import '../../../profile/providers/profile_page_cache_provider.dart';
 
@@ -36,6 +37,15 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
       context,
       MaterialPageRoute<void>(
         builder: (_) => const AccountManagementScreen(),
+      ),
+    );
+  }
+
+  void _openChangePassword() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const ChangePasswordScreen(),
       ),
     );
   }
@@ -88,7 +98,7 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                       iconPath: AppIcons.lockOutline,
                       title: 'Password',
                       subtitle: 'Change your sign-in password',
-                      onTap: _openAccountManagement,
+                      onTap: _openChangePassword,
                       trailing: Text(
                         '••••••••',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -102,18 +112,14 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                     ),
                   ],
                 ),
-                const AppSettingsSectionFootnote(
-                  text:
-                      'To update your email or password, open account management.',
-                ),
                 const SizedBox(height: AppSpacing.spacingXL),
                 PremiumSettingsGroup(
                   title: 'Management',
                   children: [
                     PremiumSettingsTile(
                       iconPath: AppIcons.setting,
-                      title: 'Account management',
-                      subtitle: 'Change email and password',
+                      title: 'Email & account settings',
+                      subtitle: 'Change your email and account options',
                       onTap: _openAccountManagement,
                     ),
                   ],

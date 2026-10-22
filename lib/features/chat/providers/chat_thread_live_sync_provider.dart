@@ -8,6 +8,7 @@ import '../data/models/message.dart';
 import '../utils/chat_thread_remote_ingest.dart';
 import '../utils/chat_thread_row_map.dart';
 import '../utils/chat_unseen_incoming.dart';
+import 'chat_list_preview_provider.dart';
 import 'chat_local_sync_provider.dart';
 import 'chat_providers.dart';
 import 'chat_pusher_providers.dart';
@@ -85,6 +86,9 @@ final chatThreadLiveSyncProvider = Provider.autoDispose.family<void, int>((
       message: message,
       peerUserId: peerUserId,
       currentUserId: me,
+      conversationReadable: ref
+          .read(chatListPreviewProvider)
+          .peerMessagesReadable(peerUserId),
     );
     final fromPeer = message.senderId == peerUserId;
     final nearBottom = ref.read(isAtBottomProvider(peerUserId));

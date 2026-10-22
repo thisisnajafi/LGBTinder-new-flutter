@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../../core/constants/api_endpoints.dart';
 import '../../core/services/app_logger.dart';
 import 'background_auth_store.dart';
+import 'background_message_display.dart';
 import 'notification_navigation.dart';
 import 'token_storage_service.dart';
 
@@ -90,21 +91,87 @@ class NotificationQuickActions {
   }
 }
 
+/// One group for every missed-call row so the shade summary keeps Call back.
+const String kMissedCallGroupKey = 'missed_calls';
+
+const List<AndroidNotificationAction> kMissedCallActions = [
+  AndroidNotificationAction(
+    kNotificationActionCallBack,
+    'Call back',
+    showsUserInterface: true,
+    cancelNotification: false,
+    contextual: false,
+  ),
+];
+
 List<AndroidNotificationAction>? trayActionsFor(String type) {
   if (type == 'message' || type == 'chat' || type == 'new_message') {
     return messageTrayActions();
   }
   if (type == 'missed_call') {
-    return const [
-      AndroidNotificationAction(
-        kNotificationActionCallBack,
-        'Call back',
-        showsUserInterface: true,
-        cancelNotification: true,
-      ),
-    ];
+    return kMissedCallActions;
   }
   return null;
+}
+
+/// Missed-call shade row. The group summary uses the same action so expanding
+/// the stack does not drop Call back.
+AndroidNotificationDetails missedCallAndroidDetails({
+  required String title,
+  required String body,
+  required String tag,
+  AndroidBitmap<Object>? largeIcon,
+  bool summary = false,
+}) {
+  return AndroidNotificationDetails(
+    kLgbtfinderCallsChannelId,
+    notificationChannelLabel(kLgbtfinderCallsChannelId),
+    channelDescription: notificationChannelDescription(kLgbtfinderCallsChannelId),
+    importance: Importance.max,
+    priority: Priority.max,
+    category: AndroidNotificationCategory.missedCall,
+    icon: '@drawable/ic_stat_lgbtfinder',
+    color: const Color(0xFFEC4899),
+    largeIcon: summary ? null : largeIcon,
+    tag: summary ? null : tag,
+    groupKey: kMissedCallGroupKey,
+    setAsGroupSummary: summary,
+    playSound: !summary,
+    enableVibration: !summary,
+    onlyAlertOnce: false,
+    autoCancel: true,
+    styleInformation: summary
+        ? InboxStyleInformation(
+            [body],
+            contentTitle: title,
+            summaryText: 'Missed calls',
+          )
+        : BigTextStyleInformation(body),
+    actions: kMissedCallActions,
+  );
+}
+
+/// Group header that still carries Call back for the latest missed call.
+Future<void> showMissedCallGroupSummary({
+  required FlutterLocalNotificationsPlugin plugin,
+  required String title,
+  required String body,
+  required String payload,
+}) async {
+  await plugin.show(
+    kMissedCallGroupKey.hashCode,
+    title,
+    body,
+    NotificationDetails(
+      android: missedCallAndroidDetails(
+        title: title,
+        body: body,
+        tag: kMissedCallGroupKey,
+        summary: true,
+      ),
+    ),
+    payload: payload,
+  );
 }
 
 List<AndroidNotificationAction> messageTrayActions() {

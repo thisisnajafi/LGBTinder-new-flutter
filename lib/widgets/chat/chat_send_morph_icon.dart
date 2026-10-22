@@ -23,7 +23,10 @@ class ChatSendMorphIcon extends StatelessWidget {
     final animate = AppAnimations.animationsEnabled(context);
     final assetPath = isEditing
         ? AppIcons.tickCircle
-        : (hasText ? AppIcons.send : AppIcons.microphone);
+        : (hasText ? AppIcons.send2 : AppIcons.microphone);
+    final mirrorForRtl = hasText &&
+        !isEditing &&
+        Directionality.of(context) == TextDirection.rtl;
     final keyName = isEditing ? 'check' : (hasText ? 'send' : 'mic');
     return AnimatedSwitcher(
       duration: AppAnimations.chatSendMorphDuration(context),
@@ -49,11 +52,14 @@ class ChatSendMorphIcon extends StatelessWidget {
           child: ScaleTransition(scale: scale, child: child),
         );
       },
-      child: AppSvgIcon(
+      child: Transform.flip(
         key: ValueKey(keyName),
-        assetPath: assetPath,
-        size: size,
-        color: color,
+        flipX: mirrorForRtl,
+        child: AppSvgIcon(
+          assetPath: assetPath,
+          size: size,
+          color: color,
+        ),
       ),
     );
   }

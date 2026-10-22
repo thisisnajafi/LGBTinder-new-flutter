@@ -35,12 +35,14 @@ class ChatPusherLifecycleState {
   final int? userId;
   final int? activeConversationId;
   final int? activePeerUserId;
+  final int consecutiveReconnectFailures;
 
   const ChatPusherLifecycleState({
     this.isReady = false,
     this.userId,
     this.activeConversationId,
     this.activePeerUserId,
+    this.consecutiveReconnectFailures = 0,
   });
 
   ChatPusherLifecycleState copyWith({
@@ -48,6 +50,7 @@ class ChatPusherLifecycleState {
     int? userId,
     int? activeConversationId,
     int? activePeerUserId,
+    int? consecutiveReconnectFailures,
     bool clearConversation = false,
   }) {
     return ChatPusherLifecycleState(
@@ -59,6 +62,8 @@ class ChatPusherLifecycleState {
       activePeerUserId: clearConversation
           ? null
           : (activePeerUserId ?? this.activePeerUserId),
+      consecutiveReconnectFailures: consecutiveReconnectFailures ??
+          this.consecutiveReconnectFailures,
     );
   }
 }
@@ -146,6 +151,7 @@ class ChatPusherLifecycleNotifier extends Notifier<ChatPusherLifecycleState> {
       userId: state.userId,
       activeConversationId: nextConversationId,
       activePeerUserId: peerUserId,
+      consecutiveReconnectFailures: state.consecutiveReconnectFailures,
     );
     ActiveChatPeerBridge.clearPendingPeer();
     unawaited(
@@ -188,7 +194,11 @@ class ChatPusherLifecycleNotifier extends Notifier<ChatPusherLifecycleState> {
     if (state.userId != null && state.userId != userId) {
       _clearActiveChat();
     }
-    state = state.copyWith(isReady: true, userId: userId);
+    state = state.copyWith(
+      isReady: true,
+      userId: userId,
+      consecutiveReconnectFailures: 0,
+    );
   }
 
   Set<int> presencePeerIdsForReconnect() {
@@ -364,6 +374,9 @@ class ChatPusherLifecycleNotifier extends Notifier<ChatPusherLifecycleState> {
       }
       setConnectedUser(userId);
     } catch (e) {
+      state = state.copyWith(
+        consecutiveReconnectFailures: state.consecutiveReconnectFailures + 1,
+      );
       AppLogger.warning(
         'ChatPusherLifecycle reconnect failed',
         tag: ChatPusherLog.tag,

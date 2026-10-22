@@ -1,10 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/responsive/responsive.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
-import '../../core/utils/app_icons.dart';
 import '../../features/chat/utils/chat_voice_bubble_layout.dart';
 import 'voice_waveform_bars.dart';
 
@@ -39,91 +40,74 @@ class VoiceSendingPlaceholder extends StatelessWidget {
           context,
           fraction: 0.72,
         );
-        final width = ChatVoiceBubbleLayout.width(
+        final scaled = ChatVoiceBubbleLayout.width(
           durationSeconds: durationSeconds,
           maxWidth: cap,
         );
+        final width = math.min(cap, math.max(scaled, 220)).toDouble();
 
         return SizedBox(
           width: width,
           child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: color.withValues(alpha: 0.9),
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 36,
+                height: 36,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: color.withValues(alpha: 0.9),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.spacingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                VoiceWaveformBars(
+              const SizedBox(width: AppSpacing.spacingSM),
+              Expanded(
+                child: VoiceWaveformBars(
                   active: true,
                   color: color,
-                  height: 28,
+                  height: 22,
                 ),
-                const SizedBox(height: AppSpacing.spacingSM),
-                Row(
-                  children: [
-                    if (durationSeconds != null)
-                      Expanded(
-                        child: Text(
-                          _formatDuration(durationSeconds!),
-                          style: AppTypography.labelSmall.copyWith(
-                            color: color.withValues(alpha: 0.72),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      )
-                    else
-                      const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.spacingSM + 2,
-                        vertical: AppSpacing.spacingXS + 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: chipFill,
-                        borderRadius: BorderRadius.circular(AppRadius.radiusRound),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AppSvgIcon(
-                            assetPath: AppIcons.microphone,
-                            size: 12,
-                            color: color.withValues(alpha: 0.85),
-                          ),
-                          const SizedBox(width: AppSpacing.spacingXS),
-                          Text(
-                            'Sending',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: color.withValues(alpha: 0.85),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              ),
+              if (durationSeconds != null) ...[
+                const SizedBox(width: AppSpacing.spacingSM),
+                Text(
+                  _formatDuration(durationSeconds!),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: color.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
-            ),
+              const SizedBox(width: AppSpacing.spacingSM),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.spacingSM,
+                  vertical: AppSpacing.spacingXS,
+                ),
+                decoration: BoxDecoration(
+                  color: chipFill,
+                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                ),
+                child: Text(
+                  'Sending',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: color.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
         );
       },
     );

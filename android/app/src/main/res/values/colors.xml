@@ -3,4 +3,10 @@
     <!-- Pride gradient blue band — matches splash_gradient.xml centerColor -->
     <color name="splash_background">#457B9D</color>
     <color name="notification_color">#EC4899</color>
+    <!-- Overrides flutter_callkit_incoming accept/decline so the lock-screen
+         actions use the LGBTFinder rose and violet accents. -->
+    <color name="accept">#8B5CF6</color>
+    <color name="accept_ripple">#C4B5FD</color>
+    <color name="decline">#E11D48</color>
+    <color name="decline_ripple">#FDA4AF</color>
 </resources>

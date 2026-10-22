@@ -70,6 +70,12 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
   String? _boundChannel;
   int? _boundRemoteUid;
 
+  /// One key for the local video so the view is moved, not rebuilt, when the
+  /// remote joins and local goes from full screen to the PiP. A rebuilt view
+  /// disposes the shared controller's texture after the new one starts, which
+  /// left the caller's PiP black.
+  final GlobalKey _localVideoKey = GlobalKey(debugLabel: 'agora-local-video');
+
   bool get _hasRemote => widget.remoteUid != null && widget.remoteUid! > 0;
 
   @override
@@ -162,6 +168,7 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
           _DraggableLocalPip(
             onFlipCamera: widget.onFlipCamera,
             localStage: _buildLocalStage(compact: true),
+            showLocalMuteBadge: true,
           ),
       ],
     );
@@ -170,12 +177,22 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
   Widget _buildMainStage() {
     if (_hasRemote) {
       if (widget.remoteCameraOn && _remoteController != null) {
-        return ColoredBox(
-          color: Colors.black,
-          child: RepaintBoundary(
-            key: const ValueKey('agora-remote-video'),
-            child: AgoraVideoView(controller: _remoteController!),
-          ),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(
+              color: Colors.black,
+              child: RepaintBoundary(
+                key: const ValueKey('agora-remote-video'),
+                child: AgoraVideoView(controller: _remoteController!),
+              ),
+            ),
+            const Positioned(
+              left: 12,
+              bottom: 12,
+              child: CallParticipantMuteBadge(local: false),
+            ),
+          ],
         );
       }
       return CallStagePlaceholder(
@@ -190,12 +207,23 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
 
   Widget _buildLocalStage({required bool compact}) {
     if (widget.localCameraOn && _localController != null) {
-      return ColoredBox(
-        color: Colors.black,
-        child: RepaintBoundary(
-          key: const ValueKey('agora-local-video'),
-          child: AgoraVideoView(controller: _localController!),
-        ),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(
+            color: Colors.black,
+            child: RepaintBoundary(
+              key: _localVideoKey,
+              child: AgoraVideoView(controller: _localController!),
+            ),
+          ),
+          if (!compact)
+            const Positioned(
+              left: 12,
+              bottom: 12,
+              child: CallParticipantMuteBadge(local: true),
+            ),
+        ],
       );
     }
     return CallStagePlaceholder(
@@ -213,10 +241,12 @@ class _AgoraCallVideoLayerState extends State<AgoraCallVideoLayer> {
 class _DraggableLocalPip extends StatefulWidget {
   final VoidCallback? onFlipCamera;
   final Widget localStage;
+  final bool showLocalMuteBadge;
 
   const _DraggableLocalPip({
     required this.localStage,
     this.onFlipCamera,
+    this.showLocalMuteBadge = false,
   });
 
   @override
@@ -404,7 +434,21 @@ class _DraggableLocalPipState extends State<_DraggableLocalPip>
                     ),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: widget.localStage,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      widget.localStage,
+                      if (widget.showLocalMuteBadge)
+                        const Positioned(
+                          left: 6,
+                          bottom: 6,
+                          child: CallParticipantMuteBadge(
+                            local: true,
+                            compact: true,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

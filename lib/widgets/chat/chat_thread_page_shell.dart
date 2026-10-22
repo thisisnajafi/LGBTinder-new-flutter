@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/spacing_constants.dart';
 import '../../features/calls/data/models/call.dart';
 import '../../features/chat/presentation/widgets/chat_muted_banner.dart';
 import '../../features/chat/providers/chat_pinned_banner_provider.dart';
@@ -164,17 +165,19 @@ class ChatThreadPageShell extends ConsumerWidget {
                       onBack: onLeave,
                       onHeaderTap: onHeaderTap,
                       onInfo: onHeaderTap,
-                      onCall: () {
-                        startOutgoingCall(
-                          context: context,
-                          ref: ref,
-                          recipientId: peerUserId,
-                          recipientName: peerDisplayName,
-                          recipientAvatarUrl: peerCallPhotoUrl,
-                          type: OutgoingCallType.voice,
-                        );
-                      },
-                      onVideoCall: onVideoCall,
+                      onCall: peerIsOfficial
+                          ? null
+                          : () {
+                              startOutgoingCall(
+                                context: context,
+                                ref: ref,
+                                recipientId: peerUserId,
+                                recipientName: peerDisplayName,
+                                recipientAvatarUrl: peerCallPhotoUrl,
+                                type: OutgoingCallType.voice,
+                              );
+                            },
+                      onVideoCall: peerIsOfficial ? null : onVideoCall,
                     ),
                     const ChatConnectionBanner(),
                     if (muted) const ChatMutedBanner(),
@@ -214,17 +217,20 @@ class ChatThreadPageShell extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          ChatComposerBar(
-                            peerUserId: peerUserId,
-                            onSend: onSend,
-                            onMediaTap: onMediaTap,
-                            onMediaLongPress: onMediaLongPress,
-                            onVoiceRecordStart: onVoiceRecordStart,
-                            onVoiceRecordSend: onVoiceRecordSend,
-                            onVoiceRecordCancel: onVoiceRecordCancel,
-                            onTextChanged: onTextChanged,
-                            onFocusChange: onFocusChange,
-                          ),
+                          if (peerIsOfficial)
+                            const _OfficialRepliesDisabledNote()
+                          else
+                            ChatComposerBar(
+                              peerUserId: peerUserId,
+                              onSend: onSend,
+                              onMediaTap: onMediaTap,
+                              onMediaLongPress: onMediaLongPress,
+                              onVoiceRecordStart: onVoiceRecordStart,
+                              onVoiceRecordSend: onVoiceRecordSend,
+                              onVoiceRecordCancel: onVoiceRecordCancel,
+                              onTextChanged: onTextChanged,
+                              onFocusChange: onFocusChange,
+                            ),
                         ],
                       ),
                     ),
@@ -233,6 +239,33 @@ class ChatThreadPageShell extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfficialRepliesDisabledNote extends StatelessWidget {
+  const _OfficialRepliesDisabledNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.spacingLG,
+          AppSpacing.spacingSM,
+          AppSpacing.spacingLG,
+          AppSpacing.spacingMD,
+        ),
+        child: Text(
+          'This is an official account. Replies are disabled.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
         ),
       ),
     );

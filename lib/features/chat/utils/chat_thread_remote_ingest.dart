@@ -30,12 +30,14 @@ class ChatThreadRemoteIngest {
     required Message message,
     required int peerUserId,
     int? currentUserId,
+    bool conversationReadable = false,
   }) {
     thread.ensureIndex();
     final mapped = ChatThreadRowMap.fromMessage(
       message,
       peerUserId: peerUserId,
       currentUserId: currentUserId,
+      conversationReadable: conversationReadable,
       replyPreview: (id) =>
           ChatThreadRowMap.replyPreviewIn(thread.rows, id),
     );

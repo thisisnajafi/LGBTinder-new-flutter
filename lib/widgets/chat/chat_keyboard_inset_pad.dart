@@ -29,6 +29,36 @@ class _ChatKeyboardInsetPadState extends State<ChatKeyboardInsetPad> {
   double _lastReported = -1;
   BoxConstraints? _lastTickConstraints;
 
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocus);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_onFocus);
+    super.dispose();
+  }
+
+  void _onFocus() {
+    if (!mounted) return;
+    _reportInset(_bottomInset());
+    setState(() {});
+  }
+
+  bool _composerFocused() {
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context == null) return false;
+    return context.widget is EditableText ||
+        context.findAncestorStateOfType<EditableTextState>() != null;
+  }
+
+  double _bottomInset() {
+    if (!_composerFocused()) return 0;
+    return MediaQuery.viewInsetsOf(context).bottom;
+  }
+
   void _reportInset(double bottom) {
     if (bottom == _lastReported) return;
     _lastReported = bottom;
@@ -46,12 +76,12 @@ class _ChatKeyboardInsetPadState extends State<ChatKeyboardInsetPad> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reportInset(MediaQuery.viewInsetsOf(context).bottom);
+    _reportInset(_bottomInset());
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = _bottomInset();
     final reduceMotion = !AppAnimations.animationsEnabled(context);
     return AnimatedPadding(
       key: const ValueKey('chat-keyboard-inset-pad'),

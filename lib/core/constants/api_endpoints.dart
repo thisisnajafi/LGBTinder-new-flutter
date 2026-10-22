@@ -41,6 +41,8 @@ class ApiEndpoints {
   static const String googleAuth = '/auth/google';
   static const String googleAuthUrl = '/auth/google/url';
   static const String googleCallback = '/auth/google/callback';
+  static const String appleAuth = '/auth/apple';
+  static const String authAppleUnlink = '/auth/apple/unlink';
   static const String authLinkedAccounts = '/auth/linked-accounts';
   static const String authGoogleUnlink = '/auth/google/unlink';
 

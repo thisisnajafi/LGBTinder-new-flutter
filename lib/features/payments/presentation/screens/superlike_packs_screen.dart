@@ -103,7 +103,10 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
       final launched = await billing.purchaseConsumableProduct(productId);
       if (!launched) {
         tracked.cancel();
-        throw Exception('Could not start Google Play purchase');
+        throw Exception(
+          billing.lastFailureMessage ??
+              'Could not start the Google Play purchase. Please try again.',
+        );
       }
 
       final grant = await tracked.result;

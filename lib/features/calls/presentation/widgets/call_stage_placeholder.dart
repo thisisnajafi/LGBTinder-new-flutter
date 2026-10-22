@@ -35,10 +35,18 @@ class CallStagePlaceholder extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final avatarSize = compact ? 48.0 : 120.0;
+    final localMuted = ref.watch(isMutedProvider);
+    final remoteMuted = ref.watch(agoraRtcSessionProvider).remoteAudioMuted;
+    final muted = switch (speakingTarget) {
+      CallSpeakingTarget.local => localMuted,
+      CallSpeakingTarget.remote => remoteMuted,
+      CallSpeakingTarget.none => false,
+    };
     final speaking = switch (speakingTarget) {
       CallSpeakingTarget.local =>
-        ref.watch(localSpeakingProvider) && !ref.watch(isMutedProvider),
-      CallSpeakingTarget.remote => ref.watch(remoteSpeakingProvider),
+        ref.watch(localSpeakingProvider) && !localMuted,
+      CallSpeakingTarget.remote =>
+        ref.watch(remoteSpeakingProvider) && !remoteMuted,
       CallSpeakingTarget.none => false,
     };
     final avatar = ClipOval(
@@ -72,10 +80,21 @@ class CallStagePlaceholder extends ConsumerWidget {
                   avatarSize: avatarSize,
                 )
               else
-                CallSpeakingRing(
-                  active: speaking,
-                  diameter: avatarSize,
-                  child: avatar,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CallSpeakingRing(
+                      active: speaking,
+                      diameter: avatarSize,
+                      child: avatar,
+                    ),
+                    if (muted && !compact)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: CallMutedMicBadge(compact: compact),
+                      ),
+                  ],
                 ),
               SizedBox(
                 height: compact ? AppSpacing.spacingXS : AppSpacing.spacingMD,
@@ -102,5 +121,56 @@ class CallStagePlaceholder extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Muted-microphone mark shown on a call participant.
+class CallMutedMicBadge extends StatelessWidget {
+  final bool compact;
+
+  const CallMutedMicBadge({super.key, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = compact ? 22.0 : 36.0;
+    return Semantics(
+      label: 'Microphone muted',
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: AppColors.feedbackError.withValues(alpha: 0.92),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: compact ? 1 : 2),
+        ),
+        alignment: Alignment.center,
+        child: AppSvgIcon(
+          assetPath: AppIcons.microphoneSlash,
+          size: compact ? 12 : 18,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+/// Watches local or remote mute and paints [CallMutedMicBadge].
+class CallParticipantMuteBadge extends ConsumerWidget {
+  final bool local;
+  final bool compact;
+
+  const CallParticipantMuteBadge({
+    super.key,
+    required this.local,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final muted = local
+        ? ref.watch(isMutedProvider)
+        : ref.watch(agoraRtcSessionProvider).remoteAudioMuted;
+    if (!muted) return const SizedBox.shrink();
+    return CallMutedMicBadge(compact: compact);
   }
 }

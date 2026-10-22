@@ -3,11 +3,13 @@ class CallInitiateException implements Exception {
   final String message;
   final bool upgradeRequired;
   final bool matchRequired;
+  final String? errorCode;
 
   const CallInitiateException(
     this.message, {
     this.upgradeRequired = false,
     this.matchRequired = false,
+    this.errorCode,
   });
 
   bool get alreadyInCall {

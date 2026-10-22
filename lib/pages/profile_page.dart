@@ -427,12 +427,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         builder: (context) => PremiumDetailScaffold(
           title: 'My Profile',
           onBack: () => Navigator.pop(context),
-          action: IconButton(
-            icon: AppSvgIcon(
-              assetPath: AppIcons.edit,
-              size: 24,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          action: CompactHeaderIconButton(
+            iconPath: AppIcons.edit,
+            semanticLabel: 'Edit profile',
+            tooltip: 'Edit profile',
             onPressed: _openProfileEdit,
           ),
           body: OwnProfileView(

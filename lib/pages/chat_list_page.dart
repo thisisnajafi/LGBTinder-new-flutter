@@ -18,6 +18,7 @@ import '../core/widgets/staggered_list_item.dart';
 import '../widgets/chat/chat_connection_banner.dart';
 import '../widgets/chat/chat_matches_row.dart';
 import '../features/matching/data/models/match.dart';
+import '../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../features/matching/providers/likes_providers.dart';
 import '../features/chat/presentation/widgets/chat_upgrade_widgets.dart';
 import '../widgets/chat/chat_list_item.dart';
@@ -85,6 +86,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   String? _tabletSelectedUserName;
   String? _tabletSelectedAvatarUrl;
   bool _tabletSelectedOfficial = false;
+  bool _tabletSelectedSystemOfficial = false;
 
   @override
   void initState() {
@@ -344,6 +346,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         chat['account_badge']?.toString() == 'official';
   }
 
+  bool _isSystemOfficialChat(Map<String, dynamic> chat) {
+    final raw = chat['is_system_official'];
+    return raw == true || raw == 1 || raw?.toString() == 'true';
+  }
+
   void _handleChatTap(Map<String, dynamic> chat) {
     final isOfficial = _isOfficialChat(chat);
     final isPremium = ref.read(isPremiumProvider);
@@ -361,6 +368,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         _tabletSelectedUserName = _displayNameFromMap(chat);
         _tabletSelectedAvatarUrl = chat['avatar_url'] as String?;
         _tabletSelectedOfficial = isOfficial;
+        _tabletSelectedSystemOfficial = _isSystemOfficialChat(chat);
       });
       return;
     }
@@ -374,6 +382,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         if ((chat['avatar_url'] as String?)?.isNotEmpty == true)
           'avatarUrl': chat['avatar_url'] as String,
         if (isOfficial) 'official': '1',
+        if (_isSystemOfficialChat(chat)) 'systemOfficial': '1',
       },
     ).toString();
     context.push(target);
@@ -542,6 +551,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       _tabletSelectedUserName = null;
       _tabletSelectedAvatarUrl = null;
       _tabletSelectedOfficial = false;
+      _tabletSelectedSystemOfficial = false;
     });
   }
 
@@ -687,14 +697,24 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                         isTyping: chat['is_typing'] == true,
                         isMuted: muted,
                         isPinned: pinned,
-                        hasPlan: hasPlan || isOfficial,
+                        hasPlan: hasPlan,
                         isOfficial: isOfficial,
+                        isMatch: chat['is_match'] == true ||
+                            chat['is_match'] == 1 ||
+                            chat['type']?.toString() == 'match' ||
+                            isOfficial,
                         lastMessageFromMe: chat['last_message_from_me'] == true,
                         lastMessageIsRead: chat['last_message_is_read'] == true,
                         lastMessageIsDelivered:
                             chat['last_message_is_delivered'] == true,
                         highlightQuery: _searchQuery,
                         onTap: () => _handleChatTap(chat),
+                        onAvatarTap: _isSystemOfficialChat(chat)
+                            ? () => OfficialTeamProfilePage.open(
+                                  context,
+                                  userId: userId,
+                                )
+                            : null,
                         onLongPress: () => _showConversationActions(
                           userId: userId,
                           name: name,
@@ -837,7 +857,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
               width: ResponsiveGrid.chatMasterPanelWidth,
               child: PremiumRefreshScope(
                 onRefresh: _refreshMessenger,
-                header: PremiumPageHeader(
+                header: CompactPageHeader(
                   title: 'Messenger',
                   subtitle: _section == _MessengerSection.calls
                       ? 'Voice and video recents'
@@ -867,6 +887,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                       userName: _tabletSelectedUserName,
                       avatarUrl: _tabletSelectedAvatarUrl,
                       isOfficial: _tabletSelectedOfficial,
+                      isSystemOfficial: _tabletSelectedSystemOfficial,
                       embedded: true,
                       onEmbeddedClose: _clearTabletSelection,
                     )
@@ -932,14 +953,10 @@ class _MessengerSearchAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return IconButton(
-      icon: AppSvgIcon(
-        assetPath: AppIcons.search,
-        size: 24,
-        color: theme.colorScheme.onSurface,
-      ),
+    return CompactHeaderIconButton(
+      iconPath: AppIcons.search,
       tooltip: searchOpen ? 'Close search' : 'Search',
+      semanticLabel: searchOpen ? 'Close search' : 'Search',
       onPressed: onPressed,
     );
   }

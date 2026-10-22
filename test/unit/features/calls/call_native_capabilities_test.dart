@@ -32,6 +32,14 @@ void main() {
       manifest.contains('android.permission.USE_FULL_SCREEN_INTENT'),
       isTrue,
     );
+    expect(manifest.contains('android:showWhenLocked="true"'), isTrue);
+    expect(manifest.contains('android:turnScreenOn="true"'), isTrue);
+    expect(
+      manifest.contains(
+        'com.hiennv.flutter_callkit_incoming.CallkitIncomingActivity',
+      ),
+      isTrue,
+    );
     expect(
       manifest.contains('android.permission.FOREGROUND_SERVICE_PHONE_CALL'),
       isTrue,

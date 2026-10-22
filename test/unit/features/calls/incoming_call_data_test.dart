@@ -175,7 +175,7 @@ void main() {
     expect(location, contains('callId=9'));
   });
 
-  test('CallKit subtitle names the call type and the app', () {
+  test('CallKit subtitle names the call type', () {
     const voice = IncomingCallData(
       callId: '1',
       callType: 'audio',
@@ -188,7 +188,7 @@ void main() {
       callerId: 2,
       callerName: 'Alex',
     );
-    expect(voice.callKitSubtitle, 'Incoming voice call · LGBTFinder');
-    expect(video.callKitSubtitle, 'Incoming video call · LGBTFinder');
+    expect(voice.callKitSubtitle, 'Incoming voice call');
+    expect(video.callKitSubtitle, 'Incoming video call');
   });
 }

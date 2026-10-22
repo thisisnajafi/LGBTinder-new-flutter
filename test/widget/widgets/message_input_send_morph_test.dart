@@ -42,7 +42,7 @@ void main() {
       tester
           .widgetList<AppSvgIcon>(find.byType(AppSvgIcon))
           .map((icon) => icon.assetPath),
-      contains(AppIcons.send),
+      contains(AppIcons.send2),
     );
   });
 }

@@ -84,71 +84,107 @@ class _MessageReplyWidgetState extends State<MessageReplyWidget> {
           child: SizedBox(
             height: AppAnimations.chatReplyPreviewHeight,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.spacingLG),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.spacingMD,
+                AppSpacing.spacingXS,
+                AppSpacing.spacingMD,
+                AppSpacing.spacingXS,
+              ),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: surfaceColor,
-                  border: Border(
-                    left: BorderSide(color: borderColor, width: 3),
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  border: Border.all(
+                    color: borderColor.withValues(
+                      alpha: widget.isEditing ? 0.55 : 0.28,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 ),
-                child: Row(
-                  children: [
-                    SizedBox(width: AppSpacing.spacingMD),
-                    if (widget.isEditing) ...[
-                      AppSvgIcon(
-                        key: const ValueKey('chat-edit-pencil'),
-                        assetPath: AppIcons.edit,
-                        size: 18,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusMD),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 3,
                         color: borderColor,
                       ),
-                      SizedBox(width: AppSpacing.spacingSM),
-                    ],
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_name != null)
-                            AppText(
-                              _name!,
-                              style: AppTypography.caption.copyWith(
-                                color: borderColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
+                      SizedBox(width: AppSpacing.spacingMD),
+                      if (widget.isEditing) ...[
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: borderColor.withValues(alpha: 0.16),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: AppSvgIcon(
+                              key: const ValueKey('chat-edit-pencil'),
+                              assetPath: AppIcons.edit,
+                              size: 14,
+                              color: borderColor,
                             ),
-                          if (_name != null && _message != null)
-                            SizedBox(height: AppSpacing.spacingXS),
-                          if (_message != null)
-                            AppText(
-                              _preview(_message!, _type),
-                              style: AppTypography.body.copyWith(
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.spacingSM),
+                      ],
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_name != null)
+                              AppText(
+                                _name!,
+                                style: AppTypography.caption.copyWith(
+                                  color: borderColor,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.1,
+                                ),
+                                maxLines: 1,
+                              ),
+                            if (_name != null && _message != null)
+                              const SizedBox(height: 2),
+                            if (_message != null)
+                              AppText(
+                                _preview(_message!, _type),
+                                style: AppTypography.caption.copyWith(
+                                  color: secondaryTextColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (widget.onCancel != null)
+                        IconButton(
+                          key: const ValueKey('chat-reply-cancel'),
+                          onPressed: _visible ? widget.onCancel : null,
+                          tooltip: widget.isEditing
+                              ? 'Cancel edit'
+                              : 'Cancel reply',
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(44, 44),
+                            tapTargetSize: MaterialTapTargetSize.padded,
+                            padding: EdgeInsets.zero,
+                          ),
+                          icon: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: secondaryTextColor.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: AppSvgIcon(
+                                assetPath: AppIcons.close,
+                                size: 14,
                                 color: secondaryTextColor,
                               ),
-                              maxLines: 1,
                             ),
-                        ],
-                      ),
-                    ),
-                    if (widget.onCancel != null)
-                      IconButton(
-                        key: const ValueKey('chat-reply-cancel'),
-                        onPressed: _visible ? widget.onCancel : null,
-                        tooltip: widget.isEditing ? 'Cancel edit' : 'Cancel reply',
-                        style: IconButton.styleFrom(
-                          minimumSize: const Size(44, 44),
-                          tapTargetSize: MaterialTapTargetSize.padded,
-                          padding: EdgeInsets.zero,
+                          ),
                         ),
-                        icon: AppSvgIcon(
-                          assetPath: AppIcons.close,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -30,7 +30,7 @@ class ChatDeletedTombstone extends StatelessWidget {
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: MessageBubbleChrome.alignmentOf(isSent),
       child: Padding(
         key: barKey,
         padding: MessageBubbleChrome.margin(

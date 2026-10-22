@@ -13,6 +13,7 @@ class ChatThreadRowMap {
     required int peerUserId,
     int? currentUserId,
     String? Function(int? replyToId)? replyPreview,
+    bool conversationReadable = false,
   }) {
     final isSent = currentUserId != null
         ? message.senderId == currentUserId
@@ -34,8 +35,8 @@ class ChatThreadRowMap {
           ChatVisualMedia.displayUrl(message) ??
           message.attachmentUrl ??
           message.mediaThumbnailUrl,
-      'is_locked': message.isLocked,
-      'is_blurred': message.isBlurred,
+      'is_locked': conversationReadable ? false : message.isLocked,
+      'is_blurred': conversationReadable ? false : message.isBlurred,
       'profile_card': message.profileCard,
       'hero_tag': ChatGalleryItem.heroTagFor(
         messageId: message.id,

@@ -163,6 +163,7 @@ class DiscoverySheetProfile {
     this.bio,
     this.isVerified = false,
     this.isOfficial = false,
+    this.isSystemOfficial = false,
     this.verification,
     this.isOnline = false,
     this.matchPercentage,
@@ -189,6 +190,7 @@ class DiscoverySheetProfile {
   final bool isVerified;
   /// Marketing account badge (`is_official` / `account_badge=official`).
   final bool isOfficial;
+  final bool isSystemOfficial;
   final ProfileIdentityVerification? verification;
   final bool isOnline;
   final int? matchPercentage;

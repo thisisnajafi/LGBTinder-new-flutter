@@ -192,6 +192,8 @@ class PlanLimits {
         return features.boost;
       case 'read_receipts':
         return features.readReceipts;
+      case 'voice_calls':
+        return features.voiceCalls;
       case 'video_calls':
         return features.videoCalls;
       case 'incognito_mode':
@@ -447,6 +449,7 @@ class Features {
   final bool passport;
   final bool boost;
   final bool readReceipts;
+  final bool voiceCalls;
   final bool videoCalls;
   final bool incognitoMode;
   final bool adFree;
@@ -460,6 +463,7 @@ class Features {
     required this.passport,
     required this.boost,
     required this.readReceipts,
+    this.voiceCalls = false,
     required this.videoCalls,
     required this.incognitoMode,
     required this.adFree,
@@ -475,6 +479,7 @@ class Features {
       passport: _SafeParser.parseBool(json['passport']),
       boost: _SafeParser.parseBool(json['boost']),
       readReceipts: _SafeParser.parseBool(json['read_receipts']),
+      voiceCalls: _SafeParser.parseBool(json['voice_calls']),
       videoCalls: _SafeParser.parseBool(json['video_calls']),
       incognitoMode: _SafeParser.parseBool(json['incognito_mode']),
       adFree: _SafeParser.parseBool(json['ad_free']),
@@ -491,6 +496,7 @@ class Features {
       'passport': passport,
       'boost': boost,
       'read_receipts': readReceipts,
+      'voice_calls': voiceCalls,
       'video_calls': videoCalls,
       'incognito_mode': incognitoMode,
       'ad_free': adFree,

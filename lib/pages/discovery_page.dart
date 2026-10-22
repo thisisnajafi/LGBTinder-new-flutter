@@ -13,6 +13,7 @@ import '../widgets/cards/card_stack_manager.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
 import '../widgets/loading/skeleton_discovery.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
+import '../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../features/discover/providers/discovery_filters_provider.dart';
 import '../features/discover/utils/discover_active_filter_labels.dart';
 import '../features/discover/utils/discovery_image_prefetch.dart';
@@ -41,7 +42,6 @@ import '../core/cache/cache_manager.dart'
     show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
 import '../features/discover/widgets/discover_active_filters_bar.dart';
-import '../features/discover/widgets/discover_swipe_limit_banner.dart';
 import '../features/discover/widgets/discover_ambient_background.dart';
 import '../features/discover/widgets/discover_greeting_widget.dart';
 import '../core/location/location_providers.dart';
@@ -131,6 +131,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     final stack = ref.read(discoverCacheProvider).stack;
     final sheetProfile = _sheetProfileFromStack(stack);
     if (sheetProfile == null) return;
+    if (sheetProfile.isSystemOfficial) {
+      final userId = ref.read(discoverCacheProvider).stack.first.id;
+      await OfficialTeamProfilePage.open(context, userId: userId);
+      return;
+    }
 
     setState(() => _isProfileSheetOpen = true);
     await showModalBottomSheet<void>(
@@ -227,6 +232,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       bio: profile.profileBio,
       isVerified: profile.isVerified ?? false,
       isOfficial: profile.isOfficial ?? false,
+      isSystemOfficial: profile.isSystemOfficial ?? false,
       verification: profile.verification,
       isOnline: profile.isOnline ?? false,
       matchPercentage: profile.matchPercentage ?? profile.compatibilityScore,
@@ -1030,17 +1036,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     context.push(target);
   }
 
-  /// Build limit indicator showing remaining swipes
-  Widget _buildLimitIndicator() {
-    final planLimits = ref.watch(planLimitsProvider);
-
-    return planLimits.when(
-      data: (limits) => DiscoverSwipeLimitBanner(limits: limits),
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
   Future<void> _openPassport() async {
     final changed = await context.push<bool>(AppRoutes.passport);
     if (!mounted || changed != true) return;
@@ -1070,111 +1065,40 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     }
   }
 
-  Widget _buildHeaderActions(BuildContext context) {
+  List<Widget> _buildHeaderActions(BuildContext context) {
     final canUsePassport =
         ref.watch(planLimitsProvider).valueOrNull?.features.passport ?? false;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (canUsePassport) ...[
-          _buildHeaderIconButton(
-            context: context,
-            iconPath: AppIcons.map,
-            semanticLabel: 'Passport — change discovery location',
-            onTap: _openPassport,
-            showBadge: ref.watch(passportLocationProvider).active,
-          ),
-          const SizedBox(width: AppSpacing.spacingXS),
-        ],
-        Consumer(
-          builder: (context, ref, child) {
-            final hasUnreadNotifications = ref.watch(
-              unreadNotificationCountProvider.select(
-                (async) => (async.asData?.value ?? 0) > 0,
-              ),
-            );
-            return _buildHeaderIconButton(
-              context: context,
-              iconPath: AppIcons.notification,
-              semanticLabel: 'Notifications',
-              onTap: () => context.go('${AppRoutes.home}/notifications'),
-              showBadge: hasUnreadNotifications,
-            );
-          },
+    return [
+      if (canUsePassport)
+        CompactHeaderIconButton(
+          iconPath: AppIcons.map,
+          semanticLabel: 'Passport — change discovery location',
+          onPressed: _openPassport,
+          showBadge: ref.watch(passportLocationProvider).active,
         ),
-        const SizedBox(width: AppSpacing.spacingXS),
-        _buildHeaderIconButton(
-          context: context,
-          iconPath: AppIcons.filter,
-          semanticLabel: 'Open filters',
-          onTap: _openFilters,
-          showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeaderIconButton({
-    required BuildContext context,
-    required String iconPath,
-    required String semanticLabel,
-    required VoidCallback onTap,
-    bool showBadge = false,
-  }) {
-    final theme = Theme.of(context);
-
-    return PremiumTapScale(
-      onTap: onTap,
-      semanticLabel: semanticLabel,
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentViolet.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: AppColors.accentViolet.withValues(alpha: 0.16),
-                ),
-              ),
-              child: Center(
-                child: AppSvgIcon(
-                  assetPath: iconPath,
-                  size: 20,
-                  color: AppColors.accentViolet,
-                ),
-              ),
+      Consumer(
+        builder: (context, ref, child) {
+          final hasUnreadNotifications = ref.watch(
+            unreadNotificationCountProvider.select(
+              (async) => (async.asData?.value ?? 0) > 0,
             ),
-            if (showBadge)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: RepaintBoundary(
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentRose,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: theme.colorScheme.surface,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+          );
+          return CompactHeaderIconButton(
+            iconPath: AppIcons.notification,
+            semanticLabel: 'Notifications',
+            onPressed: () => context.go('${AppRoutes.home}/notifications'),
+            showBadge: hasUnreadNotifications,
+          );
+        },
       ),
-    );
+      CompactHeaderIconButton(
+        iconPath: AppIcons.filter,
+        semanticLabel: 'Open filters',
+        onPressed: _openFilters,
+        showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
+      ),
+    ];
   }
 
   @override
@@ -1225,12 +1149,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  PremiumPageHeader(
+                  CompactPageHeader(
                     title: 'Discover',
-                    subtitle: 'Swipe and connect with people nearby',
-                    action: _buildHeaderActions(context),
+                    actions: _buildHeaderActions(context),
                   ),
-                  const SizedBox(height: AppSpacing.spacingMD),
+                  const SizedBox(height: AppSpacing.spacingSM),
                   const RepaintBoundary(child: DiscoverGreetingWidget()),
                   DiscoverActiveFiltersBar(
                     labels: DiscoverActiveFilterLabels.fromMap(
@@ -1244,7 +1167,6 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                     isClearing: _isClearingPassport,
                     onReturnHome: _returnFromPassport,
                   ),
-                  _buildLimitIndicator(),
                   Expanded(
                     child: ResponsiveGrid.constrainedTo(
                       context,

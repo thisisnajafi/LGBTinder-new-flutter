@@ -488,6 +488,11 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     if (mounted) setState(() {});
   }
 
+  bool _isCallTierError(String? code) {
+    return code == 'VOICE_CALL_REQUIRES_PREMIUM' ||
+        code == 'VIDEO_CALL_REQUIRES_GOLDEN';
+  }
+
   void _failOnPage(String message) {
     unawaited(SoundService.instance.stopCallSounds());
     if (!mounted) return;
@@ -545,10 +550,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         await _rejoinActiveCall();
         return;
       }
+      if (_isCallTierError(e.errorCode)) {
+        openCallTierUpgrade(context, errorCode: e.errorCode!, message: e.message);
+        return;
+      }
       _failOnPage(e.message);
     } on ApiError catch (e) {
       if (e.message.toLowerCase().contains('already an active call')) {
         await _rejoinActiveCall();
+        return;
+      }
+      if (_isCallTierError(e.errorCode)) {
+        openCallTierUpgrade(context, errorCode: e.errorCode!, message: e.message);
         return;
       }
       _failOnPage(e.message);
@@ -760,6 +773,12 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
             unawaited(_endCall());
           });
         }
+      };
+      _agoraService.onRemoteAudioMuted = (uid, muted) {
+        if (!mounted) return;
+        final current = ref.read(agoraRtcSessionProvider).remoteUid;
+        if (current != null && uid != current) return;
+        rtc.setRemoteAudioMuted(muted);
       };
       _agoraService.onRemoteVideoMuted = (uid, muted) {
         if (!mounted) return;
@@ -1474,12 +1493,21 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
                                 child: CallStagePlaceholder(
                                   userId: widget.recipientId,
                                   imageUrl: _displayBackdropUrl,
-                                  caption: failed ? caption : 'Camera is off',
+                                  caption: failed
+                                      ? caption
+                                      : (isVideo ? 'Camera is off' : widget.recipientName),
+                                  speakingTarget: CallSpeakingTarget.remote,
                                 ),
                               );
                             },
                           ),
                   ),
+                  if (!showVideoLayer && connected)
+                    Positioned(
+                      left: AppSpacing.spacingLG,
+                      bottom: bottomPad + 108,
+                      child: const CallParticipantMuteBadge(local: true),
+                    ),
                   if (showRingChrome && !connected)
                     IgnorePointer(
                       child: Center(

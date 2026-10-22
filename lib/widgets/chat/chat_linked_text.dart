@@ -40,11 +40,15 @@ class ChatLinkedText extends StatefulWidget {
   final TextStyle style;
   final Color linkColor;
 
+  /// Reading direction of this message's text; null uses the ambient one.
+  final TextDirection? textDirection;
+
   const ChatLinkedText({
     super.key,
     required this.text,
     required this.style,
     required this.linkColor,
+    this.textDirection,
   });
 
   @override
@@ -114,7 +118,12 @@ class _ChatLinkedTextState extends State<ChatLinkedText> {
   Widget build(BuildContext context) {
     _syncSpans();
     if (_spans.isEmpty) {
-      return Text(widget.text, style: widget.style);
+      return Text(
+        widget.text,
+        style: widget.style,
+        textDirection: widget.textDirection,
+        textAlign: TextAlign.start,
+      );
     }
     return Text.rich(
       TextSpan(style: widget.style, children: _spans),

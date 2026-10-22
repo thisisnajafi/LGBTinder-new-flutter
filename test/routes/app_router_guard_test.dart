@@ -16,6 +16,20 @@ void main() {
       expect(decision.redirectTo, AppRoutes.welcome);
     });
 
+    test('redirects an authenticated splash to the pending chat', () {
+      final decision = evaluateGuardDecision(
+        location: AppRoutes.splash,
+        hasLeftStartupFlow: true,
+        authStage: AuthStage.authenticated,
+        isPublicRoute: true,
+        isAuthEntryRoute: false,
+        isProtectedRoute: false,
+        hasPendingProtectedRoute: false,
+        launchRoute: '/chat?userId=12',
+      );
+      expect(decision.redirectTo, '/chat?userId=12');
+    });
+
     test('redirects splash to home after startup when authenticated', () {
       final decision = evaluateGuardDecision(
         location: AppRoutes.splash,

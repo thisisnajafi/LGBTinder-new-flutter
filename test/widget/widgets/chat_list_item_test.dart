@@ -113,6 +113,26 @@ void main() {
     expect(find.byKey(ChatListItem.previewLockKey), findsOneWidget);
   });
 
+  testWidgets('a match preview stays readable without premium', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: _app(
+          const ChatListItem(
+            userId: 7,
+            name: 'Alex',
+            lastMessage: 'see you tonight',
+            hasPlan: false,
+            isMatch: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(ChatListItem.previewLockKey), findsNothing);
+    expect(find.text('see you tonight'), findsOneWidget);
+  });
+
   testWidgets('typing cache updates the row without a parent refresh',
       (tester) async {
     final container = ProviderContainer();

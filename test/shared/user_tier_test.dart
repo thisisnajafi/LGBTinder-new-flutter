@@ -50,7 +50,7 @@ void main() {
 
     test('display label for premium and golden', () {
       expect(UserTier.silder.displayLabel, 'Silver');
-      expect(UserTier.golden.displayLabel, 'Golden');
+      expect(UserTier.golden.displayLabel, 'Gold');
     });
   });
 }

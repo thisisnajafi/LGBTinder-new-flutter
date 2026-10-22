@@ -37,6 +37,7 @@ PlanThemeData getPlanTheme(String planName) {
       isPopular: true,
       features: const [
         'Unlimited chat',
+        'Voice Calls',
         'Advanced filters',
         'Direct chat',
         'Like menu',
@@ -58,7 +59,7 @@ PlanThemeData getPlanTheme(String planName) {
       isPopular: false,
       features: const [
         'Everything in Premium',
-        'Voice & video calls',
+        'Audio/Video Calls',
         'AI match',
         '10 Superlikes per month',
       ],

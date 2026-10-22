@@ -23,5 +23,22 @@ void main() {
   test('empty bytes do not invent an icon', () {
     expect(NotificationAvatarBitmap.circlePng(Uint8List(0)), isNull);
     expect(NotificationAvatarBitmap.largeIcon(null), isNull);
+    expect(NotificationAvatarBitmap.personIcon(null), isNull);
+  });
+
+  test('download cap and cache name stay stable', () {
+    expect(NotificationAvatarBitmap.withinDownloadCap(0), isFalse);
+    expect(NotificationAvatarBitmap.withinDownloadCap(100), isTrue);
+    expect(
+      NotificationAvatarBitmap.withinDownloadCap(
+        NotificationAvatarBitmap.maxDownloadBytes + 1,
+      ),
+      isFalse,
+    );
+    const url = 'https://cdn.example/a.png';
+    expect(
+      NotificationAvatarBitmap.cacheFileName(url),
+      NotificationAvatarBitmap.cacheFileName(url),
+    );
   });
 }

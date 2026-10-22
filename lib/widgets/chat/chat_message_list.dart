@@ -12,6 +12,7 @@ import '../../features/chat/utils/chat_unread_separator.dart';
 import '../error_handling/error_display_widget.dart';
 import '../loading/skeleton_chat.dart';
 import 'chat_date_badge.dart';
+import 'chat_older_messages_card.dart';
 import 'chat_load_older_retry.dart';
 import 'chat_message_list_tile.dart';
 import 'chat_sticky_date_header.dart';
@@ -112,6 +113,7 @@ class ChatMessageList extends ConsumerWidget {
         Expanded(
           child: _ChatMessageTimeline(
             peerUserId: peerUserId,
+            peerDisplayName: peerDisplayName,
             currentUserId: currentUserId,
             unreadCount: showUnreadSeparator ? openUnreadCount : 0,
             scrollController: scrollController,
@@ -137,6 +139,7 @@ class ChatMessageList extends ConsumerWidget {
 
 class _ChatMessageTimeline extends ConsumerWidget {
   final int peerUserId;
+  final String peerDisplayName;
   final int currentUserId;
   final int unreadCount;
   final ScrollController scrollController;
@@ -156,6 +159,7 @@ class _ChatMessageTimeline extends ConsumerWidget {
 
   const _ChatMessageTimeline({
     required this.peerUserId,
+    required this.peerDisplayName,
     required this.currentUserId,
     required this.unreadCount,
     required this.scrollController,
@@ -178,11 +182,15 @@ class _ChatMessageTimeline extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final slots = ref.watch(
       chatThreadMessagesProvider(peerUserId).select((s) {
+        final history = ChatTimelineSlots.droppingBlurred(s.rows);
         final decorated = ChatUnreadSeparator.insert(
-          items: ChatDateBadgeInserter.wrap(s.rows),
+          items: ChatDateBadgeInserter.wrap(history.rows),
           unreadCount: unreadCount,
         );
-        return ChatTimelineSlots.build(decoratedRows: decorated);
+        return ChatTimelineSlots.build(
+          decoratedRows: decorated,
+          prependOlderUpgrade: history.collapsed,
+        );
       }),
     );
     final grouping = ChatBubbleGrouping.fromSlots(slots);
@@ -194,6 +202,7 @@ class _ChatMessageTimeline extends ConsumerWidget {
             ChatTimelineSlotKind.unread => ChatUnreadSeparator.kind,
             ChatTimelineSlotKind.call => 'call',
             ChatTimelineSlotKind.message => 'message',
+            ChatTimelineSlotKind.upgradeOlder => 'upgrade',
           },
           if (slot.label != null) 'label': slot.label,
         },
@@ -237,10 +246,15 @@ class _ChatMessageTimeline extends ConsumerWidget {
                         currentUserId: currentUserId,
                         onRedialCall: onRedialCall,
                       );
+                    case ChatTimelineSlotKind.upgradeOlder:
+                      return const ChatOlderMessagesCard(
+                        key: ValueKey(ChatTimelineSlots.upgradeOlderKey),
+                      );
                     case ChatTimelineSlotKind.message:
                       return MessageRow(
                         key: ValueKey(slot.key),
                         peerUserId: peerUserId,
+                        peerName: peerDisplayName,
                         rowKey: slot.key,
                         group: grouping[slot.key] ?? ChatBubbleGroup.isolated,
                         onRetry: onRetryFailed,

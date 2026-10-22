@@ -34,6 +34,9 @@ abstract class GooglePlayRepository {
   /// Check if billing is available
   Future<bool> isBillingAvailable();
 
+  /// User-facing reason for the last failed product query / launch.
+  String? get lastFailureMessage;
+
   /// Sync subscription status with backend
   Future<Map<String, dynamic>?> syncSubscriptionStatus();
 
@@ -55,6 +58,9 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
 
   @override
   Stream<bool> get billingAvailability => _billingService.billingAvailability;
+
+  @override
+  String? get lastFailureMessage => _billingService.lastFailureMessage;
 
   @override
   Stream<List<PurchaseDetails>> get purchaseUpdates => _billingService.purchaseUpdates;

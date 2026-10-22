@@ -25,32 +25,43 @@ void main() {
       );
     });
 
-    test('connecting and reconnecting show Connecting…', () {
+    test('connecting and reconnecting stay hidden until 3 failures', () {
       expect(
         ChatConnectionUi.resolve(
           pusher: ConnectionStatus.connecting,
           networkOnline: true,
+          consecutiveReconnectFailures: 2,
         ),
-        ChatConnectionBannerKind.connecting,
+        ChatConnectionBannerKind.hidden,
       );
       expect(
         ChatConnectionUi.resolve(
           pusher: ConnectionStatus.reconnecting,
           networkOnline: true,
+          consecutiveReconnectFailures: 3,
         ),
         ChatConnectionBannerKind.connecting,
       );
       expect(
         ChatConnectionUi.label(ChatConnectionBannerKind.connecting),
-        'Connecting…',
+        'Reconnecting…',
       );
     });
 
-    test('disconnected with network up is tap to reconnect', () {
+    test('disconnected with network up is tap to reconnect after 3 failures', () {
       expect(
         ChatConnectionUi.resolve(
           pusher: ConnectionStatus.disconnected,
           networkOnline: true,
+          consecutiveReconnectFailures: 1,
+        ),
+        ChatConnectionBannerKind.hidden,
+      );
+      expect(
+        ChatConnectionUi.resolve(
+          pusher: ConnectionStatus.disconnected,
+          networkOnline: true,
+          consecutiveReconnectFailures: 3,
         ),
         ChatConnectionBannerKind.tapToReconnect,
       );

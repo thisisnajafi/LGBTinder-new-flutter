@@ -43,6 +43,9 @@ class UserProfile extends Equatable {
   final bool? isVerified;
   /// Marketing / house account — API `is_official` or `account_badge=official`.
   final bool? isOfficial;
+
+  /// LGBTFinder Team system account — API `is_system_official`.
+  final bool? isSystemOfficial;
   final ProfileIdentityVerification? verification;
   final bool? isPremium;
   final bool? isOnline;
@@ -92,6 +95,7 @@ class UserProfile extends Equatable {
     this.maxAgePreference,
     this.isVerified,
     this.isOfficial,
+    this.isSystemOfficial,
     this.verification,
     this.isPremium,
     this.isOnline,
@@ -296,6 +300,9 @@ class UserProfile extends Equatable {
       isOfficial: json['is_official'] == true ||
           json['is_official'] == 1 ||
           json['account_badge']?.toString() == 'official',
+      isSystemOfficial: json['is_system_official'] == true ||
+          json['is_system_official'] == 1 ||
+          json['is_system_official']?.toString() == 'true',
       verification: json['verification'] is Map
           ? ProfileIdentityVerification.fromJson(
               Map<String, dynamic>.from(json['verification'] as Map),
@@ -365,6 +372,7 @@ class UserProfile extends Equatable {
       if (maxAgePreference != null) 'max_age_preference': maxAgePreference,
       if (isVerified != null) 'is_verified': isVerified,
       if (isOfficial != null) 'is_official': isOfficial,
+      if (isSystemOfficial != null) 'is_system_official': isSystemOfficial,
       if (isOfficial == true) 'account_badge': 'official',
       if (verification != null) 'verification': {
         'score': verification!.score,
@@ -420,6 +428,7 @@ class UserProfile extends Equatable {
         maxAgePreference,
         isVerified,
         isOfficial,
+        isSystemOfficial,
         verification,
         isPremium,
         isOnline,

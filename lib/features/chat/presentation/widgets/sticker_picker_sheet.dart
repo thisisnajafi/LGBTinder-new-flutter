@@ -103,7 +103,7 @@ class _StickerPickerSheetState extends ConsumerState<StickerPickerSheet>
         path: AppRoutes.featureLocked,
         queryParameters: const {
           'title': 'Premium stickers',
-          'desc': 'Upgrade to silder or golden to unlock exclusive sticker packs.',
+          'desc': 'Upgrade to Silver or Gold to unlock exclusive sticker packs.',
         },
       ).toString(),
     );
@@ -424,7 +424,7 @@ class _LockedPackOverlay extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.spacingSM),
             AppText(
-              'Upgrade to silder or golden to unlock this sticker pack.',
+              'Upgrade to Silver or Gold to unlock this sticker pack.',
               textAlign: TextAlign.center,
               style: AppTypography.bodySmall.copyWith(
                 color: isDark

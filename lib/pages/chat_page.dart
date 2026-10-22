@@ -19,6 +19,7 @@ import '../widgets/chat/chat_date_badge.dart';
 import '../widgets/chat/chat_unread_separator_bar.dart';
 import '../widgets/chat/chat_video_viewer.dart';
 import 'chat_conversation_info_page.dart';
+import '../features/profile/presentation/screens/official_team_profile_page.dart';
 import '../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../features/chat/providers/chat_providers.dart';
 import '../features/chat/data/services/chat_outbound_queue_service.dart';
@@ -46,13 +47,11 @@ import '../features/chat/utils/chat_thread_remote_ingest.dart';
 import '../features/chat/providers/chat_active_backend_sync_provider.dart';
 import '../features/chat/providers/active_chat_peer_bridge.dart';
 import '../shared/services/pusher_websocket_service.dart';
-import '../features/payments/data/services/plan_limits_service.dart';
 import '../features/user/providers/user_providers.dart';
 import '../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../features/profile/providers/profile_providers.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
-import '../shared/utils/plan_guard.dart';
 import '../features/calls/data/models/call.dart';
 import '../features/calls/pages/outgoing_call_page.dart';
 import '../features/calls/providers/call_providers.dart';
@@ -110,6 +109,7 @@ class ChatPage extends ConsumerStatefulWidget {
   final String? userName;
   final String? avatarUrl;
   final bool isOfficial;
+  final bool isSystemOfficial;
   final bool embedded;
   final VoidCallback? onEmbeddedClose;
 
@@ -119,6 +119,7 @@ class ChatPage extends ConsumerStatefulWidget {
     this.userName,
     this.avatarUrl,
     this.isOfficial = false,
+    this.isSystemOfficial = false,
     this.embedded = false,
     this.onEmbeddedClose,
   }) : super(key: key);
@@ -179,6 +180,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Timer? _realtimeFallbackTimer;
   String? _resolvedUserName;
   bool _peerIsOfficial = false;
+  bool _peerIsSystemOfficial = false;
   String? _resolvedAvatarUrl;
   String? _resolvedPrimaryPhotoUrl;
   late final ChatTypingOutbound _typingOutbound;
@@ -210,6 +212,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _resolvedUserName = widget.userName;
     _resolvedAvatarUrl = widget.avatarUrl;
     _peerIsOfficial = widget.isOfficial;
+    _peerIsSystemOfficial = widget.isSystemOfficial;
     _loadCurrentUserId();
     if (widget.userId > 0) {
       _openUnreadCount = _peekUnreadCount();
@@ -218,6 +221,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _resolvePeerDisplayIfNeeded();
       _bindLocalMessageStream();
       _loadMessages();
+      unawaited(_prewarmVoiceCapture());
       _initializePusherListeners();
       _loadConversationMuteStatus();
       _seedInitialPeerPresence();
@@ -336,6 +340,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _openConversationInfo() {
+    if (_peerIsSystemOfficial) {
+      OfficialTeamProfilePage.open(
+        context,
+        userId: widget.userId,
+        openedFromChat: true,
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ChatConversationInfoPage(
@@ -581,6 +593,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       message: message,
       peerUserId: widget.userId,
       currentUserId: _currentUserId,
+      conversationReadable: _peerMessagesReadable,
     );
     if (result.updatedExistingServerRow) {
       if (message.senderId == widget.userId) {
@@ -977,6 +990,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       callRows: _cachedCallMaps(),
       previousRows: _messages,
       replyPreview: _replyPreviewForId,
+      conversationReadable: _peerMessagesReadable,
     );
     _thread.setRows(next);
   }
@@ -1058,8 +1072,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
       final history = await historyFuture;
       _ackIncomingDelivered(history.messages);
-      if (history.peerIsOfficial && mounted && !_peerIsOfficial) {
-        setState(() => _peerIsOfficial = true);
+      if (mounted &&
+          (history.peerIsOfficial && !_peerIsOfficial ||
+              history.peerIsSystemOfficial && !_peerIsSystemOfficial)) {
+        setState(() {
+          if (history.peerIsOfficial) _peerIsOfficial = true;
+          if (history.peerIsSystemOfficial) _peerIsSystemOfficial = true;
+        });
       }
       List<Call> calls = const [];
       try {
@@ -1394,8 +1413,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       isVideo: call.isVideoCall,
     );
     if (!confirmed || !mounted) return;
-    if (call.isVideoCall && !await _ensureVideoCallAccess()) return;
-    if (!mounted) return;
     await startOutgoingCall(
       context: context,
       ref: ref,
@@ -1406,12 +1423,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  bool get _peerMessagesReadable =>
+      ref.read(chatListPreviewProvider).peerMessagesReadable(widget.userId);
+
   Map<String, dynamic> _messageToMap(Message message) {
     return ChatThreadRowMap.fromMessage(
       message,
       peerUserId: widget.userId,
       currentUserId: _currentUserId,
       replyPreview: _replyPreviewForId,
+      conversationReadable: _peerMessagesReadable,
     );
   }
 
@@ -2391,6 +2412,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     unawaited(_handleSend(text, existingClientId: clientId));
   }
 
+  Future<void> _prewarmVoiceCapture() async {
+    try {
+      await ChatMediaPermissions.ensure(ChatMediaPermissionKind.microphone);
+      await _voiceRecorder.hasPermission();
+    } catch (e) {
+      AppLogger.warning('Voice capture prewarm failed', tag: 'Chat', error: e);
+    }
+  }
+
   Future<bool> _handleVoiceRecordStart() async {
     if (await _voiceRecorder.isRecording()) return true;
     if (!mounted) return false;
@@ -2794,8 +2824,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  void _releaseComposerFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   Future<void> _pickAndSendVoiceFile() async {
+    _releaseComposerFocus();
     final result = await FilePicker.platform.pickFiles(type: FileType.audio);
+    _releaseComposerFocus();
     if (result == null || !mounted) return;
     final path = result.files.single.path;
     if (path == null || path.isEmpty) return;
@@ -2803,7 +2839,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _pickAndSendDocument() async {
+    _releaseComposerFocus();
     final result = await FilePicker.platform.pickFiles();
+    _releaseComposerFocus();
     if (result == null || !mounted) return;
     final picked = result.files.single;
     final path = picked.path;
@@ -2969,11 +3007,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final allowed = await ensureChatMediaPermission(context, kind);
     if (!allowed || !mounted) return;
 
+    _releaseComposerFocus();
     try {
       final picker = ImagePicker();
       final file = type == 'video'
           ? await picker.pickVideo(source: source)
           : await picker.pickImage(source: source);
+      _releaseComposerFocus();
       if (file == null || !mounted) return;
       await _sendMediaFile(
         File(file.path),
@@ -3241,29 +3281,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     router?.go('${AppRoutes.home}/chat-list');
   }
 
-  Future<bool> _ensureVideoCallAccess() async {
-    final guard = PlanGuard(ref.read(planLimitsServiceProvider));
-    final access = await guard.canMakeVideoCall();
-    if (!mounted) return false;
-    if (!access.isAllowed) {
-      final target = Uri(
-        path: AppRoutes.featureLocked,
-        queryParameters: {
-          'title': 'Video calls',
-          'desc':
-              access.errorMessage ??
-              'Upgrade to unlock face-to-face video calling.',
-          'minTier': 'golden',
-        },
-      ).toString();
-      context.push(target);
-      return false;
-    }
-    return true;
-  }
-
   Future<void> _handleVideoCallTap() async {
-    if (!await _ensureVideoCallAccess()) return;
     await startOutgoingCall(
       context: context,
       ref: ref,

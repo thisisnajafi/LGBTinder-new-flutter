@@ -9,6 +9,8 @@ import '../../../shared/services/agora_service.dart';
 import '../../../shared/services/call_permissions.dart';
 import '../../../shared/services/chat_pusher_event_names.dart';
 import '../../../shared/services/incoming_call_handler.dart';
+import '../../../shared/services/notification_navigation.dart';
+import '../../../shared/services/pending_launch_route.dart';
 
 export '../../../shared/services/incoming_call_handler.dart' show IncomingCallBridge;
 import '../data/models/call_action_request.dart';
@@ -523,11 +525,22 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     }
   }
 
-  /// Native notification tap while a call is already live.
-  /// Does not accept or join again — IncomingCallHost re-opens the route.
+  /// Native Call back, or a tap while a call is already live.
+  ///
+  /// A live call is reopened. Otherwise this starts an outgoing call of the
+  /// same type once splash has finished restoring the session.
   Future<void> callbackFromCallKit(String callId) async {
     AppLogger.info('CallKit callback $callId', tag: 'IncomingCall');
     if (!AgoraService().isInCall) {
+      if (!PendingLaunchRoute.navigationReady) return;
+      final pending = PendingLaunchRoute.consume();
+      if (pending == null) return;
+      final router = ref.read(appRouterProvider);
+      NotificationNavigation.navigateWithRouter(
+        router,
+        data: pending,
+        usePush: false,
+      );
       return;
     }
     if (_pendingNavigation?.callId == callId) {

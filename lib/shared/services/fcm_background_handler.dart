@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:notification_launch/notification_launch.dart';
 
 import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
@@ -161,7 +162,9 @@ Future<void> _showBackgroundLocalNotification(
         kLgbtfinderCallsChannelId,
         'Calls',
         description: 'Missed calls and call updates',
-        importance: Importance.high,
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
       ),
     ];
     for (final channel in channels) {
@@ -170,27 +173,36 @@ Future<void> _showBackgroundLocalNotification(
 
     final channelId = mapped.channelId;
     final isChat = mapped.style == TrayStyleKind.messaging;
-    final avatarPng = await NotificationAvatarBitmap.pngFor(mapped.avatarUrl);
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      notificationChannelLabel(channelId),
-      channelDescription: notificationChannelDescription(channelId),
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@drawable/ic_stat_lgbtfinder',
-      color: const Color(0xFFEC4899),
-      largeIcon: NotificationAvatarBitmap.largeIcon(avatarPng),
-      tag: tag,
-      groupKey: mapped.groupKey,
-      styleInformation: messageTrayStyle(
-        chat: isChat,
-        title: textTitle,
-        body: textBody,
-        senderKey: data['sender_id']?.toString() ?? data['user_id']?.toString(),
-        avatarPng: avatarPng,
-      ),
-      actions: trayActionsFor(mapped.type),
-    );
+    final avatar = await NotificationAvatarBitmap.load(mapped.avatarUrl);
+    final payload = jsonEncode(mapped.data);
+    final androidDetails = mapped.callBack
+        ? missedCallAndroidDetails(
+            title: textTitle,
+            body: textBody,
+            tag: tag,
+            largeIcon: NotificationAvatarBitmap.largeIcon(avatar),
+          )
+        : AndroidNotificationDetails(
+            channelId,
+            notificationChannelLabel(channelId),
+            channelDescription: notificationChannelDescription(channelId),
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_lgbtfinder',
+            color: const Color(0xFFEC4899),
+            largeIcon: NotificationAvatarBitmap.largeIcon(avatar),
+            tag: tag,
+            groupKey: mapped.groupKey,
+            styleInformation: messageTrayStyle(
+              chat: isChat,
+              title: textTitle,
+              body: textBody,
+              senderKey:
+                  data['sender_id']?.toString() ?? data['user_id']?.toString(),
+              avatarPng: avatar?.png,
+            ),
+            actions: trayActionsFor(mapped.type),
+          );
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
@@ -208,10 +220,12 @@ Future<void> _showBackgroundLocalNotification(
       textTitle,
       textBody,
       NotificationDetails(android: androidDetails, iOS: iosDetails),
-      payload: jsonEncode(mapped.data),
+      payload: payload,
     );
+    await NotificationLaunch.bindTapIntent(id: id, tag: tag, payload: payload);
     // The OS may still be inserting the FCM notification row. Wait so the
-    // collapse sees both and leaves one.
+    // collapse sees both and leaves one. The group summary is posted after
+    // that so it is not treated as a duplicate row.
     await Future<void>.delayed(const Duration(milliseconds: 350));
     await _collapseDuplicateTrayRows(
       plugin,
@@ -219,6 +233,15 @@ Future<void> _showBackgroundLocalNotification(
       body: textBody,
       keepTag: tag,
     );
+    await NotificationLaunch.bindTapIntent(id: id, tag: tag, payload: payload);
+    if (mapped.callBack) {
+      await showMissedCallGroupSummary(
+        plugin: plugin,
+        title: textTitle,
+        body: textBody,
+        payload: payload,
+      );
+    }
 
     AppLogger.info(
       'Background FCM displayed local notification ${message.messageId}',

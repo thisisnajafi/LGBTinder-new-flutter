@@ -75,6 +75,25 @@ class NotificationNavigation {
     return null;
   }
 
+  /// Missed-call Call back. Same call type, started after auth is ready.
+  static Map<String, dynamic> callBackPayload({
+    required int userId,
+    required String userName,
+    required String callType,
+    String? avatarUrl,
+  }) {
+    return {
+      'type': 'missed_call',
+      'action': 'call_back',
+      'user_id': userId,
+      'sender_id': userId,
+      'user_name': userName.trim().isEmpty ? 'User' : userName.trim(),
+      'call_type': callType,
+      if (avatarUrl != null && avatarUrl.trim().isNotEmpty)
+        'avatar_url': avatarUrl.trim(),
+    };
+  }
+
   /// GoRouter location for a 1:1 chat thread, or null if [userId] invalid.
   static String? chatThreadLocation({
     required int userId,

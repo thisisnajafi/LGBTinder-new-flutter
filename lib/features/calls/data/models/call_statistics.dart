@@ -130,6 +130,7 @@ class CallStatistics {
 class CallEligibility {
   final bool canCall;
   final String? reason; // if canCall is false
+  final String? errorCode;
   final bool isPremiumRequired;
   final bool isMatchRequired;
   final int? cooldownMinutes; // if user needs to wait
@@ -137,6 +138,7 @@ class CallEligibility {
   CallEligibility({
     required this.canCall,
     this.reason,
+    this.errorCode,
     this.isPremiumRequired = false,
     this.isMatchRequired = false,
     this.cooldownMinutes,
@@ -146,6 +148,7 @@ class CallEligibility {
     return CallEligibility(
       canCall: json['can_call'] == true || json['can_call'] == 1,
       reason: json['reason']?.toString(),
+      errorCode: json['error_code']?.toString(),
       isPremiumRequired: json['is_premium_required'] == true || json['is_premium_required'] == 1,
       isMatchRequired: json['is_match_required'] == true || json['is_match_required'] == 1,
       cooldownMinutes: json['cooldown_minutes'] != null ? ((json['cooldown_minutes'] is int) ? json['cooldown_minutes'] as int : int.tryParse(json['cooldown_minutes'].toString())) : null,
@@ -156,6 +159,7 @@ class CallEligibility {
     return {
       'can_call': canCall,
       if (reason != null) 'reason': reason,
+      if (errorCode != null) 'error_code': errorCode,
       'is_premium_required': isPremiumRequired,
       'is_match_required': isMatchRequired,
       if (cooldownMinutes != null) 'cooldown_minutes': cooldownMinutes,

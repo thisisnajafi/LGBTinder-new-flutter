@@ -1,0 +1,19 @@
+name: notification_launch
+description: Binds Android notification taps to MainActivity with an explicit payload intent.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.9.2
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.lgbtfinder.notification_launch
+        pluginClass: NotificationLaunchPlugin

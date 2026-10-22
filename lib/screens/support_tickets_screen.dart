@@ -433,14 +433,16 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     return AppSettingsDetailScaffold(
       title: 'Support tickets',
       subtitle: 'View and create support requests',
-      action: IconButton(
-        onPressed: () => _showNewTicketBottomSheet(context, isDark, textColor, surfaceColor),
-        icon: AppSvgIcon(
-          assetPath: AppIcons.add,
-          size: 22,
-          color: AppColors.accentViolet,
-        ),
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.add,
+        semanticLabel: 'New ticket',
         tooltip: 'New ticket',
+        onPressed: () => _showNewTicketBottomSheet(
+          context,
+          isDark,
+          textColor,
+          surfaceColor,
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

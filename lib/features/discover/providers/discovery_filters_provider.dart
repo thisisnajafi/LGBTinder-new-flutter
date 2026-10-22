@@ -1,23 +1,69 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 
-/// Session-scoped discovery filters. Survives leaving the Discover tab.
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../core/providers/feature_flags_provider.dart';
+
+/// Discovery filters (API-shaped map). Persisted in SharedPreferences so the
+/// user's last selection (including genders) survives app restarts.
+///
+/// `null` means "no custom filters": the backend then applies the user's
+/// stored matching preferences (preferred genders, age range, distance).
 final discoveryFiltersProvider =
     StateNotifierProvider<DiscoveryFiltersNotifier, Map<String, dynamic>?>(
-  (ref) => DiscoveryFiltersNotifier(),
+  (ref) => DiscoveryFiltersNotifier(ref.watch(sharedPreferencesProvider)),
 );
 
 class DiscoveryFiltersNotifier extends StateNotifier<Map<String, dynamic>?> {
-  DiscoveryFiltersNotifier() : super(null);
+  DiscoveryFiltersNotifier([this._prefs]) : super(_load(_prefs));
+
+  static const storageKey = 'discovery_filters_v1';
+
+  final SharedPreferences? _prefs;
+
+  static Map<String, dynamic>? _load(SharedPreferences? prefs) {
+    final raw = prefs?.getString(storageKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map && decoded.isNotEmpty) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      // Corrupt value: ignore and fall back to backend defaults.
+    }
+    return null;
+  }
+
+  void _persist() {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    final value = state;
+    if (value == null || value.isEmpty) {
+      prefs.remove(storageKey);
+      return;
+    }
+    try {
+      prefs.setString(storageKey, jsonEncode(value));
+    } catch (_) {
+      // Non-JSON value (should not happen for API-shaped maps): skip.
+    }
+  }
 
   void setFilters(Map<String, dynamic>? filters) {
     if (filters == null || filters.isEmpty) {
       state = null;
-      return;
+    } else {
+      state = Map<String, dynamic>.from(filters);
     }
-    state = Map<String, dynamic>.from(filters);
+    _persist();
   }
 
-  void clear() => state = null;
+  void clear() {
+    state = null;
+    _persist();
+  }
 }
 
 /// True when two filter maps encode the same query (PERF-PAGE-DISCOVERY-005).

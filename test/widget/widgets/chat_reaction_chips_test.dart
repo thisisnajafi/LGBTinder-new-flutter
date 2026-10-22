@@ -30,8 +30,9 @@ void main() {
     );
 
     expect(find.text('❤️ 2'), findsOneWidget);
-    expect(find.text('👍 1'), findsOneWidget);
-    expect(find.text('😂 1'), findsOneWidget);
+    expect(find.text('👍'), findsOneWidget);
+    expect(find.text('😂'), findsOneWidget);
+    expect(find.textContaining(' 1'), findsNothing);
     expect(find.byType(Icon), findsNothing);
     expect(find.byType(ScaleTransition), findsWidgets);
 
@@ -53,7 +54,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('😮 1'));
+    await tester.tap(find.text('😮'));
     expect(tapped, '😮');
   });
 
@@ -75,8 +76,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('👍 1'), findsOneWidget);
-    final pop = find.byKey(const ValueKey('chat-reaction-pop-👍'));
+    expect(find.text('👍'), findsOneWidget);
+    final pop = find.byKey(const ValueKey('chat-reaction-pill'));
     expect(pop, findsOneWidget);
     expect(tester.widget<ScaleTransition>(pop).scale.value, 1);
   });

@@ -257,17 +257,13 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
         unawaited(_loadLikes());
       }
     });
-    final theme = Theme.of(context);
-
     return AppSettingsDetailScaffold(
       title: 'Likes you',
       subtitle: 'People who liked your profile',
-      action: IconButton(
-        icon: AppSvgIcon(
-          assetPath: AppIcons.getIconPath('refresh'),
-          size: 22,
-          color: theme.colorScheme.onSurface,
-        ),
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
+        tooltip: 'Refresh',
         onPressed: _guardAndLoad,
       ),
       body: _buildBody(context),

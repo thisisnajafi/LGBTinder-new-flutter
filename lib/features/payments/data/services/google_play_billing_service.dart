@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart'
+    show ProductType;
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../core/services/offline_payment_service.dart';
 import '../../../../core/services/app_logger.dart';
+import '../play_billing_ids.dart';
 import 'marketing_attribution_service.dart';
 
 /// Server-confirmed outcome for one Play purchase.
@@ -45,6 +48,30 @@ class GooglePlayBillingService {
   final Map<String, String?> _pendingOfferIds = {};
   final Map<String, bool> _pendingIsSubscription = {};
 
+  /// Product IDs Play reported as subscriptions (ProductType.subs).
+  final Set<String> _knownSubscriptionIds = {};
+
+  /// User-facing reason for the most recent failure to open the Play
+  /// purchase sheet (billing unavailable, product not found, query error).
+  String? _lastFailureMessage;
+  String? get lastFailureMessage => _lastFailureMessage;
+
+  static const String billingUnavailableMessage =
+      'Google Play billing is not available on this device. Make sure the '
+      'Google Play Store app is installed and up to date, you are signed in '
+      'to a Google account, and LGBTFinder was installed from Google Play.';
+
+  static String productNotFoundMessage(String productId) =>
+      'This item is not available from Google Play right now '
+      '(product "$productId" was not found). Purchases only work when the '
+      'app is installed from Google Play (a test track is fine) by a tester '
+      'account; an APK installed directly cannot buy. Please try again later '
+      'or contact support.';
+
+  static String queryFailedMessage(Object error) =>
+      'Could not reach Google Play to load prices ($error). Check your '
+      'connection and that you are signed in to the Play Store, then try again.';
+
   /// Called after a subscription is activated or restored on the backend.
   void Function()? onSubscriptionChanged;
 
@@ -63,7 +90,14 @@ class GooglePlayBillingService {
     String productId, {
     String? basePlanId,
   }) {
-    final matches = products.where((product) => product.id == productId).toList();
+    final acceptedIds = PlayBillingIds.productQueryIds(productId);
+    final canonical = PlayBillingIds.canonicalProductId(productId);
+    final matches = products.where((product) => acceptedIds.contains(product.id)).toList()
+      ..sort((a, b) {
+        if (a.id == canonical) return -1;
+        if (b.id == canonical) return 1;
+        return 0;
+      });
     if (matches.isEmpty) return null;
 
     final wanted = basePlanId?.trim();
@@ -74,7 +108,9 @@ class GooglePlayBillingService {
       final index = product.subscriptionIndex;
       final offers = product.productDetails.subscriptionOfferDetails;
       if (index == null || offers == null || index >= offers.length) continue;
-      if (offers[index].basePlanId == wanted) return product;
+      if (PlayBillingIds.sameBasePlan(offers[index].basePlanId, wanted)) {
+        return product;
+      }
     }
 
     return null;
@@ -379,16 +415,25 @@ class GooglePlayBillingService {
 
   /// Launch a consumable purchase and return whether the Play sheet opened.
   Future<bool> purchaseConsumableProduct(String productId) async {
+    _lastFailureMessage = null;
     if (!await isBillingAvailable()) {
-      _errorController.add('Google Play Billing is not available on this device');
+      _lastFailureMessage = billingUnavailableMessage;
+      _errorController.add(billingUnavailableMessage);
       return false;
     }
     final products = await queryProductDetails({productId});
-    if (products.isEmpty) {
-      _errorController.add('Product not available: $productId');
+    final match = products.where((p) => p.id == productId).toList();
+    if (match.isEmpty) {
+      _lastFailureMessage ??= productNotFoundMessage(productId);
+      _errorController.add(_lastFailureMessage!);
       return false;
     }
-    return launchBillingFlowForConsumable(products.first);
+    final launched = await launchBillingFlowForConsumable(match.first);
+    if (!launched) {
+      _lastFailureMessage ??=
+          'Google Play could not open the purchase screen. Please try again.';
+    }
+    return launched;
   }
 
   /// Wait until Play reports a terminal status for [productId].
@@ -622,13 +667,32 @@ class GooglePlayBillingService {
       final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(productIds);
 
       if (response.error != null) {
+        _lastFailureMessage = queryFailedMessage(response.error!.message);
+        _log('queryProductDetails error: ${response.error}');
         _errorController.add('Failed to query products: ${response.error}');
         return [];
+      }
+
+      for (final product in response.productDetails) {
+        if (product is GooglePlayProductDetails &&
+            product.productDetails.productType == ProductType.subs) {
+          _knownSubscriptionIds.add(product.id);
+        }
+      }
+      if (response.notFoundIDs.isNotEmpty) {
+        // Play does not know these IDs for this package: not created / not
+        // active in Play Console, or the app was not installed from Play.
+        _log('Play notFoundIDs: ${response.notFoundIDs.join(', ')}');
+        AppLogger.warning(
+          'Google Play products not found: ${response.notFoundIDs.join(', ')}',
+          tag: 'GooglePlayBilling',
+        );
       }
 
       _log('Queried ${response.productDetails.length} products');
       return response.productDetails;
     } catch (e) {
+      _lastFailureMessage = queryFailedMessage(e);
       _errorController.add('Error querying products: $e');
       return [];
     }
@@ -647,10 +711,14 @@ class GooglePlayBillingService {
   /// but we ensure proper subscription handling by checking product type
   Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails, {String? offerId}) async {
     try {
-      // Verify this is actually a subscription product
-      if (!_isSubscriptionProduct(productDetails.id)) {
+      // Verify this is actually a subscription product (Play's own product
+      // type; the backend SKUs are e.g. silver_monthly, which no ID pattern
+      // reliably identifies).
+      if (productDetails is GooglePlayProductDetails &&
+          productDetails.productDetails.productType != ProductType.subs) {
         throw Exception('Product ${productDetails.id} is not a subscription product');
       }
+      _knownSubscriptionIds.add(productDetails.id);
 
       if (Platform.isAndroid) {
         final PurchaseParam purchaseParam = productDetails is GooglePlayProductDetails
@@ -768,7 +836,15 @@ class GooglePlayBillingService {
 
   /// Fallback for restored purchases that were not started in this session.
   bool _isSubscriptionProduct(String productId) {
-    if (productId.contains('_base')) return true;
+    final pending = _pendingIsSubscription[productId];
+    if (pending != null) return pending;
+    if (_knownSubscriptionIds.contains(productId)) return true;
+    if (productId.startsWith('superlike')) return false;
+    // Backend catalog SKUs: {bronze|silver|gold}_{monthly|quarterly|annual}.
+    if (RegExp(r'_(monthly|quarterly|annual|yearly)$').hasMatch(productId)) {
+      return true;
+    }
+    if (productId.contains('_base') || productId.contains('-base')) return true;
     if (productId.startsWith('lgbtfinder.')) return true;
     return productId.contains('.silder.') || productId.contains('.golden.');
   }

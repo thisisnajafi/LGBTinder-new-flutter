@@ -14,8 +14,10 @@ import '../../core/responsive/responsive.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/avatar_widget.dart';
 import '../../routes/app_router.dart';
+import '../../features/chat/utils/chat_bubble_text_direction.dart';
 import '../../features/chat/utils/chat_gallery_items.dart';
 import '../../features/chat/utils/chat_link_detector.dart';
+import 'chat_bubble_column.dart';
 import 'chat_image_viewer.dart';
 import 'chat_linked_text.dart';
 import 'chat_link_preview_card.dart';
@@ -39,45 +41,114 @@ import 'chat_video_viewer.dart';
 class MessageBubbleChrome {
   MessageBubbleChrome._();
 
-  static EdgeInsets margin({
+  /// Outer corners. Grouped sender-side corners use [radiusInner]; the last
+  /// bubble in a run uses [radiusTail] on the sender side.
+  static const double radiusLarge = 18;
+  static const double radiusInner = 6;
+  static const double radiusTail = 4;
+
+  /// Space under a bubble that continues the same sender.
+  static const double gapSameSender = 4;
+
+  /// Space under the last bubble of a sender run.
+  static const double gapSenderChange = 12;
+
+  /// How far [ChatReactionChips] hangs below the decorated bubble.
+  static const double reactionOverhang = 10;
+
+  /// Clearance between that pill and the next bubble.
+  static const double reactionClearance = 2;
+
+  static const double metaTopGap = 2;
+
+  static const EdgeInsets bubblePadding = EdgeInsets.symmetric(
+    horizontal: AppSpacing.spacingMD,
+    vertical: AppSpacing.spacingSM,
+  );
+
+  static const Radius _large = Radius.circular(radiusLarge);
+  static const Radius _inner = Radius.circular(radiusInner);
+  static const Radius _tail = Radius.circular(radiusTail);
+
+  static AlignmentGeometry alignmentOf(bool isSent) => isSent
+      ? AlignmentDirectional.centerEnd
+      : AlignmentDirectional.centerStart;
+
+  static double groupGap({required bool isLastInGroup}) =>
+      isLastInGroup ? gapSenderChange : gapSameSender;
+
+  /// [Stack] bottom for the reaction pill. Includes the bubble margin so the
+  /// pill overlaps the decoration by [reactionOverhang] and does not add a
+  /// second full gap.
+  static double reactionPillBottom({required bool isLastInGroup}) =>
+      groupGap(isLastInGroup: isLastInGroup) - reactionOverhang;
+
+  /// Extra padding under a row when the pill hangs past [groupGap].
+  static double reactionSlotPadding({required bool isLastInGroup}) {
+    final extra = reactionOverhang +
+        reactionClearance -
+        groupGap(isLastInGroup: isLastInGroup);
+    return extra > 0 ? extra : 0;
+  }
+
+  /// One vertical gap, on the bottom only, so adjacent bubbles are not doubled.
+  ///
+  /// [isFirstInGroup] is accepted so every bubble can pass its
+  /// [ChatBubbleGroup] through. The previous bubble's bottom is the gap above.
+  static EdgeInsetsDirectional margin({
     required bool isSent,
     bool isFirstInGroup = true,
     bool isLastInGroup = true,
   }) =>
-      EdgeInsets.only(
-        left: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
-        right: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
-        top: isFirstInGroup ? AppSpacing.spacingXS : 0,
-        bottom: isLastInGroup ? AppSpacing.spacingXS : 0,
+      EdgeInsetsDirectional.only(
+        start: isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
+        end: isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
+        bottom: groupGap(isLastInGroup: isLastInGroup),
       );
 
-  /// Telegram-style tail: sharp outer bottom corner on the last bubble only.
-  static BorderRadius radius({
+  /// Sender-side corners tighten between grouped bubbles and tail the last one.
+  ///
+  /// [BorderRadiusDirectional] mirrors with the ambient [Directionality].
+  /// [tailed] overrides [isLastInGroup] when a caller still passes the old flag.
+  static BorderRadiusDirectional radius({
     required bool isSent,
-    bool tailed = true,
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
+    bool? tailed,
   }) {
-    const corner = Radius.circular(AppRadius.radiusLG);
-    if (!tailed) {
-      return const BorderRadius.all(corner);
-    }
+    final last = tailed ?? isLastInGroup;
+    final senderTop = isFirstInGroup ? _large : _inner;
+    final senderBottom = last ? _tail : _inner;
     if (isSent) {
-      return const BorderRadius.only(
-        topLeft: corner,
-        topRight: corner,
-        bottomLeft: corner,
-        bottomRight: Radius.zero,
+      return BorderRadiusDirectional.only(
+        topStart: _large,
+        bottomStart: _large,
+        topEnd: senderTop,
+        bottomEnd: senderBottom,
       );
     }
-    return const BorderRadius.only(
-      topLeft: corner,
-      topRight: corner,
-      bottomLeft: Radius.zero,
-      bottomRight: corner,
+    return BorderRadiusDirectional.only(
+      topStart: senderTop,
+      bottomStart: senderBottom,
+      topEnd: _large,
+      bottomEnd: _large,
     );
   }
 
-  static BoxDecoration sent({bool isFailed = false, bool tailed = true}) {
-    final borderRadius = radius(isSent: true, tailed: tailed);
+  /// Slightly lifted from the page background so incoming bubbles read as cards.
+  static Color receivedFill(bool isDark) =>
+      isDark ? AppColors.surfaceElevatedDark : const Color(0xFFE8E9EE);
+
+  static BoxDecoration sent({
+    bool isFailed = false,
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
+  }) {
+    final borderRadius = radius(
+      isSent: true,
+      isFirstInGroup: isFirstInGroup,
+      isLastInGroup: isLastInGroup,
+    );
     if (isFailed) {
       return BoxDecoration(
         color: AppColors.feedbackError.withValues(alpha: 0.92),
@@ -114,19 +185,22 @@ class MessageBubbleChrome {
 
   static BoxDecoration received({
     required bool isDark,
-    bool tailed = true,
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
   }) =>
       BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: radius(isSent: false, tailed: tailed),
+        color: receivedFill(isDark),
+        borderRadius: radius(
+          isSent: false,
+          isFirstInGroup: isFirstInGroup,
+          isLastInGroup: isLastInGroup,
+        ),
         border: Border.all(
-          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.14 : 0.1),
+          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.22 : 0.12),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.06),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -135,15 +209,27 @@ class MessageBubbleChrome {
 
   static BoxDecoration locked({
     required bool isDark,
-    bool tailed = true,
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
   }) =>
-      received(isDark: isDark, tailed: tailed);
+      received(
+        isDark: isDark,
+        isFirstInGroup: isFirstInGroup,
+        isLastInGroup: isLastInGroup,
+      );
 
-  static BoxDecoration premiumGate({required bool isDark}) => BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
+  static BoxDecoration premiumGate({
+    required bool isDark,
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
+  }) =>
+      BoxDecoration(
+        color: receivedFill(isDark),
+        borderRadius: radius(
+          isSent: false,
+          isFirstInGroup: isFirstInGroup,
+          isLastInGroup: isLastInGroup,
+        ),
         border: Border.all(
           color: AppColors.accentViolet.withValues(alpha: 0.22),
         ),
@@ -158,32 +244,42 @@ class MessageBubbleChrome {
 
   static BoxDecoration expired({
     required bool isDark,
-    bool tailed = true,
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
   }) =>
       BoxDecoration(
-        color: isDark
-            ? AppColors.cardBackgroundDark
-            : AppColors.cardBackgroundLight,
-        borderRadius: radius(isSent: false, tailed: tailed),
+        color: receivedFill(isDark),
+        borderRadius: radius(
+          isSent: false,
+          isFirstInGroup: isFirstInGroup,
+          isLastInGroup: isLastInGroup,
+        ),
         border: Border.all(
-          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.1 : 0.08),
+          color: AppColors.accentViolet.withValues(alpha: isDark ? 0.16 : 0.1),
         ),
       );
 
   /// Receiver unopened self-destruct: dark card, flame in primary (CHAT-SD-002).
-  static BoxDecoration selfDestructUnopened({bool tailed = true}) =>
+  static BoxDecoration selfDestructUnopened({
+    bool isFirstInGroup = true,
+    bool isLastInGroup = true,
+  }) =>
       BoxDecoration(
         color: AppColors.backgroundDark,
-        borderRadius: radius(isSent: false, tailed: tailed),
+        borderRadius: radius(
+          isSent: false,
+          isFirstInGroup: isFirstInGroup,
+          isLastInGroup: isLastInGroup,
+        ),
         border: Border.all(
           color: AppColors.accentViolet.withValues(alpha: 0.22),
         ),
       );
 
-  /// Caption / timestamp on a sent gradient vs a received card bubble.
+  /// Timestamp on the sent gradient (white at 80%) or the incoming card.
   static Color onBubbleMeta({required bool isSent, required bool isDark}) {
-    if (isSent) return Colors.white70;
-    return isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    if (isSent) return Colors.white.withValues(alpha: 0.8);
+    return isDark ? const Color(0xFFE4E4E7) : const Color(0xFF3F3F46);
   }
 }
 
@@ -333,7 +429,6 @@ class MessageBubble extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final tailed = isLastInGroup;
     final bubbleMargin = MessageBubbleChrome.margin(
       isSent: isSent,
       isFirstInGroup: isFirstInGroup,
@@ -345,7 +440,8 @@ class MessageBubble extends ConsumerWidget {
       return _LockedIncomingPlaceholder(
         margin: bubbleMargin,
         isDark: isDark,
-        tailed: tailed,
+        isFirstInGroup: isFirstInGroup,
+        isLastInGroup: isLastInGroup,
         timestamp: timestamp,
       );
     }
@@ -443,6 +539,8 @@ class MessageBubble extends ConsumerWidget {
         messageId: messageId,
         onRetry: onRetry,
         isDark: isDark,
+        isFirstInGroup: isFirstInGroup,
+        isLastInGroup: isLastInGroup,
       );
     }
 
@@ -454,7 +552,7 @@ class MessageBubble extends ConsumerWidget {
         (forwardedFromName != null && forwardedFromName!.trim().isNotEmpty);
 
     return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: MessageBubbleChrome.alignmentOf(isSent),
       child: RepaintBoundary(
         child: GestureDetector(
         onTap: isFailed ? onRetry : null,
@@ -463,14 +561,21 @@ class MessageBubble extends ConsumerWidget {
         constraints: BoxConstraints(
           maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context),
         ),
-        padding: EdgeInsets.all(AppSpacing.spacingMD),
+        padding: MessageBubbleChrome.bubblePadding,
+        clipBehavior: Clip.antiAlias,
         decoration: isSent
-            ? MessageBubbleChrome.sent(isFailed: isFailed, tailed: tailed)
-            : MessageBubbleChrome.received(isDark: isDark, tailed: tailed),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+            ? MessageBubbleChrome.sent(
+                isFailed: isFailed,
+                isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
+              )
+            : MessageBubbleChrome.received(
+                isDark: isDark,
+                isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
+              ),
+        child: ChatBubbleColumn(
+          content: [
             if (showForwarded)
               ChatForwardedHeader(
                 name: forwardedFromName,
@@ -641,9 +746,13 @@ class MessageBubble extends ConsumerWidget {
                   onListened: isSent ? null : onVoiceListened,
                 ),
               ),
-            if (message.isNotEmpty && messageType == 'text') ...[
+            if (message.isNotEmpty &&
+                (messageType == 'text' || messageType == 'image')) ...[
+              if (messageType == 'image')
+                const SizedBox(height: AppSpacing.spacingSM),
               ChatLinkedText(
                 text: message,
+                textDirection: ChatBubbleTextDirection.of(message),
                 style: AppTypography.body.copyWith(
                   color: isSent
                       ? Colors.white
@@ -690,21 +799,21 @@ class MessageBubble extends ConsumerWidget {
                   ],
                 ),
               ),
-            ChatBubbleMetaRow(
-              timestamp: timestamp,
-              isSent: isSent,
-              isEdited: isEdited,
-              isRead: isRead,
-              isDelivered: isDelivered,
-              deliveryStatus: deliveryStatus,
-              messageId: messageId,
-              onRetry: onRetry,
-              color: MessageBubbleChrome.onBubbleMeta(
-                isSent: isSent,
-                isDark: isDark,
-              ),
-            ),
           ],
+          trailing: ChatBubbleMetaRow(
+            timestamp: timestamp,
+            isSent: isSent,
+            isEdited: isEdited,
+            isRead: isRead,
+            isDelivered: isDelivered,
+            deliveryStatus: deliveryStatus,
+            messageId: messageId,
+            onRetry: onRetry,
+            color: MessageBubbleChrome.onBubbleMeta(
+              isSent: isSent,
+              isDark: isDark,
+            ),
+          ),
         ),
       ),
         ),
@@ -724,32 +833,33 @@ class _LockedIncomingPlaceholder extends StatelessWidget {
   const _LockedIncomingPlaceholder({
     required this.margin,
     required this.isDark,
-    required this.tailed,
+    required this.isFirstInGroup,
+    required this.isLastInGroup,
     required this.timestamp,
   });
 
-  final EdgeInsets margin;
+  final EdgeInsetsGeometry margin;
   final bool isDark;
-  final bool tailed;
+  final bool isFirstInGroup;
+  final bool isLastInGroup;
   final DateTime? timestamp;
 
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Align(
-        alignment: Alignment.centerLeft,
+        alignment: MessageBubbleChrome.alignmentOf(false),
         child: Container(
           margin: margin,
           constraints: BoxConstraints(
             maxWidth: ResponsiveGrid.chatBubbleMaxWidth(context),
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.spacingLG,
-            vertical: AppSpacing.spacingMD,
-          ),
+          padding: MessageBubbleChrome.bubblePadding,
+          clipBehavior: Clip.antiAlias,
           decoration: MessageBubbleChrome.locked(
             isDark: isDark,
-            tailed: tailed,
+            isFirstInGroup: isFirstInGroup,
+            isLastInGroup: isLastInGroup,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -763,10 +873,8 @@ class _LockedIncomingPlaceholder extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.spacingSM),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: ChatBubbleColumn(
+                  content: [
                     Text(
                       'You have a new message',
                       style: AppTypography.body.copyWith(
@@ -785,15 +893,15 @@ class _LockedIncomingPlaceholder extends StatelessWidget {
                             : AppColors.textSecondaryLight,
                       ),
                     ),
-                    ChatBubbleMetaRow(
-                      timestamp: timestamp,
-                      isSent: false,
-                      color: MessageBubbleChrome.onBubbleMeta(
-                        isSent: false,
-                        isDark: isDark,
-                      ),
-                    ),
                   ],
+                  trailing: ChatBubbleMetaRow(
+                    timestamp: timestamp,
+                    isSent: false,
+                    color: MessageBubbleChrome.onBubbleMeta(
+                      isSent: false,
+                      isDark: isDark,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -825,7 +933,7 @@ class _PremiumHistoryGate extends StatelessWidget {
 
     return RepaintBoundary(
       child: Align(
-        alignment: Alignment.centerLeft,
+        alignment: MessageBubbleChrome.alignmentOf(false),
         child: Semantics(
           label: 'Premium message hidden. Tap to upgrade.',
           button: true,
@@ -837,12 +945,15 @@ class _PremiumHistoryGate extends StatelessWidget {
                 isFirstInGroup: isFirstInGroup,
                 isLastInGroup: isLastInGroup,
               ),
-              padding: const EdgeInsets.all(AppSpacing.spacingMD),
-              decoration: MessageBubbleChrome.premiumGate(isDark: isDark),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              padding: MessageBubbleChrome.bubblePadding,
+              clipBehavior: Clip.antiAlias,
+              decoration: MessageBubbleChrome.premiumGate(
+                isDark: isDark,
+                isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
+              ),
+              child: ChatBubbleColumn(
+                content: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                     child: ColoredBox(
@@ -876,15 +987,15 @@ class _PremiumHistoryGate extends StatelessWidget {
                       ),
                     ),
                   ),
-                  ChatBubbleMetaRow(
-                    timestamp: timestamp,
-                    isSent: false,
-                    color: MessageBubbleChrome.onBubbleMeta(
-                      isSent: false,
-                      isDark: isDark,
-                    ),
-                  ),
                 ],
+                trailing: ChatBubbleMetaRow(
+                  timestamp: timestamp,
+                  isSent: false,
+                  color: MessageBubbleChrome.onBubbleMeta(
+                    isSent: false,
+                    isDark: isDark,
+                  ),
+                ),
               ),
             ),
           ),
@@ -905,6 +1016,8 @@ class _StickerBubble extends StatefulWidget {
   final int messageId;
   final VoidCallback? onRetry;
   final bool isDark;
+  final bool isFirstInGroup;
+  final bool isLastInGroup;
 
   const _StickerBubble({
     required this.imageUrl,
@@ -917,6 +1030,8 @@ class _StickerBubble extends StatefulWidget {
     this.messageId = 0,
     this.onRetry,
     required this.isDark,
+    this.isFirstInGroup = true,
+    this.isLastInGroup = true,
   });
 
   @override
@@ -982,7 +1097,7 @@ class _StickerBubbleState extends State<_StickerBubble>
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: widget.isSent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: MessageBubbleChrome.alignmentOf(widget.isSent),
       child: GestureDetector(
         onTap: widget.deliveryStatus == MessageDeliveryStatus.failed
             ? widget.onRetry
@@ -990,11 +1105,10 @@ class _StickerBubbleState extends State<_StickerBubble>
         child: ScaleTransition(
           scale: _popAnimation,
           child: Padding(
-            padding: EdgeInsets.only(
-              left: widget.isSent ? AppSpacing.spacingXXL : AppSpacing.spacingSM,
-              right: widget.isSent ? AppSpacing.spacingSM : AppSpacing.spacingXXL,
-              top: AppSpacing.spacingXS,
-              bottom: AppSpacing.spacingXS,
+            padding: MessageBubbleChrome.margin(
+              isSent: widget.isSent,
+              isFirstInGroup: widget.isFirstInGroup,
+              isLastInGroup: widget.isLastInGroup,
             ),
             child: Column(
               crossAxisAlignment:
@@ -1073,7 +1187,7 @@ class _ProfileLinkBubble extends StatelessWidget {
     final verified = card['is_verified'] == true;
 
     return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: MessageBubbleChrome.alignmentOf(isSent),
       child: Container(
         margin: MessageBubbleChrome.margin(
           isSent: isSent,
@@ -1087,11 +1201,13 @@ class _ProfileLinkBubble extends StatelessWidget {
         decoration: isSent
             ? MessageBubbleChrome.sent(
                 isFailed: deliveryStatus == MessageDeliveryStatus.failed,
-                tailed: isLastInGroup,
+                isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
               )
             : MessageBubbleChrome.received(
                 isDark: isDark,
-                tailed: isLastInGroup,
+                isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
               ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1245,7 +1361,7 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
     final flameColor = isReceiverUnopened ? AppColors.primaryLight : foreground;
 
     return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: MessageBubbleChrome.alignmentOf(isSent),
       child: Semantics(
         label: durationSeconds != null
             ? '$label, ${SelfDestructSend.formatDuration(durationSeconds)}'
@@ -1263,15 +1379,18 @@ class _SelfDestructPreviewBubble extends StatelessWidget {
             decoration: isSent
                 ? MessageBubbleChrome.sent(
                     isFailed: deliveryStatus == MessageDeliveryStatus.failed,
-                    tailed: isLastInGroup,
+                    isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
                   )
                 : (isReceiverUnopened
                     ? MessageBubbleChrome.selfDestructUnopened(
-                        tailed: isLastInGroup,
+                        isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
                       )
                     : MessageBubbleChrome.received(
                         isDark: isDark,
-                        tailed: isLastInGroup,
+                        isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
                       )),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1374,7 +1493,7 @@ class _SelfDestructExpiredBubble extends StatelessWidget {
     final label = SelfDestructSend.expiredLabel(viewed: viewed);
 
     return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: MessageBubbleChrome.alignmentOf(isSent),
       child: Semantics(
         label: label,
         button: false,
@@ -1387,7 +1506,8 @@ class _SelfDestructExpiredBubble extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.spacingMD),
           decoration: MessageBubbleChrome.expired(
             isDark: isDark,
-            tailed: isLastInGroup,
+            isFirstInGroup: isFirstInGroup,
+                isLastInGroup: isLastInGroup,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

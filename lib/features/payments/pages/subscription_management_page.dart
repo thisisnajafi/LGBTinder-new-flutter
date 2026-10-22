@@ -312,7 +312,8 @@ class _SubscriptionManagementPageState
       case 'silver':
         return 'Silver';
       case 'golden':
-        return 'Golden';
+      case 'gold':
+        return 'Gold';
       case 'basic':
       case 'basid':
         return 'Free';
@@ -323,19 +324,14 @@ class _SubscriptionManagementPageState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AppSettingsDetailScaffold(
       title: 'Subscription',
       subtitle: 'Manage your premium plan',
-      action: IconButton(
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
         tooltip: 'Refresh',
         onPressed: _isLoading ? null : _loadAll,
-        icon: AppSvgIcon(
-          assetPath: AppIcons.refreshCircle,
-          size: 22,
-          color: theme.colorScheme.onSurface,
-        ),
       ),
       body: _buildBody(context),
     );
@@ -494,7 +490,7 @@ class _SubscriptionManagementPageState
         const SizedBox(height: AppSpacing.spacingSM),
         ..._planOptions.map((subPlan) {
           final isYearly = (subPlan.durationDays ?? 0) >= 365;
-          final tierName = subPlan.planId == 3 ? 'Golden' : 'Silver';
+          final tierName = subPlan.planId == 3 ? 'Gold' : 'Silver';
 
           return Card(
             margin: const EdgeInsets.symmetric(

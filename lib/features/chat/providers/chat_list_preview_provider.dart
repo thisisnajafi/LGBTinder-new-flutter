@@ -126,6 +126,8 @@ class ChatListPreviewItem {
   final int lastMessageId;
   final DateTime? lastSeenAt;
   final bool isOfficial;
+  final bool isSystemOfficial;
+  final bool isMatch;
 
   const ChatListPreviewItem({
     required this.id,
@@ -146,6 +148,8 @@ class ChatListPreviewItem {
     this.lastMessageId = 0,
     this.lastSeenAt,
     this.isOfficial = false,
+    this.isSystemOfficial = false,
+    this.isMatch = false,
   });
 
   ChatListPreviewItem copyWith({
@@ -166,6 +170,8 @@ class ChatListPreviewItem {
     int? lastMessageId,
     DateTime? lastSeenAt,
     bool? isOfficial,
+    bool? isSystemOfficial,
+    bool? isMatch,
   }) {
     return ChatListPreviewItem(
       id: id,
@@ -187,6 +193,8 @@ class ChatListPreviewItem {
       lastMessageId: lastMessageId ?? this.lastMessageId,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
       isOfficial: isOfficial ?? this.isOfficial,
+      isSystemOfficial: isSystemOfficial ?? this.isSystemOfficial,
+      isMatch: isMatch ?? this.isMatch,
     );
   }
 
@@ -209,6 +217,8 @@ class ChatListPreviewItem {
         'last_message_id': lastMessageId,
         'last_seen': lastSeenAt,
         'is_official': isOfficial,
+        'is_system_official': isSystemOfficial,
+        'is_match': isMatch,
         if (isOfficial) 'account_badge': 'official',
       };
 
@@ -239,6 +249,8 @@ class ChatListPreviewItem {
       lastMessageId: chat.lastMessage?.id ?? 0,
       lastSeenAt: chat.lastSeen,
       isOfficial: chat.isOfficial,
+      isSystemOfficial: chat.isSystemOfficial,
+      isMatch: chat.isMatch,
     );
   }
 }
@@ -251,6 +263,14 @@ class ChatListPreviewState {
     this.items = const [],
     this.isSeeded = false,
   });
+
+  /// Matches and the official account can always read message text.
+  bool peerMessagesReadable(int peerId) {
+    for (final item in items) {
+      if (item.id == peerId) return item.isMatch || item.isOfficial;
+    }
+    return false;
+  }
 
   ChatListPreviewState copyWith({
     List<ChatListPreviewItem>? items,
@@ -399,6 +419,12 @@ class ChatListPreviewNotifier extends Notifier<ChatListPreviewState> {
       isOfficial: map['is_official'] == true ||
           map['is_official'] == 1 ||
           map['account_badge']?.toString() == 'official',
+      isSystemOfficial: map['is_system_official'] == true ||
+          map['is_system_official'] == 1 ||
+          map['is_system_official']?.toString() == 'true',
+      isMatch: map['is_match'] == true ||
+          map['is_match'] == 1 ||
+          map['type']?.toString() == 'match',
       lastSeenAt: map['last_seen'] is DateTime
           ? map['last_seen'] as DateTime
           : DateTime.tryParse(

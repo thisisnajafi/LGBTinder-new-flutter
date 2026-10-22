@@ -12,7 +12,6 @@ import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/utils/media_url.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
-import '../../core/widgets/profile_image_widget.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/chat/providers/conversation_pin_cache_provider.dart';
 import '../../features/chat/providers/user_presence_cache_provider.dart';
@@ -23,6 +22,7 @@ import 'typing_indicator.dart';
 import 'message_status_indicator.dart';
 import 'chat_search_highlight_text.dart';
 import 'chat_unread_badge.dart';
+import 'chat_peer_avatar.dart';
 import 'official_account_badge.dart';
 import 'chat_online_dot.dart';
 import '../../features/chat/data/models/message_delivery_status.dart';
@@ -48,7 +48,10 @@ class ChatListItem extends ConsumerWidget {
   final String highlightQuery;
   final bool hasPlan;
   final bool isOfficial;
+  /// Matched peers stay readable on the free plan.
+  final bool isMatch;
   final VoidCallback? onTap;
+  final VoidCallback? onAvatarTap;
   final VoidCallback? onLongPress;
 
   static const pinIconKey = ValueKey('chat-list-pin-icon');
@@ -74,7 +77,9 @@ class ChatListItem extends ConsumerWidget {
     this.highlightQuery = '',
     required this.hasPlan,
     this.isOfficial = false,
+    this.isMatch = false,
     this.onTap,
+    this.onAvatarTap,
     this.onLongPress,
   });
 
@@ -82,7 +87,7 @@ class ChatListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isLocked = !hasPlan;
+    final isLocked = !hasPlan && !isMatch && !isOfficial && !lastMessageFromMe;
     final cacheMuted = ref.watch(
       conversationMuteCacheProvider.select((ids) => ids.contains(userId)),
     );
@@ -143,13 +148,18 @@ class ChatListItem extends ConsumerWidget {
             Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    ClipOval(
-                      child: ProfileImageWidget(
-                        imageUrl: resolvedAvatar,
-                        userId: userId,
-                        width: 52,
-                        height: 52,
-                        fit: BoxFit.cover,
+                    GestureDetector(
+                      onTap: onAvatarTap,
+                      behavior: onAvatarTap == null
+                          ? HitTestBehavior.deferToChild
+                          : HitTestBehavior.opaque,
+                      child: ClipOval(
+                        child: ChatPeerAvatar(
+                          imageUrl: resolvedAvatar,
+                          userId: userId,
+                          size: 52,
+                          isOfficial: isOfficial,
+                        ),
                       ),
                     ),
                     if (liveOnline)

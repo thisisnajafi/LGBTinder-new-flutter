@@ -6,6 +6,7 @@ class AgoraRtcSession {
   final int? remoteUid;
   final CallRemoteLeaveReason? remoteLeaveReason;
   final bool remoteCameraOn;
+  final bool remoteAudioMuted;
   final bool remoteVideoFrozen;
   final bool localCameraFailed;
   final String? localCameraFailureMessage;
@@ -24,6 +25,7 @@ class AgoraRtcSession {
     this.remoteUid,
     this.remoteLeaveReason,
     this.remoteCameraOn = true,
+    this.remoteAudioMuted = false,
     this.remoteVideoFrozen = false,
     this.localCameraFailed = false,
     this.localCameraFailureMessage,
@@ -59,6 +61,7 @@ class AgoraRtcSession {
     CallRemoteLeaveReason? remoteLeaveReason,
     bool clearRemoteLeaveReason = false,
     bool? remoteCameraOn,
+    bool? remoteAudioMuted,
     bool? remoteVideoFrozen,
     bool? localCameraFailed,
     String? localCameraFailureMessage,
@@ -82,6 +85,7 @@ class AgoraRtcSession {
           ? null
           : (remoteLeaveReason ?? this.remoteLeaveReason),
       remoteCameraOn: remoteCameraOn ?? this.remoteCameraOn,
+      remoteAudioMuted: remoteAudioMuted ?? this.remoteAudioMuted,
       remoteVideoFrozen: remoteVideoFrozen ?? this.remoteVideoFrozen,
       localCameraFailed: localCameraFailed ?? this.localCameraFailed,
       localCameraFailureMessage: clearLocalCameraFailure

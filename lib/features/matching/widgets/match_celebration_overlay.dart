@@ -265,7 +265,7 @@ class _MatchCelebrationOverlayState extends State<MatchCelebrationOverlay>
                       ),
                       SizedBox(height: AppSpacing.spacingSM),
                       AppText(
-                        'Congratulations! You and ${widget.matchedUser.firstName} liked each other.',
+                        'You and ${widget.matchedUser.firstName} liked each other',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: isDark
                               ? AppColors.textSecondaryDark

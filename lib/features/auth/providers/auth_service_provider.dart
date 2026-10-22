@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/api_providers.dart';
 import '../data/services/auth_service.dart';
+import '../data/services/apple_auth_service.dart';
 import '../data/services/google_auth_service.dart';
 import '../data/repositories/auth_repository.dart';
 
@@ -14,6 +15,10 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
   return GoogleAuthService();
+});
+
+final appleAuthServiceProvider = Provider<AppleAuthService>((ref) {
+  return AppleAuthService();
 });
 
 /// Auth Repository Provider

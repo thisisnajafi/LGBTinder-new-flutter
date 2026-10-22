@@ -7,11 +7,17 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_haptics.dart';
+import '../../../core/utils/app_icons.dart';
 import '../../../core/widgets/profile_image_widget.dart';
+import '../../../features/payments/data/services/plan_limits_service.dart';
+import '../../../routes/app_router.dart';
 import '../../../features/profile/presentation/widgets/own_profile/profile_photo_utils.dart';
 import '../../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../../widgets/loading/skeleton_loader.dart';
 
+/// Compact Discover greeting card: avatar, "Good morning, {name}", the daily
+/// swipe quota (with a thin progress bar) and the Upgrade button, all in one
+/// row so the swipe card gets the remaining height.
 class DiscoverGreetingWidget extends ConsumerWidget {
   const DiscoverGreetingWidget({super.key});
 
@@ -39,6 +45,19 @@ class DiscoverGreetingWidget extends ConsumerWidget {
     final firstName = _displayFirstName(profile?.firstName);
     final avatarUrl = primaryProfileImage(profile?.images)?.imageUrl;
     final isOnline = profile?.isOnline ?? false;
+    final limits = ref.watch(planLimitsProvider).valueOrNull;
+    final swipes = limits?.usage.swipes;
+    final showQuota = swipes != null && !swipes.isUnlimited;
+    final remaining = swipes?.remaining ?? 0;
+    final limit = swipes?.limit ?? 0;
+    final used = swipes?.usedToday ?? 0;
+    final progress = limit <= 0 ? 0.0 : (used / limit).clamp(0.0, 1.0);
+    final accent = remaining <= 0
+        ? AppColors.accentRose
+        : remaining <= 3
+            ? AppColors.warningYellow
+            : AppColors.onlineGreen;
+    final showUpgrade = limits != null && !limits.planInfo.isPremium;
 
     return Padding(
       padding: ResponsivePadding.horizontal(context),
@@ -46,7 +65,7 @@ class DiscoverGreetingWidget extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: AppSpacing.spacingXS),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.spacingMD,
-          vertical: AppSpacing.spacingSM,
+          vertical: AppSpacing.spacingXS + 2,
         ),
         decoration: BoxDecoration(
           color: isDark
@@ -70,8 +89,8 @@ class DiscoverGreetingWidget extends ConsumerWidget {
               button: true,
               label: 'View my profile',
               child: SizedBox(
-                width: 48,
-                height: 48,
+                width: 42,
+                height: 42,
                 child: Center(
                   child: InkWell(
                     customBorder: const CircleBorder(),
@@ -83,8 +102,8 @@ class DiscoverGreetingWidget extends ConsumerWidget {
                       clipBehavior: Clip.none,
                       children: [
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: 40,
+                          height: 40,
                           padding: const EdgeInsets.all(2.5),
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
@@ -98,8 +117,8 @@ class DiscoverGreetingWidget extends ConsumerWidget {
                             child: ClipOval(
                               child: ProfileImageWidget(
                                 imageUrl: avatarUrl,
-                                width: 38,
-                                height: 38,
+                                width: 34,
+                                height: 34,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -128,37 +147,108 @@ class DiscoverGreetingWidget extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.spacingMD),
+            const SizedBox(width: AppSpacing.spacingSM + 2),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppText(
-                    greeting,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                    ),
-                    maxLines: 1,
-                  ),
-                  const SizedBox(height: AppSpacing.spacingXS),
                   if (firstName == null)
                     const SkeletonLoader(
-                      height: 16,
+                      height: 14,
                       borderRadius: BorderRadius.all(
                         Radius.circular(AppRadius.radiusSM),
                       ),
                     )
                   else
                     AppText(
-                      'Hello, $firstName',
+                      '$greeting, $firstName',
                       maxLines: 1,
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  if (showQuota) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        AppSvgIcon(
+                          assetPath: remaining <= 3
+                              ? AppIcons.getIconPath('warning-2')
+                              : AppIcons.heart,
+                          size: 12,
+                          color: accent,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: AppText(
+                            '$remaining swipes left today',
+                            maxLines: 1,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: accent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.radiusRound),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 3,
+                        color: accent,
+                        backgroundColor: accent.withValues(alpha: 0.16),
+                      ),
+                    ),
+                  ] else
+                    AppText(
+                      'Swipe and connect',
+                      maxLines: 1,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.55),
                       ),
                     ),
                 ],
               ),
             ),
+            if (showUpgrade) ...[
+              const SizedBox(width: AppSpacing.spacingSM),
+              Semantics(
+                button: true,
+                label: 'Upgrade for more swipes',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                  onTap: () {
+                    AppHaptics.light();
+                    context.push(AppRoutes.subscriptionPlans);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.spacingSM + 2,
+                      vertical: AppSpacing.spacingXS + 2,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.radiusRound),
+                      color: accent.withValues(alpha: 0.14),
+                      border: Border.all(color: accent.withValues(alpha: 0.35)),
+                    ),
+                    child: AppText(
+                      'Upgrade',
+                      maxLines: 1,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

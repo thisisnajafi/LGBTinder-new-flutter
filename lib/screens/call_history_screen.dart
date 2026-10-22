@@ -81,12 +81,10 @@ class _CallHistoryScreenState extends ConsumerState<CallHistoryScreen> {
       title: 'Call history',
       subtitle: 'Recent voice and video calls',
       onRefresh: _isLoading ? null : _loadCallHistory,
-      action: IconButton(
-        icon: AppSvgIcon(
-          assetPath: AppIcons.getIconPath('refresh'),
-          size: 22,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
+      action: CompactHeaderIconButton(
+        iconPath: AppIcons.refresh,
+        semanticLabel: 'Refresh',
+        tooltip: 'Refresh',
         onPressed: _loadCallHistory,
       ),
       body: _isLoading

@@ -20,6 +20,11 @@ class Chat {
   /// API `is_official` or `account_badge=official`.
   final bool isOfficial;
 
+  /// LGBTFinder Team system account — API `is_system_official`.
+  final bool isSystemOfficial;
+  /// API `is_match` or `type=match`. Matched peers are never premium-locked.
+  final bool isMatch;
+
   Chat({
     required this.id,
     required this.userId,
@@ -35,6 +40,8 @@ class Chat {
     this.isMuted = false,
     this.isPinned = false,
     this.isOfficial = false,
+    this.isSystemOfficial = false,
+    this.isMatch = false,
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
@@ -111,6 +118,12 @@ class Chat {
       isOfficial: json['is_official'] == true ||
           json['is_official'] == 1 ||
           json['account_badge']?.toString() == 'official',
+      isSystemOfficial: json['is_system_official'] == true ||
+          json['is_system_official'] == 1 ||
+          json['is_system_official']?.toString() == 'true',
+      isMatch: json['is_match'] == true ||
+          json['is_match'] == 1 ||
+          json['type']?.toString() == 'match',
     );
   }
 
@@ -139,6 +152,8 @@ class Chat {
       'is_muted': isMuted,
       'is_pinned': isPinned,
       'is_official': isOfficial,
+      'is_system_official': isSystemOfficial,
+      'is_match': isMatch,
       if (isOfficial) 'account_badge': 'official',
     };
   }

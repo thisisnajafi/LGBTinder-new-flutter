@@ -23,6 +23,8 @@ import '../features/calls/data/services/call_kit_service.dart';
 import '../features/calls/providers/incoming_call_provider.dart';
 import '../features/calls/utils/call_navigation.dart';
 import '../routes/app_router.dart';
+import '../shared/services/notification_navigation.dart';
+import '../shared/services/pending_launch_route.dart';
 import '../core/utils/app_logger.dart';
 
 /// Splash: paint immediately, then auth check off the first frame (avoids ANR).
@@ -201,6 +203,8 @@ class _SplashPageState extends ConsumerState<SplashPage>
     _absoluteEscapeTimer?.cancel();
     markStartupFlowLeft(ref);
     await navigate();
+    PendingLaunchRoute.markNavigationReady();
+    PendingLaunchRoute.flushIfReady();
   }
 
   Future<void> _goToOnboarding() async {
@@ -238,12 +242,35 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 
   Future<void> _goToHome() async {
+    final router = GoRouter.of(context);
     await _finishStartup(() async {
       authLog('Splash: valid session → home');
       await ref.read(authProvider.notifier).checkAuthStatus();
       if (!mounted) return;
-      routeLog('go(${AppRoutes.home})');
-      context.go(AppRoutes.home);
+      try {
+        await PendingLaunchRoute.settled.timeout(const Duration(seconds: 2));
+      } catch (e) {
+        authLog('Splash: notification launch route timed out: $e');
+      }
+      if (!mounted) return;
+      final pending = PendingLaunchRoute.consume();
+      final location = _locationForPendingLaunch(pending);
+      if (location != null) {
+        PendingLaunchRoute.arm(location);
+      }
+      final target = routeAfterAuthenticatedSplash(location);
+      debugPrint('[LaunchRoute] navigate $target');
+      routeLog('go($target)');
+      router.go(target);
+      if (location != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final current = router.routerDelegate.currentConfiguration.uri.toString();
+          final armed = PendingLaunchRoute.peekArmed();
+          if (armed != null && (current == armed || current.startsWith(armed))) {
+            PendingLaunchRoute.clearArmed();
+          }
+        });
+      }
     });
   }
 
@@ -704,4 +731,34 @@ Future<({bool hasSeenIntro, bool hasToken})> splashLoadGate({
 @visibleForTesting
 Duration splashBrandingDelay({required bool hasCachedAuth}) {
   return hasCachedAuth ? Duration.zero : const Duration(milliseconds: 400);
+}
+
+/// Where splash should send a signed-in user.
+///
+/// A pending chat wins over Discover. The home redirect must not drop it.
+@visibleForTesting
+String routeAfterAuthenticatedSplash(String? pendingLocation) {
+  if (pendingLocation != null && pendingLocation.isNotEmpty) {
+    return pendingLocation;
+  }
+  return AppRoutes.home;
+}
+
+/// Chat or call-back route saved from a terminated notification tap.
+@visibleForTesting
+String? locationForPendingLaunch(Map<String, dynamic>? pending) {
+  if (pending == null || pending.isEmpty) return null;
+  final type = pending['type']?.toString() ?? '';
+  if (type.isEmpty) return null;
+  final location = NotificationNavigation.resolveDestination(
+    type: type,
+    data: pending,
+    peerUserId: NotificationNavigation.resolvePeerUserId(pending),
+  );
+  if (location.isEmpty || location == AppRoutes.home) return null;
+  return location;
+}
+
+String? _locationForPendingLaunch(Map<String, dynamic>? pending) {
+  return locationForPendingLaunch(pending);
 }

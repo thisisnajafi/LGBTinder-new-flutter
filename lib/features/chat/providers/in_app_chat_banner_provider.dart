@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/animation_constants.dart';
+import '../../../core/providers/subscription_provider.dart';
 import '../../../core/services/app_logger.dart';
 import '../../../shared/services/push_notification_service.dart';
 import '../../user/providers/user_providers.dart';
@@ -123,15 +124,30 @@ void _presentFromPusher(Ref ref, Message message) {
     isMutedPeer: ConversationMuteBridge.isPeerMuted,
   );
   final foreground = inAppChatBannerAppForeground();
+  ChatListPreviewItem? previewItem;
+  for (final item in ref.read(chatListPreviewProvider).items) {
+    if (item.id == message.senderId) {
+      previewItem = item;
+      break;
+    }
+  }
+  final hideText = _hideLockedMessageText(
+    message: message,
+    preview: previewItem,
+    isPremium: ref.read(isPremiumProvider),
+  );
+
   if (!own &&
       !suppressed &&
       PushNotificationService().fcmToken == null) {
-    final preview = chatMessagePreviewText(
-      message: message.message,
-      messageType: message.messageType,
-      mediaDuration: message.mediaDuration,
-      isExpired: message.isExpired,
-    );
+    final preview = hideText
+        ? 'New message'
+        : chatMessagePreviewText(
+            message: message.message,
+            messageType: message.messageType,
+            mediaDuration: message.mediaDuration,
+            isExpired: message.isExpired,
+          );
     unawaited(
       PushNotificationService().showLocalChatAlert(
         messageId: message.id,
@@ -150,20 +166,22 @@ void _presentFromPusher(Ref ref, Message message) {
     return;
   }
 
-  ChatListPreviewItem? preview;
-  for (final item in ref.read(chatListPreviewProvider).items) {
-    if (item.id == message.senderId) {
-      preview = item;
-      break;
-    }
-  }
-
   final shown = ref.read(inAppChatBannerProvider.notifier).show(
-        InAppChatBannerPolicy.fromMessage(
-          message,
-          fallbackName: preview?.name,
-          fallbackAvatarUrl: preview?.avatarUrl,
-        ),
+        hideText
+            ? InAppChatBannerItem(
+                id: message.id > 0
+                    ? '${message.id}'
+                    : 'local_${message.clientId ?? message.createdAt.millisecondsSinceEpoch}',
+                peerUserId: message.senderId,
+                title: previewItem?.name ?? 'New message',
+                body: 'New message',
+                avatarUrl: previewItem?.avatarUrl,
+              )
+            : InAppChatBannerPolicy.fromMessage(
+                message,
+                fallbackName: previewItem?.name,
+                fallbackAvatarUrl: previewItem?.avatarUrl,
+              ),
       );
   if (shown) {
     AppLogger.info(
@@ -171,4 +189,16 @@ void _presentFromPusher(Ref ref, Message message) {
       tag: 'Notifications',
     );
   }
+}
+
+/// Free, non-match chats must not reveal message text in banners or alerts.
+bool _hideLockedMessageText({
+  required Message message,
+  required ChatListPreviewItem? preview,
+  required bool isPremium,
+}) {
+  if (message.isLocked) return true;
+  if (isPremium) return false;
+  if (preview == null) return false;
+  return !preview.isMatch && !preview.isOfficial;
 }
