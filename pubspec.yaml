@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: ^3.9.2
@@ -111,7 +111,7 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.3
 
-  # Voice/video calls (Agora; flutter_webrtc removed — unused and incompatible with Flutter 3.29+)
+  # Voice/video calls (Agora; flutter_webrtc removed â€” unused and incompatible with Flutter 3.29+)
   # Pin to 6.3.x to avoid SynchronousFuture/MethodChannel errors with very new Flutter
   agora_rtc_engine: ">=6.3.0 <6.5.0"
   flutter_callkit_incoming: ^2.0.4
@@ -128,7 +128,7 @@ dependencies:
 
   # Payments (Google Play Billing only; Stripe removed)
   in_app_purchase: ^3.1.0  # Google Play Billing
-  in_app_purchase_android: ^0.4.0  # Offer tokens for subscription base plans
+  in_app_purchase_android: ^0.5.0  # Offer tokens for subscription base plans
 
   # Image Processing
   image: ^4.1.7
