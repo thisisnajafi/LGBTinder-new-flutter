@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/border_radius_constants.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../../../core/utils/app_icons.dart';
@@ -352,8 +351,27 @@ class ResetPasswordStep extends StatelessWidget {
             prefixIconPath: AppIcons.lockOutline,
             autocorrect: false,
           ),
-          SizedBox(height: AppSpacing.spacingMD),
-          const _PasswordRequirements(),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: passwordController,
+            builder: (context, value, _) {
+              final pw = value.text;
+              if (pw.isEmpty || pw.length >= 8) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.spacingXS,
+                  left: AppSpacing.spacingSM,
+                ),
+                child: Text(
+                  'Password must be at least 8 characters',
+                  style: AppTypography.caption.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              );
+            },
+          ),
           SizedBox(height: AppSpacing.spacingXXL),
           ValueListenableBuilder<bool>(
             valueListenable: isResetting,
@@ -367,67 +385,6 @@ class ResetPasswordStep extends StatelessWidget {
               );
             },
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PasswordRequirements extends StatelessWidget {
-  const _PasswordRequirements();
-
-  static const _items = [
-    'At least 8 characters',
-    'One uppercase letter',
-    'One lowercase letter',
-    'One number',
-    'One special character',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.spacingMD),
-      decoration: BoxDecoration(
-        color: AppColors.accentPurple.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppRadius.radiusMD),
-        border: Border.all(
-          color: AppColors.accentPurple.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Password Requirements:',
-            style: AppTypography.body.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          for (final item in _items)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.spacingXS),
-              child: Row(
-                children: [
-                  AppSvgIcon(
-                    assetPath: AppIcons.check,
-                    size: 16,
-                    color: AppColors.onlineGreen,
-                  ),
-                  SizedBox(width: AppSpacing.spacingSM),
-                  Text(
-                    item,
-                    style: AppTypography.caption.copyWith(color: textColor),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );

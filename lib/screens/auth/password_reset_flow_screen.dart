@@ -195,6 +195,7 @@ class _PasswordResetFlowScreenState
       return;
     }
 
+    var resetSucceeded = false;
     _isResettingPassword.value = true;
     try {
       final code = _verifiedOtpCode ?? _getOtpCode();
@@ -214,6 +215,7 @@ class _PasswordResetFlowScreenState
           passwordConfirmation: _confirmPasswordController.text.trim(),
         ),
       );
+      resetSucceeded = true;
 
       if (mounted) {
         await AlertDialogCustom.show(
@@ -232,6 +234,19 @@ class _PasswordResetFlowScreenState
         }
       }
     } catch (e) {
+      if (resetSucceeded) {
+        // The backend already reset the password; a UI error after that
+        // (e.g. the success dialog) must not be reported as a failure.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password reset. You can now log in.'),
+            ),
+          );
+          context.go(AppRoutes.login);
+        }
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to reset password: $e')),

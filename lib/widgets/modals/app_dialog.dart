@@ -18,6 +18,11 @@ Future<T?> showAppDialog<T>({
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
+    // Required by RawDialogRoute when the barrier is dismissible; omitting it
+    // throws "!barrierDismissible || barrierLabel != null".
+    barrierLabel: barrierDismissible
+        ? MaterialLocalizations.of(context).modalBarrierDismissLabel
+        : null,
     barrierColor: barrierColor ?? Colors.black54,
     transitionDuration: duration,
     pageBuilder: (context, animation, secondaryAnimation) {
