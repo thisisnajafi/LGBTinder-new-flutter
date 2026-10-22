@@ -18,6 +18,7 @@ class ApiEndpoints {
   // ==================== Authentication ====================
   static const String register = '/auth/register';
   static const String login = '/auth/login';
+  static const String authDeleteAccount = '/auth/delete-account';
   static const String loginPassword = '/auth/login-password';
   static const String verifyLoginCode = '/auth/verify-login-code';
   /// Lightweight token validation for splash (GET, Bearer token). 200 = valid, 401 = invalid.

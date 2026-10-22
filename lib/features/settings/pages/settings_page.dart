@@ -14,6 +14,7 @@ import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/settings/presentation/screens/account_details_screen.dart';
 import '../../../features/settings/presentation/screens/appearance_settings_screen.dart';
+import '../../../features/settings/presentation/screens/delete_account_screen.dart';
 import '../../../features/settings/presentation/screens/matching_preferences_screen.dart';
 import '../../../features/settings/presentation/screens/sound_preferences_screen.dart';
 import '../../../core/localization/widgets/language_selector.dart';
@@ -254,6 +255,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 iconPath: AppIcons.logout,
                 title: 'Log out',
                 onTap: _confirmLogout,
+                destructive: true,
+              ),
+              PremiumSettingsTile(
+                iconPath: AppIcons.delete,
+                title: 'Delete account',
+                subtitle: 'Permanently erase your account and data',
+                onTap: () => _push(const DeleteAccountScreen()),
                 destructive: true,
               ),
             ],

@@ -278,6 +278,8 @@ class ApiError {
 
     final path = requestPath ?? '';
     if (path.contains('/auth/check-token')) return false;
+    // Wrong password on account deletion is a 401 too; keep the session.
+    if (path.contains('/auth/delete-account')) return false;
     if (path.contains('/auth/login') ||
         path.contains('login-password') ||
         path.contains('/auth/register')) {
