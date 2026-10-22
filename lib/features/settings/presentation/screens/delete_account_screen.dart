@@ -11,6 +11,7 @@ import '../../../../core/providers/api_providers.dart';
 import '../../../../core/services/app_logger.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
+import '../../../../shared/models/api_error.dart';
 import '../../../../routes/app_router.dart';
 
 /// Self-serve, permanent account deletion (Google Play / App Store requirement).
@@ -90,7 +91,9 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         fromJson: (json) => json is Map<String, dynamic> ? json : <String, dynamic>{},
       );
       if (!response.isSuccess) {
-        throw _DeleteFailure(response.message.isNotEmpty ? response.message : 'Could not delete the account.');
+        throw ApiError(
+          message: response.message,
+        );
       }
       await _clearLocalData();
       if (!mounted) return;
@@ -108,26 +111,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     }
   }
 
-  String _messageFor(Object e) {
-    if (e is _DeleteFailure) return e.message;
-    if (e is DioException) {
-      final status = e.response?.statusCode;
-      final data = e.response?.data;
-      final msg = data is Map ? data['message']?.toString() : null;
-      if (status == 401) return 'The password is incorrect.';
-      if (status == 422) {
-        return _passwordController.text.isEmpty
-            ? 'Please enter your password. If you signed in with Google or Apple and never set one, leave it empty and type DELETE.'
-            : (msg ?? 'Please check the fields and try again.');
-      }
-      if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
-        return 'No connection. Check your internet and try again.';
-      }
-      return msg ?? 'Could not delete the account. Please try again or contact support@lgbtfinder.com.';
-    }
-    final text = e.toString().replaceFirst('Exception: ', '');
-    return text.isEmpty ? 'Could not delete the account. Please try again.' : text;
-  }
+  String _messageFor(Object e) => deleteAccountErrorMessage(
+        e,
+        passwordEmpty: _passwordController.text.isEmpty,
+      );
 
   Future<void> _clearLocalData() async {
     try {
@@ -207,31 +194,45 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            Text('Current password', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
             TextField(
+              key: const ValueKey('delete_account_password'),
               controller: _passwordController,
               obscureText: _obscure,
               enabled: !_busy,
+              keyboardType: TextInputType.visiblePassword,
+              autocorrect: false,
+              enableSuggestions: false,
               autofillHints: const [AutofillHints.password],
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: 'Current password',
+                hintText: 'Enter your account password (not your email)',
+                floatingLabelBehavior: FloatingLabelBehavior.auto,
                 helperText: 'Leave empty if you signed in with Google or Apple and never set a password.',
                 helperMaxLines: 2,
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
+                  tooltip: _obscure ? 'Show password' : 'Hide password',
                   icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            Text('Confirm deletion', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
             TextField(
+              key: const ValueKey('delete_account_confirm'),
               controller: _confirmController,
               enabled: !_busy,
               textCapitalization: TextCapitalization.characters,
               autocorrect: false,
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
-                labelText: 'Type DELETE to confirm',
+                labelText: 'Confirmation',
+                hintText: 'Type DELETE to confirm',
+                helperText: 'Type DELETE in capital letters to enable the button.',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -259,7 +260,38 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   }
 }
 
-class _DeleteFailure implements Exception {
-  _DeleteFailure(this.message);
-  final String message;
+const kDeleteAccountWrongPassword = 'Incorrect password. Please try again.';
+const kDeleteAccountGenericError =
+    'We couldn\'t delete your account right now. Please try again, or contact support@lgbtfinder.com.';
+
+/// Friendly, user-facing message for a failed account deletion.
+/// Never returns a raw exception / ApiError string.
+String deleteAccountErrorMessage(Object e, {bool passwordEmpty = false}) {
+  int? status;
+  String? message;
+  if (e is ApiError) {
+    status = e.code;
+    message = e.message;
+    final original = e.originalError;
+    if (status == null && original is DioException) {
+      status = original.response?.statusCode;
+    }
+  } else if (e is DioException) {
+    status = e.response?.statusCode;
+    final data = e.response?.data;
+    message = data is Map ? data['message']?.toString() : null;
+    if (status == null &&
+        (e.type == DioExceptionType.connectionError ||
+            e.type == DioExceptionType.connectionTimeout)) {
+      return 'No connection. Check your internet and try again.';
+    }
+  }
+  final lower = (message ?? e.toString()).toLowerCase();
+  if (status == 401 || lower.contains('invalid password') || lower.contains('incorrect password')) {
+    return kDeleteAccountWrongPassword;
+  }
+  if (status == 422 && passwordEmpty) {
+    return 'Please enter your current password. If you signed in with Google or Apple and never set one, leave it empty and type DELETE.';
+  }
+  return kDeleteAccountGenericError;
 }

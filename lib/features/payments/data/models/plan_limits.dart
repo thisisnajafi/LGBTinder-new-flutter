@@ -80,7 +80,7 @@ class PlanLimits {
     }
   }
 
-  /// Golden / Silver must not be capped by a low `daily_profile` value from the API.
+  /// Gold / Premium must not be capped by a low `daily_profile` value from the API.
   PlanLimits correctSwipeLimitsForTier() {
     final tier = _resolveTier();
     if (tier != UserTier.golden && tier != UserTier.silder) {
@@ -145,6 +145,9 @@ class PlanLimits {
       superlikeInfo: superlikeInfo ?? this.superlikeInfo,
     );
   }
+
+  /// Subscription tier from `plan_info` (hierarchical: Basic < Premium < Gold).
+  UserTier get tier => _resolveTier();
 
   UserTier _resolveTier() {
     final apiTier = planInfo.tier?.toLowerCase().trim();

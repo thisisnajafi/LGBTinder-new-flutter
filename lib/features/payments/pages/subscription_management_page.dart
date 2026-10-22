@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,6 +12,8 @@ import '../../../core/utils/app_icons.dart';
 import '../../../core/widgets/app_settings_detail.dart';
 import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../shared/models/api_error.dart';
+import '../../../routes/app_router.dart';
+import '../../../shared/models/user_tier.dart';
 import '../../../shared/services/error_handler_service.dart';
 import '../../../widgets/error_handling/error_display_widget.dart';
 import '../data/models/subscription_plan.dart';
@@ -66,10 +69,15 @@ class _SubscriptionManagementPageState
 
       final embedded = plans.expand((p) => p.subPlans).toList();
       final merged = embedded.isNotEmpty ? embedded : subPlans;
+      // Plan ids: 1 = Basic, 2 = Premium (legacy "Silver"), 3 = Gold.
       final premiumOptions = merged
-          .where((sp) => sp.planId == 2 || sp.planId == 3)
+          .where((sp) => userTierFromPlanId(sp.planId) != null)
           .toList()
-        ..sort((a, b) => (a.durationDays ?? 0).compareTo(b.durationDays ?? 0));
+        ..sort((a, b) {
+          final byTier = (a.planId ?? 0).compareTo(b.planId ?? 0);
+          if (byTier != 0) return byTier;
+          return (a.durationDays ?? 0).compareTo(b.durationDays ?? 0);
+        });
 
       if (mounted) {
         setState(() {
@@ -103,7 +111,7 @@ class _SubscriptionManagementPageState
     return [
       {
         'id': status.planId ?? 0,
-        'plan_name': status.planName ?? status.tier ?? 'Current plan',
+        'plan_name': planDisplayName(status.tier ?? status.planName),
         'tier': status.tier,
         'status': status.status ?? 'active',
         'provider': status.provider,
@@ -166,11 +174,40 @@ class _SubscriptionManagementPageState
     return itemCount >= 20;
   }
 
-  bool get _isPremiumActive =>
-      _status?.isActive == true &&
-      (_status?.tier != null &&
-          _status!.tier!.toLowerCase() != 'basic' &&
-          _status!.tier!.toLowerCase() != 'basid');
+  /// Current paid tier, or null for Free. Reads the same global subscription
+  /// state the Compare tiers page uses (API `meta.subscription`), and falls
+  /// back to `/subscriptions/status` so the two pages always agree.
+  UserTier? get _currentTier {
+    final global = ref.watch(subscriptionProvider);
+    if (global != null && global.isActive) return global.tier;
+    final status = _status;
+    if (status != null && status.isActive) {
+      final raw = status.tier?.toLowerCase().trim() ?? '';
+      if (raw.isNotEmpty && raw != 'free' && raw != 'none') {
+        return userTierFromApiKey(raw);
+      }
+      return userTierFromPlanId(status.planId) ??
+          userTierFromPlan(planId: status.planId, planName: status.planName);
+    }
+    return null;
+  }
+
+  bool get _hasPaidPlan => _currentTier != null;
+
+  bool get _isGold => _currentTier == UserTier.golden;
+
+  /// Upgrade options above the current tier (Gold has none).
+  List<SubPlan> get _upgradeOptions {
+    final current = _currentTier;
+    return _planOptions.where((sp) {
+      final tier = userTierFromPlanId(sp.planId);
+      if (tier == null) return false;
+      return current == null || tier.level > current.level;
+    }).toList();
+  }
+
+  // Kept for the actions section (cancel / restore / manage) visibility.
+  bool get _isPremiumActive => _hasPaidPlan;
 
   bool get _isGracePeriod =>
       _status?.status?.toLowerCase() == 'grace_period';
@@ -305,22 +342,7 @@ class _SubscriptionManagementPageState
     return null;
   }
 
-  String _tierLabel(String? tier) {
-    if (tier == null) return 'Free';
-    switch (tier.toLowerCase()) {
-      case 'silder':
-      case 'silver':
-        return 'Silver';
-      case 'golden':
-      case 'gold':
-        return 'Gold';
-      case 'basic':
-      case 'basid':
-        return 'Free';
-      default:
-        return tier;
-    }
-  }
+  String _tierLabel(String? tier) => planDisplayName(tier);
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +378,7 @@ class _SubscriptionManagementPageState
           child: AppSettingsDetailList(
             children: [
               _buildCurrentPlanCard(context),
-              if (!_isPremiumActive && _planOptions.isNotEmpty) ...[
+              if (_upgradeOptions.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.spacingLG),
                 _buildPlanOptionsSection(context),
               ],
@@ -385,25 +407,24 @@ class _SubscriptionManagementPageState
 
   Widget _buildCurrentPlanCard(BuildContext context) {
     final theme = Theme.of(context);
-    final tier = _status?.tier;
-    final planName = _status?.planName ?? _tierLabel(tier);
-    final periodEnd = _status?.endDate ?? _status?.nextBillingDate;
+    final current = _currentTier;
+    final planName = current?.displayLabel ?? 'Free';
+    final periodEnd = _status?.endDate ??
+        _status?.nextBillingDate ??
+        ref.watch(subscriptionProvider)?.expiresAt;
 
-    if (!_isPremiumActive) {
+    if (current == null) {
       return PremiumSettingsGroup(
         title: 'Current plan',
         children: [
-          PremiumInfoRow(label: 'Plan', value: 'Free Plan'),
+          const PremiumInfoRow(label: 'Plan', value: 'Free'),
           PremiumSettingsTile(
             iconPath: AppIcons.crown,
-            title: 'Upgrade to premium',
-            subtitle: 'Unlock unlimited likes, see who liked you, and more',
+            title: 'Upgrade your plan',
+            subtitle:
+                'Basic unlocks unlimited chat. Premium adds voice calls and see who liked you. Gold unlocks everything.',
             accent: theme.colorScheme.primary,
-            onTap: () {
-              if (_planOptions.isNotEmpty) {
-                _purchasePlan(_planOptions.first);
-              }
-            },
+            onTap: () => context.push(AppRoutes.tierComparison),
           ),
         ],
       );
@@ -413,10 +434,27 @@ class _SubscriptionManagementPageState
       title: 'Current plan',
       children: [
         PremiumInfoRow(
-          label: 'Tier',
+          label: 'Plan',
           value: planName,
-          badge: _status?.status?.toUpperCase(),
+          badge: (_status?.status ?? 'active').toUpperCase(),
         ),
+        if (_isGold)
+          const PremiumInfoRow(
+            label: 'Benefits',
+            value: 'Every feature unlocked',
+          )
+        else
+          PremiumSettingsTile(
+            iconPath: AppIcons.crown,
+            title: current == UserTier.silder
+                ? 'Upgrade to Gold'
+                : 'Upgrade to Premium or Gold',
+            subtitle: current == UserTier.silder
+                ? 'Add video calls, AI matching and more superlikes'
+                : 'Add voice calls, see who liked you, advanced filters and more',
+            accent: Theme.of(context).colorScheme.primary,
+            onTap: () => context.push(AppRoutes.tierComparison),
+          ),
         if (periodEnd != null)
           PremiumInfoRow(
             label: 'Next billing',
@@ -476,79 +514,98 @@ class _SubscriptionManagementPageState
 
   Widget _buildPlanOptionsSection(BuildContext context) {
     final theme = Theme.of(context);
+    final options = _upgradeOptions;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.spacingMD),
           child: Text(
-            'Choose a plan',
+            _hasPaidPlan ? 'Upgrade options' : 'Choose a plan',
             style: theme.textTheme.titleMedium,
           ),
         ),
         const SizedBox(height: AppSpacing.spacingSM),
-        ..._planOptions.map((subPlan) {
+        ...options.map((subPlan) {
           final isYearly = (subPlan.durationDays ?? 0) >= 365;
-          final tierName = subPlan.planId == 3 ? 'Gold' : 'Silver';
+          final tierName =
+              userTierFromPlanId(subPlan.planId)?.displayLabel ?? 'Premium';
 
-          return Card(
-            margin: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.spacingMD,
-              vertical: AppSpacing.spacingXS,
-            ),
-            child: InkWell(
-              onTap: _actionInProgress ? null : () => _purchasePlan(subPlan),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.spacingMD),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: AppSpacing.spacingSM,
-                      runSpacing: AppSpacing.spacingXS,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          '$tierName ${subPlan.durationLabel}',
-                          style: theme.textTheme.titleSmall,
-                        ),
-                        if (isYearly)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Best value',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer,
-                              ),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.spacingSM),
+            child: SizedBox(
+              width: double.infinity,
+              child: PremiumShell(
+                margin: EdgeInsets.zero,
+                padding: EdgeInsets.zero,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: ValueKey('sub_plan_option_${subPlan.id}'),
+                    onTap: _actionInProgress ? null : () => _purchasePlan(subPlan),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.spacingLG),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: AppSpacing.spacingSM,
+                                  runSpacing: AppSpacing.spacingXS,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$tierName · ${subPlan.durationLabel}',
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    if (isYearly)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primaryContainer,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Best value',
+                                          style: AppTypography.labelSmall.copyWith(
+                                            color: theme.colorScheme.onPrimaryContainer,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                if (subPlan.description != null) ...[
+                                  const SizedBox(height: AppSpacing.spacingXS),
+                                  AppText(
+                                    subPlan.description!,
+                                    style: theme.textTheme.bodySmall,
+                                    maxLines: 3,
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.spacingXS),
-                    Text(
-                      '\$${subPlan.price.toStringAsFixed(2)}',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: theme.colorScheme.primary,
+                          const SizedBox(width: AppSpacing.spacingMD),
+                          Text(
+                            '\$${subPlan.price.toStringAsFixed(2)}',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (subPlan.description != null) ...[
-                      const SizedBox(height: AppSpacing.spacingXS),
-                      AppText(
-                        subPlan.description!,
-                        style: theme.textTheme.bodySmall,
-                        maxLines: 3,
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
             ),

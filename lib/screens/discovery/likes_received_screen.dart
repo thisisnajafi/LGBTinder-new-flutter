@@ -22,6 +22,7 @@ import '../../features/profile/widgets/tier_badge.dart';
 import '../../features/matching/data/models/match.dart' as match_models;
 import '../../features/matching/widgets/match_celebration_launcher.dart';
 import '../../routes/app_router.dart';
+import '../../shared/models/user_tier.dart';
 import '../../shared/utils/plan_guard.dart';
 import '../../widgets/badges/verification_badge.dart';
 import '../../widgets/discovery/discovery_swipe_action_button.dart';
@@ -54,14 +55,14 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
       final guard = PlanGuard(service);
       final result = await guard.canSeeWhoLikedMe();
       if (!mounted) return;
-      if (!result.isAllowed) {
+      if (!result.isAllowed && result.upgradeRequired) {
         final target = Uri(
           path: AppRoutes.featureLocked,
           queryParameters: {
             'title': 'See who liked you',
             'desc':
                 'Unlock this feature to view everyone who has liked your profile.',
-            'minTier': 'silder',
+            'minTier': seeWhoLikedMeMinTier.key,
           },
         ).toString();
         context.push(target);

@@ -30,7 +30,7 @@ void main() {
     test('falls back to is_premium when plan title is missing', () {
       final profile = _profile({'is_premium': true});
       expect(tierFromUserProfile(profile), UserTier.silder);
-      expect(planBadgeLabelFromUserProfile(profile), 'Silver');
+      expect(planBadgeLabelFromUserProfile(profile), 'Premium');
     });
 
     test('defaults to Basic when there is no paid plan', () {
@@ -39,10 +39,10 @@ void main() {
       expect(planBadgeLabelFromUserProfile(profile), 'Basic');
     });
 
-    test('normalizes legacy Silder title to Silver', () {
+    test('normalizes legacy Silder title to Premium', () {
       final profile = _profile({'plan_type': 'Silder'});
       expect(tierFromUserProfile(profile), UserTier.silder);
-      expect(planBadgeLabelFromUserProfile(profile), 'Silver');
+      expect(planBadgeLabelFromUserProfile(profile), 'Premium');
     });
   });
 }

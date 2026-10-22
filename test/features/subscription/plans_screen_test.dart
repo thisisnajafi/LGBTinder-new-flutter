@@ -28,11 +28,12 @@ void main() {
 
     testWidgets('plans screen should display all tiers', (WidgetTester tester) async {
       // Arrange
-      final tiers = ['Bronze', 'Silver', 'Gold', 'Diamond'];
-      
+      final tiers = ['Free', 'Basic', 'Premium', 'Gold'];
+
       // Assert
       expect(tiers.length, 4);
-      expect(tiers, contains('Diamond'));
+      expect(tiers, isNot(contains('Silver')));
+      expect(tiers, isNot(contains('Diamond')));
     });
   });
 }

@@ -9,6 +9,7 @@ import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../../../screens/settings/account_management_screen.dart';
 import '../../../../screens/settings/change_password_screen.dart';
 import '../../../../core/utils/country_phone_utils.dart';
+import 'delete_account_screen.dart';
 import '../../../profile/providers/profile_page_cache_provider.dart';
 
 /// Read-only account contact and security details with links to change flows.
@@ -124,6 +125,25 @@ class _AccountDetailsScreenState extends ConsumerState<AccountDetailsScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: AppSpacing.spacingXL),
+                // Kept reachable in-app (Google Play requirement), but subtle.
+                Align(
+                  alignment: Alignment.center,
+                  child: TextButton(
+                    key: const ValueKey('account_details_delete_account'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const DeleteAccountScreen(),
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor:
+                          AppColors.feedbackError.withValues(alpha: 0.85),
+                    ),
+                    child: const Text('Delete account'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.spacingMD),
               ],
             ),
     );

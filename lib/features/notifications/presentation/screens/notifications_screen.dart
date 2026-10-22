@@ -348,7 +348,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           'title': 'See who liked you',
           'desc':
               'Upgrade to see the people who liked you and match faster.',
-          'minTier': 'silder',
+          'minTier': 'premium',
           'feature': 'See who liked you',
         },
       ).toString();

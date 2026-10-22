@@ -26,13 +26,12 @@ class FeatureLockedScreen extends StatelessWidget {
     this.featureDescription,
   });
 
+  @visibleForTesting
+  static UserTier parseTier(String? value) => _parseTier(value);
+
   static UserTier _parseTier(String? value) {
     final v = (value ?? '').toLowerCase().trim();
-    if (v == 'golden' || v == 'gold') return UserTier.golden;
-    if (v == 'silder' || v == 'silver' || v == 'premium') {
-      return UserTier.silder;
-    }
-    return UserTier.basid;
+    return userTierFromApiKey(v);
   }
 
   static FeatureLockedScreen fromQueryParams(Map<String, String> qp) {
@@ -73,7 +72,8 @@ class FeatureLockedScreen extends StatelessWidget {
 
     final tierLabel = switch (minTier) {
       UserTier.golden => 'Gold',
-      UserTier.silder => 'Silver',
+      // Premium is the lowest tier here and Gold includes it.
+      UserTier.silder => 'Premium or Gold',
       UserTier.basid => minTier.displayLabel,
     };
 

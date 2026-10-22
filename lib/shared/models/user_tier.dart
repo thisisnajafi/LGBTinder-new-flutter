@@ -12,10 +12,12 @@ extension UserTierX on UserTier {
       };
 
   /// User-facing label for badges and upgrade copy.
-  /// Internal keys stay `silder` and `golden`.
+  /// Internal keys stay `silder` and `golden` (legacy slugs shared with the
+  /// backend and the store catalog); the product names are Basic, Premium
+  /// and Gold. "Silver" is a retired name for Premium.
   String get displayLabel => switch (this) {
         UserTier.basid => 'Basic',
-        UserTier.silder => 'Silver',
+        UserTier.silder => 'Premium',
         UserTier.golden => 'Gold',
       };
 
@@ -37,7 +39,7 @@ extension UserTierX on UserTier {
 ///
 /// Mapping:
 /// - 1 or "bronze"/"basic" => basid
-/// - 2 or "silver"/"premium" => silder
+/// - 2 or "premium" (legacy "silver"/"silder") => silder (Premium)
 /// - 3 or "gold"/"golden" => golden
 UserTier userTierFromPlan({int? planId, String? planName}) {
   final name = (planName ?? '').toLowerCase().trim();
@@ -77,3 +79,31 @@ UserTier userTierFromApiKey(String? raw) {
   }
 }
 
+
+/// User-facing plan name for a backend tier slug or plan title.
+///
+/// The plans are Free (no subscription), Basic, Premium and Gold. Legacy
+/// names from the store catalog / database map onto them: "Silver"/"silder"
+/// => Premium, "Golden" => Gold, "Bronze"/"basid" => Basic.
+String planDisplayName(String? raw) {
+  final v = (raw ?? '').toLowerCase().trim();
+  if (v.isEmpty || v == 'free' || v == 'none' || v.contains('free plan')) {
+    return 'Free';
+  }
+  if (v.contains('gold')) return 'Gold';
+  if (v.contains('premium') || v.contains('silver') || v.contains('silder')) {
+    return 'Premium';
+  }
+  if (v.contains('basic') || v.contains('basid') || v.contains('bronze')) {
+    return 'Basic';
+  }
+  return raw!.trim();
+}
+
+/// Paid tier for a backend plan id (1 = Basic, 2 = Premium, 3 = Gold).
+UserTier? userTierFromPlanId(int? planId) => switch (planId) {
+      1 => UserTier.basid,
+      2 => UserTier.silder,
+      3 => UserTier.golden,
+      _ => null,
+    };

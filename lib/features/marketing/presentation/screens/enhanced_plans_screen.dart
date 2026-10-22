@@ -22,8 +22,7 @@ import '../../../../core/widgets/premium/premium_design_system.dart';
 /// Part of the Marketing System Implementation (Task 3.5.1)
 /// 
 /// Features:
-/// - Diamond tier support
-/// - Price anchoring layout (Diamond first)
+/// - Price anchoring layout (highest tier first)
 /// - "Most Popular" badge
 /// - Value stacking display
 /// - Promo code input
@@ -68,7 +67,7 @@ class _EnhancedPlansScreenState extends ConsumerState<EnhancedPlansScreen> {
 
       if (mounted) {
         setState(() {
-          // Sort plans by price descending (Diamond first - price anchoring)
+          // Sort plans by price descending (highest tier first - price anchoring)
           _plans = List.from(plans)
             ..sort((a, b) => (b.basePrice ?? 0).compareTo(a.basePrice ?? 0));
           _isLoading = false;
@@ -242,14 +241,13 @@ class _EnhancedPlansScreenState extends ConsumerState<EnhancedPlansScreen> {
     Color tierColor;
     String tierName = plan.name.toLowerCase();
     switch (tierName) {
-      case 'diamond':
-        tierColor = const Color(0xFFB9F2FF); // Diamond blue
-        break;
       case 'gold':
+      case 'golden':
         tierColor = const Color(0xFFFFD700); // Gold
         break;
-      case 'silver':
-        tierColor = const Color(0xFFC0C0C0); // Silver
+      case 'premium':
+      case 'silver': // legacy name for Premium
+        tierColor = const Color(0xFFC0C0C0); // Premium
         break;
       default:
         tierColor = const Color(0xFFCD7F32); // Bronze
@@ -562,11 +560,11 @@ class _EnhancedPlansScreenState extends ConsumerState<EnhancedPlansScreen> {
 
   IconData _getTierIcon(String tier) {
     switch (tier.toLowerCase()) {
-      case 'diamond':
-        return Icons.diamond;
       case 'gold':
+      case 'golden':
         return Icons.workspace_premium;
-      case 'silver':
+      case 'premium':
+      case 'silver': // legacy name for Premium
         return Icons.star;
       default:
         return Icons.shield;

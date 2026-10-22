@@ -126,3 +126,69 @@ class DiscoverPassportBanner extends StatelessWidget {
     );
   }
 }
+
+/// Compact Passport line rendered inside the Discover greeting card.
+class DiscoverPassportInlineSection extends StatelessWidget {
+  const DiscoverPassportInlineSection({
+    super.key,
+    required this.passport,
+    required this.onReturnHome,
+    this.isClearing = false,
+  });
+
+  final PassportLocation passport;
+  final VoidCallback onReturnHome;
+  final bool isClearing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PremiumTapScale(
+      onTap: isClearing ? () {} : onReturnHome,
+      semanticLabel: 'Return from passport location',
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.spacingXS + 2),
+        child: Row(
+          children: [
+            AppSvgIcon(
+              assetPath: AppIcons.map,
+              size: 16,
+              color: AppColors.accentViolet,
+            ),
+            const SizedBox(width: AppSpacing.spacingSM),
+            AppText(
+              'Passport active',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: AppColors.accentRose,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+            ),
+            const SizedBox(width: AppSpacing.spacingSM),
+            Expanded(
+              child: AppText(
+                'Exploring ${passport.displayLabel} · Return home',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+              ),
+            ),
+            if (isClearing)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              AppSvgIcon(
+                assetPath: AppIcons.getIconPath('arrow-right-3'),
+                size: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

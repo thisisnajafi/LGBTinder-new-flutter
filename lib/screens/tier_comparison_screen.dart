@@ -17,6 +17,75 @@ import '../shared/models/user_tier.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../core/responsive/responsive.dart';
 
+/// One row of the Compare tiers page. Feature lists mirror what the backend
+/// enforces (PlanLimitsController / SubscriptionFeatures / PlanLimitSettings).
+class TierComparisonCard {
+  const TierComparisonCard({
+    required this.tier,
+    required this.title,
+    required this.tagline,
+    required this.accent,
+    required this.bullets,
+  });
+
+  /// null = Free (no subscription).
+  final UserTier? tier;
+  final String title;
+  final String tagline;
+  final Color accent;
+  final List<String> bullets;
+}
+
+const tierComparisonCards = <TierComparisonCard>[
+  TierComparisonCard(
+    tier: null,
+    title: 'Free',
+    tagline: 'Get started',
+    accent: AppColors.accentViolet,
+    bullets: [
+      'Discovery and swiping with daily limits',
+      'Daily message limits per match',
+      '1 Super Like per day',
+    ],
+  ),
+  TierComparisonCard(
+    tier: UserTier.basid,
+    title: 'Basic',
+    tagline: 'Chat without limits',
+    accent: AppColors.accentViolet,
+    bullets: [
+      'Unlimited chat with your matches',
+      'Full message history',
+      'Ad-free',
+    ],
+  ),
+  TierComparisonCard(
+    tier: UserTier.silder,
+    title: 'Premium',
+    tagline: 'Best for faster matches',
+    accent: AppColors.accentPink,
+    bullets: [
+      'Everything in Basic',
+      'Voice calls',
+      'See who liked you',
+      'Advanced filters, Passport and Rewind',
+      'Unlimited swipes and 5 Super Likes per day',
+    ],
+  ),
+  TierComparisonCard(
+    tier: UserTier.golden,
+    title: 'Gold',
+    tagline: 'Everything unlocked',
+    accent: AppColors.feedbackWarning,
+    bullets: [
+      'Everything in Premium',
+      'Video calls',
+      'AI matching',
+      '10 Super Likes per day',
+    ],
+  ),
+];
+
 class TierComparisonScreen extends StatelessWidget {
   const TierComparisonScreen({super.key});
 
@@ -24,10 +93,12 @@ class TierComparisonScreen extends StatelessWidget {
     for (final plan in plans) {
       final name = plan.name.toLowerCase();
       final hits = switch (tier) {
-        UserTier.basid => name.contains('basic') || name.contains('free'),
-        UserTier.silder =>
-          name.contains('silver') || name.contains('silder') || name.contains('premium'),
-        UserTier.golden => name.contains('gold'),
+        UserTier.basid => plan.id == 1 || name.contains('basic') || name.contains('bronze'),
+        UserTier.silder => plan.id == 2 ||
+            name.contains('premium') ||
+            name.contains('silver') ||
+            name.contains('silder'),
+        UserTier.golden => plan.id == 3 || name.contains('gold'),
       };
       if (hits) {
         final amount = plan.price.toStringAsFixed(
@@ -54,8 +125,10 @@ class TierComparisonScreen extends StatelessWidget {
           );
         });
 
-        final currentTier =
-            ref.watch(subscriptionProvider)?.tier ?? UserTier.basid;
+        final sub = ref.watch(subscriptionProvider);
+        // null = Free (no active subscription).
+        final UserTier? currentTier =
+            sub != null && sub.isActive ? sub.tier : null;
         final plans = ref.watch(subscriptionPlansProvider).valueOrNull ??
             const <SubscriptionPlan>[];
 
@@ -72,7 +145,7 @@ class TierComparisonScreen extends StatelessWidget {
             ),
             children: [
               AppText(
-                'Current plan: ${currentTier.displayLabel}',
+                'Current plan: ${currentTier?.displayLabel ?? 'Free'}',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -86,49 +159,22 @@ class TierComparisonScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.spacingXL),
-              _TierCard(
-                title: 'Basic',
-                subtitle: _priceFor(plans, UserTier.basid).isEmpty
-                    ? 'Great to start'
-                    : _priceFor(plans, UserTier.basid),
-                accent: AppColors.accentViolet,
-                isCurrent: currentTier == UserTier.basid,
-                bullets: const [
-                  'Discovery + swiping',
-                  'Basic messaging limits',
-                  'Standard filters',
-                ],
-              ),
-              const SizedBox(height: AppSpacing.spacingLG),
-              _TierCard(
-                title: 'Silver',
-                subtitle: _priceFor(plans, UserTier.silder).isEmpty
-                    ? 'Best for faster matches'
-                    : _priceFor(plans, UserTier.silder),
-                accent: AppColors.accentPink,
-                highlight: true,
-                isCurrent: currentTier == UserTier.silder,
-                bullets: const [
-                  'See who liked you',
-                  'Advanced filters',
-                  'More superlikes/boosts',
-                  'More messaging freedom',
-                ],
-              ),
-              const SizedBox(height: AppSpacing.spacingLG),
-              _TierCard(
-                title: 'Gold',
-                subtitle: _priceFor(plans, UserTier.golden).isEmpty
-                    ? 'Everything unlocked'
-                    : _priceFor(plans, UserTier.golden),
-                accent: AppColors.feedbackWarning,
-                isCurrent: currentTier == UserTier.golden,
-                bullets: const [
-                  'All Silver benefits',
-                  'Highest limits + priority perks',
-                  'Exclusive badges/visibility boosts',
-                ],
-              ),
+              for (final card in tierComparisonCards) ...[
+                _TierCard(
+                  title: card.title,
+                  subtitle: card.tier == null
+                      ? 'No subscription'
+                      : (_priceFor(plans, card.tier!).isEmpty
+                          ? card.tagline
+                          : '${_priceFor(plans, card.tier!)} / month'),
+                  accent: card.accent,
+                  highlight: card.tier == UserTier.silder &&
+                      currentTier != UserTier.golden,
+                  isCurrent: card.tier == currentTier,
+                  bullets: card.bullets,
+                ),
+                const SizedBox(height: AppSpacing.spacingLG),
+              ],
             ],
           ),
           bottomNavigationBar: SafeArea(

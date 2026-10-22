@@ -56,13 +56,15 @@ UserTier tierFromUserProfile(UserProfile profile) {
   return UserTier.basid;
 }
 
-/// User-facing plan badge text (Basic / Silver / Gold).
+/// User-facing plan badge text (Basic / Premium / Gold).
 String planBadgeLabelFromUserProfile(UserProfile profile) {
   final raw = profilePlanNameFromPayload(profile);
   if (raw != null) {
     final lower = raw.toLowerCase();
     if (lower == 'basid') return 'Basic';
-    if (lower == 'silder' || lower == 'silver') return 'Silver';
+    if (lower == 'silder' || lower == 'silver' || lower == 'premium') {
+      return 'Premium';
+    }
     if (lower == 'golden' || lower == 'gold') return 'Gold';
     return raw;
   }

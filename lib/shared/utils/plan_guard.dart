@@ -70,6 +70,9 @@ class PlanGuardResult {
 /// }
 /// // Perform superlike...
 /// ```
+/// Lowest tier that unlocks "See who liked you" (Premium; Gold includes it).
+const UserTier seeWhoLikedMeMinTier = UserTier.silder;
+
 class PlanGuard {
   final PlanLimitsService _planLimitsService;
 
@@ -215,7 +218,11 @@ class PlanGuard {
     try {
       final limits = await _planLimitsService.getPlanLimits();
 
-      if (limits.features.seeWhoLikedMe) {
+      // Hierarchical: Premium and every higher tier (Gold) include it, even
+      // when a stale per-plan flag says otherwise.
+      if (limits.features.seeWhoLikedMe ||
+          (limits.planInfo.isPremium &&
+              limits.tier.atLeast(seeWhoLikedMeMinTier))) {
         return PlanGuardResult.allowed();
       }
 
@@ -302,7 +309,7 @@ class PlanGuard {
     }
   }
 
-  /// Voice calls start at Premium (Silver). Basic and Free are blocked.
+  /// Voice calls start at Premium. Basic and Free are blocked.
   Future<PlanGuardResult> canMakeVoiceCall() async {
     try {
       final limits = await _planLimitsService.getPlanLimits(forceRefresh: true);
@@ -327,7 +334,7 @@ class PlanGuard {
     }
   }
 
-  /// Video calls are Golden only. Silver still sees the button, then this prompt.
+  /// Video calls are Golden only. Premium still sees the button, then this prompt.
   Future<PlanGuardResult> canMakeVideoCall() async {
     try {
       final limits = await _planLimitsService.getPlanLimits(forceRefresh: true);

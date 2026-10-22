@@ -32,14 +32,10 @@ AppSubscriptionStatus appSubscriptionFromLegacy(
   PlanLimits? planLimits,
 }) {
   final tierRaw = status.tier?.toLowerCase().trim();
-  final tier = tierRaw != null && tierRaw.isNotEmpty
-      ? UserTier.values.firstWhere(
-          (t) => t.key == tierRaw,
-          orElse: () => userTierFromPlan(
-            planId: status.planId ?? planLimits?.planInfo.planId,
-            planName: status.planName ?? planLimits?.planInfo.planName,
-          ),
-        )
+  final tier = tierRaw != null &&
+          tierRaw.isNotEmpty &&
+          userTierFromApiKey(tierRaw) != UserTier.basid
+      ? userTierFromApiKey(tierRaw)
       : userTierFromPlan(
           planId: status.planId ?? planLimits?.planInfo.planId,
           planName: status.planName ?? planLimits?.planInfo.planName,

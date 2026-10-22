@@ -46,7 +46,7 @@ class ChatUpgradeBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.spacingSM),
             AppText(
-              'Upgrade to Silver or Gold to send unlimited messages in this chat.',
+              'Upgrade to Basic or higher to send unlimited messages in this chat.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: isDark

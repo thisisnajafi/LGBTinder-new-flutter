@@ -64,7 +64,8 @@ void main() {
 
       expect(find.text('Upgrade required'), findsOneWidget);
       expect(find.text('Video calls'), findsOneWidget);
-      expect(find.textContaining('Silver'), findsOneWidget);
+      expect(find.textContaining('Required tier: Premium or Gold'), findsOneWidget);
+      expect(find.textContaining('Silver'), findsNothing);
       expect(find.text('View plans'), findsOneWidget);
       expect(find.text('Compare tiers'), findsOneWidget);
     });

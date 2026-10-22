@@ -19,7 +19,11 @@ import '../../../widgets/loading/skeleton_loader.dart';
 /// swipe quota (with a thin progress bar) and the Upgrade button, all in one
 /// row so the swipe card gets the remaining height.
 class DiscoverGreetingWidget extends ConsumerWidget {
-  const DiscoverGreetingWidget({super.key});
+  const DiscoverGreetingWidget({super.key, this.footer});
+
+  /// Optional inner section shown under the greeting row inside the same card
+  /// (e.g. the active Passport line), separated by a thin divider.
+  final Widget? footer;
 
   String _timeBasedGreeting() {
     final hour = DateTime.now().hour;
@@ -83,7 +87,11 @@ class DiscoverGreetingWidget extends ConsumerWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+        Row(
           children: [
             Semantics(
               button: true,
@@ -248,6 +256,18 @@ class DiscoverGreetingWidget extends ConsumerWidget {
                   ),
                 ),
               ),
+            ],
+          ],
+        ),
+            if (footer != null) ...[
+              const SizedBox(height: AppSpacing.spacingXS + 2),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.accentViolet
+                    .withValues(alpha: isDark ? 0.16 : 0.10),
+              ),
+              footer!,
             ],
           ],
         ),

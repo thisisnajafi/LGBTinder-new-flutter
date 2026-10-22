@@ -34,7 +34,9 @@ class TierBadge extends ConsumerWidget {
     if (raw == null || raw.isEmpty) return tier.displayLabel;
     final lower = raw.toLowerCase();
     if (lower == 'basid') return 'Basic';
-    if (lower == 'silder' || lower == 'silver') return 'Silver';
+    if (lower == 'silder' || lower == 'silver' || lower == 'premium') {
+      return 'Premium';
+    }
     if (lower == 'golden' || lower == 'gold') return 'Gold';
     return raw;
   }

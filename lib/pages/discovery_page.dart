@@ -1154,18 +1154,23 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                     actions: _buildHeaderActions(context),
                   ),
                   const SizedBox(height: AppSpacing.spacingSM),
-                  const RepaintBoundary(child: DiscoverGreetingWidget()),
+                  RepaintBoundary(
+                    child: DiscoverGreetingWidget(
+                      footer: passport.active
+                          ? DiscoverPassportInlineSection(
+                              passport: passport,
+                              isClearing: _isClearingPassport,
+                              onReturnHome: _returnFromPassport,
+                            )
+                          : null,
+                    ),
+                  ),
                   DiscoverActiveFiltersBar(
                     labels: DiscoverActiveFilterLabels.fromMap(
                       ref.watch(discoveryFiltersProvider),
                     ),
                     onEdit: _openFilters,
                     onClear: _clearActiveFilters,
-                  ),
-                  DiscoverPassportBanner(
-                    passport: passport,
-                    isClearing: _isClearingPassport,
-                    onReturnHome: _returnFromPassport,
                   ),
                   Expanded(
                     child: ResponsiveGrid.constrainedTo(
