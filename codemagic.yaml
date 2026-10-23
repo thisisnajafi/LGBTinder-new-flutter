@@ -89,6 +89,7 @@ workflows:
         script: |
           set -euo pipefail
           # Do not pass API_ORIGIN. The production entry point rejects it.
+          flutter config --no-enable-swift-package-manager
           flutter build ipa --release \
             --flavor "$XCODE_SCHEME" \
             --target "$ENTRY_POINT" \
@@ -170,6 +171,7 @@ workflows:
       - name: Build staging IPA
         script: |
           set -euo pipefail
+          flutter config --no-enable-swift-package-manager
           flutter build ipa --release \
             --flavor "$XCODE_SCHEME" \
             --target "$ENTRY_POINT" \
