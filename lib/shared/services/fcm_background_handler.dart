@@ -11,6 +11,7 @@ import '../../features/calls/data/models/incoming_call_data.dart';
 import '../../features/calls/data/services/call_kit_service.dart';
 import '../../core/services/app_logger.dart';
 import 'background_message_display.dart';
+import 'push_session_guard.dart';
 import 'notification_avatar_bitmap.dart';
 import 'notification_payload_map.dart';
 import 'notification_quick_actions.dart';
@@ -44,6 +45,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await Firebase.initializeApp();
   } catch (_) {
     // Already initialized in this isolate.
+  }
+
+  // Logged out on this device: drop the push (stale token on the backend).
+  if (!await PushSessionGuard.hasLocalSession()) {
+    AppLogger.info('Ignored background FCM: no signed-in user', tag: 'Notifications');
+    return;
   }
 
   final data = Map<String, dynamic>.from(message.data);

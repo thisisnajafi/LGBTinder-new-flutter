@@ -6,6 +6,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/widgets.dart';
 import 'package:notification_launch/notification_launch.dart';
 import 'dart:async';
+
+import 'push_session_guard.dart';
 import 'dart:convert';
 import 'dart:io';
 import '../../core/constants/api_endpoints.dart';
@@ -45,6 +47,7 @@ class PushNotificationService {
 
   bool _isInitialized = false;
   String? _fcmToken;
+  final Set<String> _subscribedTopics = <String>{};
 
   // API service for backend communication
   ApiService? _apiService;
@@ -76,6 +79,9 @@ class PushNotificationService {
     final token = _fcmToken;
     if (token != null && token.isNotEmpty) {
       unawaited(_sendTokenToBackend(token));
+    } else if (_isInitialized) {
+      // Token was deleted on logout; fetch a fresh one and register it.
+      unawaited(_getFCMToken());
     }
   }
 
@@ -437,7 +443,7 @@ class PushNotificationService {
   Future<String?> _getFCMToken() async {
     try {
       _fcmToken = await _firebaseMessaging.getToken();
-      AppLogger.debug('FCM Token: $_fcmToken');
+      AppLogger.debug('FCM token obtained (${_fcmToken?.length ?? 0} chars)');
       if (_fcmToken != null && _fcmToken!.isNotEmpty) {
         await _sendTokenToBackend(_fcmToken!);
       }
@@ -486,13 +492,17 @@ class PushNotificationService {
 
     // Handle token refresh
     _firebaseMessaging.onTokenRefresh.listen((String newToken) async {
-      AppLogger.debug('FCM Token refreshed: $newToken');
+      AppLogger.debug('FCM token refreshed');
       _fcmToken = newToken;
       await _sendTokenToBackend(newToken);
     });
   }
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    if (!await PushSessionGuard.hasLocalSession()) {
+      AppLogger.info('Ignored FCM message: no signed-in user', tag: 'Notifications');
+      return;
+    }
     if (_isIncomingCallPayload(message.data)) {
       _handleIncomingCall(message.data);
       return;
@@ -898,6 +908,7 @@ class PushNotificationService {
   Future<void> subscribeToTopic(String topic) async {
     try {
       await _firebaseMessaging.subscribeToTopic(topic);
+      _subscribedTopics.add(topic);
       AppLogger.debug('Subscribed to topic: $topic');
     } catch (e) {
       AppLogger.debug('Error subscribing to topic: $e');
@@ -908,10 +919,23 @@ class PushNotificationService {
   Future<void> unsubscribeFromTopic(String topic) async {
     try {
       await _firebaseMessaging.unsubscribeFromTopic(topic);
+      _subscribedTopics.remove(topic);
       AppLogger.debug('Unsubscribed from topic: $topic');
     } catch (e) {
       AppLogger.debug('Error unsubscribing from topic: $e');
     }
+  }
+
+  /// Logout cleanup: unsubscribe topics, delete the FCM token on this device
+  /// and stop sending tokens to the backend until the next login.
+  /// Call after the backend has been told to drop the token.
+  Future<void> clearOnLogout() async {
+    for (final topic in _subscribedTopics.toList()) {
+      await unsubscribeFromTopic(topic);
+    }
+    _subscribedTopics.clear();
+    await deleteToken();
+    _apiService = null;
   }
 
   /// Delete FCM token

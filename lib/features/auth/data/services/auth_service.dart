@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/services/token_storage_service.dart';
+import '../../../../shared/services/push_notification_service.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../shared/models/api_response.dart';
 import '../models/register_request.dart';
@@ -588,19 +589,46 @@ class AuthService {
     return fields;
   }
 
-  /// Logout - revoke server token, clear local session.
+  /// Logout: remove this device's push token on the server, revoke the
+  /// server session, delete the FCM token locally, then clear local auth.
+  /// Network steps are best-effort with a timeout so logout never hangs.
   Future<void> logout() async {
+    final push = PushNotificationService();
+    final deviceToken = push.fcmToken;
+    const timeout = Duration(seconds: 6);
     try {
       final token = await _tokenStorage.getAuthToken();
       if (token != null && token.isNotEmpty) {
-        await _apiService.post<Map<String, dynamic>>(
-          ApiEndpoints.logout,
-          fromJson: (json) => json as Map<String, dynamic>,
-        );
+        if (deviceToken != null && deviceToken.isNotEmpty) {
+          try {
+            await _apiService
+                .delete<Map<String, dynamic>>(
+                  ApiEndpoints.notificationsUnregisterDevice,
+                  data: {'device_token': deviceToken},
+                  fromJson: (json) => json as Map<String, dynamic>,
+                )
+                .timeout(timeout);
+          } catch (_) {
+            // Logout below also clears the token server-side.
+          }
+        }
+        await _apiService
+            .post<Map<String, dynamic>>(
+              ApiEndpoints.logout,
+              data: {
+                if (deviceToken != null && deviceToken.isNotEmpty)
+                  'device_token': deviceToken,
+              },
+              fromJson: (json) => json as Map<String, dynamic>,
+            )
+            .timeout(timeout);
       }
     } catch (_) {
       // Local logout should still proceed if the network call fails.
     } finally {
+      try {
+        await push.clearOnLogout().timeout(timeout);
+      } catch (_) {}
       await _tokenStorage.clearAllTokens();
       _dioClient.clearAuthToken();
     }
