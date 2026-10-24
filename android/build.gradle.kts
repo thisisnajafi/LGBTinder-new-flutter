@@ -274,6 +274,56 @@ fun Project.patchCallkitExplicitDecline() {
 
 patchCallkitExplicitDecline()
 
+// FGS: the plugin starts its ongoing-call service with type phoneCall only, so
+// Android silences the microphone once the app is backgrounded. Start it with
+// phoneCall|microphone when RECORD_AUDIO is granted (the manifest override in
+// app/src/main declares both types). Idempotent; pub get restores the source.
+fun Project.patchCallkitMicrophoneForeground() {
+    val config = file("../.dart_tool/package_config.json")
+    if (!config.exists()) return
+    val json = config.readText()
+    val nameAt = json.indexOf("\"name\": \"flutter_callkit_incoming\"")
+    if (nameAt < 0) return
+    val rootKey = "\"rootUri\": \""
+    val rootAt = json.indexOf(rootKey, nameAt)
+    if (rootAt < 0 || rootAt - nameAt > 200) return
+    val uriStart = rootAt + rootKey.length
+    val rootUri = json.substring(uriStart, json.indexOf('"', uriStart))
+    val rawPath = java.net.URI(rootUri).path ?: return
+    val path = if (rawPath.length >= 3 && rawPath[0] == '/' && rawPath[2] == ':') rawPath.substring(1) else rawPath
+    val service = file(
+        "$path/android/src/main/kotlin/com/hiennv/flutter_callkit_incoming/CallkitNotificationService.kt",
+    )
+    if (!service.exists()) return
+    val source = service.readText()
+    if (source.contains("FGS-MIC")) return
+    val needle = "                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL\n"
+    val normalized = source.replace("\r\n", "\n")
+    if (!normalized.contains(needle)) {
+        logger.warn("FGS-MIC: CallkitNotificationService shape changed; microphone type not applied")
+        return
+    }
+    val hook = """
+        |                    // FGS-MIC: keep the mic live while the call is backgrounded.
+        |                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+        |                        ContextCompat.checkSelfPermission(
+        |                            this,
+        |                            android.Manifest.permission.RECORD_AUDIO
+        |                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        |                    ) {
+        |                        ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or
+        |                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        |                    } else {
+        |                        ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+        |                    }
+        |
+    """.trimMargin()
+    service.writeText(normalized.replace(needle, hook))
+    logger.lifecycle("FGS-MIC: CallKit ongoing service uses phoneCall|microphone (${service.path})")
+}
+
+patchCallkitMicrophoneForeground()
+
 allprojects {
     repositories {
         google()
