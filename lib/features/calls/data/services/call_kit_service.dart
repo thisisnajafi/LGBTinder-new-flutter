@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
@@ -343,6 +344,48 @@ class CallKitService {
       await BackgroundAuthStore.mirror(token);
     } catch (e) {
       AppLogger.warning('Auth mirror for CallKit failed', tag: _tag, error: e);
+    }
+  }
+
+  /// Android: start the plugin's ongoing-call foreground service
+  /// (`CallkitNotificationService`, type phoneCall|microphone) once media is
+  /// connected. It shows the "ongoing call" notification and keeps the
+  /// process, network and microphone alive while the app is in the
+  /// background. Stopped by [endCall] / [endAllCalls].
+  Future<void> startOngoing({
+    required String callId,
+    required String peerName,
+    String? peerAvatar,
+    required bool isVideo,
+  }) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    if (callId.isEmpty || callId == '0') return;
+    final avatar = peerAvatar?.trim();
+    try {
+      await FlutterCallkitIncoming.startCall(
+        CallKitParams(
+          id: callId,
+          nameCaller: peerName,
+          appName: 'LGBTFinder',
+          avatar: (avatar != null && avatar.isNotEmpty) ? avatar : null,
+          handle: isVideo ? 'Video call' : 'Voice call',
+          type: isVideo ? 1 : 0,
+          android: AndroidParams(
+            isCustomNotification: true,
+            isShowLogo: false,
+            backgroundColor: _hex(AppColors.backgroundDark),
+            actionColor: _hex(AppColors.accentRose),
+            textColor: '#FFFFFF',
+          ),
+        ),
+      );
+      // startCall registers the row through a broadcast; give it a moment
+      // before flipping the notification to "connected".
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await FlutterCallkitIncoming.setCallConnected(callId);
+      AppLogger.info('Ongoing call service started callId=$callId', tag: _tag);
+    } catch (e) {
+      AppLogger.warning('startOngoing failed', tag: _tag, error: e);
     }
   }
 

@@ -30,6 +30,7 @@ import '../data/models/call_initiate_exception.dart';
 import '../data/models/call_reconnect_policy.dart';
 import '../data/models/call_wake_lock.dart';
 import '../data/models/active_call_session.dart';
+import '../data/services/call_kit_service.dart';
 import '../data/services/call_signaling_service.dart';
 import '../presentation/widgets/call_blurred_backdrop.dart';
 import '../presentation/widgets/call_end_overlay.dart';
@@ -715,6 +716,14 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _mediaConnected = true;
     _liveUi.setConnected(true);
     _syncMessengerStatus('active');
+    unawaited(
+      CallKitService.instance.startOngoing(
+        callId: _callId.toString(),
+        peerName: widget.recipientName,
+        peerAvatar: widget.recipientAvatarUrl,
+        isVideo: widget.type == OutgoingCallType.video,
+      ),
+    );
     if (mounted) {
       setState(() {
         _connectionError = null;
@@ -1237,6 +1246,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     }
     if (_callId > 0) {
       _signaling.disposeCall(_callId);
+      unawaited(CallKitService.instance.endCall(_callId.toString()));
     }
   }
 
@@ -1376,6 +1386,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     unawaited(_wakeLock.disable(force: true));
     if (callId > 0) {
       _signaling.disposeCall(callId);
+      unawaited(CallKitService.instance.endCall(callId.toString()));
     }
     unawaited(_agoraService.dispose());
     unawaited(SoundService.instance.stopCallSounds());
