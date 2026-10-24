@@ -118,6 +118,12 @@
              location service are unused; location is foreground-only. -->
         <service android:name="io.agora.rtc2.extensions.MediaProjectionMgr$LocalScreenSharingService" tools:node="remove" />
         <service android:name="com.baseflow.geolocator.GeolocatorLocationService" tools:node="remove" />
+        <!-- Ongoing VoIP call: keep the call alive in the background with
+             mic access (Play FGS declaration: phoneCall + microphone). -->
+        <service
+            android:name="com.hiennv.flutter_callkit_incoming.CallkitNotificationService"
+            android:foregroundServiceType="phoneCall|microphone"
+            tools:replace="android:foregroundServiceType" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
