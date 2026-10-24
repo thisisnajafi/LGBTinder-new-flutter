@@ -722,6 +722,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         peerName: widget.recipientName,
         peerAvatar: widget.recipientAvatarUrl,
         isVideo: widget.type == OutgoingCallType.video,
+        onHangUp: _endCall,
       ),
     );
     if (mounted) {

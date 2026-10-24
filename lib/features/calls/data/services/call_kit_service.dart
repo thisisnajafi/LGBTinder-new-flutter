@@ -60,6 +60,10 @@ class CallKitService {
   final List<_QueuedCallKitAction> _queued = [];
   final _CallKitResumeFlush _resumeFlush = _CallKitResumeFlush();
 
+  /// Connected call shown in the ongoing-call notification ([startOngoing]).
+  String? _ongoingCallId;
+  Future<void> Function()? _onOngoingHangUp;
+
   /// Start the native event stream before splash / Riverpod handlers exist.
   Future<void> startListening() async {
     if (_listening) return;
@@ -161,6 +165,15 @@ class CallKitService {
         }
         await _dispatch(CallKitEventAction.callback, callId);
       case CallKitEventAction.dismissOnly:
+        if (callId == _ongoingCallId) {
+          // Hang Up on the ongoing-call notification.
+          final hangUp = _onOngoingHangUp;
+          _ongoingCallId = null;
+          _onOngoingHangUp = null;
+          AppLogger.info('Ongoing call $callId hung up from notification', tag: _tag);
+          if (hangUp != null) await hangUp();
+          break;
+        }
         AppLogger.info('Ended $callId (UI dismiss only)', tag: _tag);
       case CallKitEventAction.ignore:
         break;
@@ -357,10 +370,13 @@ class CallKitService {
     required String peerName,
     String? peerAvatar,
     required bool isVideo,
+    Future<void> Function()? onHangUp,
   }) async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     if (callId.isEmpty || callId == '0') return;
     final avatar = peerAvatar?.trim();
+    _ongoingCallId = callId;
+    _onOngoingHangUp = onHangUp;
     try {
       await FlutterCallkitIncoming.startCall(
         CallKitParams(
@@ -390,6 +406,11 @@ class CallKitService {
   }
 
   Future<void> endCall(String callId) async {
+    if (callId == _ongoingCallId) {
+      // Our own teardown: the ENDED echo must not hang up again.
+      _ongoingCallId = null;
+      _onOngoingHangUp = null;
+    }
     try {
       await FlutterCallkitIncoming.endCall(callId);
     } catch (e) {
