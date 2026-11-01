@@ -6,6 +6,7 @@ set -euo pipefail
 # Reuse existing project Telegram config; allow GitHub secrets override.
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc}"
 TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:--1002275828844}"
+TELEGRAM_THREAD_ID="${TELEGRAM_THREAD_ID:-2466}"
 
 if [[ -z "${TELEGRAM_BOT_TOKEN}" || -z "${TELEGRAM_CHAT_ID}" ]]; then
   echo "Telegram credentials not configured, skipping notification."
@@ -68,6 +69,7 @@ EOF
 curl -sS --connect-timeout 15 --max-time 30 \
   -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   -d "chat_id=${TELEGRAM_CHAT_ID}" \
+  -d "message_thread_id=${TELEGRAM_THREAD_ID}" \
   --data-urlencode "text=${MESSAGE}" \
   -d "parse_mode=HTML" \
   -d "disable_web_page_preview=true"
