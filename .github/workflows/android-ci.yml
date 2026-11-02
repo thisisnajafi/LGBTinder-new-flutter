@@ -299,3 +299,69 @@ jobs:
         run: |
           chmod +x scripts/ci_telegram_report.sh
           scripts/ci_telegram_report.sh
+
+      - name: Notify Telegram
+        if: always()
+        timeout-minutes: 1
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ job.status }}
+          ACTOR: ${{ github.actor }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${TELEGRAM_BOT_TOKEN}" ]; then
+            echo "TELEGRAM_BOT_TOKEN is empty; skipping Telegram notification."
+            exit 0
+          fi
+
+          CHAT_ID="${TELEGRAM_CHAT_ID:--1002275828844}"
+
+          case "${JOB_STATUS}" in
+            success) ICON="✅" ;;
+            failure) ICON="❌" ;;
+            cancelled) ICON="🚫" ;;
+            *) ICON="⚠️" ;;
+          esac
+
+          html_escape() {
+            local value=$1 out="" i char
+            for ((i = 0; i < ${#value}; i++)); do
+              char=${value:i:1}
+              case "$char" in
+                '&') out+='&amp;' ;;
+                '<') out+='&lt;' ;;
+                '>') out+='&gt;' ;;
+                *) out+="$char" ;;
+              esac
+            done
+            printf '%s' "$out"
+          }
+
+          SHORT_SHA="$(printf '%s' "${SHA}" | cut -c1-7)"
+          RAW_MSG="$(printf '%s' "${COMMIT_MESSAGE}" | tr '\n\r\t' ' ' | cut -c1-200)"
+          SAFE_MSG="$(html_escape "${RAW_MSG}")"
+          SAFE_ACTOR="$(html_escape "${ACTOR}")"
+          SAFE_BRANCH="$(html_escape "${BRANCH}")"
+          SAFE_STATUS="$(html_escape "${JOB_STATUS}")"
+
+          MESSAGE="$(printf '%s\n' \
+            "${ICON} <b>LGBTFinder App</b>" \
+            "<b>Status:</b> ${SAFE_STATUS}" \
+            "<b>Actor:</b> ${SAFE_ACTOR}" \
+            "<b>Branch:</b> ${SAFE_BRANCH}" \
+            "<b>Commit:</b> <code>${SHORT_SHA}</code>" \
+            "<b>Message:</b> ${SAFE_MSG}" \
+            "<b>Run:</b> ${RUN_URL}")"
+
+          curl -sS --connect-timeout 10 --max-time 20 \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "message_thread_id=2466" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "disable_web_page_preview=true" \
+            || true
