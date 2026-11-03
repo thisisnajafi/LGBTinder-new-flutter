@@ -79,11 +79,13 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="lgbtfinder"/>
             </intent-filter>
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="lgbtfinder.app"/>
+                <data android:scheme="https"/>
+                <data android:host="lgbtfinder.com"/>
+                <data android:host="www.lgbtfinder.com"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

@@ -136,12 +136,12 @@ class MarketingDeepLinkHandler {
 
     // Handle app-specific scheme
     if (link.startsWith('lgbtfinder://')) {
-      normalizedLink = link.replaceFirst('lgbtfinder://', 'https://lgbtfinder.app/');
+      normalizedLink = link.replaceFirst('lgbtfinder://', 'https://lgbtfinder.com/');
     }
 
     // Handle relative paths
     if (link.startsWith('/')) {
-      normalizedLink = 'https://lgbtfinder.app$link';
+      normalizedLink = 'https://lgbtfinder.com$link';
     }
 
     try {
@@ -166,7 +166,7 @@ class MarketingDeepLinkHandler {
   static String generateWebDeepLink(String path, {Map<String, String>? params}) {
     final uri = Uri(
       scheme: 'https',
-      host: 'lgbtfinder.app',
+      host: 'lgbtfinder.com',
       path: path,
       queryParameters: params,
     );
