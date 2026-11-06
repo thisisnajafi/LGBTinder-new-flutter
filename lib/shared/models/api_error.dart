@@ -378,7 +378,10 @@ class ApiError {
     return message;
   }
 
-  /// Seconds from `retry_after` when the backend rate-limits OTP attempts.
+  /// Seconds from `retry_after` (top-level or under `data`). Accepts int,
+  /// num, or decimal string and rounds fractional values UP. Null when
+  /// missing or non-positive. Prefer [OtpRateLimit.retryAfterSeconds] for
+  /// UI waits (that helper also applies the 60s fallback).
   int? get retryAfterSeconds {
     final data = responseData;
     if (data == null) return null;
@@ -389,12 +392,14 @@ class ApiError {
         raw = nested['retry_after'] ?? nested['retryAfter'];
       }
     }
-    return switch (raw) {
-      final int n => n,
-      final num n => n.toInt(),
-      final String s => int.tryParse(s),
+    final double? asDouble = switch (raw) {
+      final int n => n.toDouble(),
+      final num n => n.toDouble(),
+      final String s => double.tryParse(s.trim()),
       _ => null,
     };
+    if (asDouble == null || asDouble <= 0) return null;
+    return asDouble.ceil();
   }
 
   /// OTP verify/reset lockout (HTTP 429 + OTP_TOO_MANY_ATTEMPTS).

@@ -7,16 +7,24 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/theme/typography.dart';
 import '../../utils/otp_rate_limit.dart';
 
-/// Shows a lockout countdown from [retryAfterSeconds], then a resend action.
+/// Countdown after an HTTP 429 on an OTP screen.
+///
+/// When [codeInvalidated] is true, shows Resend at 0.
+/// When false (IP/retry-only wait), calls [onWaitEnded] at 0 so submit/resend
+/// unlock without forcing a new code.
 class OtpRateLimitNotice extends StatefulWidget {
   const OtpRateLimitNotice({
     super.key,
     required this.retryAfterSeconds,
-    required this.onResend,
+    required this.codeInvalidated,
+    this.onResend,
+    this.onWaitEnded,
   });
 
   final int retryAfterSeconds;
-  final Future<bool> Function() onResend;
+  final bool codeInvalidated;
+  final Future<bool> Function()? onResend;
+  final VoidCallback? onWaitEnded;
 
   @override
   State<OtpRateLimitNotice> createState() => _OtpRateLimitNoticeState();
@@ -26,6 +34,7 @@ class _OtpRateLimitNoticeState extends State<OtpRateLimitNotice> {
   late int _remaining;
   Timer? _timer;
   bool _busy = false;
+  bool _endedNotified = false;
 
   @override
   void initState() {
@@ -36,7 +45,9 @@ class _OtpRateLimitNoticeState extends State<OtpRateLimitNotice> {
   @override
   void didUpdateWidget(covariant OtpRateLimitNotice oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.retryAfterSeconds != widget.retryAfterSeconds) {
+    if (oldWidget.retryAfterSeconds != widget.retryAfterSeconds ||
+        oldWidget.codeInvalidated != widget.codeInvalidated) {
+      _endedNotified = false;
       _start(widget.retryAfterSeconds);
     }
   }
@@ -50,7 +61,10 @@ class _OtpRateLimitNoticeState extends State<OtpRateLimitNotice> {
   void _start(int seconds) {
     _timer?.cancel();
     _remaining = seconds < 0 ? 0 : seconds;
-    if (_remaining <= 0) return;
+    if (_remaining <= 0) {
+      _notifyEndedIfNeeded();
+      return;
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -59,17 +73,28 @@ class _OtpRateLimitNoticeState extends State<OtpRateLimitNotice> {
       if (_remaining <= 1) {
         timer.cancel();
         setState(() => _remaining = 0);
+        _notifyEndedIfNeeded();
         return;
       }
       setState(() => _remaining--);
     });
   }
 
+  void _notifyEndedIfNeeded() {
+    if (_endedNotified) return;
+    if (_remaining > 0) return;
+    if (widget.codeInvalidated) return;
+    _endedNotified = true;
+    widget.onWaitEnded?.call();
+  }
+
   Future<void> _handleResend() async {
+    final onResend = widget.onResend;
+    if (!widget.codeInvalidated || onResend == null) return;
     if (_remaining > 0 || _busy) return;
     setState(() => _busy = true);
     try {
-      await widget.onResend();
+      await onResend();
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -100,11 +125,14 @@ class _OtpRateLimitNoticeState extends State<OtpRateLimitNotice> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            OtpRateLimit.waitMessage(_remaining),
+            OtpRateLimit.waitMessage(
+              _remaining,
+              codeInvalidated: widget.codeInvalidated,
+            ),
             style: AppTypography.body.copyWith(color: textColor),
             textAlign: TextAlign.center,
           ),
-          if (_remaining <= 0) ...[
+          if (widget.codeInvalidated && _remaining <= 0) ...[
             SizedBox(height: AppSpacing.spacingSM),
             TextButton(
               onPressed: _busy ? null : _handleResend,

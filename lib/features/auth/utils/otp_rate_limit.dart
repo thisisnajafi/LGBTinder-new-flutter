@@ -1,37 +1,96 @@
 import '../../../shared/models/api_error.dart';
 
-/// Helpers for backend OTP lockouts (`OTP_TOO_MANY_ATTEMPTS` + `retry_after`).
+/// Active wait after an HTTP 429 on an OTP/code screen.
+class OtpWaitLock {
+  const OtpWaitLock({
+    required this.retryAfterSeconds,
+    required this.codeInvalidated,
+  });
+
+  final int retryAfterSeconds;
+
+  /// When true (`OTP_TOO_MANY_ATTEMPTS`), the code was burned — clear fields
+  /// and offer Resend after the countdown. When false (IP/retry-only 429),
+  /// keep the entered code and only block submit/resend until the wait ends.
+  final bool codeInvalidated;
+}
+
+/// Helpers for HTTP 429 waits on OTP / verification code screens.
 ///
-/// Returned by verify-login-code, verify-otp, reset-password, and
-/// send-verification (registration) as HTTP 429.
-/// The code is invalidated; the user must wait, then request a new code.
+/// Endpoints: verify-login-code, verify-otp, reset-password, send-verification.
+///
+/// - Any 429 with `retry_after` (top-level or under `data`) starts a countdown.
+/// - With `error_code: OTP_TOO_MANY_ATTEMPTS` the code is invalidated.
+/// - Without that code (older IP limiter) the entered digits are kept.
+///
+/// Intentionally ignores `data.failed_attempts` and `restriction_tier`.
 abstract final class OtpRateLimit {
   static const String errorCode = 'OTP_TOO_MANY_ATTEMPTS';
   static const int defaultRetryAfterSeconds = 60;
 
-  static bool matches(ApiError error) =>
+  /// True when this is a 429 that carries a usable `retry_after`.
+  static bool matches(ApiError error) {
+    if (error.code != 429) return false;
+    return _rawRetryAfter(error.responseData) != null ||
+        isCodeInvalidated(error);
+  }
+
+  /// Burned-code lockout from the per-email OTP attempt limiter.
+  static bool isCodeInvalidated(ApiError error) =>
       error.code == 429 &&
       (error.errorCode == errorCode ||
-          error.responseData?['error_code']?.toString() == errorCode);
+          error.responseData?['error_code']?.toString() == errorCode ||
+          _nestedErrorCode(error.responseData) == errorCode);
 
-  /// Seconds to wait before a new code can be requested.
-  static int retryAfterSeconds(ApiError error) {
-    final data = error.responseData;
-    Object? raw = data?['retry_after'] ?? data?['retryAfter'];
+  static String? _nestedErrorCode(Map<String, dynamic>? data) {
+    final nested = data?['data'];
+    if (nested is Map) {
+      return nested['error_code']?.toString();
+    }
+    return null;
+  }
+
+  static Object? _rawRetryAfter(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    Object? raw = data['retry_after'] ?? data['retryAfter'];
     if (raw == null) {
-      final nested = data?['data'];
+      final nested = data['data'];
       if (nested is Map) {
         raw = nested['retry_after'] ?? nested['retryAfter'];
       }
     }
-    final parsed = switch (raw) {
-      final int n => n,
-      final num n => n.toInt(),
-      final String s => int.tryParse(s),
+    return raw;
+  }
+
+  /// Parse `retry_after` as int / num / decimal string; round fractional
+  /// values UP (ceil). Returns null when missing or non-positive.
+  static int? _parseSeconds(Object? raw) {
+    final double? asDouble = switch (raw) {
+      final int n => n.toDouble(),
+      final num n => n.toDouble(),
+      final String s => double.tryParse(s.trim()),
       _ => null,
     };
-    if (parsed == null || parsed <= 0) return defaultRetryAfterSeconds;
-    return parsed;
+    if (asDouble == null || asDouble <= 0) return null;
+    // Round UP so a partial second still blocks for a full second.
+    return asDouble.ceil();
+  }
+
+  /// Seconds to wait. Prefers body `retry_after` (top-level or under `data`);
+  /// falls back to [defaultRetryAfterSeconds] when missing or <= 0.
+  static int retryAfterSeconds(ApiError error) {
+    final parsed = _parseSeconds(_rawRetryAfter(error.responseData));
+    if (parsed != null && parsed > 0) return parsed;
+    return defaultRetryAfterSeconds;
+  }
+
+  /// Build the UI lock from a 429 [ApiError], or `null` if it should not wait.
+  static OtpWaitLock? lockFrom(ApiError error) {
+    if (!matches(error)) return null;
+    return OtpWaitLock(
+      retryAfterSeconds: retryAfterSeconds(error),
+      codeInvalidated: isCodeInvalidated(error),
+    );
   }
 
   static String formatCountdown(int seconds) {
@@ -41,30 +100,41 @@ abstract final class OtpRateLimit {
     return '$minutes:${secs.toString().padLeft(2, '0')}';
   }
 
-  /// Clear wait message shown while the lockout countdown runs.
-  static String waitMessage(int seconds) {
+  static String waitMessage(int seconds, {required bool codeInvalidated}) {
     final remaining = seconds < 0 ? 0 : seconds;
     if (remaining <= 0) {
-      return 'You can request a new code now.';
+      return codeInvalidated
+          ? 'You can request a new code now.'
+          : 'You can try again now.';
     }
-    return 'Too many attempts. Please wait ${formatCountdown(remaining)}, '
-        'then request a new code.';
+    if (codeInvalidated) {
+      return 'Too many attempts. Please wait ${formatCountdown(remaining)}, '
+          'then request a new code.';
+    }
+    return 'Too many requests. Please wait ${formatCountdown(remaining)}.';
   }
 
-  /// Parse a Dio/API JSON body the same way [ApiError.fromDioException] does.
+  /// Parse a 429 JSON body into [ApiError] for contract tests / Dio-free paths.
+  ///
+  /// Accepts top-level or nested `retry_after`. Does not read
+  /// `failed_attempts` or `restriction_tier`.
   static ApiError? tryParseRateLimit({
     required int? statusCode,
     required Map<String, dynamic>? body,
   }) {
     if (statusCode != 429 || body == null) return null;
-    final code = body['error_code']?.toString() ?? body['code']?.toString();
-    if (code != errorCode) return null;
+    final hasRetry = _rawRetryAfter(body) != null;
+    final code = body['error_code']?.toString() ?? _nestedErrorCode(body);
+    final isBurn = code == errorCode;
+    if (!hasRetry && !isBurn) return null;
     return ApiError(
       code: 429,
       message:
           body['message']?.toString() ??
-          'Too many code attempts. Please wait and request a new code.',
-      errorCode: errorCode,
+          (isBurn
+              ? 'Too many code attempts. Please wait and request a new code.'
+              : 'Too many requests. Please wait a moment.'),
+      errorCode: isBurn ? errorCode : code,
       responseData: body,
     );
   }

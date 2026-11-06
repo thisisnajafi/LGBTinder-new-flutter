@@ -38,7 +38,7 @@ class _PasswordResetFlowScreenState
   final _isVerifyingOtp = ValueNotifier<bool>(false);
   final _isResettingPassword = ValueNotifier<bool>(false);
   String? _verifiedOtpCode;
-  final _otpRateLimitSeconds = ValueNotifier<int?>(null);
+  final _otpRateLimitLock = ValueNotifier<OtpWaitLock?>(null);
 
   @override
   void dispose() {
@@ -56,7 +56,7 @@ class _PasswordResetFlowScreenState
     _isSendingOtp.dispose();
     _isVerifyingOtp.dispose();
     _isResettingPassword.dispose();
-    _otpRateLimitSeconds.dispose();
+    _otpRateLimitLock.dispose();
     super.dispose();
   }
 
@@ -87,14 +87,24 @@ class _PasswordResetFlowScreenState
   }
 
   void _applyOtpRateLimit(ApiError error) {
-    final seconds = OtpRateLimit.retryAfterSeconds(error);
-    _otpRateLimitSeconds.value = seconds;
-    _verifiedOtpCode = null;
-    _clearOtpFields();
+    final lock = OtpRateLimit.lockFrom(error);
+    if (lock == null) return;
+    _otpRateLimitLock.value = lock;
+    if (lock.codeInvalidated) {
+      _verifiedOtpCode = null;
+      _clearOtpFields();
+    }
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(OtpRateLimit.waitMessage(seconds))));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          OtpRateLimit.waitMessage(
+            lock.retryAfterSeconds,
+            codeInvalidated: lock.codeInvalidated,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _goToStep(int step) async {
@@ -122,7 +132,7 @@ class _PasswordResetFlowScreenState
         SendOtpRequest(email: _emailController.text.trim()),
       );
       if (mounted) {
-        _otpRateLimitSeconds.value = null;
+        _otpRateLimitLock.value = null;
         await _goToStep(1);
       }
     } catch (e) {
@@ -159,7 +169,7 @@ class _PasswordResetFlowScreenState
       }
     } on ApiError catch (e) {
       if (!mounted) return;
-      if (OtpRateLimit.matches(e) || e.isOtpRateLimited) {
+      if (OtpRateLimit.matches(e)) {
         _applyOtpRateLimit(e);
         return;
       }
@@ -188,7 +198,7 @@ class _PasswordResetFlowScreenState
         SendOtpRequest(email: _emailController.text.trim()),
       );
       if (mounted) {
-        _otpRateLimitSeconds.value = null;
+        _otpRateLimitLock.value = null;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('OTP sent successfully!')));
@@ -275,7 +285,7 @@ class _PasswordResetFlowScreenState
         return;
       }
       if (!mounted) return;
-      if (OtpRateLimit.matches(e) || e.isOtpRateLimited) {
+      if (OtpRateLimit.matches(e)) {
         await _goToStep(1);
         _applyOtpRateLimit(e);
         return;
@@ -350,7 +360,7 @@ class _PasswordResetFlowScreenState
                               onChanged: _onOtpChanged,
                               onVerify: _verifyOtp,
                               onResend: _resendOtp,
-                              rateLimitSeconds: _otpRateLimitSeconds,
+                              rateLimitLock: _otpRateLimitLock,
                             )
                           : const SizedBox.expand(),
                     ),

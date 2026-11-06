@@ -8,6 +8,7 @@ import '../../../../core/widgets/premium/premium_text_field.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import 'email_verification_form.dart';
+import '../../utils/otp_rate_limit.dart';
 import 'otp_rate_limit_notice.dart';
 
 /// Email → Verify → Reset dots. Parent passes [currentStep] only.
@@ -220,7 +221,7 @@ class ResetOtpStep extends StatelessWidget {
     required this.onChanged,
     required this.onVerify,
     required this.onResend,
-    this.rateLimitSeconds,
+    this.rateLimitLock,
   });
 
   final String email;
@@ -231,8 +232,8 @@ class ResetOtpStep extends StatelessWidget {
   final VoidCallback onVerify;
   final Future<bool> Function() onResend;
 
-  /// When non-null, show lockout countdown instead of the default resend row.
-  final ValueNotifier<int?>? rateLimitSeconds;
+  /// When non-null, show wait countdown and block verify/resend.
+  final ValueNotifier<OtpWaitLock?>? rateLimitLock;
 
   @override
   Widget build(BuildContext context) {
@@ -281,35 +282,57 @@ class ResetOtpStep extends StatelessWidget {
           ValueListenableBuilder<bool>(
             valueListenable: isVerifying,
             builder: (context, verifying, _) {
-              return GradientButton(
-                text: verifying ? 'Verifying...' : 'Verify Code',
-                onPressed: verifying ? null : onVerify,
-                isLoading: verifying,
-                isFullWidth: true,
-                iconPath: AppIcons.shieldTick,
+              final lockListenable = rateLimitLock;
+              if (lockListenable == null) {
+                return GradientButton(
+                  text: verifying ? 'Verifying...' : 'Verify Code',
+                  onPressed: verifying ? null : onVerify,
+                  isLoading: verifying,
+                  isFullWidth: true,
+                  iconPath: AppIcons.shieldTick,
+                );
+              }
+              return ValueListenableBuilder<OtpWaitLock?>(
+                valueListenable: lockListenable,
+                builder: (context, lock, _) {
+                  final blocked = lock != null || verifying;
+                  return GradientButton(
+                    text: verifying ? 'Verifying...' : 'Verify Code',
+                    onPressed: blocked ? null : onVerify,
+                    isLoading: verifying,
+                    isFullWidth: true,
+                    iconPath: AppIcons.shieldTick,
+                  );
+                },
               );
             },
           ),
           SizedBox(height: AppSpacing.spacingLG),
-          if (rateLimitSeconds == null)
+          if (rateLimitLock == null)
             EmailResendRow(onResend: onResend)
           else
-            ValueListenableBuilder<int?>(
-              valueListenable: rateLimitSeconds!,
-              builder: (context, seconds, _) {
-                if (seconds == null) {
+            ValueListenableBuilder<OtpWaitLock?>(
+              valueListenable: rateLimitLock!,
+              builder: (context, lock, _) {
+                if (lock == null) {
                   return EmailResendRow(onResend: onResend);
                 }
                 return OtpRateLimitNotice(
-                  key: ValueKey('otp-lock-$seconds'),
-                  retryAfterSeconds: seconds,
-                  onResend: () async {
-                    final ok = await onResend();
-                    if (ok) {
-                      rateLimitSeconds!.value = null;
-                    }
-                    return ok;
-                  },
+                  key: ValueKey(
+                    'otp-lock-${lock.codeInvalidated}-${lock.retryAfterSeconds}',
+                  ),
+                  retryAfterSeconds: lock.retryAfterSeconds,
+                  codeInvalidated: lock.codeInvalidated,
+                  onWaitEnded: lock.codeInvalidated
+                      ? null
+                      : () => rateLimitLock!.value = null,
+                  onResend: lock.codeInvalidated
+                      ? () async {
+                          final ok = await onResend();
+                          if (ok) rateLimitLock!.value = null;
+                          return ok;
+                        }
+                      : null,
                 );
               },
             ),

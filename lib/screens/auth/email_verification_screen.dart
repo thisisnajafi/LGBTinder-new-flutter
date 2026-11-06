@@ -48,7 +48,7 @@ class _EmailVerificationScreenState
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   final _isVerifying = ValueNotifier<bool>(false);
-  final _otpRateLimitSeconds = ValueNotifier<int?>(null);
+  final _otpRateLimitLock = ValueNotifier<OtpWaitLock?>(null);
 
   @override
   void initState() {
@@ -75,7 +75,7 @@ class _EmailVerificationScreenState
       node.dispose();
     }
     _isVerifying.dispose();
-    _otpRateLimitSeconds.dispose();
+    _otpRateLimitLock.dispose();
     super.dispose();
   }
 
@@ -106,13 +106,23 @@ class _EmailVerificationScreenState
   }
 
   void _applyOtpRateLimit(ApiError error) {
-    final seconds = OtpRateLimit.retryAfterSeconds(error);
-    _otpRateLimitSeconds.value = seconds;
-    _clearCodeFields();
+    final lock = OtpRateLimit.lockFrom(error);
+    if (lock == null) return;
+    _otpRateLimitLock.value = lock;
+    if (lock.codeInvalidated) {
+      _clearCodeFields();
+    }
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(OtpRateLimit.waitMessage(seconds))));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          OtpRateLimit.waitMessage(
+            lock.retryAfterSeconds,
+            codeInvalidated: lock.codeInvalidated,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _verifyCode() async {
@@ -164,7 +174,7 @@ class _EmailVerificationScreenState
       }
     } on ApiError catch (e) {
       if (!mounted) return;
-      if (OtpRateLimit.matches(e) || e.isOtpRateLimited) {
+      if (OtpRateLimit.matches(e)) {
         _applyOtpRateLimit(e);
         return;
       }
@@ -200,7 +210,7 @@ class _EmailVerificationScreenState
       }
 
       if (mounted) {
-        _otpRateLimitSeconds.value = null;
+        _otpRateLimitLock.value = null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
@@ -295,35 +305,47 @@ class _EmailVerificationScreenState
               onChanged: _onCodeChanged,
             ),
             SizedBox(height: AppSpacing.spacingXL),
-            ValueListenableBuilder<bool>(
-              valueListenable: _isVerifying,
-              builder: (context, verifying, _) {
-                return GradientButton(
-                  text: verifying ? 'Verifying...' : 'Verify Email',
-                  onPressed: verifying ? null : _verifyCode,
-                  isLoading: verifying,
-                  isFullWidth: true,
-                  iconPath: AppIcons.shieldTick,
+            ValueListenableBuilder<OtpWaitLock?>(
+              valueListenable: _otpRateLimitLock,
+              builder: (context, lock, _) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: _isVerifying,
+                  builder: (context, verifying, _) {
+                    final blocked = lock != null || verifying;
+                    return GradientButton(
+                      text: verifying ? 'Verifying...' : 'Verify Email',
+                      onPressed: blocked ? null : _verifyCode,
+                      isLoading: verifying,
+                      isFullWidth: true,
+                      iconPath: AppIcons.shieldTick,
+                    );
+                  },
                 );
               },
             ),
             SizedBox(height: AppSpacing.spacingLG),
-            ValueListenableBuilder<int?>(
-              valueListenable: _otpRateLimitSeconds,
-              builder: (context, seconds, _) {
-                if (seconds == null) {
+            ValueListenableBuilder<OtpWaitLock?>(
+              valueListenable: _otpRateLimitLock,
+              builder: (context, lock, _) {
+                if (lock == null) {
                   return EmailResendRow(onResend: _resendCode);
                 }
                 return OtpRateLimitNotice(
-                  key: ValueKey('reg-otp-lock-$seconds'),
-                  retryAfterSeconds: seconds,
-                  onResend: () async {
-                    final ok = await _resendCode();
-                    if (ok) {
-                      _otpRateLimitSeconds.value = null;
-                    }
-                    return ok;
-                  },
+                  key: ValueKey(
+                    'reg-otp-lock-${lock.codeInvalidated}-${lock.retryAfterSeconds}',
+                  ),
+                  retryAfterSeconds: lock.retryAfterSeconds,
+                  codeInvalidated: lock.codeInvalidated,
+                  onWaitEnded: lock.codeInvalidated
+                      ? null
+                      : () => _otpRateLimitLock.value = null,
+                  onResend: lock.codeInvalidated
+                      ? () async {
+                          final ok = await _resendCode();
+                          if (ok) _otpRateLimitLock.value = null;
+                          return ok;
+                        }
+                      : null,
                 );
               },
             ),
