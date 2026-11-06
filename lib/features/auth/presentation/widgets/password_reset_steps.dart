@@ -8,6 +8,7 @@ import '../../../../core/widgets/premium/premium_text_field.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../../../widgets/buttons/gradient_button.dart';
 import 'email_verification_form.dart';
+import 'otp_rate_limit_notice.dart';
 
 /// Email → Verify → Reset dots. Parent passes [currentStep] only.
 class PasswordResetProgress extends StatelessWidget {
@@ -19,12 +20,15 @@ class PasswordResetProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-    final borderColor =
-        isDark ? AppColors.borderMediumDark : AppColors.borderMediumLight;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final borderColor = isDark
+        ? AppColors.borderMediumDark
+        : AppColors.borderMediumLight;
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.spacingLG),
@@ -147,10 +151,12 @@ class ResetEmailStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.spacingLG),
@@ -214,6 +220,7 @@ class ResetOtpStep extends StatelessWidget {
     required this.onChanged,
     required this.onVerify,
     required this.onResend,
+    this.rateLimitSeconds,
   });
 
   final String email;
@@ -224,14 +231,19 @@ class ResetOtpStep extends StatelessWidget {
   final VoidCallback onVerify;
   final Future<bool> Function() onResend;
 
+  /// When non-null, show lockout countdown instead of the default resend row.
+  final ValueNotifier<int?>? rateLimitSeconds;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.spacingLG),
@@ -279,7 +291,28 @@ class ResetOtpStep extends StatelessWidget {
             },
           ),
           SizedBox(height: AppSpacing.spacingLG),
-          EmailResendRow(onResend: onResend),
+          if (rateLimitSeconds == null)
+            EmailResendRow(onResend: onResend)
+          else
+            ValueListenableBuilder<int?>(
+              valueListenable: rateLimitSeconds!,
+              builder: (context, seconds, _) {
+                if (seconds == null) {
+                  return EmailResendRow(onResend: onResend);
+                }
+                return OtpRateLimitNotice(
+                  key: ValueKey('otp-lock-$seconds'),
+                  retryAfterSeconds: seconds,
+                  onResend: () async {
+                    final ok = await onResend();
+                    if (ok) {
+                      rateLimitSeconds!.value = null;
+                    }
+                    return ok;
+                  },
+                );
+              },
+            ),
         ],
       ),
     );
@@ -305,10 +338,12 @@ class ResetPasswordStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.spacingLG),

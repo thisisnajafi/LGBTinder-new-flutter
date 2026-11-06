@@ -31,7 +31,23 @@ class RetryInterceptor extends Interceptor {
   }
 
   static bool _isRateLimitRetryable(DioException error) {
-    return error.response?.headers.value('retry-after') != null;
+    if (error.response?.headers.value('retry-after') == null) {
+      return false;
+    }
+    // OTP lockouts invalidate the code — surface 429 to the UI instead of
+    // silently waiting and retrying with the dead code.
+    final path = error.requestOptions.path;
+    if (path.contains('verify-login-code') ||
+        path.contains('verify-otp') ||
+        path.contains('reset-password')) {
+      return false;
+    }
+    final data = error.response?.data;
+    if (data is Map &&
+        data['error_code']?.toString() == 'OTP_TOO_MANY_ATTEMPTS') {
+      return false;
+    }
+    return true;
   }
 
   int _maxRetriesFor(DioException error) {
@@ -67,9 +83,7 @@ class RetryInterceptor extends Interceptor {
 
     final retryAfterHeader = err.response?.headers.value('retry-after');
     final actualDelay = retryAfterHeader != null
-        ? Duration(
-            seconds: int.tryParse(retryAfterHeader) ?? delay.inSeconds,
-          )
+        ? Duration(seconds: int.tryParse(retryAfterHeader) ?? delay.inSeconds)
         : delay;
 
     await Future.delayed(actualDelay);

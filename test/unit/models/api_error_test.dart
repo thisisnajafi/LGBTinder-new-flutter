@@ -32,10 +32,7 @@ void main() {
 
     test('returns false for 401 on login/register routes', () {
       expect(
-        ApiError.shouldForceLogout(
-          statusCode: 401,
-          requestPath: '/auth/login',
-        ),
+        ApiError.shouldForceLogout(statusCode: 401, requestPath: '/auth/login'),
         isFalse,
       );
     });
@@ -54,10 +51,7 @@ void main() {
 
   group('ApiError.isFeatureForbiddenResponse', () {
     test('treats all 403 as feature forbidden', () {
-      expect(
-        ApiError.isFeatureForbiddenResponse(statusCode: 403),
-        isTrue,
-      );
+      expect(ApiError.isFeatureForbiddenResponse(statusCode: 403), isTrue);
     });
 
     test('detects purchase_required and known error codes', () {
@@ -91,11 +85,28 @@ void main() {
     });
 
     test('401 session expiry requires login', () {
-      final error = ApiError(
-        code: 401,
-        message: 'Unauthenticated',
-      );
+      final error = ApiError(code: 401, message: 'Unauthenticated');
       expect(error.requiresLogin, isTrue);
+    });
+  });
+
+  group('ApiError OTP rate limit', () {
+    test('exposes isOtpRateLimited and retryAfterSeconds', () {
+      final error = ApiError(
+        code: 429,
+        message: 'Too many',
+        errorCode: 'OTP_TOO_MANY_ATTEMPTS',
+        responseData: {
+          'error_code': 'OTP_TOO_MANY_ATTEMPTS',
+          'retry_after': 45,
+        },
+      );
+      expect(error.isOtpRateLimited, isTrue);
+      expect(error.retryAfterSeconds, 45);
+      expect(
+        error.getUserFriendlyMessage(),
+        'Too many code attempts. Please wait and request a new code.',
+      );
     });
   });
 }

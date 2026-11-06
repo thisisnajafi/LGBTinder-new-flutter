@@ -21,47 +21,52 @@ const Map<String, String> backendErrorMessages = {
   'FEATURE_NOT_AVAILABLE': 'Upgrade your plan to access this feature.',
   'PREMIUM_REQUIRED': 'This feature requires a premium subscription.',
   'SUBSCRIPTION_EXPIRED': 'Your subscription has expired. Please renew.',
-  
+
   // Limit errors
-  'DAILY_LIMIT_REACHED': 'You\'ve reached your daily limit. Try again tomorrow!',
+  'DAILY_LIMIT_REACHED':
+      'You\'ve reached your daily limit. Try again tomorrow!',
   'SWIPE_LIMIT_REACHED': 'No more swipes today. Upgrade for unlimited swipes!',
   'SUPERLIKE_LIMIT_REACHED': 'You\'ve used all your Super Likes for today.',
-  'CHAT_DAILY_SEND_LIMIT_REACHED': 'Daily message limit reached for this chat. Upgrade to send more.',
-  'CHAT_IMAGE_UPLOAD_LIMIT_REACHED': 'Too many image uploads. Please try again later.',
-  
+  'CHAT_DAILY_SEND_LIMIT_REACHED':
+      'Daily message limit reached for this chat. Upgrade to send more.',
+  'CHAT_IMAGE_UPLOAD_LIMIT_REACHED':
+      'Too many image uploads. Please try again later.',
+
   // Profile errors
   'PROFILE_PICTURE_REQUIRED': 'Please add a profile picture first.',
   'PROFILE_INCOMPLETE': 'Please complete your profile to continue.',
   'AGE_VERIFICATION_REQUIRED': 'Age verification is required for this action.',
-  
+
   // User interaction errors
   'USER_BLOCKED': 'You cannot interact with this user.',
   'USER_NOT_FOUND': 'This user is no longer available.',
   'ALREADY_MATCHED': 'You\'ve already matched with this user!',
   'ALREADY_LIKED': 'You\'ve already liked this user.',
   'SELF_ACTION': 'You cannot perform this action on yourself.',
-  
+
   // Chat errors
   'CHAT_NOT_ALLOWED': 'You need to match with this user to chat.',
   'MATCH_REQUIRED': 'Match with this user first to send messages.',
   'MESSAGE_TOO_LONG': 'Your message is too long. Please shorten it.',
-  
+
   // Auth errors
   'INVALID_CREDENTIALS': 'Invalid email or password. Please try again.',
   'EMAIL_NOT_VERIFIED': 'Please verify your email address first.',
   'ACCOUNT_DISABLED': 'Your account has been disabled. Contact support.',
   'TOKEN_EXPIRED': 'Your session has expired. Please log in again.',
   'TOKEN_INVALID': 'Invalid authentication. Please log in again.',
-  
+  'OTP_TOO_MANY_ATTEMPTS':
+      'Too many code attempts. Please wait and request a new code.',
+
   // Validation errors
   'VALIDATION_FAILED': 'Please check your input and try again.',
   'INVALID_FORMAT': 'The format of your input is invalid.',
-  
+
   // Call errors
   'CALL_NOT_ALLOWED': 'Video calls require a premium subscription.',
   'USER_BUSY': 'This user is currently busy. Try again later.',
   'CALL_DECLINED': 'The user declined your call.',
-  
+
   // Generic errors
   'UNAUTHORIZED': 'Please log in to continue.',
   'FORBIDDEN': 'You don\'t have permission for this action.',
@@ -69,7 +74,8 @@ const Map<String, String> backendErrorMessages = {
   'SERVER_ERROR': 'Something went wrong. Please try again later.',
   'MATCHES_PREMIUM_REQUIRED': 'Upgrade to see your matches.',
   'REWIND_PREMIUM_REQUIRED': 'Rewind requires a Premium subscription.',
-  'TEMPORARY_TOKEN_RESTRICTION': 'Complete your profile to access this feature.',
+  'TEMPORARY_TOKEN_RESTRICTION':
+      'Complete your profile to access this feature.',
 };
 
 /// Backend codes that mean plan/feature access denied — never treat as session logout.
@@ -100,7 +106,8 @@ class ApiError {
   final String? errorCode; // Backend error code (e.g., 'DAILY_LIMIT_REACHED')
   final Map<String, List<String>>? errors;
   final dynamic originalError;
-  final Map<String, dynamic>? responseData; // Store full response data for special cases
+  final Map<String, dynamic>?
+  responseData; // Store full response data for special cases
 
   ApiError({
     this.code,
@@ -129,39 +136,43 @@ class ApiError {
       case DioExceptionType.badResponse:
         statusCode = error.response?.statusCode;
         final data = error.response?.data;
-        
+
         if (data is Map<String, dynamic>) {
           responseDataMap = data;
-          
+
           // Extract error code if present
-          errorCode = data['error_code']?.toString() ?? 
-                      data['code']?.toString();
-          
+          errorCode =
+              data['error_code']?.toString() ?? data['code']?.toString();
+
           // Get backend message
           final backendMessage = data['message']?.toString();
-          
-          // Priority: 
+
+          // Priority:
           // 1. Backend error code mapped message
           // 2. Backend message
           // 3. HTTP status code mapped message
           // 4. Generic error
-          if (errorCode != null && backendErrorMessages.containsKey(errorCode)) {
+          if (errorCode != null &&
+              backendErrorMessages.containsKey(errorCode)) {
             message = backendErrorMessages[errorCode]!;
           } else if (backendMessage != null && backendMessage.isNotEmpty) {
             message = backendMessage;
-          } else if (statusCode != null && httpErrorMessages.containsKey(statusCode)) {
+          } else if (statusCode != null &&
+              httpErrorMessages.containsKey(statusCode)) {
             message = httpErrorMessages[statusCode]!;
           } else {
             message = 'An error occurred';
           }
-          
+
           // Handle validation errors
           if (data['errors'] != null) {
             errors = Map<String, List<String>>.from(
               (data['errors'] as Map).map(
                 (key, value) => MapEntry(
                   key.toString(),
-                  value is List ? value.map((e) => e.toString()).toList() : [value.toString()],
+                  value is List
+                      ? value.map((e) => e.toString()).toList()
+                      : [value.toString()],
                 ),
               ),
             );
@@ -211,7 +222,8 @@ class ApiError {
     Map<String, dynamic>? responseData,
   }) {
     final data = responseData ?? json;
-    final errorCode = data['error_code']?.toString() ?? data['code']?.toString();
+    final errorCode =
+        data['error_code']?.toString() ?? data['code']?.toString();
 
     return ApiError(
       code: statusCode ?? data['code'] as int?,
@@ -311,7 +323,7 @@ class ApiError {
           // For validation errors, show the error message directly (it's usually clear enough)
           // Only add field name if it's helpful
           final formattedField = _formatFieldName(key);
-          if (formattedField.toLowerCase() != key.toLowerCase() && 
+          if (formattedField.toLowerCase() != key.toLowerCase() &&
               !errorMsg.toLowerCase().contains(formattedField.toLowerCase())) {
             allErrors.add('$formattedField: $errorMsg');
           } else {
@@ -328,9 +340,10 @@ class ApiError {
   String _formatFieldName(String fieldName) {
     return fieldName
         .split('_')
-        .map((word) => word.isEmpty
-            ? ''
-            : word[0].toUpperCase() + word.substring(1))
+        .map(
+          (word) =>
+              word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1),
+        )
         .join(' ');
   }
 
@@ -341,7 +354,7 @@ class ApiError {
     if (errorCode != null && backendErrorMessages.containsKey(errorCode)) {
       return backendErrorMessages[errorCode]!;
     }
-    
+
     // 2. Prefer validation errors if available
     if (errors != null && errors!.isNotEmpty) {
       final firstErr = this.firstError;
@@ -350,21 +363,44 @@ class ApiError {
       }
       return getAllErrors();
     }
-    
+
     // 3. Check for HTTP status code mapped message
     if (code != null && httpErrorMessages.containsKey(code)) {
       // Only use HTTP message if current message is generic
-      if (message == 'An error occurred' || 
+      if (message == 'An error occurred' ||
           message == 'Server error occurred' ||
           message == 'An unexpected error occurred') {
         return httpErrorMessages[code]!;
       }
     }
-    
+
     // 4. Return the message if it's user-friendly
     return message;
   }
-  
+
+  /// Seconds from `retry_after` when the backend rate-limits OTP attempts.
+  int? get retryAfterSeconds {
+    final data = responseData;
+    if (data == null) return null;
+    Object? raw = data['retry_after'] ?? data['retryAfter'];
+    if (raw == null) {
+      final nested = data['data'];
+      if (nested is Map) {
+        raw = nested['retry_after'] ?? nested['retryAfter'];
+      }
+    }
+    return switch (raw) {
+      final int n => n,
+      final num n => n.toInt(),
+      final String s => int.tryParse(s),
+      _ => null,
+    };
+  }
+
+  /// OTP verify/reset lockout (HTTP 429 + OTP_TOO_MANY_ATTEMPTS).
+  bool get isOtpRateLimited =>
+      code == 429 && errorCode == 'OTP_TOO_MANY_ATTEMPTS';
+
   /// Check if error requires user to log in again (never for plan/feature 403).
   bool get requiresLogin {
     if (isFeatureForbidden) return false;
@@ -409,12 +445,11 @@ class ApiError {
       errorCode == 'VOICE_CALL_REQUIRES_PREMIUM' ||
       errorCode == 'VIDEO_CALL_REQUIRES_GOLDEN' ||
       errorCode == 'STICKER_PACK_LOCKED';
-  
+
   /// Check if error is a validation error
-  bool get isValidationError => 
-      code == 422 || 
-      (errors != null && errors!.isNotEmpty);
-  
+  bool get isValidationError =>
+      code == 422 || (errors != null && errors!.isNotEmpty);
+
   /// Check if error is a network/connection error
   bool get isNetworkError =>
       message.contains('internet') ||

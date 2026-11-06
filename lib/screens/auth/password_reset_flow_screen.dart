@@ -9,6 +9,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/auth_page_scaffold.dart';
 import '../../features/auth/data/models/models.dart';
+import '../../features/auth/utils/otp_rate_limit.dart';
+import '../../shared/models/api_error.dart';
 import '../../features/auth/presentation/widgets/password_reset_steps.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../routes/app_router.dart';
@@ -30,13 +32,13 @@ class _PasswordResetFlowScreenState
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _otpControllers =
-      List.generate(6, (_) => TextEditingController());
+  final _otpControllers = List.generate(6, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(6, (_) => FocusNode());
   final _isSendingOtp = ValueNotifier<bool>(false);
   final _isVerifyingOtp = ValueNotifier<bool>(false);
   final _isResettingPassword = ValueNotifier<bool>(false);
   String? _verifiedOtpCode;
+  final _otpRateLimitSeconds = ValueNotifier<int?>(null);
 
   @override
   void dispose() {
@@ -54,6 +56,7 @@ class _PasswordResetFlowScreenState
     _isSendingOtp.dispose();
     _isVerifyingOtp.dispose();
     _isResettingPassword.dispose();
+    _otpRateLimitSeconds.dispose();
     super.dispose();
   }
 
@@ -72,6 +75,26 @@ class _PasswordResetFlowScreenState
 
   String _getOtpCode() {
     return _otpControllers.map((c) => c.text).join();
+  }
+
+  void _clearOtpFields() {
+    for (final controller in _otpControllers) {
+      controller.clear();
+    }
+    if (_otpFocusNodes.isNotEmpty) {
+      _otpFocusNodes[0].requestFocus();
+    }
+  }
+
+  void _applyOtpRateLimit(ApiError error) {
+    final seconds = OtpRateLimit.retryAfterSeconds(error);
+    _otpRateLimitSeconds.value = seconds;
+    _verifiedOtpCode = null;
+    _clearOtpFields();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(OtpRateLimit.waitMessage(seconds))));
   }
 
   Future<void> _goToStep(int step) async {
@@ -99,13 +122,14 @@ class _PasswordResetFlowScreenState
         SendOtpRequest(email: _emailController.text.trim()),
       );
       if (mounted) {
+        _otpRateLimitSeconds.value = null;
         await _goToStep(1);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send OTP: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to send OTP: $e')));
       }
     } finally {
       if (mounted) {
@@ -127,24 +151,28 @@ class _PasswordResetFlowScreenState
     try {
       final authService = ref.read(authServiceProvider);
       await authService.verifyOtp(
-        VerifyOtpRequest(
-          email: _emailController.text.trim(),
-          code: code,
-        ),
+        VerifyOtpRequest(email: _emailController.text.trim(), code: code),
       );
       if (mounted) {
         _verifiedOtpCode = code;
         await _goToStep(2);
       }
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      if (OtpRateLimit.matches(e) || e.isOtpRateLimited) {
+        _applyOtpRateLimit(e);
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.getUserFriendlyMessage())));
+      _clearOtpFields();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid or expired code: $e')),
-        );
-        for (final controller in _otpControllers) {
-          controller.clear();
-        }
-        _otpFocusNodes[0].requestFocus();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Invalid or expired code: $e')));
+        _clearOtpFields();
       }
     } finally {
       if (mounted) {
@@ -160,16 +188,17 @@ class _PasswordResetFlowScreenState
         SendOtpRequest(email: _emailController.text.trim()),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP sent successfully!')),
-        );
+        _otpRateLimitSeconds.value = null;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('OTP sent successfully!')));
       }
       return true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to resend OTP: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to resend OTP: $e')));
       }
       return false;
     }
@@ -183,9 +212,9 @@ class _PasswordResetFlowScreenState
       return;
     }
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
     if (_passwordController.text.length < 8) {
@@ -233,6 +262,27 @@ class _PasswordResetFlowScreenState
           context.go(AppRoutes.login);
         }
       }
+    } on ApiError catch (e) {
+      if (resetSucceeded) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password reset. You can now log in.'),
+            ),
+          );
+          context.go(AppRoutes.login);
+        }
+        return;
+      }
+      if (!mounted) return;
+      if (OtpRateLimit.matches(e) || e.isOtpRateLimited) {
+        await _goToStep(1);
+        _applyOtpRateLimit(e);
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.getUserFriendlyMessage())));
     } catch (e) {
       if (resetSucceeded) {
         // The backend already reset the password; a UI error after that
@@ -248,9 +298,9 @@ class _PasswordResetFlowScreenState
         return;
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reset password: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to reset password: $e')));
       }
     } finally {
       if (mounted) {
@@ -300,6 +350,7 @@ class _PasswordResetFlowScreenState
                               onChanged: _onOtpChanged,
                               onVerify: _verifyOtp,
                               onResend: _resendOtp,
+                              rateLimitSeconds: _otpRateLimitSeconds,
                             )
                           : const SizedBox.expand(),
                     ),

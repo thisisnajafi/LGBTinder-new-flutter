@@ -17,6 +17,10 @@ void main() {
       ChatAttachmentKind.video,
     );
     expect(
+      ChatAttachmentKindResolver.fromName('clip.3gp'),
+      ChatAttachmentKind.video,
+    );
+    expect(
       ChatAttachmentKindResolver.messageType(ChatAttachmentKind.video),
       'video',
     );
@@ -30,7 +34,7 @@ void main() {
     );
   });
 
-  test('pdf and unknown files are unsupported', () {
+  test('legacy and unknown files are unsupported', () {
     expect(
       ChatAttachmentKindResolver.fromName('resume.pdf'),
       ChatAttachmentKind.unsupported,
@@ -41,6 +45,14 @@ void main() {
     );
     expect(
       ChatAttachmentKindResolver.fromName('archive.zip'),
+      ChatAttachmentKind.unsupported,
+    );
+    expect(
+      ChatAttachmentKindResolver.fromName('clip.avi'),
+      ChatAttachmentKind.unsupported,
+    );
+    expect(
+      ChatAttachmentKindResolver.fromName('note.wav'),
       ChatAttachmentKind.unsupported,
     );
   });

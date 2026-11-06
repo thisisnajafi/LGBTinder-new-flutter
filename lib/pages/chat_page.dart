@@ -1,4 +1,4 @@
-﻿// Screen: ChatPage
+// Screen: ChatPage
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -92,7 +92,7 @@ import '../widgets/chat/chat_media_permission_sheet.dart';
 import '../features/chat/utils/chat_media_permissions.dart';
 import '../features/chat/utils/chat_reconnect_catch_up.dart';
 import '../features/chat/presentation/widgets/share_profile_sheet.dart';
-import '../features/chat/utils/chat_attachment_kind.dart';
+import '../features/chat/utils/chat_upload_validation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../features/calls/utils/call_navigation.dart';
 import '../features/calls/utils/call_redial_confirm.dart';
@@ -2492,6 +2492,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _sendVoiceAtPath(String filePath, int duration) async {
+    final voiceFile = File(filePath);
+    final voiceName = filePath.replaceAll(r'\', '/').split('/').last;
+    final voiceSize = voiceFile.existsSync() ? await voiceFile.length() : 0;
+    final voiceError = ChatUploadValidation.validateVoice(
+      fileName: voiceName,
+      fileSizeBytes: voiceSize,
+    );
+    if (voiceError != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(voiceError)));
+      }
+      return;
+    }
+
     final clientId = ChatClientIds.next();
     final sentAt = DateTime.now();
     if (mounted) {
@@ -2846,17 +2862,30 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final picked = result.files.single;
     final path = picked.path;
     if (path == null || path.isEmpty) return;
-    final kind = ChatAttachmentKindResolver.fromName(picked.name);
-    final type = ChatAttachmentKindResolver.messageType(kind);
+    final type = ChatUploadValidation.messageTypeForUpload(picked.name);
     if (type == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'This chat can send photos, videos, and voice notes.',
+            'This chat can send photos, videos (MP4/MOV/WebM/3GP), '
+            'and voice notes (M4A/AAC/MP3).',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
       );
+      return;
+    }
+    final size = picked.size > 0 ? picked.size : await File(path).length();
+    final validationError = ChatUploadValidation.validateForMessageType(
+      messageType: type,
+      fileName: picked.name,
+      fileSizeBytes: size,
+    );
+    if (validationError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationError)));
       return;
     }
     if (type == 'voice') {
@@ -3039,6 +3068,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     String? clientId;
     String? mediaPath;
     try {
+      if (type == 'video' || type == 'disappearing_video') {
+        final name = mediaFile.path.replaceAll(r'\', '/').split('/').last;
+        final size = await mediaFile.length();
+        final error = ChatUploadValidation.validateVideo(
+          fileName: name,
+          fileSizeBytes: size,
+        );
+        if (error != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(error)));
+          }
+          return;
+        }
+      }
       if (type == 'image' || type == 'disappearing_image') {
         final length = await mediaFile.length();
         if (length > _maxChatImageBytes * 2) {

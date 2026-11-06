@@ -1,4 +1,6 @@
 /// Maps a picked file name to a chat message type (CHAT-INPUT-002).
+///
+/// Upload allowlists match Laravel PR #5 (see [ChatUploadValidation]).
 enum ChatAttachmentKind { image, video, audio, unsupported }
 
 abstract final class ChatAttachmentKindResolver {
@@ -12,22 +14,11 @@ abstract final class ChatAttachmentKindResolver {
     '.heif',
   ];
 
-  static const List<String> videoSuffixes = [
-    '.mp4',
-    '.mov',
-    '.m4v',
-    '.webm',
-    '.avi',
-  ];
+  /// Backend accepts mp4, mov, webm, 3gp for video uploads.
+  static const List<String> videoSuffixes = ['.mp4', '.mov', '.webm', '.3gp'];
 
-  static const List<String> audioSuffixes = [
-    '.m4a',
-    '.aac',
-    '.mp3',
-    '.wav',
-    '.ogg',
-    '.caf',
-  ];
+  /// Backend accepts m4a, aac, mp3 for voice uploads.
+  static const List<String> audioSuffixes = ['.m4a', '.aac', '.mp3'];
 
   static ChatAttachmentKind fromName(String name) {
     final lower = name.trim().toLowerCase();

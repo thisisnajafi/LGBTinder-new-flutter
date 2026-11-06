@@ -12,17 +12,21 @@ class SendMessageUseCase {
 
   /// Execute send message use case
   /// Returns [Message] with the sent message details
-  Future<Message> execute(int receiverId, String message, {
+  Future<Message> execute(
+    int receiverId,
+    String message, {
     String messageType = 'text',
     MessageAttachment? attachment,
     String? clientId,
   }) async {
     try {
+      final allowsAttachment =
+          messageType != 'text' && messageType != 'sticker';
       return await _chatRepository.sendMessage(
         receiverId,
         message,
         messageType: messageType,
-        attachment: attachment,
+        attachment: allowsAttachment ? attachment : null,
         clientId: clientId,
       );
     } catch (e) {
