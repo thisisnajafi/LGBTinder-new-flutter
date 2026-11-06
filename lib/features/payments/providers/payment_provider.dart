@@ -4,26 +4,33 @@ import '../data/models/superlike_pack.dart';
 import '../domain/use_cases/get_subscription_plans_use_case.dart';
 import '../domain/use_cases/purchase_subscription_use_case.dart';
 import '../domain/use_cases/cancel_subscription_use_case.dart';
-import '../domain/use_cases/restore_purchases_use_case.dart';
 import '../domain/use_cases/validate_receipt_use_case.dart';
 import '../domain/use_cases/get_superlike_packs_use_case.dart';
 import '../domain/use_cases/get_subscription_status_use_case.dart';
 
 /// Payment provider - manages payment and subscription state
-final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((ref) {
-  final getSubscriptionPlansUseCase = ref.watch(getSubscriptionPlansUseCaseProvider);
-  final purchaseSubscriptionUseCase = ref.watch(purchaseSubscriptionUseCaseProvider);
-  final cancelSubscriptionUseCase = ref.watch(cancelSubscriptionUseCaseProvider);
-  final restorePurchasesUseCase = ref.watch(restorePurchasesUseCaseProvider);
+final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((
+  ref,
+) {
+  final getSubscriptionPlansUseCase = ref.watch(
+    getSubscriptionPlansUseCaseProvider,
+  );
+  final purchaseSubscriptionUseCase = ref.watch(
+    purchaseSubscriptionUseCaseProvider,
+  );
+  final cancelSubscriptionUseCase = ref.watch(
+    cancelSubscriptionUseCaseProvider,
+  );
   final validateReceiptUseCase = ref.watch(validateReceiptUseCaseProvider);
   final getSuperlikePacksUseCase = ref.watch(getSuperlikePacksUseCaseProvider);
-  final getSubscriptionStatusUseCase = ref.watch(getSubscriptionStatusUseCaseProvider);
+  final getSubscriptionStatusUseCase = ref.watch(
+    getSubscriptionStatusUseCaseProvider,
+  );
 
   return PaymentNotifier(
     getSubscriptionPlansUseCase: getSubscriptionPlansUseCase,
     purchaseSubscriptionUseCase: purchaseSubscriptionUseCase,
     cancelSubscriptionUseCase: cancelSubscriptionUseCase,
-    restorePurchasesUseCase: restorePurchasesUseCase,
     validateReceiptUseCase: validateReceiptUseCase,
     getSuperlikePacksUseCase: getSuperlikePacksUseCase,
     getSubscriptionStatusUseCase: getSubscriptionStatusUseCase,
@@ -76,7 +83,8 @@ class PaymentState {
       isPurchasing: isPurchasing ?? this.isPurchasing,
       isRestoring: isRestoring ?? this.isRestoring,
       error: error ?? this.error,
-      hasActiveSubscription: hasActiveSubscription ?? this.hasActiveSubscription,
+      hasActiveSubscription:
+          hasActiveSubscription ?? this.hasActiveSubscription,
       selectedPlanId: selectedPlanId ?? this.selectedPlanId,
       checkoutSession: checkoutSession ?? this.checkoutSession,
     );
@@ -88,7 +96,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   final GetSubscriptionPlansUseCase _getSubscriptionPlansUseCase;
   final PurchaseSubscriptionUseCase _purchaseSubscriptionUseCase;
   final CancelSubscriptionUseCase _cancelSubscriptionUseCase;
-  final RestorePurchasesUseCase _restorePurchasesUseCase;
   final ValidateReceiptUseCase _validateReceiptUseCase;
   final GetSuperlikePacksUseCase _getSuperlikePacksUseCase;
   final GetSubscriptionStatusUseCase _getSubscriptionStatusUseCase;
@@ -97,14 +104,12 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required GetSubscriptionPlansUseCase getSubscriptionPlansUseCase,
     required PurchaseSubscriptionUseCase purchaseSubscriptionUseCase,
     required CancelSubscriptionUseCase cancelSubscriptionUseCase,
-    required RestorePurchasesUseCase restorePurchasesUseCase,
     required ValidateReceiptUseCase validateReceiptUseCase,
     required GetSuperlikePacksUseCase getSuperlikePacksUseCase,
     required GetSubscriptionStatusUseCase getSubscriptionStatusUseCase,
   }) : _getSubscriptionPlansUseCase = getSubscriptionPlansUseCase,
        _purchaseSubscriptionUseCase = purchaseSubscriptionUseCase,
        _cancelSubscriptionUseCase = cancelSubscriptionUseCase,
-       _restorePurchasesUseCase = restorePurchasesUseCase,
        _validateReceiptUseCase = validateReceiptUseCase,
        _getSuperlikePacksUseCase = getSuperlikePacksUseCase,
        _getSubscriptionStatusUseCase = getSubscriptionStatusUseCase,
@@ -116,15 +121,9 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 
     try {
       final plans = await _getSubscriptionPlansUseCase.execute();
-      state = state.copyWith(
-        subscriptionPlans: plans,
-        isLoading: false,
-      );
+      state = state.copyWith(subscriptionPlans: plans, isLoading: false);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -153,11 +152,15 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   }
 
   /// Purchase subscription
-  Future<SubscriptionStatus?> purchaseSubscription(SubscribeRequest request) async {
+  Future<SubscriptionStatus?> purchaseSubscription(
+    SubscribeRequest request,
+  ) async {
     state = state.copyWith(isPurchasing: true, error: null);
 
     try {
-      final subscriptionStatus = await _purchaseSubscriptionUseCase.execute(request);
+      final subscriptionStatus = await _purchaseSubscriptionUseCase.execute(
+        request,
+      );
       final hasActive = subscriptionStatus.isActive;
 
       state = state.copyWith(
@@ -168,10 +171,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 
       return subscriptionStatus;
     } catch (e) {
-      state = state.copyWith(
-        isPurchasing: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isPurchasing: false, error: e.toString());
       return null;
     }
   }
@@ -185,23 +185,6 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       return true;
     } catch (e) {
       state = state.copyWith(error: e.toString());
-      return false;
-    }
-  }
-
-  /// Restore purchases
-  Future<bool> restorePurchases() async {
-    state = state.copyWith(isRestoring: true, error: null);
-
-    try {
-      final success = await _restorePurchasesUseCase.execute();
-      state = state.copyWith(isRestoring: false);
-      return success;
-    } catch (e) {
-      state = state.copyWith(
-        isRestoring: false,
-        error: e.toString(),
-      );
       return false;
     }
   }

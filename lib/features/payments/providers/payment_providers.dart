@@ -14,7 +14,6 @@ import '../data/models/superlike_pack.dart';
 import '../domain/use_cases/get_subscription_plans_use_case.dart';
 import '../domain/use_cases/purchase_subscription_use_case.dart';
 import '../domain/use_cases/cancel_subscription_use_case.dart';
-import '../domain/use_cases/restore_purchases_use_case.dart';
 import '../domain/use_cases/validate_receipt_use_case.dart';
 import '../domain/use_cases/get_superlike_packs_use_case.dart';
 import '../domain/use_cases/get_subscription_status_use_case.dart';
@@ -39,24 +38,23 @@ final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
 });
 
 /// Use Case Providers
-final getSubscriptionPlansUseCaseProvider = Provider<GetSubscriptionPlansUseCase>((ref) {
-  final repository = ref.watch(paymentRepositoryProvider);
-  return GetSubscriptionPlansUseCase(repository);
-});
+final getSubscriptionPlansUseCaseProvider =
+    Provider<GetSubscriptionPlansUseCase>((ref) {
+      final repository = ref.watch(paymentRepositoryProvider);
+      return GetSubscriptionPlansUseCase(repository);
+    });
 
-final purchaseSubscriptionUseCaseProvider = Provider<PurchaseSubscriptionUseCase>((ref) {
-  final repository = ref.watch(paymentRepositoryProvider);
-  return PurchaseSubscriptionUseCase(repository);
-});
+final purchaseSubscriptionUseCaseProvider =
+    Provider<PurchaseSubscriptionUseCase>((ref) {
+      final repository = ref.watch(paymentRepositoryProvider);
+      return PurchaseSubscriptionUseCase(repository);
+    });
 
-final cancelSubscriptionUseCaseProvider = Provider<CancelSubscriptionUseCase>((ref) {
+final cancelSubscriptionUseCaseProvider = Provider<CancelSubscriptionUseCase>((
+  ref,
+) {
   final repository = ref.watch(paymentRepositoryProvider);
   return CancelSubscriptionUseCase(repository);
-});
-
-final restorePurchasesUseCaseProvider = Provider<RestorePurchasesUseCase>((ref) {
-  final repository = ref.watch(paymentRepositoryProvider);
-  return RestorePurchasesUseCase(repository);
 });
 
 final validateReceiptUseCaseProvider = Provider<ValidateReceiptUseCase>((ref) {
@@ -64,18 +62,23 @@ final validateReceiptUseCaseProvider = Provider<ValidateReceiptUseCase>((ref) {
   return ValidateReceiptUseCase(repository);
 });
 
-final getSuperlikePacksUseCaseProvider = Provider<GetSuperlikePacksUseCase>((ref) {
+final getSuperlikePacksUseCaseProvider = Provider<GetSuperlikePacksUseCase>((
+  ref,
+) {
   final repository = ref.watch(paymentRepositoryProvider);
   return GetSuperlikePacksUseCase(repository);
 });
 
-final getSubscriptionStatusUseCaseProvider = Provider<GetSubscriptionStatusUseCase>((ref) {
-  final repository = ref.watch(paymentRepositoryProvider);
-  return GetSubscriptionStatusUseCase(repository);
-});
+final getSubscriptionStatusUseCaseProvider =
+    Provider<GetSubscriptionStatusUseCase>((ref) {
+      final repository = ref.watch(paymentRepositoryProvider);
+      return GetSubscriptionStatusUseCase(repository);
+    });
 
 /// Subscription Plans Provider
-final subscriptionPlansProvider = FutureProvider<List<SubscriptionPlan>>((ref) async {
+final subscriptionPlansProvider = FutureProvider<List<SubscriptionPlan>>((
+  ref,
+) async {
   final paymentService = ref.watch(paymentServiceProvider);
   return await paymentService.getPlans();
 });
@@ -99,7 +102,9 @@ SubscriptionStatus? subscriptionStatusFromAppCache(
 ///
 /// Task 3.3.2 (Phase 4): Enhanced with auto-refresh capability
 /// Use ref.refresh(subscriptionStatusProvider) to force refresh
-final subscriptionStatusProvider = FutureProvider<SubscriptionStatus?>((ref) async {
+final subscriptionStatusProvider = FutureProvider<SubscriptionStatus?>((
+  ref,
+) async {
   final cached = subscriptionStatusFromAppCache(ref.read(subscriptionProvider));
   try {
     final paymentService = ref.watch(paymentServiceProvider);
@@ -110,7 +115,7 @@ final subscriptionStatusProvider = FutureProvider<SubscriptionStatus?>((ref) asy
 });
 
 /// Subscription Sync Service Provider
-/// 
+///
 /// Task 3.3.2: Provides subscription status sync functionality
 /// Call methods on this provider to refresh subscription status
 final subscriptionSyncProvider = Provider<SubscriptionSyncService>((ref) {
@@ -118,9 +123,9 @@ final subscriptionSyncProvider = Provider<SubscriptionSyncService>((ref) {
 });
 
 /// Subscription Sync Service
-/// 
+///
 /// Task 3.3.2 (Phase 4): Handles subscription status synchronization
-/// 
+///
 /// Usage:
 /// ```dart
 /// // In a widget
@@ -160,7 +165,7 @@ class SubscriptionSyncService {
   }
 
   /// Schedule periodic refresh (call once during app initialization)
-  /// 
+  ///
   /// Note: This is a simple implementation. For production, consider using
   /// a background task scheduler or listening to app lifecycle events.
   void schedulePeriodicRefresh(Duration interval) {
@@ -170,7 +175,7 @@ class SubscriptionSyncService {
     Future.doWhile(() async {
       await Future.delayed(interval);
       if (!_isPeriodicRefreshActive) return false;
-      
+
       try {
         await refreshStatus();
       } catch (e) {
@@ -186,7 +191,7 @@ class SubscriptionSyncService {
   }
 
   /// Handle subscription change notification from push notification
-  /// 
+  ///
   /// Call this when receiving a push notification about subscription changes
   Future<void> onSubscriptionChangeNotification() async {
     _ref.read(planLimitsServiceProvider).clearCache();
@@ -213,13 +218,17 @@ class SubscriptionSyncService {
 }
 
 /// Available Superlike Packs Provider
-final availableSuperlikePacksProvider = FutureProvider<List<SuperlikePack>>((ref) async {
+final availableSuperlikePacksProvider = FutureProvider<List<SuperlikePack>>((
+  ref,
+) async {
   final superlikeService = ref.watch(superlikePackServiceProvider);
   return await superlikeService.getAvailablePacks();
 });
 
 /// User Superlike Packs Provider
-final userSuperlikePacksProvider = FutureProvider<List<UserSuperlikePack>>((ref) async {
+final userSuperlikePacksProvider = FutureProvider<List<UserSuperlikePack>>((
+  ref,
+) async {
   final superlikeService = ref.watch(superlikePackServiceProvider);
   return await superlikeService.getUserPacks();
 });
@@ -229,4 +238,3 @@ final totalSuperlikesProvider = FutureProvider<int>((ref) async {
   final userPacks = await ref.watch(userSuperlikePacksProvider.future);
   return userPacks.fold<int>(0, (sum, pack) => sum + pack.remainingCount);
 });
-

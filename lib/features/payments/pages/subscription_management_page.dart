@@ -18,6 +18,7 @@ import '../../../shared/services/error_handler_service.dart';
 import '../../../widgets/error_handling/error_display_widget.dart';
 import '../data/models/subscription_plan.dart';
 import '../presentation/widgets/offline_purchase_queue_indicator.dart';
+import '../data/services/google_play_billing_service.dart';
 import '../providers/google_play_billing_provider.dart';
 import '../providers/payment_providers.dart';
 import '../../../core/responsive/responsive.dart';
@@ -70,14 +71,13 @@ class _SubscriptionManagementPageState
       final embedded = plans.expand((p) => p.subPlans).toList();
       final merged = embedded.isNotEmpty ? embedded : subPlans;
       // Plan ids: 1 = Basic, 2 = Premium (legacy "Silver"), 3 = Gold.
-      final premiumOptions = merged
-          .where((sp) => userTierFromPlanId(sp.planId) != null)
-          .toList()
-        ..sort((a, b) {
-          final byTier = (a.planId ?? 0).compareTo(b.planId ?? 0);
-          if (byTier != 0) return byTier;
-          return (a.durationDays ?? 0).compareTo(b.durationDays ?? 0);
-        });
+      final premiumOptions =
+          merged.where((sp) => userTierFromPlanId(sp.planId) != null).toList()
+            ..sort((a, b) {
+              final byTier = (a.planId ?? 0).compareTo(b.planId ?? 0);
+              if (byTier != 0) return byTier;
+              return (a.durationDays ?? 0).compareTo(b.durationDays ?? 0);
+            });
 
       if (mounted) {
         setState(() {
@@ -209,8 +209,7 @@ class _SubscriptionManagementPageState
   // Kept for the actions section (cancel / restore / manage) visibility.
   bool get _isPremiumActive => _hasPaidPlan;
 
-  bool get _isGracePeriod =>
-      _status?.status?.toLowerCase() == 'grace_period';
+  bool get _isGracePeriod => _status?.status?.toLowerCase() == 'grace_period';
 
   Future<void> _openGooglePlaySubscriptions() async {
     final uri = Uri.parse(_googlePlaySubscriptionsUrl);
@@ -256,16 +255,21 @@ class _SubscriptionManagementPageState
 
     try {
       final repository = ref.read(googlePlayRepositoryProvider);
-      await repository.restorePurchases();
-      await ref.read(subscriptionRefreshProvider).refresh();
-      await _loadAll();
+      final outcome = await repository.restorePurchasesWithConfirmation();
 
-      if (mounted) {
-        _showSnack('Purchases restored');
+      if (outcome.isSuccess) {
+        await ref.read(subscriptionRefreshProvider).refresh();
+        await _loadAll();
       }
+
+      if (!mounted) return;
+      _showSnack(outcome.userMessage, isError: !outcome.isSuccess);
     } catch (e) {
       if (mounted) {
-        _showSnack('Failed to restore purchases: $e', isError: true);
+        _showSnack(
+          GooglePlayBillingService.restorePlayFailedMessage,
+          isError: true,
+        );
       }
     } finally {
       if (mounted) setState(() => _actionInProgress = false);
@@ -274,7 +278,9 @@ class _SubscriptionManagementPageState
 
   Future<void> _showCancelSheet() async {
     final periodEnd = _status?.endDate ?? _status?.nextBillingDate;
-    final periodLabel = periodEnd != null ? _formatDate(periodEnd) : 'the end of your billing period';
+    final periodLabel = periodEnd != null
+        ? _formatDate(periodEnd)
+        : 'the end of your billing period';
 
     await showModalBottomSheet<void>(
       context: context,
@@ -300,7 +306,9 @@ class _SubscriptionManagementPageState
 
     try {
       final paymentService = ref.read(paymentServiceProvider);
-      await paymentService.cancelLifecycleSubscription(immediately: immediately);
+      await paymentService.cancelLifecycleSubscription(
+        immediately: immediately,
+      );
       await ref.read(subscriptionRefreshProvider).refresh();
       await _loadAll();
 
@@ -328,8 +336,9 @@ class _SubscriptionManagementPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor:
-            isError ? AppColors.feedbackError : AppColors.feedbackSuccess,
+        backgroundColor: isError
+            ? AppColors.feedbackError
+            : AppColors.feedbackSuccess,
       ),
     );
   }
@@ -409,7 +418,8 @@ class _SubscriptionManagementPageState
     final theme = Theme.of(context);
     final current = _currentTier;
     final planName = current?.displayLabel ?? 'Free';
-    final periodEnd = _status?.endDate ??
+    final periodEnd =
+        _status?.endDate ??
         _status?.nextBillingDate ??
         ref.watch(subscriptionProvider)?.expiresAt;
 
@@ -456,10 +466,7 @@ class _SubscriptionManagementPageState
             onTap: () => context.push(AppRoutes.tierComparison),
           ),
         if (periodEnd != null)
-          PremiumInfoRow(
-            label: 'Next billing',
-            value: _formatDate(periodEnd),
-          ),
+          PremiumInfoRow(label: 'Next billing', value: _formatDate(periodEnd)),
         if (_status?.cancelAtPeriodEnd == true && periodEnd != null)
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -543,7 +550,9 @@ class _SubscriptionManagementPageState
                   color: Colors.transparent,
                   child: InkWell(
                     key: ValueKey('sub_plan_option_${subPlan.id}'),
-                    onTap: _actionInProgress ? null : () => _purchasePlan(subPlan),
+                    onTap: _actionInProgress
+                        ? null
+                        : () => _purchasePlan(subPlan),
                     borderRadius: BorderRadius.circular(16),
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.spacingLG),
@@ -560,9 +569,10 @@ class _SubscriptionManagementPageState
                                   children: [
                                     Text(
                                       '$tierName · ${subPlan.durationLabel}',
-                                      style: theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                     if (isYearly)
                                       Container(
@@ -571,14 +581,21 @@ class _SubscriptionManagementPageState
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: theme.colorScheme.primaryContainer,
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: theme
+                                              .colorScheme
+                                              .primaryContainer,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           'Best value',
-                                          style: AppTypography.labelSmall.copyWith(
-                                            color: theme.colorScheme.onPrimaryContainer,
-                                          ),
+                                          style: AppTypography.labelSmall
+                                              .copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onPrimaryContainer,
+                                              ),
                                         ),
                                       ),
                                   ],
@@ -631,7 +648,9 @@ class _SubscriptionManagementPageState
         PremiumSettingsTile(
           iconPath: AppIcons.refreshCircle,
           title: 'Restore purchases',
-          subtitle: 'Recover a subscription from Google Play',
+          subtitle: _actionInProgress
+              ? 'Restoring… please wait'
+              : 'Recover a subscription from Google Play',
           accent: theme.colorScheme.primary,
           onTap: _actionInProgress ? () {} : _restorePurchases,
         ),
@@ -678,24 +697,21 @@ class _SubscriptionManagementPageState
               padding: EdgeInsets.all(AppSpacing.spacingMD),
               child: Text('No subscription history yet'),
             )
-          else
-            ...[
-              ..._history.map(_buildHistoryRow),
-              if (_historyHasMore)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: AppSpacing.spacingMD,
-                  ),
-                  child: Center(
-                    child: TextButton(
-                      onPressed: _historyLoading
-                          ? null
-                          : () => _loadHistory(more: true),
-                      child: const Text('Load more'),
-                    ),
+          else ...[
+            ..._history.map(_buildHistoryRow),
+            if (_historyHasMore)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.spacingMD),
+                child: Center(
+                  child: TextButton(
+                    onPressed: _historyLoading
+                        ? null
+                        : () => _loadHistory(more: true),
+                    child: const Text('Load more'),
                   ),
                 ),
-            ],
+              ),
+          ],
         ],
       ],
     );
@@ -707,8 +723,7 @@ class _SubscriptionManagementPageState
     final provider = item['provider']?.toString() ?? '';
     final started = item['started_at']?.toString();
     final ended = item['ended_at']?.toString();
-    final startedDate =
-        started != null ? DateTime.tryParse(started) : null;
+    final startedDate = started != null ? DateTime.tryParse(started) : null;
     final endedDate = ended != null ? DateTime.tryParse(ended) : null;
 
     return Padding(
@@ -839,7 +854,8 @@ class _CancelSubscriptionSheetState extends State<_CancelSubscriptionSheet> {
             ),
             const SizedBox(height: AppSpacing.spacingSM),
             FilledButton(
-              onPressed: _confirmController.text.trim().toUpperCase() == 'CANCEL'
+              onPressed:
+                  _confirmController.text.trim().toUpperCase() == 'CANCEL'
                   ? () => widget.onCancelImmediately()
                   : null,
               style: FilledButton.styleFrom(

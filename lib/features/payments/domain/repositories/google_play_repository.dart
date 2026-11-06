@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../data/services/google_play_billing_service.dart';
+import '../../data/services/restore_purchases_confirmer.dart';
 
 /// Repository interface for Google Play Billing operations
 abstract class GooglePlayRepository {
@@ -20,7 +21,10 @@ abstract class GooglePlayRepository {
   Future<List<ProductDetails>> queryProducts(Set<String> productIds);
 
   /// Launch billing flow for subscriptions
-  Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails, {String? offerId});
+  Future<bool> launchSubscriptionBillingFlow(
+    ProductDetails productDetails, {
+    String? offerId,
+  });
 
   /// Launch billing flow for consumables (superlike packs)
   Future<bool> launchConsumableBillingFlow(ProductDetails productDetails);
@@ -30,6 +34,12 @@ abstract class GooglePlayRepository {
 
   /// Restore purchases
   Future<void> restorePurchases();
+
+  /// Restore and wait for backend confirmation via the grant stream.
+  Future<RestorePurchasesOutcome> restorePurchasesWithConfirmation({
+    Duration timeout = const Duration(seconds: 30),
+    Duration emptySettle = const Duration(seconds: 3),
+  });
 
   /// Check if billing is available
   Future<bool> isBillingAvailable();
@@ -41,7 +51,9 @@ abstract class GooglePlayRepository {
   Future<Map<String, dynamic>?> syncSubscriptionStatus();
 
   /// Start periodic subscription status sync
-  void startPeriodicStatusSync({Duration interval = const Duration(minutes: 5)});
+  void startPeriodicStatusSync({
+    Duration interval = const Duration(minutes: 5),
+  });
 
   /// Stop periodic subscription status sync
   void stopPeriodicStatusSync();
@@ -63,7 +75,8 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   String? get lastFailureMessage => _billingService.lastFailureMessage;
 
   @override
-  Stream<List<PurchaseDetails>> get purchaseUpdates => _billingService.purchaseUpdates;
+  Stream<List<PurchaseDetails>> get purchaseUpdates =>
+      _billingService.purchaseUpdates;
 
   @override
   Stream<String> get errors => _billingService.errors;
@@ -80,12 +93,20 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   }
 
   @override
-  Future<bool> launchSubscriptionBillingFlow(ProductDetails productDetails, {String? offerId}) async {
-    return await _billingService.launchSubscriptionBillingFlow(productDetails, offerId: offerId);
+  Future<bool> launchSubscriptionBillingFlow(
+    ProductDetails productDetails, {
+    String? offerId,
+  }) async {
+    return await _billingService.launchSubscriptionBillingFlow(
+      productDetails,
+      offerId: offerId,
+    );
   }
 
   @override
-  Future<bool> launchConsumableBillingFlow(ProductDetails productDetails) async {
+  Future<bool> launchConsumableBillingFlow(
+    ProductDetails productDetails,
+  ) async {
     return await _billingService.launchBillingFlowForConsumable(productDetails);
   }
 
@@ -100,6 +121,17 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   }
 
   @override
+  Future<RestorePurchasesOutcome> restorePurchasesWithConfirmation({
+    Duration timeout = const Duration(seconds: 30),
+    Duration emptySettle = const Duration(seconds: 3),
+  }) {
+    return _billingService.restorePurchasesWithConfirmation(
+      timeout: timeout,
+      emptySettle: emptySettle,
+    );
+  }
+
+  @override
   Future<bool> isBillingAvailable() async {
     return await _billingService.isBillingAvailable();
   }
@@ -110,7 +142,9 @@ class GooglePlayRepositoryImpl implements GooglePlayRepository {
   }
 
   @override
-  void startPeriodicStatusSync({Duration interval = const Duration(minutes: 5)}) {
+  void startPeriodicStatusSync({
+    Duration interval = const Duration(minutes: 5),
+  }) {
     _billingService.startPeriodicStatusSync(interval: interval);
   }
 

@@ -60,7 +60,9 @@ class PaymentService {
   }
 
   /// POST stripe/verify-payment. Body: session_id.
-  Future<Map<String, dynamic>> stripeVerifyPayment({required String sessionId}) async {
+  Future<Map<String, dynamic>> stripeVerifyPayment({
+    required String sessionId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeVerifyPayment,
       data: {'session_id': sessionId},
@@ -71,7 +73,9 @@ class PaymentService {
   }
 
   /// POST stripe/create-payment-intent. Body: amount, currency; API may require sub_plan_id.
-  Future<Map<String, dynamic>> stripeCreatePaymentIntent(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> stripeCreatePaymentIntent(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeCreatePaymentIntent,
       data: body,
@@ -82,7 +86,9 @@ class PaymentService {
   }
 
   /// POST stripe/verify-payment-intent. Body: payment_intent_id.
-  Future<Map<String, dynamic>> stripeVerifyPaymentIntent({required String paymentIntentId}) async {
+  Future<Map<String, dynamic>> stripeVerifyPaymentIntent({
+    required String paymentIntentId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeVerifyPaymentIntent,
       data: {'payment_intent_id': paymentIntentId},
@@ -93,7 +99,9 @@ class PaymentService {
   }
 
   /// POST stripe/create-upgrade-payment-intent. Body: plan_id or new_sub_plan_id.
-  Future<Map<String, dynamic>> stripeCreateUpgradePaymentIntent(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> stripeCreateUpgradePaymentIntent(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeCreateUpgradePaymentIntent,
       data: body,
@@ -104,7 +112,9 @@ class PaymentService {
   }
 
   /// POST stripe/verify-upgrade-payment-intent. Body: payment_intent_id.
-  Future<Map<String, dynamic>> stripeVerifyUpgradePaymentIntent({required String paymentIntentId}) async {
+  Future<Map<String, dynamic>> stripeVerifyUpgradePaymentIntent({
+    required String paymentIntentId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeVerifyUpgradePaymentIntent,
       data: {'payment_intent_id': paymentIntentId},
@@ -115,7 +125,9 @@ class PaymentService {
   }
 
   /// POST stripe/payment-intent. Body: amount; API may require sub_plan_id.
-  Future<Map<String, dynamic>> stripePaymentIntent(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> stripePaymentIntent(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripePaymentIntent,
       data: body,
@@ -126,7 +138,9 @@ class PaymentService {
   }
 
   /// POST stripe/subscription. Body: price_id; API may require sub_plan_id.
-  Future<Map<String, dynamic>> stripeSubscription(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> stripeSubscription(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeSubscription,
       data: body,
@@ -137,7 +151,9 @@ class PaymentService {
   }
 
   /// POST stripe/refund. Body: payment_intent_id.
-  Future<Map<String, dynamic>> stripeRefund({required String paymentIntentId}) async {
+  Future<Map<String, dynamic>> stripeRefund({
+    required String paymentIntentId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.stripeRefund,
       data: {'payment_intent_id': paymentIntentId},
@@ -158,7 +174,9 @@ class PaymentService {
   }
 
   /// POST paypal/create-order-plan. Body: plan_id or sub_plan_id.
-  Future<Map<String, dynamic>> paypalCreateOrderPlan(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> paypalCreateOrderPlan(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.paypalCreateOrderPlan,
       data: body,
@@ -169,7 +187,9 @@ class PaymentService {
   }
 
   /// POST paypal/capture-order. Body: order_id.
-  Future<Map<String, dynamic>> paypalCaptureOrder({required String orderId}) async {
+  Future<Map<String, dynamic>> paypalCaptureOrder({
+    required String orderId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.paypalCaptureOrder,
       data: {'order_id': orderId},
@@ -190,7 +210,9 @@ class PaymentService {
   }
 
   /// POST subscriptions/calculate-upgrade. Body: price_id (or new_plan_id).
-  Future<Map<String, dynamic>> calculateUpgrade({required String priceId}) async {
+  Future<Map<String, dynamic>> calculateUpgrade({
+    required String priceId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.subscriptionsCalculateUpgrade,
       data: {'price_id': priceId},
@@ -201,7 +223,9 @@ class PaymentService {
   }
 
   /// POST subscriptions/upgrade-with-penalty. Body: price_id (and any other required fields).
-  Future<Map<String, dynamic>> upgradeWithPenalty(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> upgradeWithPenalty(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.subscriptionsUpgradeWithPenalty,
       data: body,
@@ -212,7 +236,9 @@ class PaymentService {
   }
 
   /// POST subscriptions/update. Body: price_id.
-  Future<Map<String, dynamic>> updateSubscription({required String priceId}) async {
+  Future<Map<String, dynamic>> updateSubscription({
+    required String priceId,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.subscriptionsUpdate,
       data: {'price_id': priceId},
@@ -235,9 +261,7 @@ class PaymentService {
   /// Get all subscription plans (legacy GET /plans)
   Future<List<SubscriptionPlan>> getPlans() async {
     try {
-      final response = await _apiService.get<dynamic>(
-        ApiEndpoints.plans,
-      );
+      final response = await _apiService.get<dynamic>(ApiEndpoints.plans);
 
       List<dynamic>? dataList;
       if (response.data is Map<String, dynamic>) {
@@ -251,7 +275,9 @@ class PaymentService {
 
       if (dataList != null) {
         return dataList
-            .map((item) => SubscriptionPlan.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => SubscriptionPlan.fromJson(item as Map<String, dynamic>),
+            )
             .toList();
       }
       return [];
@@ -282,7 +308,10 @@ class PaymentService {
   }
 
   /// PUT plans/:id. Body: title, price, description, etc. (admin).
-  Future<Map<String, dynamic>> updatePlan(int planId, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> updatePlan(
+    int planId,
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.put<Map<String, dynamic>>(
       ApiEndpoints.planById(planId),
       data: body,
@@ -302,7 +331,10 @@ class PaymentService {
   }
 
   /// POST plans/:planId/sub-plans. Body: duration_days, price, sub_plan_title, sub_plan_description (admin).
-  Future<Map<String, dynamic>> createPlanSubPlans(int planId, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> createPlanSubPlans(
+    int planId,
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.planSubPlans(planId),
       data: body,
@@ -339,9 +371,7 @@ class PaymentService {
   /// Get all sub plans (supports nested /sub-plans index format)
   Future<List<SubPlan>> getSubPlans() async {
     try {
-      final response = await _apiService.get<dynamic>(
-        ApiEndpoints.subPlans,
-      );
+      final response = await _apiService.get<dynamic>(ApiEndpoints.subPlans);
 
       List<dynamic>? dataList;
       if (response.data is Map<String, dynamic>) {
@@ -388,7 +418,9 @@ class PaymentService {
   }
 
   /// GET sub-plans/duration. Query: duration_days (required).
-  Future<Map<String, dynamic>> getSubPlansDuration({required int durationDays}) async {
+  Future<Map<String, dynamic>> getSubPlansDuration({
+    required int durationDays,
+  }) async {
     final path = '${ApiEndpoints.subPlansDuration}?duration_days=$durationDays';
     final response = await _apiService.get<Map<String, dynamic>>(
       path,
@@ -399,7 +431,9 @@ class PaymentService {
   }
 
   /// POST sub-plans/compare. Body: plan_ids (list), duration_days.
-  Future<Map<String, dynamic>> compareSubPlans(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> compareSubPlans(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.subPlansCompare,
       data: body,
@@ -535,7 +569,9 @@ class PaymentService {
   }
 
   /// POST plan-purchase-actions. Body: plan_purchase_id, action; or user_id, user_data, name, email, amount, status, stripe_session_id, day.
-  Future<Map<String, dynamic>> createPlanPurchaseAction(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> createPlanPurchaseAction(
+    Map<String, dynamic> body,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.planPurchaseActions,
       data: body,
@@ -566,7 +602,9 @@ class PaymentService {
   }
 
   /// GET plan-purchase-actions/status. Optional [status] query param.
-  Future<Map<String, dynamic>> getPlanPurchaseActionsStatus({String? status}) async {
+  Future<Map<String, dynamic>> getPlanPurchaseActionsStatus({
+    String? status,
+  }) async {
     final path = status != null
         ? '${ApiEndpoints.planPurchaseActionsStatus}?status=$status'
         : ApiEndpoints.planPurchaseActionsStatus;
@@ -599,7 +637,10 @@ class PaymentService {
   }
 
   /// PATCH plan-purchase-actions/:id/status. Body: status (e.g. completed).
-  Future<Map<String, dynamic>> updatePlanPurchaseActionStatus(int id, String status) async {
+  Future<Map<String, dynamic>> updatePlanPurchaseActionStatus(
+    int id,
+    String status,
+  ) async {
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.planPurchaseActionStatus(id),
       data: {'status': status},
@@ -670,7 +711,9 @@ class PaymentService {
   }
 
   /// Restore subscription from Google Play purchase token (POST /subscriptions/restore).
-  Future<Map<String, dynamic>> restoreSubscriptionWithToken(String purchaseToken) async {
+  Future<Map<String, dynamic>> restoreSubscriptionWithToken(
+    String purchaseToken,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.subscriptionsRestore,
       data: {'purchase_token': purchaseToken},
@@ -685,7 +728,9 @@ class PaymentService {
   }
 
   /// Cancel subscription via lifecycle API (POST /subscriptions/cancel).
-  Future<Map<String, dynamic>> cancelLifecycleSubscription({bool immediately = false}) async {
+  Future<Map<String, dynamic>> cancelLifecycleSubscription({
+    bool immediately = false,
+  }) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.subscriptionCancel,
       data: {'immediately': immediately},
@@ -701,7 +746,7 @@ class PaymentService {
 
   /// Paginated subscription history (GET /subscriptions/history).
   Future<({List<Map<String, dynamic>> items, Map<String, dynamic> pagination})>
-      getSubscriptionHistory({int page = 1}) async {
+  getSubscriptionHistory({int page = 1}) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       '${ApiEndpoints.subscriptionsHistory}?page=$page',
       fromJson: (json) => json as Map<String, dynamic>,
@@ -718,9 +763,9 @@ class PaymentService {
     }
     final items = raw is List
         ? raw
-            .whereType<Map>()
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList()
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList()
         : <Map<String, dynamic>>[];
     final pagination = data['pagination'] is Map
         ? Map<String, dynamic>.from(data['pagination'] as Map)
@@ -744,11 +789,17 @@ class PaymentService {
   }
 
   /// Upgrade subscription
-  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
+  Future<bool> upgradeSubscription(
+    String currentPlanId,
+    String targetPlanId,
+  ) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.subscriptionsUpgrade,
-        data: {'current_plan_id': currentPlanId, 'target_plan_id': targetPlanId},
+        data: {
+          'current_plan_id': currentPlanId,
+          'target_plan_id': targetPlanId,
+        },
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -779,10 +830,7 @@ class PaymentService {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
         ApiEndpoints.validateReceipt,
-        data: {
-          'receipt_data': receiptData,
-          'transaction_id': transactionId,
-        },
+        data: {'receipt_data': receiptData, 'transaction_id': transactionId},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -792,24 +840,6 @@ class PaymentService {
       return false;
     } catch (e) {
       // For now, return true to allow purchases (implement proper validation later)
-      return true;
-    }
-  }
-
-  /// Restore purchases from app stores
-  Future<bool> restorePurchases() async {
-    try {
-      final response = await _apiService.post<Map<String, dynamic>>(
-        ApiEndpoints.restorePurchases,
-        fromJson: (json) => json as Map<String, dynamic>,
-      );
-
-      if (response.isSuccess && response.data != null) {
-        return response.data!['restored'] as bool? ?? false;
-      }
-      return false;
-    } catch (e) {
-      // For now, return true to indicate restore was attempted
       return true;
     }
   }
@@ -848,9 +878,7 @@ class PaymentService {
     }
 
     final data = response.data ?? const <String, dynamic>{};
-    final rawList = data['transactions'] ??
-        data['payments'] ??
-        data['data'];
+    final rawList = data['transactions'] ?? data['payments'] ?? data['data'];
     if (rawList is! List) return const [];
 
     return rawList
@@ -860,7 +888,10 @@ class PaymentService {
   }
 
   /// Get user payment history (API: GET user/payments/history). Returns data with payments list and pagination.
-  Future<Map<String, dynamic>> getUserPaymentHistory({int page = 1, int limit = 20}) async {
+  Future<Map<String, dynamic>> getUserPaymentHistory({
+    int page = 1,
+    int limit = 20,
+  }) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.userPaymentsHistory,
       queryParameters: {'page': page, 'per_page': limit},
@@ -892,7 +923,9 @@ class PaymentService {
 
   /// Get failed user payments (API: GET user/payments/failed).
   Future<List<Map<String, dynamic>>> getUserPaymentsFailed() async {
-    final response = await _apiService.get<dynamic>(ApiEndpoints.userPaymentsFailed);
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.userPaymentsFailed,
+    );
     if (response.data is Map<String, dynamic>) {
       final data = response.data as Map<String, dynamic>;
       final list = data['data'] ?? data['payments'];
@@ -901,7 +934,9 @@ class PaymentService {
       }
     }
     if (response.data is List) {
-      return (response.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      return (response.data as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
     }
     return [];
   }
@@ -947,7 +982,9 @@ class PaymentService {
   }
 
   /// GET payment-methods/currency/:currency (e.g. usd).
-  Future<Map<String, dynamic>> getPaymentMethodsByCurrency(String currency) async {
+  Future<Map<String, dynamic>> getPaymentMethodsByCurrency(
+    String currency,
+  ) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.paymentMethodsCurrency(currency),
       fromJson: (json) => json as Map<String, dynamic>,
@@ -988,7 +1025,9 @@ class PaymentService {
   /// Get Google Play products (API: GET google-play/products). Returns data or empty list on error.
   Future<List<Map<String, dynamic>>> getGooglePlayProducts() async {
     try {
-      final response = await _apiService.get<dynamic>(ApiEndpoints.googlePlayProducts);
+      final response = await _apiService.get<dynamic>(
+        ApiEndpoints.googlePlayProducts,
+      );
       if (response.data is Map<String, dynamic>) {
         final data = response.data as Map<String, dynamic>;
         final list = data['data'] ?? data['products'];
@@ -997,7 +1036,9 @@ class PaymentService {
         }
       }
       if (response.data is List) {
-        return (response.data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return (response.data as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
       }
     } catch (e) {
       rethrow;
@@ -1023,10 +1064,7 @@ class PaymentService {
     int limit = 20,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'per_page': limit,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'per_page': limit};
       if (type != null) queryParams['type'] = type;
       if (status != null) queryParams['status'] = status;
 
@@ -1047,7 +1085,11 @@ class PaymentService {
 
       if (dataList != null) {
         return dataList
-            .map((item) => GooglePlayPurchaseHistory.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) => GooglePlayPurchaseHistory.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            )
             .toList();
       }
 
@@ -1058,7 +1100,9 @@ class PaymentService {
   }
 
   /// Get Google Play purchase details
-  Future<GooglePlayPurchaseHistory> getGooglePlayPurchaseDetails(int purchaseId) async {
+  Future<GooglePlayPurchaseHistory> getGooglePlayPurchaseDetails(
+    int purchaseId,
+  ) async {
     try {
       final response = await _apiService.get<Map<String, dynamic>>(
         ApiEndpoints.googlePlayPurchaseDetails(purchaseId),
@@ -1066,7 +1110,9 @@ class PaymentService {
       );
 
       if (response.isSuccess && response.data != null) {
-        return GooglePlayPurchaseHistory.fromJson(response.data!['data'] ?? response.data!);
+        return GooglePlayPurchaseHistory.fromJson(
+          response.data!['data'] ?? response.data!,
+        );
       } else {
         throw Exception(response.message);
       }
@@ -1093,7 +1139,9 @@ class PaymentService {
       }
 
       if (dataList != null) {
-        return dataList.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+        return dataList
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
       }
 
       return [];
@@ -1119,7 +1167,9 @@ class PaymentService {
   }
 
   /// POST google-play/subscription/cancel. Body: purchase_token.
-  Future<Map<String, dynamic>> cancelGooglePlaySubscriptionByToken(String purchaseToken) async {
+  Future<Map<String, dynamic>> cancelGooglePlaySubscriptionByToken(
+    String purchaseToken,
+  ) async {
     final response = await _apiService.post<Map<String, dynamic>>(
       ApiEndpoints.googlePlaySubscriptionCancel,
       data: {'purchase_token': purchaseToken},
@@ -1189,7 +1239,9 @@ class PaymentService {
         dataList = response.data as List;
       }
       if (dataList != null) {
-        return dataList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return dataList
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
       }
       return [];
     } catch (e) {
@@ -1198,7 +1250,9 @@ class PaymentService {
   }
 
   /// Get Google Play subscription details (GET google-play/subscriptions/:id)
-  Future<Map<String, dynamic>> getGooglePlaySubscriptionDetails(int subscriptionId) async {
+  Future<Map<String, dynamic>> getGooglePlaySubscriptionDetails(
+    int subscriptionId,
+  ) async {
     final response = await _apiService.get<Map<String, dynamic>>(
       ApiEndpoints.googlePlaySubscriptionDetails(subscriptionId),
       fromJson: (json) => json as Map<String, dynamic>,
@@ -1207,4 +1261,3 @@ class PaymentService {
     return response.data ?? {};
   }
 }
-

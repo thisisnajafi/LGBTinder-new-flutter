@@ -33,8 +33,14 @@ class PaymentRepository {
   }
 
   /// Upgrade subscription
-  Future<bool> upgradeSubscription(String currentPlanId, String targetPlanId) async {
-    return await _paymentService.upgradeSubscription(currentPlanId, targetPlanId);
+  Future<bool> upgradeSubscription(
+    String currentPlanId,
+    String targetPlanId,
+  ) async {
+    return await _paymentService.upgradeSubscription(
+      currentPlanId,
+      targetPlanId,
+    );
   }
 
   /// Cancel subscription
@@ -59,11 +65,6 @@ class PaymentRepository {
   /// Validate receipt
   Future<bool> validateReceipt(String receiptData, String transactionId) async {
     return await _paymentService.validateReceipt(receiptData, transactionId);
-  }
-
-  /// Restore purchases
-  Future<bool> restorePurchases() async {
-    return await _paymentService.restorePurchases();
   }
 
   /// Get payment history
