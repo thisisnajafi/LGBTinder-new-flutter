@@ -3003,8 +3003,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     });
   }
 
-  static const int _maxChatImageBytes = 5 * 1024 * 1024;
-
   /// Gallery picks on Android 13+ can be HEIC. GD cannot decode that, so
   /// every chat image is rewritten to JPEG before upload.
   Future<File?> _compressImageIfNeeded(String sourcePath) async {
@@ -3085,14 +3083,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         }
       }
       if (type == 'image' || type == 'disappearing_image') {
+        final name = mediaFile.path.replaceAll(r'\', '/').split('/').last;
         final length = await mediaFile.length();
-        if (length > _maxChatImageBytes * 2) {
+        final imageError = ChatUploadValidation.validateImage(
+          fileName: name,
+          fileSizeBytes: length,
+        );
+        if (imageError != null) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Image is too large. Maximum size is 5MB.'),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(imageError)));
           }
           return;
         }

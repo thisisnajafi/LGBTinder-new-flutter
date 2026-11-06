@@ -3,6 +3,12 @@ import 'package:lgbtindernew/features/chat/utils/chat_upload_validation.dart';
 
 void main() {
   group('ChatUploadValidation', () {
+    test('matches backend default byte caps', () {
+      expect(ChatUploadValidation.maxVideoBytes, 52428800);
+      expect(ChatUploadValidation.maxVoiceBytes, 5242880);
+      expect(ChatUploadValidation.maxImageBytes, 5242880);
+    });
+
     test('accepts allowed video types under 50 MB', () {
       expect(
         ChatUploadValidation.validateVideo(
@@ -51,11 +57,11 @@ void main() {
       );
     });
 
-    test('accepts voice m4a/aac/mp3 and rejects others', () {
+    test('accepts voice m4a/aac/mp3 under 5 MB and rejects others', () {
       expect(
         ChatUploadValidation.validateVoice(
           fileName: 'note.m4a',
-          fileSizeBytes: 100,
+          fileSizeBytes: ChatUploadValidation.maxVoiceBytes,
         ),
         isNull,
       );
@@ -80,14 +86,46 @@ void main() {
         ),
         'Voice notes must be M4A, AAC, or MP3.',
       );
+      expect(
+        ChatUploadValidation.validateVoice(
+          fileName: 'note.m4a',
+          fileSizeBytes: ChatUploadValidation.maxVoiceBytes + 1,
+        ),
+        'Voice note is too large. Maximum size is 5 MB.',
+      );
     });
 
-    test('text and sticker never allow attachments', () {
+    test('accepts images under 5 MB and rejects oversized', () {
+      expect(
+        ChatUploadValidation.validateImage(
+          fileName: 'photo.jpg',
+          fileSizeBytes: ChatUploadValidation.maxImageBytes,
+        ),
+        isNull,
+      );
+      expect(
+        ChatUploadValidation.validateImage(
+          fileName: 'photo.png',
+          fileSizeBytes: ChatUploadValidation.maxImageBytes + 1,
+        ),
+        'Image is too large. Maximum size is 5 MB.',
+      );
+      expect(
+        ChatUploadValidation.validateImage(
+          fileName: 'doc.pdf',
+          fileSizeBytes: 100,
+        ),
+        'Only image files are allowed.',
+      );
+    });
+
+    test('text and sticker never allow attachments; documents unsupported', () {
       expect(ChatUploadValidation.allowsAttachment('text'), isFalse);
       expect(ChatUploadValidation.allowsAttachment('sticker'), isFalse);
       expect(ChatUploadValidation.allowsAttachment('image'), isTrue);
       expect(ChatUploadValidation.allowsAttachment('video'), isTrue);
       expect(ChatUploadValidation.allowsAttachment('voice'), isTrue);
+      expect(ChatUploadValidation.messageTypeForUpload('resume.pdf'), isNull);
     });
 
     test('messageTypeForUpload maps allowlisted names only', () {

@@ -1,15 +1,35 @@
 import 'chat_attachment_kind.dart';
 
-/// Client-side chat media rules matching Laravel PR #5.
+/// Client-side chat media rules matching
+/// `lgbtinder-backend` `Chat*UploadService` + `config/chat_broadcasting.php`.
 ///
-/// Videos: mp4 / mov / webm / 3gp, max 50 MB.
-/// Voice: m4a / aac / mp3.
+/// - Video: mp4 / mov / webm / 3gp, max 52_428_800 bytes (50 MiB)
+/// - Voice: m4a / aac / mp3, max 5_242_880 bytes (5 MiB)
+/// - Image: any `image/*`, max 5_242_880 bytes (5 MiB)
+/// - Documents: not a chat message type on the backend (unsupported)
 abstract final class ChatUploadValidation {
-  static const int maxVideoBytes = 50 * 1024 * 1024;
+  /// [ChatVideoUploadService::maxBytes] / `chat_broadcasting.video_max_bytes`
+  static const int maxVideoBytes = 52428800;
+
+  /// [ChatVoiceUploadService::maxBytes] / `chat_broadcasting.voice_max_bytes`
+  static const int maxVoiceBytes = 5242880;
+
+  /// [ChatImageUploadService::maxBytes] / `chat_broadcasting.image_max_bytes`
+  static const int maxImageBytes = 5242880;
 
   static const Set<String> videoExtensions = {'.mp4', '.mov', '.webm', '.3gp'};
 
   static const Set<String> voiceExtensions = {'.m4a', '.aac', '.mp3'};
+
+  static const Set<String> imageExtensions = {
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.webp',
+    '.heic',
+    '.heif',
+  };
 
   static String extensionOf(String fileName) {
     final name = fileName.trim().toLowerCase().replaceAll(r'\', '/');
@@ -25,6 +45,9 @@ abstract final class ChatUploadValidation {
 
   static bool isAllowedVoiceName(String fileName) =>
       voiceExtensions.contains(extensionOf(fileName));
+
+  static bool isAllowedImageName(String fileName) =>
+      imageExtensions.contains(extensionOf(fileName));
 
   /// Returns a friendly error, or `null` when the file is allowed.
   static String? validateVideo({
@@ -48,10 +71,27 @@ abstract final class ChatUploadValidation {
     if (!isAllowedVoiceName(fileName)) {
       return 'Voice notes must be M4A, AAC, or MP3.';
     }
+    if (fileSizeBytes > maxVoiceBytes) {
+      return 'Voice note is too large. Maximum size is 5 MB.';
+    }
     return null;
   }
 
-  /// Validate by resolved chat message type (`video` / `voice`).
+  /// Returns a friendly error, or `null` when the file is allowed.
+  static String? validateImage({
+    required String fileName,
+    required int fileSizeBytes,
+  }) {
+    if (fileName.isNotEmpty && !isAllowedImageName(fileName)) {
+      return 'Only image files are allowed.';
+    }
+    if (fileSizeBytes > maxImageBytes) {
+      return 'Image is too large. Maximum size is 5 MB.';
+    }
+    return null;
+  }
+
+  /// Validate by resolved chat message type.
   static String? validateForMessageType({
     required String messageType,
     required String fileName,
@@ -63,6 +103,10 @@ abstract final class ChatUploadValidation {
         fileSizeBytes: fileSizeBytes,
       ),
       'voice' => validateVoice(
+        fileName: fileName,
+        fileSizeBytes: fileSizeBytes,
+      ),
+      'image' || 'disappearing_image' => validateImage(
         fileName: fileName,
         fileSizeBytes: fileSizeBytes,
       ),
@@ -83,6 +127,7 @@ abstract final class ChatUploadValidation {
     final type = ChatAttachmentKindResolver.messageType(kind);
     if (type == 'video' && !isAllowedVideoName(fileName)) return null;
     if (type == 'voice' && !isAllowedVoiceName(fileName)) return null;
+    if (type == 'image' && !isAllowedImageName(fileName)) return null;
     return type;
   }
 }

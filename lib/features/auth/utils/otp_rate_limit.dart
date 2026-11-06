@@ -2,7 +2,8 @@ import '../../../shared/models/api_error.dart';
 
 /// Helpers for backend OTP lockouts (`OTP_TOO_MANY_ATTEMPTS` + `retry_after`).
 ///
-/// Returned by verify-login-code, verify-otp, and reset-password (HTTP 429).
+/// Returned by verify-login-code, verify-otp, reset-password, and
+/// send-verification (registration) as HTTP 429.
 /// The code is invalidated; the user must wait, then request a new code.
 abstract final class OtpRateLimit {
   static const String errorCode = 'OTP_TOO_MANY_ATTEMPTS';

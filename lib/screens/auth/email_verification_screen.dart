@@ -12,6 +12,8 @@ import '../../core/widgets/auth_page_scaffold.dart';
 import '../../core/responsive/responsive.dart';
 import '../../features/auth/data/models/verify_email_request.dart';
 import '../../features/auth/presentation/widgets/email_verification_form.dart';
+import '../../features/auth/presentation/widgets/otp_rate_limit_notice.dart';
+import '../../features/auth/utils/otp_rate_limit.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
@@ -40,10 +42,13 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
 
 class _EmailVerificationScreenState
     extends ConsumerState<EmailVerificationScreen> {
-  final List<TextEditingController> _codeControllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _codeControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   final _isVerifying = ValueNotifier<bool>(false);
+  final _otpRateLimitSeconds = ValueNotifier<int?>(null);
 
   @override
   void initState() {
@@ -70,6 +75,7 @@ class _EmailVerificationScreenState
       node.dispose();
     }
     _isVerifying.dispose();
+    _otpRateLimitSeconds.dispose();
     super.dispose();
   }
 
@@ -90,6 +96,25 @@ class _EmailVerificationScreenState
     return _codeControllers.map((c) => c.text).join();
   }
 
+  void _clearCodeFields() {
+    for (final controller in _codeControllers) {
+      controller.clear();
+    }
+    if (_focusNodes.isNotEmpty) {
+      _focusNodes[0].requestFocus();
+    }
+  }
+
+  void _applyOtpRateLimit(ApiError error) {
+    final seconds = OtpRateLimit.retryAfterSeconds(error);
+    _otpRateLimitSeconds.value = seconds;
+    _clearCodeFields();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(OtpRateLimit.waitMessage(seconds))));
+  }
+
   Future<void> _verifyCode() async {
     final code = _getCode();
     if (code.length != 6) {
@@ -104,10 +129,7 @@ class _EmailVerificationScreenState
     try {
       final authService = ref.read(authServiceProvider);
 
-      final request = VerifyEmailRequest(
-        email: widget.email,
-        code: code,
-      );
+      final request = VerifyEmailRequest(email: widget.email, code: code);
 
       final response = await authService.verifyEmail(request);
 
@@ -141,17 +163,17 @@ class _EmailVerificationScreenState
         }
       }
     } on ApiError catch (e) {
-      if (mounted) {
-        ErrorHandlerService.showErrorSnackBar(
-          context,
-          e,
-          customMessage: 'Verification failed',
-        );
-        for (final controller in _codeControllers) {
-          controller.clear();
-        }
-        _focusNodes[0].requestFocus();
+      if (!mounted) return;
+      if (OtpRateLimit.matches(e) || e.isOtpRateLimited) {
+        _applyOtpRateLimit(e);
+        return;
       }
+      ErrorHandlerService.showErrorSnackBar(
+        context,
+        e,
+        customMessage: 'Verification failed',
+      );
+      _clearCodeFields();
     } catch (e) {
       if (mounted) {
         ErrorHandlerService.handleError(
@@ -159,10 +181,7 @@ class _EmailVerificationScreenState
           e,
           customMessage: 'Verification failed',
         );
-        for (final controller in _codeControllers) {
-          controller.clear();
-        }
-        _focusNodes[0].requestFocus();
+        _clearCodeFields();
       }
     } finally {
       if (mounted) {
@@ -181,6 +200,7 @@ class _EmailVerificationScreenState
       }
 
       if (mounted) {
+        _otpRateLimitSeconds.value = null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
@@ -216,10 +236,12 @@ class _EmailVerificationScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final textColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return AuthPageScaffold(
       title: 'Verify Email',
@@ -286,7 +308,25 @@ class _EmailVerificationScreenState
               },
             ),
             SizedBox(height: AppSpacing.spacingLG),
-            EmailResendRow(onResend: _resendCode),
+            ValueListenableBuilder<int?>(
+              valueListenable: _otpRateLimitSeconds,
+              builder: (context, seconds, _) {
+                if (seconds == null) {
+                  return EmailResendRow(onResend: _resendCode);
+                }
+                return OtpRateLimitNotice(
+                  key: ValueKey('reg-otp-lock-$seconds'),
+                  retryAfterSeconds: seconds,
+                  onResend: () async {
+                    final ok = await _resendCode();
+                    if (ok) {
+                      _otpRateLimitSeconds.value = null;
+                    }
+                    return ok;
+                  },
+                );
+              },
+            ),
             SizedBox(height: AppSpacing.spacingXL),
             Container(
               padding: const EdgeInsets.all(AppSpacing.spacingMD),

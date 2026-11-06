@@ -39,7 +39,8 @@ class RetryInterceptor extends Interceptor {
     final path = error.requestOptions.path;
     if (path.contains('verify-login-code') ||
         path.contains('verify-otp') ||
-        path.contains('reset-password')) {
+        path.contains('reset-password') ||
+        path.contains('send-verification')) {
       return false;
     }
     final data = error.response?.data;
