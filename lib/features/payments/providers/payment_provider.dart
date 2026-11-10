@@ -8,6 +8,7 @@ import '../domain/use_cases/restore_purchases_use_case.dart';
 import '../domain/use_cases/validate_receipt_use_case.dart';
 import '../domain/use_cases/get_superlike_packs_use_case.dart';
 import '../domain/use_cases/get_subscription_status_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Payment provider - manages payment and subscription state
 final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((ref) {
@@ -123,7 +124,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -134,7 +135,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       final packs = await _getSuperlikePacksUseCase.execute();
       state = state.copyWith(superlikePacks: packs);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -148,7 +149,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         hasActiveSubscription: hasActive,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -170,7 +171,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     } catch (e) {
       state = state.copyWith(
         isPurchasing: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -184,7 +185,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       state = state.copyWith(hasActiveSubscription: false);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -200,7 +201,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     } catch (e) {
       state = state.copyWith(
         isRestoring: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -211,7 +212,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     try {
       return await _validateReceiptUseCase.execute(receiptData, transactionId);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }

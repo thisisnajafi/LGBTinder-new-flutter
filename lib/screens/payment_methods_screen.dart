@@ -16,6 +16,7 @@ import '../widgets/modals/confirmation_dialog.dart';
 import '../widgets/error_handling/empty_state.dart';
 import 'add_payment_method_screen.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Payment methods screen — manage saved cards and wallets.
 class PaymentMethodsScreen extends ConsumerStatefulWidget {
@@ -95,7 +96,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update default payment method: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }
@@ -132,7 +133,7 @@ class _PaymentMethodsScreenState extends ConsumerState<PaymentMethodsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove payment method: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

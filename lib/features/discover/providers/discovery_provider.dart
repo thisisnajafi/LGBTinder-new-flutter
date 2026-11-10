@@ -11,6 +11,7 @@ import '../domain/use_cases/apply_filters_use_case.dart';
 import '../../matching/providers/matching_provider.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../payments/data/services/plan_limits_service.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Discovery provider - manages discovery state and operations
 final discoveryProvider = StateNotifierProvider<DiscoveryNotifier, DiscoveryState>((ref) {
@@ -106,7 +107,7 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -137,7 +138,7 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingMore: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -163,7 +164,7 @@ class DiscoveryNotifier extends StateNotifier<DiscoveryState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }

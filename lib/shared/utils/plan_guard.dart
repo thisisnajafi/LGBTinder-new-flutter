@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../features/payments/data/services/plan_limits_service.dart';
 import '../../features/payments/data/models/plan_limits.dart';
 import '../models/user_tier.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Plan Guard Result
 /// 
@@ -447,7 +448,7 @@ extension PlanGuardResultUI on PlanGuardResult {
     if (!isAllowed && errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage!),
+          content: Text(sanitizeUserMessage(errorMessage)),
           action: upgradeRequired
               ? SnackBarAction(
                   label: 'Upgrade',

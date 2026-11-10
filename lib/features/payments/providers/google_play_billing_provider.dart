@@ -9,6 +9,7 @@ import 'payment_providers.dart';
 import '../data/services/marketing_attribution_service.dart';
 import '../domain/repositories/google_play_repository.dart';
 import '../domain/use_cases/initiate_google_purchase_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 // Provider for Offline Payment Service
 final offlinePaymentServiceProvider = Provider<OfflinePaymentService>((ref) {
@@ -147,7 +148,7 @@ class GooglePlayPurchaseNotifier extends StateNotifier<GooglePlayPurchaseState> 
     } catch (e) {
       tracked.cancel();
       if (!mounted) return;
-      state = GooglePlayPurchaseState.error('Purchase failed: $e');
+      state = GooglePlayPurchaseState.error(userErrorMessage(e));
     }
   }
 

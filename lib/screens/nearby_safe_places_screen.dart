@@ -12,6 +12,7 @@ import '../core/location/location_providers.dart';
 import '../core/location/location_required_exception.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import '../features/safety/data/models/safe_place.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Lists hospitals, police, and fire stations near the user's GPS position.
 class NearbySafePlacesScreen extends ConsumerStatefulWidget {
@@ -59,7 +60,7 @@ class _NearbySafePlacesScreenState extends ConsumerState<NearbySafePlacesScreen>
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _error = e.toString();
+        _error = userErrorMessage(e);
       });
     }
   }
@@ -139,7 +140,7 @@ class _NearbySafePlacesScreenState extends ConsumerState<NearbySafePlacesScreen>
             ),
             const SizedBox(height: AppSpacing.spacingMD),
             Text(
-              _error!,
+              sanitizeUserMessage(_error),
               textAlign: TextAlign.center,
               style: AppTypography.body.copyWith(color: textColor),
             ),

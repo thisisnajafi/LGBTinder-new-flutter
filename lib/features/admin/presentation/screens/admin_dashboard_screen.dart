@@ -9,6 +9,7 @@ import '../../../../core/utils/app_icons.dart';
 import '../../providers/admin_provider.dart';
 import '../widgets/analytics_card.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Admin dashboard — excluded from release (PERF-FEAT-ADMIN-001).
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -154,7 +155,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: AppText(
-                      adminState.error!,
+                      sanitizeUserMessage(adminState.error),
                       style: const TextStyle(color: Colors.red),
                       maxLines: 3,
                     ),

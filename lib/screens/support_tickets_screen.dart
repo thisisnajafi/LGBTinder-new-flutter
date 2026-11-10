@@ -21,6 +21,7 @@ import '../core/widgets/premium/premium_design_system.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../widgets/buttons/gradient_button.dart';
+import '../core/errors/user_error_message.dart';
 
 const _situationOptions = <String, String>{
   'bug': 'Bug / technical issue',
@@ -205,7 +206,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = userErrorMessage(e);
           _loading = false;
           _loadingMore = false;
         });
@@ -454,7 +455,7 @@ class _SupportTicketsScreenState extends ConsumerState<SupportTicketsScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _error!,
+                          sanitizeUserMessage(_error),
                           style: AppTypography.body.copyWith(color: secondaryTextColor),
                           textAlign: TextAlign.center,
                         ),

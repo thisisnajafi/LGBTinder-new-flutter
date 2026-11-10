@@ -13,6 +13,7 @@ import '../domain/use_cases/get_emergency_contacts_use_case.dart';
 import '../domain/use_cases/get_reports_history_use_case.dart';
 import '../domain/use_cases/add_to_favorites_use_case.dart';
 import '../domain/use_cases/remove_from_favorites_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Safety provider - manages safety and user interaction state
 final safetyProvider = StateNotifierProvider<SafetyNotifier, SafetyState>((ref) {
@@ -151,7 +152,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -168,7 +169,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
         isUserFavorited: favoritesMap,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -178,7 +179,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
       final reports = await _getReportsHistoryUseCase.execute();
       state = state.copyWith(reportsHistory: reports);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -188,7 +189,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
       final contacts = await _getEmergencyContactsUseCase.execute();
       state = state.copyWith(emergencyContacts: contacts);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -214,7 +215,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
     } catch (e) {
       state = state.copyWith(
         isBlocking: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -239,7 +240,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
 
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -262,7 +263,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
     } catch (e) {
       state = state.copyWith(
         isReporting: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -287,7 +288,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
     } catch (e) {
       state = state.copyWith(
         isFavoriting: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -310,7 +311,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
       );
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -326,7 +327,7 @@ class SafetyNotifier extends StateNotifier<SafetyState> {
 
       return contact;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return null;
     }
   }

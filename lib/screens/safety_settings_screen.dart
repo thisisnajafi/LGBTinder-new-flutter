@@ -17,6 +17,7 @@ import 'nearby_safe_places_screen.dart';
 import 'blocked_users_screen.dart';
 import 'report_history_screen.dart';
 import 'emergency_contacts_screen.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Safety settings screen - Manage safety and privacy settings
 class SafetySettingsScreen extends ConsumerStatefulWidget {
@@ -82,7 +83,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {
@@ -157,7 +158,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to share location: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }

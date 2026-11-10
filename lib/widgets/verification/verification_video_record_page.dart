@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import 'verification_video_limits.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Front-camera recorder for video verification.
 ///
@@ -197,7 +198,7 @@ class _VerificationVideoRecordPageState extends State<VerificationVideoRecordPag
                     const CircularProgressIndicator()
                   else if (_error != null) ...[
                     Text(
-                      _error!,
+                      sanitizeUserMessage(_error),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AppColors.textPrimaryDark,

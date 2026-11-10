@@ -5,6 +5,7 @@ import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../widgets/profile/profile_photo_crop_screen.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Profile image picker widget
 /// Allows users to pick images from camera or gallery
@@ -164,7 +165,7 @@ class ProfileImagePicker extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );

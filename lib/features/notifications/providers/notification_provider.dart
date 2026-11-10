@@ -5,6 +5,7 @@ import '../domain/use_cases/get_notifications_use_case.dart';
 import '../domain/use_cases/mark_as_read_use_case.dart';
 import '../domain/use_cases/delete_notification_use_case.dart';
 import '../domain/use_cases/update_preferences_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Notification provider - manages notification state and operations
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
@@ -112,7 +113,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -123,7 +124,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       final preferences = await _updatePreferencesUseCase.getPreferences();
       state = state.copyWith(preferences: preferences);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -140,7 +141,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     } catch (e) {
       state = state.copyWith(
         isUpdating: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -172,7 +173,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       state = state.copyWith(notifications: updatedNotifications);
       await _updateUnreadCount();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -202,7 +203,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         unreadCount: 0,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -219,7 +220,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       state = state.copyWith(notifications: updatedNotifications);
       await _updateUnreadCount();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 

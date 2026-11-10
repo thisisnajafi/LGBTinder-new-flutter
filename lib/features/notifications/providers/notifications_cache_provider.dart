@@ -12,6 +12,7 @@ import '../data/local/notifications_local_repository.dart';
 import '../data/models/notification.dart' as app_models;
 import '../data/services/notification_service.dart';
 import 'notification_providers.dart';
+import '../../../core/errors/user_error_message.dart';
 
 export '../data/local/notifications_list_snapshot.dart';
 
@@ -221,7 +222,7 @@ class NotificationsCacheNotifier extends StateNotifier<NotificationsCacheState> 
     } catch (e) {
       state = state.copyWith(
         hasError: state.notifications.isEmpty,
-        errorMessage: e.toString(),
+        errorMessage: userErrorMessage(e),
         initialLoadComplete: state.notifications.isNotEmpty,
         isRefreshing: false,
       );

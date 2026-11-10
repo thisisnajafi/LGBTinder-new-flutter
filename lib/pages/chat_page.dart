@@ -102,6 +102,7 @@ import '../core/services/connectivity_service.dart';
 import '../core/cache/peer_avatar_cache.dart';
 import '../core/utils/media_url.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Chat page - Individual chat conversation screen
 class ChatPage extends ConsumerStatefulWidget {
@@ -1168,7 +1169,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted && !showedCache) {
         _thread.patch(
           hasError: true,
-          errorMessage: e.toString(),
+          errorMessage: userErrorMessage(e),
           isLoading: false,
         );
       }

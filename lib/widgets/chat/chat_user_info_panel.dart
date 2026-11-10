@@ -17,6 +17,7 @@ import '../../features/safety/presentation/widgets/block_user_dialog.dart';
 import '../../routes/app_router.dart';
 import '../../shared/models/api_error.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Slide-down peer info panel shown below the chat header.
 class ChatUserInfoPanel extends ConsumerStatefulWidget {
@@ -75,7 +76,7 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = userErrorMessage(e);
         _isLoading = false;
       });
     }
@@ -105,13 +106,13 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
       if (!mounted) return;
       setState(() => _isMuting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isMuting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update mute: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }

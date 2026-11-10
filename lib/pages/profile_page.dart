@@ -40,6 +40,7 @@ import '../core/utils/app_logger.dart';
 import '../features/safety/data/models/favorite.dart';
 import '../features/safety/presentation/screens/report_user_screen.dart';
 import 'package:go_router/go_router.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Profile page - Displays user's own profile
 class ProfilePage extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.toString();
+          _errorMessage = userErrorMessage(e);
           _isLoading = false;
         });
       }
@@ -654,7 +655,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message),
+            content: Text(userErrorMessage(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -663,7 +664,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload photo: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: Colors.red,
           ),
         );

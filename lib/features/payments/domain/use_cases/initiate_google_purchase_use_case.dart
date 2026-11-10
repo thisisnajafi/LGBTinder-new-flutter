@@ -2,6 +2,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../data/play_billing_ids.dart';
 import '../../data/services/google_play_billing_service.dart';
 import '../repositories/google_play_repository.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Use case for initiating a Google Play purchase
 class InitiateGooglePurchaseUseCase {
@@ -57,7 +58,7 @@ class InitiateGooglePurchaseUseCase {
         );
       }
     } catch (e) {
-      return PurchaseResult.failure('Could not start the Google Play purchase: $e');
+      return PurchaseResult.failure(userErrorMessage(e));
     }
   }
 }

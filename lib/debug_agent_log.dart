@@ -12,6 +12,7 @@ const _kLogPath = r'e:\1 - laravel\1 - LGBTinder\.cursor\debug.log';
 void agentLog(String location, String message, Map<String, dynamic> data,
     String hypothesisId,
     {String runId = 'run1'}) {
+  if (!kDebugMode) return;
   final payload = {
     'location': location,
     'message': message,

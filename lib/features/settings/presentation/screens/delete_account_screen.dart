@@ -13,6 +13,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 import '../../../../shared/models/api_error.dart';
 import '../../../../routes/app_router.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Self-serve, permanent account deletion (Google Play / App Store requirement).
 ///
@@ -238,7 +239,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: AppColors.feedbackError)),
+              Text(sanitizeUserMessage(_error), style: TextStyle(color: AppColors.feedbackError)),
             ],
             const SizedBox(height: 24),
             FilledButton(

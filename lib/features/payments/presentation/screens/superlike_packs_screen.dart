@@ -22,6 +22,7 @@ import '../../data/models/superlike_pack.dart';
 import '../../data/services/plan_limits_service.dart';
 import '../../providers/google_play_billing_provider.dart';
 import '../../providers/payment_providers.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Full-screen superlike pack purchase — mirrors subscription plans UX.
 class SuperlikePacksScreen extends ConsumerStatefulWidget {
@@ -176,7 +177,7 @@ class _SuperlikePacksScreenState extends ConsumerState<SuperlikePacksScreen> {
       body: packsAsync.when(
         loading: () => const SkeletonSubscriptionPlans(),
         error: (error, _) => ErrorDisplayWidget(
-          errorMessage: error.toString(),
+          errorMessage: userErrorMessage(error),
           onRetry: () => ref.invalidate(availableSuperlikePacksProvider),
         ),
         data: (packs) => packs.isEmpty

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../providers/google_play_billing_provider.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Dev-only Google Play Billing playground (PERF-FEAT-PAY-009).
 class GooglePlayBillingTestScreen extends ConsumerStatefulWidget {
@@ -128,7 +129,7 @@ class _GooglePlayBillingTestScreenState
                       children: products.map((product) => _buildProductTile(product, true)).toList(),
                     ),
               loading: () => const CircularProgressIndicator(),
-              error: (error, stack) => Text('Error loading products: $error'),
+              error: (error, stack) => Text(userErrorMessage(error)),
             ),
           ],
         ),
@@ -157,7 +158,7 @@ class _GooglePlayBillingTestScreenState
                       children: products.map((product) => _buildProductTile(product, false)).toList(),
                     ),
               loading: () => const CircularProgressIndicator(),
-              error: (error, stack) => Text('Error loading products: $error'),
+              error: (error, stack) => Text(userErrorMessage(error)),
             ),
           ],
         ),
@@ -222,7 +223,7 @@ class _GooglePlayBillingTestScreenState
                   const Icon(Icons.error, color: Colors.red),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text('Purchase failed: ${purchaseState.errorMessage}'),
+                    child: Text(userErrorMessage(purchaseState.errorMessage)),
                   ),
                 ],
               )
@@ -274,7 +275,7 @@ class _GooglePlayBillingTestScreenState
                       )).toList(),
                     ),
               loading: () => const CircularProgressIndicator(),
-              error: (error, stack) => Text('Error loading purchases: $error'),
+              error: (error, stack) => Text(userErrorMessage(error)),
             ),
           ],
         ),
@@ -304,7 +305,7 @@ class _GooglePlayBillingTestScreenState
                       style: const TextStyle(color: Colors.red),
                     ),
               loading: () => const Text('Monitoring for errors...'),
-              error: (error, stack) => Text('Error monitoring: $error'),
+              error: (error, stack) => Text(userErrorMessage(error)),
             ),
           ],
         ),

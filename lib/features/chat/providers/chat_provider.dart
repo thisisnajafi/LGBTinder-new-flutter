@@ -21,6 +21,7 @@ import '../domain/use_cases/get_chats_use_case.dart';
 import 'chat_outbox_ui_provider.dart';
 import 'chat_providers.dart';
 import 'chat_thread_providers.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Chat provider - manages chat state and operations
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
@@ -331,7 +332,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(
         currentMessages: _markFailed(clientId),
         isSendingMessage: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -512,7 +513,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       state = state.copyWith(
         currentMessages: _markFailed(clientId),
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -565,7 +566,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         tag: 'Chat',
         error: e,
       );
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 

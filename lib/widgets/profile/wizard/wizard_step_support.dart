@@ -7,6 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../../features/reference_data/data/models/reference_item.dart';
 import '../../common/selection_bottom_sheet.dart';
 import '../profile_wizard_layout.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Shared loading / error / picker rows for profile-wizard steps.
 class WizardStepSupport {
@@ -152,7 +153,7 @@ class WizardStepSupport {
               border: Border.all(color: AppColors.feedbackError),
             ),
             child: Text(
-              'Failed to load $label: $error',
+              userErrorMessage(error),
               style: AppTypography.body.copyWith(color: AppColors.feedbackError),
             ),
           ),

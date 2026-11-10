@@ -6,6 +6,7 @@ import '../../../core/services/app_logger.dart';
 import '../data/foreground_push_policy.dart';
 import '../data/models/notification_preferences.dart';
 import 'notification_providers.dart';
+import '../../../core/errors/user_error_message.dart';
 
 class NotificationPreferencesUiState {
   const NotificationPreferencesUiState({
@@ -84,7 +85,7 @@ class NotificationPreferencesNotifier
       );
       state = NotificationPreferencesUiState(
         preferences: state.preferences ?? NotificationPreferences(),
-        saveError: e.toString(),
+        saveError: userErrorMessage(e),
       );
       _syncForegroundPolicy(state.preferences);
     }
@@ -127,7 +128,7 @@ class NotificationPreferencesNotifier
       final revert = _lastSaved;
       state = NotificationPreferencesUiState(
         preferences: revert ?? pending,
-        saveError: e.toString(),
+        saveError: userErrorMessage(e),
       );
       _syncForegroundPolicy(state.preferences);
     }

@@ -12,6 +12,7 @@ import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../data/models/google_play_purchase_history.dart';
 import '../../providers/payment_providers.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Purchase details — paints [initialPurchase] immediately (PERF-FEAT-PAY-007).
 class PurchaseDetailsScreen extends ConsumerStatefulWidget {
@@ -67,7 +68,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen> {
       if (!mounted) return;
       setState(() {
         _hasError = true;
-        _errorMessage = e.toString();
+        _errorMessage = userErrorMessage(e);
         _isLoading = false;
       });
     }

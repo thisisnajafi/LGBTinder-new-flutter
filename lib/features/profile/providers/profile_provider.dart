@@ -16,6 +16,7 @@ import '../domain/use_cases/upload_image_use_case.dart';
 import '../domain/use_cases/delete_image_use_case.dart';
 import '../domain/use_cases/verify_profile_use_case.dart';
 import '../domain/use_cases/complete_profile_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Profile provider - manages profile state and operations
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((ref) {
@@ -172,7 +173,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -191,7 +192,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isUpdating: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -214,7 +215,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isUploadingImage: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -226,7 +227,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       final updatedImages = state.images.where((image) => image.id != imageId).toList();
       state = state.copyWith(images: updatedImages);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -242,7 +243,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isVerificationLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -254,7 +255,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
           await _verifyProfileUseCase.getVerificationGuidelines();
       state = state.copyWith(verificationGuidelines: guidelines);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -270,7 +271,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isVerificationHistoryLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -303,7 +304,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         verificationUpload: const VerificationUploadState(),
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       rethrow;
     }
@@ -349,7 +350,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
           await _verifyProfileUseCase.cancelVerification(verificationId);
       state = state.copyWith(verification: verification, clearError: true);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       rethrow;
     }
   }
@@ -360,7 +361,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       final completion = await _completeProfileUseCase.execute();
       state = state.copyWith(completion: completion);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 

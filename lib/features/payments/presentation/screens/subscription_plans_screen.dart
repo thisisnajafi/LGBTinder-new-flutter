@@ -24,6 +24,7 @@ import '../widgets/plan_duration_options.dart';
 import '../utils/plan_theme_helper.dart';
 import 'subscription_management_screen.dart';
 import '../../../../shared/analytics/app_event_tracker.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Subscription plans screen — plan-themed UI (Basic, Premium, Golden)
 class SubscriptionPlansScreen extends ConsumerStatefulWidget {
@@ -102,7 +103,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.toString();
+          _errorMessage = userErrorMessage(e);
           _isLoading = false;
         });
       }
@@ -199,7 +200,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Purchase failed: ${purchaseState.errorMessage}'),
+            content: Text(userErrorMessage(purchaseState.errorMessage)),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -214,7 +215,7 @@ class _SubscriptionPlansScreenState extends ConsumerState<SubscriptionPlansScree
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Purchase failed: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.accentRed,
           ),
         );

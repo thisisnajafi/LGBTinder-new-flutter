@@ -16,6 +16,7 @@ import '../../routes/app_router.dart';
 import '../../core/providers/api_providers.dart';
 import '../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../features/profile/providers/profile_providers.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Account management screen - Manage account settings
 class AccountManagementScreen extends ConsumerStatefulWidget {
@@ -113,7 +114,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send verification code: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {
@@ -291,7 +292,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Verification failed: $e'),
+                                    content: Text(userErrorMessage(e)),
                                     backgroundColor: AppColors.notificationRed,
                                   ),
                                 );

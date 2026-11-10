@@ -8,6 +8,7 @@ import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Media picker settings screen - Manage media picker preferences
 class MediaPickerSettingsScreen extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _MediaPickerSettingsScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save settings: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

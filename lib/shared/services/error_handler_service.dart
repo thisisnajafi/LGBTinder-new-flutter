@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import '../models/api_error.dart';
+import '../../core/errors/user_error_message.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Service for handling API errors and displaying user-friendly messages
 class ErrorHandlerService {
   /// Get user-friendly error message from ApiError
   static String getUserFriendlyMessage(ApiError error) {
+    return sanitizeUserMessage(_rawFriendlyMessage(error));
+  }
+
+  static String _rawFriendlyMessage(ApiError error) {
     // Check for validation errors first - these are the most important
     if (error.errors != null && error.errors!.isNotEmpty) {
       // For validation errors, show the first error (most important)
@@ -74,7 +79,7 @@ class ErrorHandlerService {
         case 502:
         case 503:
         case 504:
-          return 'Server error. Please try again later.';
+          return kGenericErrorMessage;
         default:
           break;
       }
@@ -111,7 +116,7 @@ class ErrorHandlerService {
     }
     
     if (message.contains('server error') || message.contains('500')) {
-      return 'Server error. Please try again later.';
+      return kGenericErrorMessage;
     }
 
     // Return the original message if no pattern matches
@@ -331,10 +336,7 @@ class ErrorHandlerService {
         showErrorSnackBar(context, error, customMessage: customMessage, onRetry: onRetry);
       }
     } else if (error is Exception) {
-      final detail = error.toString().replaceFirst('Exception: ', '');
-      final apiError = ApiError(
-        message: detail.isNotEmpty ? detail : 'An unexpected error occurred',
-      );
+      final apiError = ApiError(message: userErrorMessage(error));
       if (showAsDialog) {
         showErrorDialog(context, apiError, onRetry: onRetry);
       } else {
@@ -343,7 +345,7 @@ class ErrorHandlerService {
     } else {
       // Handle string errors
       final apiError = ApiError(
-        message: customMessage ?? error.toString(),
+        message: customMessage ?? userErrorMessage(error),
       );
       if (showAsDialog) {
         showErrorDialog(context, apiError, onRetry: onRetry);

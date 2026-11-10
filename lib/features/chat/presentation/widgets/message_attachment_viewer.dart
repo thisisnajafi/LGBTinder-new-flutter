@@ -18,6 +18,7 @@ import '../../../../core/theme/spacing_constants.dart';
 import '../../../../core/widgets/app_action_bottom_sheet.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../models/message_attachment.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Message attachment viewer widget
 /// Displays different types of attachments (images, videos, files)
@@ -389,7 +390,7 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download failed: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }
@@ -413,7 +414,7 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Share failed: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }
@@ -444,7 +445,7 @@ class _MessageAttachmentViewerState extends ConsumerState<MessageAttachmentViewe
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Playback failed: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }

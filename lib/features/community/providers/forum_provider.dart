@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lgbtindernew/features/community/data/models/forum_post.dart';
 import 'package:lgbtindernew/features/community/data/services/forum_service.dart';
 import 'package:lgbtindernew/shared/models/api_response.dart';
+import '../../../core/errors/user_error_message.dart';
 
 // State for forum posts
 class ForumPostsState {
@@ -85,7 +86,7 @@ class ForumPostsNotifier extends StateNotifier<ForumPostsState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -196,7 +197,7 @@ class ForumCategoriesNotifier extends StateNotifier<ForumCategoriesState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }

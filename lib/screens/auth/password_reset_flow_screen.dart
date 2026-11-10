@@ -13,6 +13,7 @@ import '../../features/auth/presentation/widgets/password_reset_steps.dart';
 import '../../features/auth/providers/auth_service_provider.dart';
 import '../../routes/app_router.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Password reset flow — email → OTP → new password.
 class PasswordResetFlowScreen extends ConsumerStatefulWidget {
@@ -104,7 +105,7 @@ class _PasswordResetFlowScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send OTP: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {
@@ -139,7 +140,7 @@ class _PasswordResetFlowScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid or expired code: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
         for (final controller in _otpControllers) {
           controller.clear();
@@ -168,7 +169,7 @@ class _PasswordResetFlowScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to resend OTP: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
       return false;
@@ -249,7 +250,7 @@ class _PasswordResetFlowScreenState
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reset password: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

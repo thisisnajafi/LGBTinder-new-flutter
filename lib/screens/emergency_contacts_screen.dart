@@ -24,6 +24,7 @@ import '../core/location/widgets/emergency_alert_countdown_dialog.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import '../widgets/common/reference_bottom_sheet_field.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Emergency contacts screen - Manage emergency contacts
 class EmergencyContactsScreen extends ConsumerStatefulWidget {
@@ -102,7 +103,7 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add emergency contact: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }
@@ -134,7 +135,7 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove emergency contact: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }
@@ -181,7 +182,7 @@ class _EmergencyContactsScreenState extends ConsumerState<EmergencyContactsScree
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to send emergency alert: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.notificationRed,
         ),
       );

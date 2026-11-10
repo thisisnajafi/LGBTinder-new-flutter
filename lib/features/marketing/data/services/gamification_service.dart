@@ -1,5 +1,6 @@
 import '../../../../shared/services/api_service.dart';
 import '../models/badge_model.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Gamification service for badges and achievements
 /// Part of the Marketing System Implementation (Task 3.2.4)
@@ -101,7 +102,7 @@ class GamificationService {
     } catch (e) {
       return ClaimBadgesResult(
         success: false,
-        message: e.toString(),
+        message: userErrorMessage(e),
       );
     }
   }
@@ -125,7 +126,7 @@ class GamificationService {
     } catch (e) {
       return ClaimRewardResult(
         success: false,
-        message: e.toString(),
+        message: userErrorMessage(e),
       );
     }
   }

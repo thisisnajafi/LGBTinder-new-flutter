@@ -13,6 +13,7 @@ import '../../features/profile/providers/profile_providers.dart';
 import '../../features/reference_data/providers/reference_data_providers.dart';
 import '../../shared/models/api_error.dart';
 import '../../routes/app_router.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Onboarding preferences screen - Preference selection during onboarding
 class OnboardingPreferencesScreen extends ConsumerStatefulWidget {
@@ -73,7 +74,7 @@ class _OnboardingPreferencesScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to load preferences: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.feedbackError,
         ),
       );
@@ -124,7 +125,7 @@ class _OnboardingPreferencesScreenState
           e.errors != null && e.errors!.isNotEmpty ? e.getAllErrors() : e.message;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save preferences: $errorMessage'),
+          content: Text(userErrorMessage(errorMessage)),
           backgroundColor: AppColors.feedbackError,
         ),
       );
@@ -132,7 +133,7 @@ class _OnboardingPreferencesScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save preferences: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.feedbackError,
         ),
       );

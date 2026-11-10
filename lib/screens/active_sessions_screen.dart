@@ -17,6 +17,7 @@ import '../widgets/error_handling/empty_state.dart';
 import '../widgets/error_handling/error_display_widget.dart';
 import '../widgets/loading/skeleton_loader.dart';
 import '../widgets/modals/confirmation_dialog.dart';
+import '../core/errors/user_error_message.dart';
 
 String _maskIpAddress(String? ip) {
   if (ip == null || ip.trim().isEmpty) return '—';
@@ -190,7 +191,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to log out device: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.feedbackError,
         ),
       );
@@ -247,7 +248,7 @@ class _ActiveSessionsScreenState extends ConsumerState<ActiveSessionsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to log out other devices: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.feedbackError,
         ),
       );

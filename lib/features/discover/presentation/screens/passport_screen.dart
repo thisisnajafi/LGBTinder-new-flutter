@@ -16,6 +16,7 @@ import '../../../../widgets/buttons/gradient_button.dart';
 import '../../../../widgets/common/reference_bottom_sheet_field.dart';
 import '../../../../widgets/common/selection_bottom_sheet.dart';
 import '../../../../widgets/profile/profile_wizard_layout.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 class _DurationOption {
   const _DurationOption(this.hours, this.label);
@@ -238,7 +239,7 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.all(AppSpacing.spacingMD),
-                  child: Text('Failed to load countries: $e'),
+                  child: Text(userErrorMessage(e)),
                 ),
               ),
               if (_countryId != null)
@@ -260,7 +261,7 @@ class _PassportScreenState extends ConsumerState<PassportScreen> {
                   ),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.all(AppSpacing.spacingMD),
-                    child: Text('Failed to load cities: $e'),
+                    child: Text(userErrorMessage(e)),
                   ),
                 ),
               ProfileWizardLayout.pickerTile(

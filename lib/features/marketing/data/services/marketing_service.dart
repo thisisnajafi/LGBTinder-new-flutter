@@ -2,6 +2,7 @@ import '../../../../core/constants/api_endpoints.dart';
 import '../../../../shared/services/api_service.dart';
 import '../models/campaign_model.dart';
 import '../models/banner_model.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Marketing service for campaigns, promotions, and banners
 /// Part of the Marketing System Implementation (Task 3.2.1)
@@ -48,7 +49,7 @@ class MarketingService {
     } catch (e) {
       return PromoValidationResult(
         valid: false,
-        message: e.toString(),
+        message: userErrorMessage(e),
       );
     }
   }
@@ -84,7 +85,7 @@ class MarketingService {
         originalPrice: 0,
         discount: 0,
         finalPrice: 0,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }

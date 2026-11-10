@@ -9,6 +9,7 @@ import '../../features/calls/data/models/call_quota.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
 import '../../core/responsive/responsive.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Widget to display user's call quota and usage
 class CallQuotaDisplay extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _CallQuotaDisplayState extends ConsumerState<CallQuotaDisplay> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load call quota: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );

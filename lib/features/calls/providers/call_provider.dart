@@ -9,6 +9,7 @@ import '../domain/use_cases/accept_call_use_case.dart';
 import '../domain/use_cases/decline_call_use_case.dart';
 import '../domain/use_cases/end_call_use_case.dart';
 import 'call_providers.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Call provider - manages call functionality and state
 final callProvider = StateNotifierProvider<CallNotifier, CallState>((ref) {
@@ -138,7 +139,7 @@ class CallNotifier extends StateNotifier<CallState> {
     } catch (e) {
       state = state.copyWith(
         isInitiatingCall: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       rethrow;
     }
@@ -159,7 +160,7 @@ class CallNotifier extends StateNotifier<CallState> {
     } catch (e) {
       state = state.copyWith(
         isAcceptingCall: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -172,7 +173,7 @@ class CallNotifier extends StateNotifier<CallState> {
       state = state.copyWith(incomingCallId: null);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -197,7 +198,7 @@ class CallNotifier extends StateNotifier<CallState> {
     } catch (e) {
       state = state.copyWith(
         isEndingCall: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -227,7 +228,7 @@ class CallNotifier extends StateNotifier<CallState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingHistory: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -238,7 +239,7 @@ class CallNotifier extends StateNotifier<CallState> {
       final recentCalls = await _getCallHistoryUseCase.getRecentCalls(limit: limit);
       state = state.copyWith(callHistory: recentCalls);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -248,7 +249,7 @@ class CallNotifier extends StateNotifier<CallState> {
       final missedCalls = await _getCallHistoryUseCase.getMissedCalls(limit: limit);
       state = state.copyWith(callHistory: missedCalls);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 

@@ -14,6 +14,7 @@ import '../domain/use_cases/get_superlike_history_use_case.dart';
 import '../domain/use_cases/get_matches_use_case.dart';
 import '../domain/use_cases/get_compatibility_score_use_case.dart';
 import '../domain/use_cases/check_match_status_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Matching provider - manages matching state and operations
 final matchingProvider = StateNotifierProvider<MatchingNotifier, MatchingState>((ref) {
@@ -138,7 +139,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
       );
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -155,7 +156,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
         error: e,
         stackTrace: stack,
       );
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -171,7 +172,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
         error: e,
         stackTrace: stack,
       );
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -220,7 +221,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
       );
       state = state.copyWith(
         isLiking: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -256,7 +257,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
       );
       state = state.copyWith(
         isSuperliking: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return null;
     }
@@ -274,7 +275,7 @@ class MatchingNotifier extends StateNotifier<MatchingState> {
         error: e,
         stackTrace: stack,
       );
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 

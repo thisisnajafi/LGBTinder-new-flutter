@@ -14,6 +14,7 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Advanced profile customization — section isolate + draft (PERF-SCR-CUSTOM-001).
 class AdvancedProfileCustomizationScreen extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _AdvancedProfileCustomizationScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save settings: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

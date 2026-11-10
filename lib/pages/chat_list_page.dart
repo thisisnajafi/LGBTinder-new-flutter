@@ -49,6 +49,7 @@ import '../routes/app_router.dart';
 import '../routes/home_tab_routes.dart';
 import 'chat_page.dart';
 import '../screens/message_search_screen.dart';
+import '../core/errors/user_error_message.dart';
 
 enum _MessengerSection { chats, calls }
 
@@ -261,7 +262,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       if (mounted && !showedCache) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.toString();
+          _errorMessage = userErrorMessage(e);
           _isLoading = false;
         });
       }
@@ -405,7 +406,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      ).showSnackBar(SnackBar(content: Text(userErrorMessage(e))));
     } catch (e, stack) {
       ref.read(conversationMuteCacheProvider.notifier).setMuted(
             userId,
@@ -441,7 +442,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      ).showSnackBar(SnackBar(content: Text(userErrorMessage(e))));
     } catch (e, stack) {
       ref.read(conversationPinCacheProvider.notifier).setPinned(
             userId,

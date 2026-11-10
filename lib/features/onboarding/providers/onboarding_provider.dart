@@ -6,6 +6,7 @@ import '../domain/use_cases/save_onboarding_preferences_use_case.dart';
 import '../domain/use_cases/complete_onboarding_use_case.dart';
 import '../domain/use_cases/get_onboarding_progress_use_case.dart';
 import '../domain/use_cases/skip_onboarding_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Onboarding provider - manages onboarding flow and preferences
 final onboardingProvider = StateNotifierProvider<OnboardingNotifier, OnboardingState>((ref) {
@@ -114,7 +115,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -132,7 +133,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     } catch (e) {
       state = state.copyWith(
         isSaving: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -210,7 +211,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
     } catch (e) {
       state = state.copyWith(
         isCompleting: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -223,7 +224,7 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
       state = state.copyWith(isCompleted: true);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }

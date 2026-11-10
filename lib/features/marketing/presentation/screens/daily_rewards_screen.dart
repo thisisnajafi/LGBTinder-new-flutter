@@ -11,6 +11,7 @@ import '../../providers/marketing_providers.dart';
 import '../../data/models/daily_reward_model.dart';
 import '../../data/services/daily_rewards_service.dart';
 import '../../../../core/responsive/responsive.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Daily rewards screen with full reward calendar and history
 /// Part of the Marketing System Implementation (Task 3.5.2)
@@ -130,10 +131,10 @@ class _DailyRewardsScreenState extends ConsumerState<DailyRewardsScreen>
 
     return statusAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(userErrorMessage(e))),
       data: (status) => configAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(userErrorMessage(e))),
         data: (config) => SingleChildScrollView(
           padding: EdgeInsets.all(AppSpacing.spacingLG),
           child: Column(
@@ -493,7 +494,7 @@ class _DailyRewardsScreenState extends ConsumerState<DailyRewardsScreen>
 
     return leaderboardAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(userErrorMessage(e))),
       data: (leaderboard) => ListView.builder(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         itemCount: leaderboard.length,

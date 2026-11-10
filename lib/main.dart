@@ -87,6 +87,11 @@ void installStartupConfig() {
 }
 
 void startLgbtinderApp() {
+  // Release builds must not write tokens, PII or API bodies to the device
+  // log (logcat / Console). All app logging funnels through debugPrint.
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
   runZonedGuarded(
     () {
       unawaited(_bootstrap());

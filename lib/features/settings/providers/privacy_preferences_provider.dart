@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/app_logger.dart';
 import '../data/models/privacy_settings.dart';
 import 'settings_provider.dart';
+import '../../../core/errors/user_error_message.dart';
 
 class PrivacyPreferencesUiState {
   const PrivacyPreferencesUiState({
@@ -68,7 +69,7 @@ class PrivacyPreferencesNotifier extends Notifier<PrivacyPreferencesUiState> {
       );
       state = PrivacyPreferencesUiState(
         settings: state.settings ?? PrivacySettings(),
-        saveError: e.toString(),
+        saveError: userErrorMessage(e),
       );
     }
   }
@@ -111,7 +112,7 @@ class PrivacyPreferencesNotifier extends Notifier<PrivacyPreferencesUiState> {
       final revert = _lastSaved;
       state = PrivacyPreferencesUiState(
         settings: revert ?? pending,
-        saveError: e.toString(),
+        saveError: userErrorMessage(e),
       );
       if (revert != null) {
         ref.read(settingsProvider.notifier).hydratePrivacy(revert);

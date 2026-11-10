@@ -15,6 +15,7 @@ import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Two-factor authentication screen - Setup 2FA
 class TwoFactorAuthScreen extends ConsumerStatefulWidget {
@@ -103,7 +104,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to enable 2FA: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }
@@ -207,7 +208,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to disable 2FA: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }
@@ -248,7 +249,7 @@ class _TwoFactorAuthScreenState extends ConsumerState<TwoFactorAuthScreen> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Verification failed: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }

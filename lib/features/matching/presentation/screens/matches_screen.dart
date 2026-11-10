@@ -20,6 +20,7 @@ import '../../../../widgets/error_handling/empty_state.dart';
 import '../../../../widgets/error_handling/error_display_widget.dart';
 import '../../../../widgets/loading/skeleton_loading.dart';
 import '../../data/models/match.dart' as app_models;
+import '../../../../core/errors/user_error_message.dart';
 
 /// Matches screen — cache-first list aligned with premium profile/settings UI.
 class MatchesScreen extends ConsumerStatefulWidget {
@@ -95,7 +96,7 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
       body: matchesAsync.when(
         loading: () => const SkeletonLoading(),
         error: (e, _) => ErrorDisplayWidget(
-          errorMessage: e.toString(),
+          errorMessage: userErrorMessage(e),
           onRetry: _refreshMatches,
         ),
         data: (matches) {

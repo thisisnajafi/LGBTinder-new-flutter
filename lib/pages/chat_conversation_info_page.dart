@@ -37,6 +37,7 @@ import '../core/widgets/premium/premium_design_system.dart';
 import '../core/widgets/profile_image_widget.dart';
 import '../widgets/buttons/gradient_button.dart';
 import '../widgets/chat/last_seen_widget.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Chat-only conversation details: identity, media, mute, safety.
 class ChatConversationInfoPage extends ConsumerStatefulWidget {
@@ -295,13 +296,13 @@ class _ChatConversationInfoPageState
       if (!mounted) return;
       setState(() => _isMuting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isMuting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update mute: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }
@@ -329,13 +330,13 @@ class _ChatConversationInfoPageState
       if (!mounted) return;
       setState(() => _isPinning = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isPinning = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update pin: $e')),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }

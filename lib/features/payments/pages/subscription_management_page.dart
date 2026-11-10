@@ -21,6 +21,7 @@ import '../presentation/widgets/offline_purchase_queue_indicator.dart';
 import '../providers/google_play_billing_provider.dart';
 import '../providers/payment_providers.dart';
 import '../../../core/responsive/responsive.dart';
+import '../../../core/errors/user_error_message.dart';
 
 const _googlePlaySubscriptionsUrl =
     'https://play.google.com/store/account/subscriptions';
@@ -98,7 +99,7 @@ class _SubscriptionManagementPageState
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.toString();
+          _errorMessage = userErrorMessage(e);
           _isLoading = false;
         });
       }
@@ -245,7 +246,7 @@ class _SubscriptionManagementPageState
         _showSnack(state.errorMessage!, isError: true);
       }
     } catch (e) {
-      _showSnack('Purchase failed: $e', isError: true);
+      _showSnack(userErrorMessage(e), isError: true);
     } finally {
       if (mounted) setState(() => _actionInProgress = false);
     }
@@ -265,7 +266,7 @@ class _SubscriptionManagementPageState
       }
     } catch (e) {
       if (mounted) {
-        _showSnack('Failed to restore purchases: $e', isError: true);
+        _showSnack(userErrorMessage(e), isError: true);
       }
     } finally {
       if (mounted) setState(() => _actionInProgress = false);

@@ -13,6 +13,7 @@ import '../../data/models/badge_model.dart';
 import '../../data/services/gamification_service.dart';
 import '../widgets/badge_display.dart';
 import '../widgets/badge_achievement_popup.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Badges/Achievements screen
 /// Part of the Marketing System Implementation (Task 3.5.3)
@@ -105,7 +106,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
 
     return badgesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(userErrorMessage(e))),
       data: (badges) {
         // Get unique categories
         final categories = ['all', ...badges.map((b) => b.category ?? 'other').toSet()];
@@ -342,7 +343,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to claim badges: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -360,7 +361,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
 
     return badgesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(userErrorMessage(e))),
       data: (badges) {
         if (badges.isEmpty) {
           return Center(
@@ -454,7 +455,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
 
     return leaderboardAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(userErrorMessage(e))),
       data: (leaderboard) => ListView.builder(
         padding: EdgeInsets.all(AppSpacing.spacingLG),
         itemCount: leaderboard.length,
@@ -597,7 +598,7 @@ class _BadgesScreenState extends ConsumerState<BadgesScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to claim reward: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.accentRed,
           ),
         );

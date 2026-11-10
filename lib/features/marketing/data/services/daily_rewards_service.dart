@@ -1,5 +1,6 @@
 import '../../../../shared/services/api_service.dart';
 import '../models/daily_reward_model.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Daily rewards service for streak management and reward claiming
 /// Part of the Marketing System Implementation (Task 3.2.2)
@@ -49,7 +50,7 @@ class DailyRewardsService {
     } catch (e) {
       return ClaimResult(
         success: false,
-        message: e.toString(),
+        message: userErrorMessage(e),
       );
     }
   }

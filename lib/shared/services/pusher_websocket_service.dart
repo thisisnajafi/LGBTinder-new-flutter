@@ -19,6 +19,7 @@ import '../../shared/models/subscription_status.dart';
 import '../../shared/models/user_tier.dart';
 import 'chat_pusher_event_names.dart';
 import 'pusher_auth_response.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Real-time chat via Pusher Channels (replaces socket.io for production).
 ///
@@ -172,7 +173,7 @@ class PusherWebSocketService {
         error: e,
         stackTrace: stack,
       );
-      _errorController.add('Failed to initialize Pusher: $e');
+      _errorController.add(userErrorMessage(e));
       rethrow;
     }
   }
@@ -306,7 +307,7 @@ class PusherWebSocketService {
         );
         return;
       }
-      _errorController.add('Failed to subscribe $channelName: $e');
+      _errorController.add(userErrorMessage(e));
       rethrow;
     }
   }

@@ -11,6 +11,7 @@ import '../../../../core/services/offline_payment_service.dart';
 import '../../../../core/services/app_logger.dart';
 import '../play_billing_ids.dart';
 import 'marketing_attribution_service.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Server-confirmed outcome for one Play purchase.
 class BillingGrantResult {
@@ -210,7 +211,7 @@ class GooglePlayBillingService {
       _purchaseSubscription = _inAppPurchase.purchaseStream.listen(
         _onPurchaseUpdate,
         onError: (error) {
-          _errorController.add('Purchase stream error: $error');
+          _errorController.add(userErrorMessage(error));
         },
         onDone: () {
           _log('Purchase stream closed');
@@ -231,7 +232,7 @@ class GooglePlayBillingService {
 
       _log('Google Play Billing initialized successfully');
     } catch (e) {
-      _errorController.add('Failed to initialize billing: $e');
+      _errorController.add(userErrorMessage(e));
       _log('Billing initialization error: $e');
     }
   }
@@ -330,7 +331,7 @@ class GooglePlayBillingService {
       }
     } catch (e) {
       _log('Error handling successful purchase: $e');
-      _errorController.add('Error processing purchase: $e');
+      _errorController.add(userErrorMessage(e));
       _emitGrant(purchaseDetails.productID, granted: false, message: 'Error processing purchase');
     }
   }
@@ -380,7 +381,7 @@ class GooglePlayBillingService {
       }
     } catch (e) {
       _log('Error handling restored purchase: $e');
-      _errorController.add('Error processing restored purchase: $e');
+      _errorController.add(userErrorMessage(e));
       _emitGrant(purchaseDetails.productID, granted: false, message: 'Error processing restored purchase');
     }
   }
@@ -396,7 +397,7 @@ class GooglePlayBillingService {
       error: purchaseDetails.error,
     );
 
-    _errorController.add('Purchase failed: $errorMessage');
+    _errorController.add(userErrorMessage(errorMessage));
     _emitGrant(purchaseDetails.productID, granted: false, message: errorMessage);
   }
 
@@ -693,7 +694,7 @@ class GooglePlayBillingService {
       return response.productDetails;
     } catch (e) {
       _lastFailureMessage = queryFailedMessage(e);
-      _errorController.add('Error querying products: $e');
+      _errorController.add(userErrorMessage(e));
       return [];
     }
   }
@@ -762,7 +763,7 @@ class GooglePlayBillingService {
         return false;
       }
 
-      _errorController.add('Failed to launch subscription billing flow: $e');
+      _errorController.add(userErrorMessage(e));
       return false;
     }
   }
@@ -796,7 +797,7 @@ class GooglePlayBillingService {
         return false;
       }
 
-      _errorController.add('Failed to launch billing flow: $e');
+      _errorController.add(userErrorMessage(e));
       return false;
     }
   }
@@ -823,7 +824,7 @@ class GooglePlayBillingService {
         return false;
       }
 
-      _errorController.add('Failed to launch consumable billing flow: $e');
+      _errorController.add(userErrorMessage(e));
       return false;
     }
   }
@@ -877,7 +878,7 @@ class GooglePlayBillingService {
       return [];
     } catch (e) {
       _log('Failed to get current purchases: $e');
-      _errorController.add('Failed to get current purchases: $e');
+      _errorController.add(userErrorMessage(e));
       return [];
     }
   }
@@ -897,7 +898,7 @@ class GooglePlayBillingService {
       // and will be validated with backend automatically
     } catch (e) {
       _log('Failed to restore purchases: $e');
-      _errorController.add('Failed to restore purchases: $e');
+      _errorController.add(userErrorMessage(e));
       rethrow;
     }
   }
@@ -985,7 +986,7 @@ class GooglePlayBillingService {
       }
     } catch (e) {
       _log('Error syncing subscription status: $e');
-      _errorController.add('Error syncing subscription status: $e');
+      _errorController.add(userErrorMessage(e));
       return null;
     }
   }

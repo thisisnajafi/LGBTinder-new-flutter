@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_settings_detail.dart';
 import '../../../../core/widgets/premium/premium_design_system.dart';
 import '../../data/models/sound_preferences.dart';
 import '../../providers/sound_preferences_provider.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Settings screen for message, call, and notification sounds.
 class SoundPreferencesScreen extends ConsumerWidget {
@@ -134,7 +135,7 @@ class _SoundPreferencesEditorState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

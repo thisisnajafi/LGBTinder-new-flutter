@@ -13,6 +13,7 @@ import '../widgets/buttons/gradient_button.dart';
 import '../widgets/modals/alert_dialog_custom.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/providers/api_providers.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Add payment method screen - Add new payment method
 class AddPaymentMethodScreen extends ConsumerStatefulWidget {
@@ -74,7 +75,7 @@ class _AddPaymentMethodScreenState extends ConsumerState<AddPaymentMethodScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add payment method: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

@@ -13,6 +13,7 @@ import '../../features/chat/data/models/chat_forward_result.dart';
 import '../../features/chat/utils/chat_forward_attribution.dart';
 import '../../features/chat/providers/chat_list_preview_provider.dart';
 import '../../features/chat/providers/chat_providers.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Conversation picker for forwarding a message (CHAT-THREAD-008).
 class ChatForwardSheet {
@@ -103,8 +104,7 @@ class _ChatForwardPickerState extends ConsumerState<_ChatForwardPicker> {
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
+          content: Text(userErrorMessage(e).replaceFirst('Exception: ', ''),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),

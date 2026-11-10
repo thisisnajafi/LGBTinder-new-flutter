@@ -10,6 +10,7 @@ import '../../../shared/services/onboarding_service.dart';
 import '../../../core/cache/cache_invalidator.dart';
 import '../../../core/providers/api_providers.dart';
 import 'auth_service_provider.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Auth Provider State
 class AuthProviderState {
@@ -105,7 +106,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       );
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: userErrorMessage(e),
       );
     }
   }
@@ -135,7 +136,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       );
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: userErrorMessage(e),
       );
       rethrow;
     }
@@ -172,7 +173,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       if (!silent) {
         state = state.copyWith(
           isLoading: false,
-          errorMessage: e.toString(),
+          errorMessage: userErrorMessage(e),
         );
       }
       await _onLogoutCachePurge();

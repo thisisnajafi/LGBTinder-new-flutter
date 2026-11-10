@@ -12,6 +12,7 @@ import '../../core/widgets/app_page_scaffold.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/loading/skeleton_loader.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Profile analytics — lazy charts + isolated paint (PERF-SCR-ANALYTICS-001/002).
 class ProfileAnalyticsScreen extends ConsumerStatefulWidget {
@@ -74,7 +75,7 @@ class _ProfileAnalyticsScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load analytics: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

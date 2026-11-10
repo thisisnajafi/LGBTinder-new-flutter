@@ -13,6 +13,7 @@ import '../../features/calls/data/models/call.dart';
 import '../../features/calls/utils/call_settings_draft.dart';
 import '../../shared/models/api_error.dart';
 import '../../shared/services/error_handler_service.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Call settings screen - Configure call preferences
 class CallSettingsScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,7 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load call settings: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );
@@ -111,7 +112,7 @@ class _CallSettingsScreenState extends ConsumerState<CallSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save call settings: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );

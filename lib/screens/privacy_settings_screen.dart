@@ -11,6 +11,7 @@ import '../features/discover/providers/discover_cache_provider.dart';
 import '../features/settings/providers/privacy_preferences_provider.dart';
 import '../features/settings/providers/settings_provider.dart';
 import '../widgets/loading/skeleton_loader.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Privacy settings — every §5.6 control round-trips GET/PUT `/privacy/settings`.
 class PrivacySettingsScreen extends ConsumerWidget {
@@ -193,7 +194,7 @@ class _DiscoveryVisibilityGroup extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save: $e')),
+            SnackBar(content: Text(userErrorMessage(e))),
           );
         }
       }

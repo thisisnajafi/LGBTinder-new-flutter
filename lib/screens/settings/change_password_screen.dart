@@ -12,6 +12,7 @@ import '../../features/profile/providers/profile_page_cache_provider.dart';
 import '../../shared/services/token_storage_service.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Current / new / confirm password, or a first-time set for social sign-in.
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -108,7 +109,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) _showMessage('Failed to update password: $e');
+      if (mounted) _showMessage(userErrorMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

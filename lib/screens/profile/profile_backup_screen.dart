@@ -13,6 +13,7 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Profile backup screen - Backup profile data
 class ProfileBackupScreen extends ConsumerStatefulWidget {
@@ -74,7 +75,7 @@ class _ProfileBackupScreenState extends ConsumerState<ProfileBackupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup failed: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

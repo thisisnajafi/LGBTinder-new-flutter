@@ -17,6 +17,7 @@ import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import 'package:intl/intl.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Blocked users screen - Manage blocked users
 class BlockedUsersScreen extends ConsumerStatefulWidget {
@@ -67,7 +68,7 @@ class _BlockedUsersScreenState extends ConsumerState<BlockedUsersScreen> {
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = e.toString();
+          _errorMessage = userErrorMessage(e);
           _isLoading = false;
         });
       }

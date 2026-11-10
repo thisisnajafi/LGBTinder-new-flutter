@@ -8,6 +8,7 @@ import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Pull to refresh settings screen - Manage pull to refresh preferences
 class PullToRefreshSettingsScreen extends ConsumerStatefulWidget {
@@ -52,7 +53,7 @@ class _PullToRefreshSettingsScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save settings: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

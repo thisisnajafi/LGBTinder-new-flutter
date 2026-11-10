@@ -6,6 +6,7 @@ import '../domain/use_cases/get_admin_analytics_use_case.dart';
 import '../domain/use_cases/manage_admin_users_use_case.dart';
 import '../domain/use_cases/system_management_use_case.dart';
 import '../domain/use_cases/export_analytics_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Admin provider - manages admin dashboard and operations
 final adminProvider = StateNotifierProvider<AdminNotifier, AdminState>((ref) {
@@ -132,7 +133,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -161,7 +162,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingUsers: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -183,7 +184,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isCreatingUser: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -208,7 +209,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isUpdatingUser: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -231,7 +232,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isDeletingUser: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -249,7 +250,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
       state = state.copyWith(exportUrl: url);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -262,7 +263,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
       await loadSystemHealth();
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -278,7 +279,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isSendingNotification: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -297,7 +298,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingHealth: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -308,7 +309,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
       final config = await _systemManagementUseCase.getAppConfiguration();
       state = state.copyWith(appConfiguration: config);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -326,7 +327,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isUpdatingConfig: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -346,7 +347,7 @@ class AdminNotifier extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(
         isUpdatingConfig: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }

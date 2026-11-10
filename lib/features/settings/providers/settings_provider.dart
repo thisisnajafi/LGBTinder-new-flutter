@@ -12,6 +12,7 @@ import '../domain/use_cases/get_settings_use_case.dart';
 import '../domain/use_cases/update_settings_use_case.dart';
 import '../domain/use_cases/change_password_use_case.dart';
 import '../data/repositories/settings_repository.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Settings provider - manages user settings and account operations
 final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
@@ -108,7 +109,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -126,7 +127,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -148,7 +149,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (e) {
       state = state.copyWith(
         isUpdating: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -166,7 +167,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (e) {
       state = state.copyWith(
         isUpdating: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -182,7 +183,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (e) {
       state = state.copyWith(
         isChangingPassword: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
       return false;
     }
@@ -194,7 +195,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final sessions = await _settingsRepository.getDeviceSessions();
       state = state.copyWith(deviceSessions: sessions);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
     }
   }
 
@@ -206,7 +207,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       state = state.copyWith(deviceSessions: updatedSessions);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -220,7 +221,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       state = state.copyWith(deviceSessions: currentSessions);
       return revokedCount;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return null;
     }
   }
@@ -249,7 +250,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       state = state.copyWith(deviceSessions: updatedSessions);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -261,7 +262,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       state = state.copyWith(cacheCleared: true);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -273,7 +274,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       state = state.copyWith(settingsReset: true);
       return true;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return false;
     }
   }
@@ -283,7 +284,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     try {
       return await _settingsRepository.exportUserData();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: userErrorMessage(e));
       return null;
     }
   }

@@ -15,6 +15,7 @@ import '../../widgets/loading/shimmer_effect.dart';
 import '../../widgets/verification/verification_components.dart';
 import '../../widgets/verification/verification_type_card.dart';
 import '../../widgets/verification/verification_video_record_page.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Profile verification — identity trust (photo / video, camera only).
 class ProfileVerificationScreen extends ConsumerStatefulWidget {
@@ -141,7 +142,7 @@ class _ProfileVerificationScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }
@@ -212,7 +213,7 @@ class _ProfileVerificationScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(userErrorMessage(e))),
       );
     }
   }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../services/app_logger.dart';
 
@@ -31,7 +32,7 @@ class AppDioLogger extends Interceptor {
       tag: 'Dio',
       error: '${err.response?.statusCode} — ${err.message}',
     );
-    if (err.response != null) {
+    if (kDebugMode && err.response != null) {
       AppLogger.error(
         'Response body: ${err.response?.data}',
         tag: 'Dio',

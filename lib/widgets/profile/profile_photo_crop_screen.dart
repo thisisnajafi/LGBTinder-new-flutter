@@ -20,6 +20,7 @@ import '../../core/utils/profile_photo_crop_encoder.dart';
 import '../../core/utils/square_crop_geometry.dart';
 import '../buttons/gradient_button.dart';
 import '../buttons/scale_tap_feedback.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Full-screen 1:1 crop step shown after picking a profile photo.
 class ProfilePhotoCropScreen extends StatefulWidget {
@@ -185,7 +186,7 @@ class _ProfilePhotoCropScreenState extends State<ProfilePhotoCropScreen> {
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not crop photo: $error'),
+          content: Text(userErrorMessage(error)),
           backgroundColor: AppColors.feedbackError,
         ),
       );

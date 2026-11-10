@@ -50,6 +50,7 @@ import '../core/location/data/models/user_location.dart';
 import '../features/discover/widgets/discover_passport_banner.dart';
 import '../core/location/passport_provider.dart';
 import '../routes/app_router.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Discovery page - Main swiping/discovery screen
 class DiscoveryPage extends ConsumerStatefulWidget {
@@ -980,8 +981,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.message.isNotEmpty
+            content: Text(userErrorMessage(e).isNotEmpty
                   ? e.message
                   : 'No Super Likes remaining. Purchase more to continue.',
             ),
@@ -1059,7 +1059,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: AppText(e.toString(), maxLines: 3)));
+      ).showSnackBar(SnackBar(content: AppText(userErrorMessage(e), maxLines: 3)));
     } finally {
       if (mounted) setState(() => _isClearingPassport = false);
     }

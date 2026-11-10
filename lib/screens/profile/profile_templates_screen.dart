@@ -12,6 +12,7 @@ import '../../core/widgets/optimized_image.dart';
 import '../../features/profile/utils/profile_template_catalog.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Profile templates screen - Profile template selection
 class ProfileTemplatesScreen extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load templates: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {
@@ -82,7 +83,7 @@ class _ProfileTemplatesScreenState extends ConsumerState<ProfileTemplatesScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to apply template: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

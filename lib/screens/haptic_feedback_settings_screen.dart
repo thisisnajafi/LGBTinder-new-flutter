@@ -9,6 +9,7 @@ import '../core/utils/app_icons.dart';
 import '../core/widgets/app_settings_detail.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../core/responsive/responsive.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Haptic feedback settings screen - Manage haptic feedback preferences
 class HapticFeedbackSettingsScreen extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _HapticFeedbackSettingsScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save settings: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

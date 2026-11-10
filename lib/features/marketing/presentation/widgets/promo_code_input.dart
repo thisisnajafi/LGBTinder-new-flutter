@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/campaign_model.dart';
 import '../../providers/marketing_providers.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Promo code input widget with validation
 /// Part of the Marketing System Implementation (Task 3.4.3)
@@ -295,7 +296,7 @@ class _PromoCodeInputState extends ConsumerState<PromoCodeInput> {
         ),
         const SizedBox(width: 8),
         Text(
-          _errorMessage!,
+          sanitizeUserMessage(_errorMessage),
           style: theme.textTheme.bodySmall?.copyWith(
             color: AppColors.accentRed,
           ),

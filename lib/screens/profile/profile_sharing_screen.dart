@@ -15,6 +15,7 @@ import '../../features/profile/utils/profile_qr.dart';
 import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/common/section_header.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Profile sharing screen - Share profile functionality
 class ProfileSharingScreen extends ConsumerStatefulWidget {
@@ -58,7 +59,7 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate share URL: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {
@@ -76,7 +77,7 @@ class _ProfileSharingScreenState extends ConsumerState<ProfileSharingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

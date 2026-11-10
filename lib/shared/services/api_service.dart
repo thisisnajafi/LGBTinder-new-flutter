@@ -9,6 +9,7 @@ import 'cache_service.dart';
 import 'offline_queue_service.dart';
 import 'retry_service.dart';
 import 'dart:io';
+import '../../core/errors/user_error_message.dart';
 
 /// In-flight GET requests by request key (endpoint + params). Prevents duplicate calls.
 final Map<String, Future<ApiResponse<dynamic>>> _inFlightGet = {};
@@ -175,7 +176,7 @@ class ApiService {
         rethrow;
       }
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -324,7 +325,7 @@ class ApiService {
     } catch (e) {
       if (e is ApiError) rethrow;
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -421,7 +422,7 @@ class ApiService {
         rethrow;
       }
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -506,7 +507,7 @@ class ApiService {
     } catch (e) {
       if (e is ApiError) rethrow;
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -602,7 +603,7 @@ class ApiService {
         rethrow;
       }
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -683,7 +684,7 @@ class ApiService {
         rethrow;
       }
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -723,7 +724,7 @@ class ApiService {
       throw ApiError.fromDioException(e);
     } catch (e) {
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }
@@ -770,7 +771,7 @@ class ApiService {
       throw ApiError.fromDioException(e);
     } catch (e) {
       throw ApiError(
-        message: 'An unexpected error occurred: ${e.toString()}',
+        message: userErrorMessage(e),
         originalError: e,
       );
     }

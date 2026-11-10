@@ -20,6 +20,7 @@ import '../../profile/avatar_upload.dart';
 import '../../profile/profile_photo_crop_screen.dart';
 import '../../profile/profile_photo_source_sheet.dart';
 import 'profile_image_editor.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Isolated photo editor: picker, compress-before-preview, upload, gallery.
 ///
@@ -173,7 +174,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -205,7 +206,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload image: ${e.message}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -214,7 +215,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload image: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -260,7 +261,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload primary photo: ${e.message}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -269,7 +270,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upload primary photo: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -307,7 +308,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to delete image: ${e.message}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -316,7 +317,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to delete image: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -355,7 +356,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to set primary image: ${e.message}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -364,7 +365,7 @@ class _ProfileEditPhotosSectionState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to set primary image: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -401,7 +402,7 @@ class _ProfileEditPhotosSectionState
         setState(() => _images = previous);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to reorder images: ${e.message}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );
@@ -411,7 +412,7 @@ class _ProfileEditPhotosSectionState
         setState(() => _images = previous);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to reorder images: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.feedbackError,
           ),
         );

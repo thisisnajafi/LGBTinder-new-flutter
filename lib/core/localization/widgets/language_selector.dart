@@ -4,6 +4,7 @@ import '../../theme/app_colors.dart';
 import '../../responsive/responsive.dart';
 import '../../widgets/premium/premium_design_system.dart';
 import '../locale_provider.dart';
+import '../../errors/user_error_message.dart';
 
 /// Language selector widget
 /// Allows users to select their preferred language
@@ -148,7 +149,7 @@ class LanguageSelector extends ConsumerWidget {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to change language: ${e.toString()}'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),

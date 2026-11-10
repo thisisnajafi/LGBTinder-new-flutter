@@ -24,6 +24,7 @@ import '../core/location/location_sync_service.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Profile edit page - Edit user's own profile
 class ProfileEditPage extends ConsumerStatefulWidget {
@@ -109,7 +110,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load profile: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -166,7 +167,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update profile: ${e.message}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -175,7 +176,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update profile: ${e.toString()}'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -226,7 +227,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (mounted) {
         setState(() => _isUpdatingLocation = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update location: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     }

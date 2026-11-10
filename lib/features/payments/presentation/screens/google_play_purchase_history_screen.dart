@@ -17,6 +17,7 @@ import '../../providers/payment_providers.dart';
 import '../widgets/purchase_filter_chip.dart';
 import '../widgets/purchase_history_item.dart';
 import 'purchase_details_screen.dart';
+import '../../../../core/errors/user_error_message.dart';
 
 /// Google Play purchase history with filter chips and paginated lazy list
 /// (PERF-FEAT-PAY-003).
@@ -81,7 +82,7 @@ class _GooglePlayPurchaseHistoryScreenState
       if (!mounted) return;
       setState(() {
         _hasError = true;
-        _errorMessage = e.toString();
+        _errorMessage = userErrorMessage(e);
         _isLoading = false;
       });
     }

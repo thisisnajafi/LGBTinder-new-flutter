@@ -29,6 +29,7 @@ import '../../widgets/discovery/discovery_swipe_action_button.dart';
 import '../../widgets/error_handling/empty_state.dart';
 import '../../widgets/loading/skeleton_loader.dart';
 import 'profile_detail_screen.dart';
+import '../../core/errors/user_error_message.dart';
 
 /// Likes received — premium list of users who liked you (accept / pass).
 class LikesReceivedScreen extends ConsumerStatefulWidget {
@@ -192,7 +193,7 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to accept like: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.feedbackError,
         ),
       );
@@ -224,7 +225,7 @@ class _LikesReceivedScreenState extends ConsumerState<LikesReceivedScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to reject like: $e'),
+          content: Text(userErrorMessage(e)),
           backgroundColor: AppColors.feedbackError,
         ),
       );

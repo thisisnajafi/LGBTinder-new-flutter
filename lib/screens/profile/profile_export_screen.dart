@@ -13,6 +13,7 @@ import '../../widgets/buttons/gradient_button.dart';
 import '../../widgets/common/divider_custom.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/modals/alert_dialog_custom.dart';
+import '../../core/errors/user_error_message.dart';
 
 class _ExportFormat {
   const _ExportFormat({
@@ -107,7 +108,7 @@ class _ProfileExportScreenState extends ConsumerState<ProfileExportScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(content: Text(userErrorMessage(e))),
         );
       }
     } finally {

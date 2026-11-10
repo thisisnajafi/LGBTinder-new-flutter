@@ -20,6 +20,7 @@ import '../shared/services/agora_service.dart';
 import '../shared/services/call_quality_monitor.dart';
 import '../widgets/common/incoming_call_overlay.dart';
 import 'package:lgbtindernew/core/services/app_logger.dart';
+import '../core/errors/user_error_message.dart';
 
 /// Voice call screen - Voice call interface
 class VoiceCallScreen extends ConsumerStatefulWidget {
@@ -166,7 +167,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to start call: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );
@@ -223,7 +224,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to toggle mute: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );
@@ -247,7 +248,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to toggle speaker: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );
@@ -306,7 +307,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to accept call: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );
@@ -380,7 +381,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to start voice call: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );
@@ -398,7 +399,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
     if (!successful && failureReason != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Call ended: $failureReason'),
+          content: Text('Call ended. ${sanitizeUserMessage(failureReason, fallback: kGenericErrorMessage)}'),
           backgroundColor: AppColors.notificationRed,
         ),
       );
@@ -422,7 +423,7 @@ class _VoiceCallScreenState extends ConsumerState<VoiceCallScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to get call details: $e'),
+            content: Text(userErrorMessage(e)),
             backgroundColor: AppColors.notificationRed,
           ),
         );

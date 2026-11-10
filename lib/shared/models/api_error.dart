@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../../core/errors/user_error_message.dart';
+
 /// Task 2.2.2 (Phase 3): User-friendly HTTP error messages
 const Map<int, String> httpErrorMessages = {
   400: 'Invalid request. Please check your input.',
@@ -147,8 +149,11 @@ class ApiError {
           // 4. Generic error
           if (errorCode != null && backendErrorMessages.containsKey(errorCode)) {
             message = backendErrorMessages[errorCode]!;
+          } else if (statusCode != null && statusCode >= 500) {
+            // Never surface server-side exception text.
+            message = kGenericErrorMessage;
           } else if (backendMessage != null && backendMessage.isNotEmpty) {
-            message = backendMessage;
+            message = sanitizeUserMessage(backendMessage);
           } else if (statusCode != null && httpErrorMessages.containsKey(statusCode)) {
             message = httpErrorMessages[statusCode]!;
           } else {
@@ -187,11 +192,12 @@ class ApiError {
         } else if (error.message?.contains('HandshakeException') ?? false) {
           message = 'Secure connection failed. Please try again.';
         } else {
-          message = error.message ?? 'An unexpected error occurred';
+          // Raw Dio text can contain URLs and internals; keep it in logs only.
+          message = kGenericErrorMessage;
         }
         break;
       default:
-        message = error.message ?? 'An error occurred';
+        message = kGenericErrorMessage;
     }
 
     return ApiError(
@@ -215,7 +221,10 @@ class ApiError {
 
     return ApiError(
       code: statusCode ?? data['code'] as int?,
-      message: data['message'] as String? ?? 'An error occurred',
+      message: (statusCode ?? 0) >= 500
+          ? kGenericErrorMessage
+          : sanitizeUserMessage(data['message']?.toString(),
+              fallback: 'An error occurred'),
       errorCode: errorCode,
       errors: data['errors'] != null
           ? Map<String, List<String>>.from(
@@ -361,8 +370,9 @@ class ApiError {
       }
     }
     
-    // 4. Return the message if it's user-friendly
-    return message;
+    // 4. Return the message only if it's user-safe
+    if (code != null && code! >= 500) return kGenericErrorMessage;
+    return sanitizeUserMessage(message);
   }
   
   /// Check if error requires user to log in again (never for plan/feature 403).

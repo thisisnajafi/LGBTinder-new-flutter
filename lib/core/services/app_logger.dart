@@ -14,6 +14,8 @@ class AppLogger {
   /// flavor floor. Before a flavor is installed (unit tests), stay quiet
   /// outside debug, with the historical error floor.
   static bool get _enabled {
+    // Release builds never print: logs could carry tokens, PII or API bodies.
+    if (kReleaseMode) return false;
     if (!AppConfig.isReady) return kDebugMode;
     return true;
   }
@@ -44,6 +46,7 @@ class AppLogger {
 
   /// Request and response bodies are a development-debug concern.
   static bool get _apiLogging {
+    if (!kDebugMode) return false;
     if (!AppConfig.isReady) return true;
     return AppConfig.current.flavor == AppFlavor.development && kDebugMode;
   }

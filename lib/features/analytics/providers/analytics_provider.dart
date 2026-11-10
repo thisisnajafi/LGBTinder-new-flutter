@@ -3,6 +3,7 @@ import '../data/models/user_analytics.dart';
 import '../data/repositories/analytics_repository.dart';
 import '../domain/use_cases/get_analytics_use_case.dart';
 import '../domain/use_cases/track_activity_use_case.dart';
+import '../../../core/errors/user_error_message.dart';
 
 /// Analytics provider - manages analytics state and functionality
 final analyticsProvider = StateNotifierProvider<AnalyticsNotifier, AnalyticsState>((ref) {
@@ -77,7 +78,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
@@ -103,7 +104,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
     } catch (e) {
       state = state.copyWith(
         isTrackingActivity: false,
-        error: e.toString(),
+        error: userErrorMessage(e),
       );
     }
   }
