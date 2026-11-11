@@ -89,7 +89,9 @@ android {
     // UnsatisfiedLinkError on load (emulator x86_64 and devices).
     val agoraOptionalLibs = listOf(
         "libagora_ai_echo_cancellation_extension.so",
+        "libagora_ai_echo_cancellation_ll_extension.so",
         "libagora_ai_noise_suppression_extension.so",
+        "libagora_ai_noise_suppression_ll_extension.so",
         "libagora_audio_beauty_extension.so",
         "libagora_clear_vision_extension.so",
         "libagora_content_inspect_extension.so",
