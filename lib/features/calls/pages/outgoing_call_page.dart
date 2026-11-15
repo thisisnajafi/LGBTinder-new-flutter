@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/config/agora_config.dart';
 import '../../../core/services/app_logger.dart';
@@ -49,6 +50,7 @@ import '../providers/call_providers.dart';
 import '../providers/live_call_ui_provider.dart';
 import '../providers/messenger_calls_provider.dart';
 import '../utils/call_conflict_resolver.dart';
+import '../utils/call_end_orchestrator.dart';
 import '../utils/call_rejoin_policy.dart';
 import '../utils/call_log_labels.dart';
 import '../utils/call_audio_route.dart';
@@ -132,6 +134,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   String? _backdropPhotoUrl;
   String? _localAvatarUrl;
   int _localUserId = 0;
+  GoRouter? _router;
 
   @override
   void initState() {
@@ -148,6 +151,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _router ??= GoRouter.of(context);
       final session = ref.read(activeCallSessionProvider);
       final resuming = ActiveCallLifecycle.shouldResume(
         pageCallId: widget.callId,
@@ -372,10 +376,19 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   void _leaveCallUi() {
     _notifyServerOfLeave();
+    final callId = _callId > 0 ? _callId.toString() : null;
+    if (callId != null) {
+      CallEndOrchestrator.instance.markEnded(callId);
+    }
+    final router = _router;
+    if (router != null) {
+      leaveCallRoutes(router, callId: callId);
+      return;
+    }
     if (!mounted) return;
     leaveCallRoute(
       context,
-      callId: _callId > 0 ? _callId.toString() : null,
+      callId: callId,
     );
   }
 
@@ -1203,6 +1216,14 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   Future<void> _endCall() async {
+    final callKey = _callId > 0 ? _callId.toString() : '';
+    if (!CallEndOrchestrator.instance.beginEnd(callKey)) {
+      // Another path already owns teardown; still leave UI if we are stuck.
+      if (!_leaving && mounted) {
+        _leaveCallUi();
+      }
+      return;
+    }
     if (_leaving) return;
     _leaving = true;
     _preservingEngine = false;
@@ -1219,16 +1240,17 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       _syncMessengerStatus(connected ? 'ended' : 'missed');
     }
 
-    unawaited(_stopCallMedia());
-    unawaited(
-      _postEndIfNeeded(
-        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut),
-      ),
-    );
+    // Optimistic leave: summary / navigation first; media + API in background.
     _presentEndSummary(
       CallEndSummary.resolve(
         wasConnected: connected,
         connectionError: _connectionError,
+      ),
+    );
+    unawaited(_stopCallMedia());
+    unawaited(
+      _postEndIfNeeded(
+        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut),
       ),
     );
   }
@@ -1298,8 +1320,16 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
           'endCall API failed',
           tag: 'outgoing_call_page',
         );
+      } else if (_callId > 0) {
+        CallEndOrchestrator.instance.markEnded(_callId.toString());
       }
     } catch (e) {
+      if (CallEndOrchestrator.isInactiveEndSuccess(e)) {
+        if (_callId > 0) {
+          CallEndOrchestrator.instance.markEnded(_callId.toString());
+        }
+        return;
+      }
       _endPosted = false;
       AppLogger.warning(
         'endCall API failed',

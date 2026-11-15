@@ -65,6 +65,9 @@ class CardStackManager extends ConsumerStatefulWidget {
   /// Horizontal inset — use [AppSpacing.contentPadding] to match greeting card width.
   final double horizontalPadding;
 
+  /// When false (Discover tab not selected), front-card photo carousel timers stop.
+  final bool carouselEnabled;
+
   const CardStackManager({
     super.key,
     required this.cards,
@@ -86,6 +89,7 @@ class CardStackManager extends ConsumerStatefulWidget {
     this.contentTopInset = 0,
     this.contentBottomInset = 0,
     this.horizontalPadding = PremiumPageHeader.horizontalPadding,
+    this.carouselEnabled = true,
   });
 
   @override
@@ -752,6 +756,7 @@ class CardStackManagerState extends ConsumerState<CardStackManager>
       matchReasons: matchReasons,
       isExpanded: depth == 0 && widget.isSheetOpen,
       isBackgroundPreview: isBackgroundPreview,
+      carouselEnabled: widget.carouselEnabled,
       onBioMoreTap: depth == 0 && !isBackgroundPreview
           ? () => widget.onSheetOpenChanged?.call(true)
           : null,

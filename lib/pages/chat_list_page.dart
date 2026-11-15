@@ -327,17 +327,28 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
         },
     ];
 
+    // Only subscribe to presence when the Online filter is active, and only
+    // rebuild when the set of online user ids changes (not every presence map).
+    final presenceByUser = _activeFilter == ChatListRowFilter.online
+        ? {
+            for (final id in ref.watch(
+              userPresenceCacheProvider.select(
+                (map) => {
+                  for (final e in map.entries)
+                    if (e.value.isOnline) e.key,
+                },
+              ),
+            ))
+              id: true,
+          }
+        : const <int, bool>{};
+
     return ChatListFilter.apply(
       source: withPins,
       filter: _activeFilter,
       query: _searchQuery,
       hiddenIds: ref.watch(chatListHiddenPeersProvider),
-      presenceByUser: _activeFilter == ChatListRowFilter.online
-          ? {
-              for (final entry in ref.watch(userPresenceCacheProvider).entries)
-                entry.key: entry.value.isOnline,
-            }
-          : const {},
+      presenceByUser: presenceByUser,
     );
   }
 
@@ -600,8 +611,6 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     final preview = ref.watch(chatListPreviewProvider);
     final hasPlan = ref.watch(isPremiumProvider);
     final filtered = _filteredChats(preview);
-    final mutedIds = ref.watch(conversationMuteCacheProvider);
-    final pinnedIds = ref.watch(conversationPinCacheProvider);
     final showLoading = _isLoading && !preview.isSeeded && filtered.isEmpty;
     final showError = _hasError && !preview.isSeeded && filtered.isEmpty;
     final staggerFirstSession = !_didStaggerConversations;
@@ -651,77 +660,36 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
                 final userId = chat['id'] as int;
                 final name = _displayNameFromMap(chat);
                 final isOfficial = _isOfficialChat(chat);
-                final muted =
-                    mutedIds.contains(userId) || chat['is_muted'] == true;
-                final pinned =
-                    pinnedIds.contains(userId) ||
-                    chat['is_pinned'] == true ||
-                    chat['is_pinned'] == 1;
+                // Mute/pin watched per-row so one toggle does not rebuild the list.
                 return StaggeredListItem(
                   index: index,
                   animateAppear: StaggeredListItem.shouldAnimate(
                     index: index,
                     firstSession: staggerFirstSession,
                   ),
-                  child: ChatListSwipeRow(
+                  child: _ChatListConversationRow(
+                    chat: chat,
                     userId: userId,
-                    isMuted: muted,
-                    isPinned: pinned,
-                    onMuteToggle: () {
+                    name: name,
+                    isOfficial: isOfficial,
+                    hasPlan: hasPlan,
+                    searchQuery: _searchQuery,
+                    isSystemOfficial: _isSystemOfficialChat(chat),
+                    onTap: () => _handleChatTap(chat),
+                    onMuteToggle: (muted) {
                       unawaited(_swipeMute(userId, muted));
                       return Future<void>.value();
                     },
-                    onPinToggle: () {
+                    onPinToggle: (pinned) {
                       unawaited(_togglePin(userId, pinned));
                       return Future<void>.value();
                     },
                     onConfirmDelete: () => _confirmHideConversation(name),
                     onDeleted: () => _hideConversation(userId, name),
-                    child: RepaintBoundary(
-                      child: ChatListItem(
-                        userId: userId,
-                        name: name,
-                        avatarUrl: chat['avatar_url'],
-                        lastMessage: chat['last_message'],
-                        lastMessageType: chat['last_message_type']?.toString(),
-                        lastMessageTime: chat['last_message_time'],
-                        unreadCount: chat['unread_count'],
-                        isOnline:
-                            chat['is_online'] == true || chat['is_online'] == 1,
-                        lastSeenAt: chat['last_seen'] is DateTime
-                            ? chat['last_seen'] as DateTime
-                            : DateTime.tryParse(
-                                chat['last_seen']?.toString() ??
-                                    chat['last_seen_at']?.toString() ??
-                                    '',
-                              ),
-                        isTyping: chat['is_typing'] == true,
-                        isMuted: muted,
-                        isPinned: pinned,
-                        hasPlan: hasPlan,
-                        isOfficial: isOfficial,
-                        isMatch: chat['is_match'] == true ||
-                            chat['is_match'] == 1 ||
-                            chat['type']?.toString() == 'match' ||
-                            isOfficial,
-                        lastMessageFromMe: chat['last_message_from_me'] == true,
-                        lastMessageIsRead: chat['last_message_is_read'] == true,
-                        lastMessageIsDelivered:
-                            chat['last_message_is_delivered'] == true,
-                        highlightQuery: _searchQuery,
-                        onTap: () => _handleChatTap(chat),
-                        onAvatarTap: _isSystemOfficialChat(chat)
-                            ? () => OfficialTeamProfilePage.open(
-                                  context,
-                                  userId: userId,
-                                )
-                            : null,
-                        onLongPress: () => _showConversationActions(
-                          userId: userId,
-                          name: name,
-                          pinned: pinned,
-                        ),
-                      ),
+                    onLongPress: (pinned) => _showConversationActions(
+                      userId: userId,
+                      name: name,
+                      pinned: pinned,
                     ),
                   ),
                 );
@@ -1021,6 +989,103 @@ class _MessengerSectionSwitch extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Isolates mute/pin `.select` watches so one conversation toggle does not
+/// rebuild the entire messenger list.
+class _ChatListConversationRow extends ConsumerWidget {
+  const _ChatListConversationRow({
+    required this.chat,
+    required this.userId,
+    required this.name,
+    required this.isOfficial,
+    required this.hasPlan,
+    required this.searchQuery,
+    required this.isSystemOfficial,
+    required this.onTap,
+    required this.onMuteToggle,
+    required this.onPinToggle,
+    required this.onConfirmDelete,
+    required this.onDeleted,
+    required this.onLongPress,
+  });
+
+  final Map<String, dynamic> chat;
+  final int userId;
+  final String name;
+  final bool isOfficial;
+  final bool hasPlan;
+  final String searchQuery;
+  final bool isSystemOfficial;
+  final VoidCallback onTap;
+  final Future<void> Function(bool currentlyMuted) onMuteToggle;
+  final Future<void> Function(bool currentlyPinned) onPinToggle;
+  final Future<bool> Function() onConfirmDelete;
+  final VoidCallback onDeleted;
+  final void Function(bool pinned) onLongPress;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final muted = ref.watch(
+          conversationMuteCacheProvider.select((ids) => ids.contains(userId)),
+        ) ||
+        chat['is_muted'] == true;
+    final pinned = ref.watch(
+          conversationPinCacheProvider.select((ids) => ids.contains(userId)),
+        ) ||
+        chat['is_pinned'] == true ||
+        chat['is_pinned'] == 1;
+
+    return ChatListSwipeRow(
+      userId: userId,
+      isMuted: muted,
+      isPinned: pinned,
+      onMuteToggle: () => onMuteToggle(muted),
+      onPinToggle: () => onPinToggle(pinned),
+      onConfirmDelete: onConfirmDelete,
+      onDeleted: onDeleted,
+      child: RepaintBoundary(
+        child: ChatListItem(
+          userId: userId,
+          name: name,
+          avatarUrl: chat['avatar_url'],
+          lastMessage: chat['last_message'],
+          lastMessageType: chat['last_message_type']?.toString(),
+          lastMessageTime: chat['last_message_time'],
+          unreadCount: chat['unread_count'],
+          isOnline: chat['is_online'] == true || chat['is_online'] == 1,
+          lastSeenAt: chat['last_seen'] is DateTime
+              ? chat['last_seen'] as DateTime
+              : DateTime.tryParse(
+                  chat['last_seen']?.toString() ??
+                      chat['last_seen_at']?.toString() ??
+                      '',
+                ),
+          isTyping: chat['is_typing'] == true,
+          isMuted: muted,
+          isPinned: pinned,
+          hasPlan: hasPlan,
+          isOfficial: isOfficial,
+          isMatch: chat['is_match'] == true ||
+              chat['is_match'] == 1 ||
+              chat['type']?.toString() == 'match' ||
+              isOfficial,
+          lastMessageFromMe: chat['last_message_from_me'] == true,
+          lastMessageIsRead: chat['last_message_is_read'] == true,
+          lastMessageIsDelivered: chat['last_message_is_delivered'] == true,
+          highlightQuery: searchQuery,
+          onTap: onTap,
+          onAvatarTap: isSystemOfficial
+              ? () => OfficialTeamProfilePage.open(
+                    context,
+                    userId: userId,
+                  )
+              : null,
+          onLongPress: () => onLongPress(pinned),
+        ),
       ),
     );
   }

@@ -13,6 +13,7 @@ import '../data/models/call_wake_lock.dart';
 import '../data/services/call_kit_service.dart';
 import '../data/services/call_signaling_service.dart';
 import '../utils/call_audio_route.dart';
+import '../utils/call_end_orchestrator.dart';
 import '../utils/minimized_call_remote_end.dart';
 import 'agora_rtc_session_provider.dart';
 import 'call_provider.dart';
@@ -107,66 +108,81 @@ class ActiveCallSessionNotifier extends StateNotifier<ActiveCallSession?> {
     final session = state;
     final callId = callIdOverride ?? session?.callId ?? 0;
     if (session == null && callId <= 0) return;
+    final callKey = callId > 0 ? callId.toString() : '';
+    if (!CallEndOrchestrator.instance.beginEnd(callKey)) {
+      return;
+    }
     _localTeardown = true;
     try {
       final wasConnected = _safeWasConnected();
       clearUiOnly();
 
-    try {
-      await AgoraService().dispose();
-    } catch (e) {
-      AppLogger.warning('Agora dispose from notification failed', tag: _tag, error: e);
-    }
-
-    unawaited(CallWakeLock().disable(force: true));
-
-    if (callId > 0) {
       try {
-        _ref.read(callSignalingServiceProvider).disposeCall(callId);
+        await AgoraService().dispose();
       } catch (e) {
         AppLogger.warning(
-          'disposeCall from notification failed',
+          'Agora dispose from notification failed',
           tag: _tag,
           error: e,
         );
       }
-      if (postEnd) {
+
+      unawaited(CallWakeLock().disable(force: true));
+
+      if (callId > 0) {
         try {
-          await _ref.read(callProvider.notifier).endCall(
-                CallActionRequest.end(callId.toString()),
+          _ref.read(callSignalingServiceProvider).disposeCall(callId);
+        } catch (e) {
+          AppLogger.warning(
+            'disposeCall from notification failed',
+            tag: _tag,
+            error: e,
+          );
+        }
+        if (postEnd) {
+          try {
+            await _ref.read(callProvider.notifier).endCall(
+                  CallActionRequest.end(callId.toString()),
+                );
+          } catch (e) {
+            if (!CallEndOrchestrator.isInactiveEndSuccess(e)) {
+              AppLogger.warning(
+                'endCall from notification failed',
+                tag: _tag,
+                error: e,
+              );
+            }
+          }
+        }
+        try {
+          _ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
+                callId: callId,
+                status: wasConnected ? 'ended' : 'missed',
               );
         } catch (e) {
-          AppLogger.warning('endCall from notification failed', tag: _tag, error: e);
+          AppLogger.warning(
+            'applyRemoteStatus from notification failed',
+            tag: _tag,
+            error: e,
+          );
         }
+        unawaited(CallKitService.instance.endCall(callId.toString()));
       }
+
       try {
-        _ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
-              callId: callId,
-              status: wasConnected ? 'ended' : 'missed',
-            );
+        _ref.read(liveCallUiProvider.notifier).reset();
+        _ref.read(agoraRtcSessionProvider.notifier).reset();
       } catch (e) {
         AppLogger.warning(
-          'applyRemoteStatus from notification failed',
+          'live-call reset from notification failed',
           tag: _tag,
           error: e,
         );
       }
-      unawaited(CallKitService.instance.endCall(callId.toString()));
-    }
 
-    try {
-      _ref.read(liveCallUiProvider.notifier).reset();
-      _ref.read(agoraRtcSessionProvider.notifier).reset();
-    } catch (e) {
-      AppLogger.warning(
-        'live-call reset from notification failed',
-        tag: _tag,
-        error: e,
-      );
-    }
-
-    _clearTrackedActiveCall(callId);
-    AppLogger.info('Call ended from notification callId=$callId', tag: _tag);
+      _clearTrackedActiveCall(callId);
+      CallEndOrchestrator.instance.markEnded(callKey);
+      AppLogger.info('Call ended from notification callId=$callId', tag: _tag);
     } finally {
       _localTeardown = false;
     }

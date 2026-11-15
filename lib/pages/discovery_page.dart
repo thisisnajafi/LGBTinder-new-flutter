@@ -1198,6 +1198,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                     onViewProfile: _handleCardTap,
                                     isSheetOpen: _isProfileSheetOpen,
                                     onSheetOpenChanged: _setProfileSheetOpen,
+                                    carouselEnabled: widget.selectedTabIndex ==
+                                            null ||
+                                        widget.selectedTabIndex ==
+                                            widget.discoveryTabIndex,
                                     horizontalPadding:
                                         _kDiscoverHorizontalPadding,
                                     contentTopInset: AppSpacing.spacingSM,

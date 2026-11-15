@@ -24,18 +24,22 @@ class IncomingCallPage extends ConsumerStatefulWidget {
 }
 
 class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
+  /// Cached in [initState] — [ref] must not be read from [dispose].
+  IncomingCallNotifier? _incomingNotifier;
+
   @override
   void initState() {
     super.initState();
+    _incomingNotifier = ref.read(incomingCallProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(incomingCallProvider.notifier).markIncomingPageOpen(true);
+      _incomingNotifier?.markIncomingPageOpen(true);
     });
   }
 
   @override
   void dispose() {
-    ref.read(incomingCallProvider.notifier).markIncomingPageOpen(false);
+    _incomingNotifier?.markIncomingPageOpen(false);
     super.dispose();
   }
 
@@ -45,10 +49,12 @@ class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
     if (incoming == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
-        final path =
-            GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
-        if (path == AppRoutes.incomingCall && context.canPop()) {
-          context.pop();
+        final router = GoRouter.of(context);
+        final path = router.routerDelegate.currentConfiguration.uri.path;
+        // Accept may have already replaced this route; only pop a stale
+        // incoming page that is still on top with no call payload.
+        if (path == AppRoutes.incomingCall && router.canPop()) {
+          router.pop();
         }
       });
       return const Scaffold(backgroundColor: AppColors.backgroundDark);

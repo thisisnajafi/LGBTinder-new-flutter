@@ -43,6 +43,9 @@ class SwipeableCard extends ConsumerStatefulWidget {
   final bool isBackgroundPreview;
   final bool hideBioMore;
 
+  /// When false (e.g. Discover tab off-screen), the photo carousel timer stops.
+  final bool carouselEnabled;
+
   const SwipeableCard({
     super.key,
     required this.userId,
@@ -65,6 +68,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.isExpanded = false,
     this.isBackgroundPreview = false,
     this.hideBioMore = false,
+    this.carouselEnabled = true,
   });
 
   static const double cardRadius = AppRadius.radiusXL;
@@ -153,8 +157,12 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
         oldWidget.avatarUrl != widget.avatarUrl) {
       _scheduleImageCarousel();
     }
-    if (oldWidget.isExpanded != widget.isExpanded) {
-      if (widget.isExpanded) {
+    if (oldWidget.isExpanded != widget.isExpanded ||
+        oldWidget.carouselEnabled != widget.carouselEnabled ||
+        oldWidget.isBackgroundPreview != widget.isBackgroundPreview) {
+      if (widget.isExpanded ||
+          !widget.carouselEnabled ||
+          widget.isBackgroundPreview) {
         _stopImageCarousel();
       } else {
         _scheduleImageCarousel();
@@ -188,7 +196,12 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
 
   void _scheduleImageCarousel() {
     _stopImageCarousel();
-    if (!mounted || widget.isBackgroundPreview || widget.isExpanded) return;
+    if (!mounted ||
+        widget.isBackgroundPreview ||
+        widget.isExpanded ||
+        !widget.carouselEnabled) {
+      return;
+    }
 
     final count = _images.length;
     if (count <= 1) return;

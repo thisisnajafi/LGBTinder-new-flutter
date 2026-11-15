@@ -23,6 +23,7 @@ import '../../data/models/active_call_session.dart';
 import '../../providers/active_call_session_provider.dart';
 import '../../providers/call_providers.dart';
 import '../../providers/incoming_call_provider.dart';
+import '../../utils/call_end_orchestrator.dart';
 import '../../utils/call_navigation.dart';
 import '../../utils/call_rejoin_policy.dart';
 import '../../../../shared/services/call_permissions.dart';
@@ -229,6 +230,8 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
     with WidgetsBindingObserver {
   bool _showingPermissionSheet = false;
   bool _openingIncoming = false;
+  /// Last call_id for which we pushed [AppRoutes.incomingCall].
+  String? _presentedIncomingCallId;
 
   @override
   void initState() {
@@ -307,6 +310,9 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
       });
     });
     ref.listen(incomingCallProvider, (previous, next) {
+      if (next == null) {
+        _presentedIncomingCallId = null;
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final notifier = ref.read(incomingCallProvider.notifier);
@@ -337,26 +343,44 @@ class _IncomingCallHostState extends ConsumerState<IncomingCallHost>
 
   /// Read a live unanswered CallKit row and open [IncomingCallPage].
   /// A permission dialog pause does not count as bringing the app forward.
+  ///
+  /// Guard [_openingIncoming] before any await so Pusher + resume + listen
+  /// cannot push the same call_id twice (~100 ms race → black screen on end).
   Future<void> _adoptAndOpenIncoming() async {
     if (!mounted || _openingIncoming) return;
-    if (CallPermissionLifecycle.blocksCallTerminalActions) return;
-    if (!ref.read(startupFlowCompleteProvider)) return;
-    if (ref.read(incomingCallProvider) == null) {
-      final ringing = await CallKitService.instance.currentRingingCall();
-      if (!mounted || ringing == null) return;
-      if (CallPermissionLifecycle.blocksCallTerminalActions) return;
-      ref.read(incomingCallProvider.notifier).adoptRinging(ringing);
-    }
-    if (!mounted || ref.read(incomingCallProvider) == null) return;
-    final router = ref.read(appRouterProvider);
-    final path = router.routerDelegate.currentConfiguration.uri.path;
-    if (path == AppRoutes.incomingCall || path == AppRoutes.outgoingCall) {
-      return;
-    }
     _openingIncoming = true;
-    ref.read(incomingCallProvider.notifier).markIncomingPageOpen(true);
-    router.push(AppRoutes.incomingCall);
-    _openingIncoming = false;
+    try {
+      if (CallPermissionLifecycle.blocksCallTerminalActions) return;
+      if (!ref.read(startupFlowCompleteProvider)) return;
+      if (ref.read(incomingCallProvider) == null) {
+        final ringing = await CallKitService.instance.currentRingingCall();
+        if (!mounted || ringing == null) return;
+        if (CallPermissionLifecycle.blocksCallTerminalActions) return;
+        ref.read(incomingCallProvider.notifier).adoptRinging(ringing);
+      }
+      if (!mounted) return;
+      final incoming = ref.read(incomingCallProvider);
+      if (incoming == null) {
+        _presentedIncomingCallId = null;
+        return;
+      }
+      final router = ref.read(appRouterProvider);
+      final alreadyOnCallUi = stackContainsCallUi(router);
+      if (!CallEndOrchestrator.shouldPresentIncomingRoute(
+        callId: incoming.callId,
+        alreadyPresentedCallId: _presentedIncomingCallId,
+        openingInFlight: false,
+        stackAlreadyShowsCallUi: alreadyOnCallUi,
+      )) {
+        _presentedIncomingCallId = incoming.callId;
+        return;
+      }
+      _presentedIncomingCallId = incoming.callId;
+      ref.read(incomingCallProvider.notifier).markIncomingPageOpen(true);
+      router.push(AppRoutes.incomingCall);
+    } finally {
+      _openingIncoming = false;
+    }
   }
 
   Future<void> _showBlockedPermissionSheet() async {

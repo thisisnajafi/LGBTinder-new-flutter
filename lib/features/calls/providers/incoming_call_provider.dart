@@ -18,7 +18,6 @@ import '../data/models/incoming_call_data.dart';
 import '../data/services/call_kit_service.dart';
 import '../data/services/callkit_pending_flusher.dart';
 import '../../../routes/app_router.dart';
-import '../pages/outgoing_call_page.dart';
 import '../presentation/widgets/call_permission_sheet.dart';
 import '../utils/call_busy_confirmation.dart';
 import '../utils/call_local_busy.dart';
@@ -261,20 +260,9 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
         );
         return;
       }
-      // Push before clearing the banner. Clearing state unmounts the
-      // button context, and GoRouter.of(that context) is missing because
-      // the banner sits above the navigator.
-      ref.read(appRouterProvider).push(
-            activeCallLocation(
-              callId: int.parse(data.callId),
-              recipientId: data.callerId,
-              recipientName: data.callerName,
-              recipientAvatarUrl: data.callerAvatar,
-              type: data.isVideo
-                  ? OutgoingCallType.video
-                  : OutgoingCallType.voice,
-            ),
-          );
+      // Replace the incoming route (do not push on top). A stacked incoming
+      // page with null state is an empty black screen after hang-up.
+      openActiveCallReplacingIncoming(ref.read(appRouterProvider), data);
       state = null;
       unawaited(SoundService.instance.stopCallSounds());
       unawaited(CallKitService.instance.endCall(data.callId));
@@ -605,15 +593,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     _pendingNavigation = null;
     IncomingCallHandler.clearPendingCallData();
 
-    router.push(
-      activeCallLocation(
-        callId: int.parse(data.callId),
-        recipientId: data.callerId,
-        recipientName: data.callerName,
-        recipientAvatarUrl: data.callerAvatar,
-        type: data.isVideo ? OutgoingCallType.video : OutgoingCallType.voice,
-      ),
-    );
+    openActiveCallReplacingIncoming(router, data);
   }
 }
 

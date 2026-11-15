@@ -43,6 +43,32 @@ void main() {
       final image = tester.widget<OptimizedImage>(find.byType(OptimizedImage));
       expect(image.size, ImageSize.thumbnail);
     });
+
+    testWidgets('plan-restricted like uses static gate without ImageFiltered',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: NotificationTile(
+                notification: app_models.Notification(
+                  id: 2,
+                  type: 'like_received',
+                  title: 'Someone liked you',
+                  message: 'Upgrade to see who',
+                  createdAt: DateTime(2026, 1, 1),
+                  userImageUrl: 'https://example.com/b.jpg',
+                  isPlanRestricted: true,
+                  upgradeRequired: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ImageFiltered), findsNothing);
+    });
   });
 
   group('NotificationBadge', () {

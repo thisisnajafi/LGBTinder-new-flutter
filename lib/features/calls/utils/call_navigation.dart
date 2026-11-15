@@ -161,28 +161,115 @@ void openCallTierUpgrade(
   );
 }
 
-/// Leaves the call screen safely after hangup / reject / failure.
+/// True when [path] is a full-screen call UI (incoming or in-call).
+bool isCallUiPath(String path) =>
+    path == AppRoutes.incomingCall || path == AppRoutes.outgoingCall;
+
+/// Leaves every stacked call route (incoming + in-call) after hang-up.
 ///
-/// Cold-start Accept can stack the call on Splash. A bare [pop] then reveals a
-/// dead Splash (`_redirected` already true) and the UI never recovers. Prefer
-/// [pop] when a real parent exists; otherwise (or if Splash is underneath)
-/// [go] home.
-void leaveCallRoute(BuildContext context, {String? callId}) {
+/// A bare single [pop] leaves a duplicate incoming page (null state = black
+/// empty scaffold). Keep popping while the top route is call UI, then fall
+/// back to [fallback] when the stack is empty / stuck on Splash.
+///
+/// Prefer the top [RouteMatch] location over [uri.path]: after imperative
+/// pushes go_router can report the parent URI while call pages are still on
+/// the stack (the black-screen race on hang-up).
+void leaveCallRoutes(
+  GoRouter router, {
+  String? callId,
+  String fallback = AppRoutes.home,
+}) {
   if (callId != null && callId.isNotEmpty) {
     unawaited(CallKitService.instance.endCall(callId));
     IncomingCallHandler.clearPendingCallData();
   }
-  if (!context.mounted) return;
 
-  final router = GoRouter.of(context);
-  final underIsSplash = _stackContainsSplash(router);
+  const maxPops = 10;
+  for (var i = 0; i < maxPops; i++) {
+    final path = _topStackPath(router);
+    if (!isCallUiPath(path)) return;
 
-  if (context.canPop() && !underIsSplash) {
-    context.pop();
-    return;
+    if (_callStackHasDeadSplash(router) || !router.canPop()) {
+      router.go(fallback);
+      return;
+    }
+    router.pop();
   }
 
-  router.go(AppRoutes.home);
+  if (isCallUiPath(_topStackPath(router))) {
+    router.go(fallback);
+  }
+}
+
+/// Leaves the call screen safely after hangup / reject / failure.
+///
+/// Cold-start Accept can stack the call on Splash. A bare [pop] then reveals a
+/// dead Splash (`_redirected` already true) and the UI never recovers. Prefer
+/// popping all call routes when a real parent exists; otherwise (or if Splash
+/// is underneath) [go] home.
+///
+/// Prefer [router] when the triggering widget may already be disposed.
+void leaveCallRoute(
+  BuildContext? context, {
+  String? callId,
+  GoRouter? router,
+  String fallback = AppRoutes.home,
+}) {
+  final goRouter = router ??
+      (context != null && context.mounted ? GoRouter.of(context) : null);
+  if (goRouter == null) {
+    if (callId != null && callId.isNotEmpty) {
+      unawaited(CallKitService.instance.endCall(callId));
+      IncomingCallHandler.clearPendingCallData();
+    }
+    return;
+  }
+  leaveCallRoutes(goRouter, callId: callId, fallback: fallback);
+}
+
+String _currentPath(GoRouter router) {
+  try {
+    return router.routerDelegate.currentConfiguration.uri.path;
+  } catch (_) {
+    return '';
+  }
+}
+
+/// Top-most matched location (imperative push stack aware).
+String _topStackPath(GoRouter router) {
+  try {
+    final matches = router.routerDelegate.currentConfiguration.matches;
+    for (var i = matches.length - 1; i >= 0; i--) {
+      final loc = matches[i].matchedLocation;
+      if (loc.isNotEmpty) return loc;
+    }
+  } catch (_) {}
+  return _currentPath(router);
+}
+
+/// Whether the navigator stack already contains a call screen.
+bool stackContainsCallUi(GoRouter router) {
+  try {
+    final matches = router.routerDelegate.currentConfiguration.matches;
+    for (final match in matches) {
+      if (isCallUiPath(match.matchedLocation)) return true;
+    }
+  } catch (_) {}
+  return isCallUiPath(_currentPath(router));
+}
+
+/// Opens the in-call page, replacing a top incoming route when present.
+void openActiveCallReplacingIncoming(
+  GoRouter router,
+  IncomingCallData data,
+) {
+  final loc = activeCallLocationFromIncoming(data);
+  final path = _topStackPath(router);
+  if (path == AppRoutes.incomingCall) {
+    unawaited(router.pushReplacement(loc));
+    return;
+  }
+  router.push(loc);
 }
 
 /// Re-opens the live call screen without joining Agora again.
@@ -203,7 +290,9 @@ bool _stackContainsSplash(GoRouter router) {
     final matches = router.routerDelegate.currentConfiguration.matches;
     for (final match in matches) {
       final loc = match.matchedLocation;
-      if (loc == AppRoutes.splash || loc == '/') {
+      // Splash route is `/`. Only treat an exact splash page under a call
+      // route as dead — do not confuse other paths that happen to be `/`.
+      if (loc == AppRoutes.splash) {
         return true;
       }
     }
@@ -212,6 +301,12 @@ bool _stackContainsSplash(GoRouter router) {
   } catch (_) {
     return false;
   }
+}
+
+/// Splash under a call route is unrecoverable after cold-start Accept.
+bool _callStackHasDeadSplash(GoRouter router) {
+  if (!_stackContainsSplash(router)) return false;
+  return stackContainsCallUi(router);
 }
 
 /// Seats Home under the active call using a captured [GoRouter] (safe after Splash unmounts).
@@ -237,15 +332,20 @@ void openActiveCallPage({
   String? recipientAvatarUrl,
   required OutgoingCallType type,
 }) {
-  context.push(
-    activeCallLocation(
-      callId: callId,
-      recipientId: recipientId,
-      recipientName: recipientName,
-      recipientAvatarUrl: recipientAvatarUrl,
-      type: type,
-    ),
+  final router = GoRouter.of(context);
+  final loc = activeCallLocation(
+    callId: callId,
+    recipientId: recipientId,
+    recipientName: recipientName,
+    recipientAvatarUrl: recipientAvatarUrl,
+    type: type,
   );
+  final path = _topStackPath(router);
+  if (path == AppRoutes.incomingCall) {
+    unawaited(router.pushReplacement(loc));
+    return;
+  }
+  router.push(loc);
 }
 
 /// Rejoins a ringing or active call from the messenger Calls list.

@@ -1,6 +1,4 @@
 // Widget: NotificationTile
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/animation_constants.dart';
@@ -157,29 +155,20 @@ class _NotificationTileState extends State<NotificationTile> {
         );
       }
       if (_restrictLikeIdentity) {
-        if (!AppAnimations.animationsEnabled(context)) {
-          return Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(color: accent.withValues(alpha: 0.35)),
-            ),
-            child: Center(
-              child: AppSvgIcon(
-                assetPath: AppIcons.getIconPath('profile-circle'),
-                size: 24,
-                color: accent,
-              ),
-            ),
-          );
-        }
-        return RepaintBoundary(
-          child: ClipOval(
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: avatar,
+        // Static gate (no ImageFiltered blur) — same reduce-motion look always.
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
+          ),
+          child: Center(
+            child: AppSvgIcon(
+              assetPath: AppIcons.getIconPath('profile-circle'),
+              size: 24,
+              color: accent,
             ),
           ),
         );

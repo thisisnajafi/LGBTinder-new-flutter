@@ -1,6 +1,4 @@
 // Widget: ChatListItem — REF-04 conversation row
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -360,25 +358,25 @@ class _MessagePreview extends StatelessWidget {
       return previewContent;
     }
 
-    return Stack(
-      alignment: Alignment.centerLeft,
+    // Static gate (no ImageFiltered blur) — same idea as message premium gate.
+    return Row(
       children: [
-        ClipRect(
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-            child: previewContent,
+        Expanded(
+          child: Text(
+            '············',
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+            style: textStyle?.copyWith(
+              letterSpacing: 1.5,
+              color: mutedColor.withValues(alpha: 0.45),
+            ),
           ),
         ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          child: AppSvgIcon(
-            key: ChatListItem.previewLockKey,
-            assetPath: AppIcons.lock,
-            size: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
+        AppSvgIcon(
+          key: ChatListItem.previewLockKey,
+          assetPath: AppIcons.lock,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
         ),
       ],
     );

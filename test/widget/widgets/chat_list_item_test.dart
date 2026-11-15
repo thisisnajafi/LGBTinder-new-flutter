@@ -111,6 +111,9 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(ChatListItem.previewLockKey), findsOneWidget);
+    // Static gate — no ImageFiltered blur on scroll rows (run3 smoothness).
+    expect(find.byType(ImageFiltered), findsNothing);
+    expect(find.text('secret preview'), findsNothing);
   });
 
   testWidgets('a match preview stays readable without premium', (tester) async {
