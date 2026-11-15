@@ -589,23 +589,47 @@ class AuthService {
     return fields;
   }
 
-  /// Logout: remove this device's push token on the server, revoke the
-  /// server session, delete the FCM token locally, then clear local auth.
-  /// Network steps are best-effort with a timeout so logout never hangs.
-  Future<void> logout() async {
-    final push = PushNotificationService();
-    final deviceToken = push.fcmToken;
+  /// Best-effort server logout (network only; touches no local state).
+  ///
+  /// Does **not** clear secure-storage tokens or the local FCM token —
+  /// [AuthProvider] owns both (tokens on the critical path, FCM as an
+  /// epoch-guarded background step). Pass [bearerToken] captured *before*
+  /// local clear; requests use that token explicitly and skip the global 401
+  /// handler so a late failure cannot bounce a newly logged-in session.
+  Future<void> logout({
+    String? bearerToken,
+    String? deviceToken,
+  }) async {
+    String? resolvedDeviceToken = deviceToken;
+    if (resolvedDeviceToken == null || resolvedDeviceToken.isEmpty) {
+      try {
+        resolvedDeviceToken = PushNotificationService().fcmToken;
+      } catch (_) {
+        // Firebase unavailable on this host.
+      }
+    }
     const timeout = Duration(seconds: 6);
+    final token = bearerToken;
+    final authOptions = (token != null && token.isNotEmpty)
+        ? Options(
+            headers: {'Authorization': 'Bearer $token'},
+            extra: {kSkipUnauthorizedHandlerExtra: true},
+          )
+        : Options(
+            extra: {kSkipUnauthorizedHandlerExtra: true},
+          );
+
     try {
-      final token = await _tokenStorage.getAuthToken();
       if (token != null && token.isNotEmpty) {
-        if (deviceToken != null && deviceToken.isNotEmpty) {
+        if (resolvedDeviceToken != null && resolvedDeviceToken.isNotEmpty) {
           try {
             await _apiService
                 .delete<Map<String, dynamic>>(
                   ApiEndpoints.notificationsUnregisterDevice,
-                  data: {'device_token': deviceToken},
+                  data: {'device_token': resolvedDeviceToken},
                   fromJson: (json) => json as Map<String, dynamic>,
+                  options: authOptions,
+                  queueIfOffline: false,
                 )
                 .timeout(timeout);
           } catch (_) {
@@ -616,22 +640,27 @@ class AuthService {
             .post<Map<String, dynamic>>(
               ApiEndpoints.logout,
               data: {
-                if (deviceToken != null && deviceToken.isNotEmpty)
-                  'device_token': deviceToken,
+                if (resolvedDeviceToken != null &&
+                    resolvedDeviceToken.isNotEmpty)
+                  'device_token': resolvedDeviceToken,
               },
               fromJson: (json) => json as Map<String, dynamic>,
+              options: authOptions,
+              queueIfOffline: false,
             )
             .timeout(timeout);
       }
     } catch (_) {
-      // Local logout should still proceed if the network call fails.
-    } finally {
-      try {
-        await push.clearOnLogout().timeout(timeout);
-      } catch (_) {}
-      await _tokenStorage.clearAllTokens();
-      _dioClient.clearAuthToken();
+      // Background logout must never surface errors to the UI.
     }
+    // Local FCM cleanup is owned by [AuthProviderNotifier] (epoch-guarded):
+    // doing it here ran after the network calls with no session check and
+    // could delete the push token a newer login had just registered.
+  }
+
+  /// Clears Dio's in-memory Authorization header (local logout critical path).
+  void clearInMemoryAuthHeader() {
+    _dioClient.clearAuthToken();
   }
 
   /// Send OTP for password reset

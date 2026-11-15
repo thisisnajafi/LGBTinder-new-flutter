@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,10 +10,10 @@ import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/utils/app_icons.dart';
-import '../../../routes/app_router.dart';
 import '../presentation/widgets/call_blurred_backdrop.dart';
 import '../presentation/widgets/call_outgoing_pulse.dart';
 import '../providers/incoming_call_provider.dart';
+import '../utils/call_navigation.dart';
 
 /// Full-screen incoming call. Decline and Accept use the existing notifier
 /// so an explicit decline still rejects, and accept still signals before
@@ -24,35 +26,80 @@ class IncomingCallPage extends ConsumerStatefulWidget {
 }
 
 class _IncomingCallPageState extends ConsumerState<IncomingCallPage> {
+  /// Cached in [initState] — [ref] must not be read from [dispose].
+  IncomingCallNotifier? _incomingNotifier;
+
   @override
   void initState() {
     super.initState();
+    _incomingNotifier = ref.read(incomingCallProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(incomingCallProvider.notifier).markIncomingPageOpen(true);
+      _incomingNotifier?.markIncomingPageOpen(true);
     });
   }
 
+  /// Last call this page rendered; tells an answered call from a closed one
+  /// once the provider state is already null.
+  String? _lastCallId;
+  bool _leaveScheduled = false;
+  Timer? _answeredFallback;
+
+  /// How long the accept path gets to replace this route before the page
+  /// removes itself anyway (never leave an empty dark screen behind).
+  static const Duration _answeredReplaceGrace = Duration(seconds: 2);
+
   @override
   void dispose() {
-    ref.read(incomingCallProvider.notifier).markIncomingPageOpen(false);
+    _answeredFallback?.cancel();
+    // Not markIncomingPageOpen(false): that notifies provider listeners
+    // synchronously, which is not allowed while the tree is being torn down.
+    _incomingNotifier?.markIncomingPageClosedOnDispose();
     super.dispose();
+  }
+
+  /// The call is gone (declined, cancelled by the caller, ring timeout,
+  /// permission denied): remove this page instead of leaving it as an empty
+  /// dark screen.
+  ///
+  /// This route is pushed imperatively, so `currentConfiguration.uri` still
+  /// names the page underneath; [leaveIncomingCallRoute] checks the top of
+  /// the match stack instead.
+  void _scheduleLeave(GoRouter router) {
+    if (_leaveScheduled) return;
+    _leaveScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _leaveScheduled = false;
+      if (!mounted) return;
+      if (ref.read(incomingCallProvider) != null) return;
+      final callId = _lastCallId;
+      final answered =
+          callId != null && (_incomingNotifier?.wasAnswered(callId) ?? false);
+      if (!answered) {
+        leaveIncomingCallRoute(router);
+        return;
+      }
+      // Answered: the accept path replaces this route with the in-call page.
+      // Popping here could race that replacement and take the page below.
+      _answeredFallback?.cancel();
+      _answeredFallback = Timer(_answeredReplaceGrace, () {
+        if (!mounted) return;
+        if (ref.read(incomingCallProvider) != null) return;
+        leaveIncomingCallRoute(router);
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final incoming = ref.watch(incomingCallProvider);
     if (incoming == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        final path =
-            GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
-        if (path == AppRoutes.incomingCall && context.canPop()) {
-          context.pop();
-        }
-      });
+      _scheduleLeave(GoRouter.of(context));
       return const Scaffold(backgroundColor: AppColors.backgroundDark);
     }
+    _lastCallId = incoming.callId;
+    _answeredFallback?.cancel();
+    _answeredFallback = null;
 
     final kind = incoming.isVideo ? 'video' : 'voice';
     return Scaffold(

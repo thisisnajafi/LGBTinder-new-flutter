@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Synchronous flag for GoRouter redirects (splash owns bootstrap navigation).
@@ -15,4 +16,10 @@ void markStartupFlowLeft(WidgetRef ref) {
   }
   _hasLeftStartupFlow = true;
   ref.read(startupFlowCompleteProvider.notifier).state = true;
+}
+
+/// Sets the sync startup flag without a [WidgetRef] (widget/e2e tests).
+@visibleForTesting
+void markStartupFlowLeftForTest() {
+  _hasLeftStartupFlow = true;
 }

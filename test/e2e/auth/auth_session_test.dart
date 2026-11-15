@@ -7,6 +7,7 @@ import 'package:lgbtindernew/core/providers/api_providers.dart';
 import 'package:lgbtindernew/features/auth/providers/auth_provider.dart';
 import 'package:lgbtindernew/features/auth/providers/auth_service_provider.dart';
 import 'package:lgbtindernew/pages/onboarding_page.dart';
+import 'package:lgbtindernew/shared/services/onboarding_service.dart';
 import 'package:lgbtindernew/pages/splash_page.dart';
 import 'package:lgbtindernew/routes/app_router.dart';
 import 'package:lgbtindernew/screens/auth/email_verification_screen.dart';
@@ -369,24 +370,34 @@ void main() {
   });
 
   group('Logout and unauthorized', () {
-    // TEST-020
-    testWidgets('TEST-020: logout clears tokens via auth provider', (tester) async {
+    // TEST-020 (plain test — testWidgets fake-async stalls Future.delayed / background)
+    test('TEST-020: logout clears tokens via auth provider', () async {
+      SharedPreferences.setMockInitialValues({});
       final storage = InMemoryTokenStorage()..seedAuthenticated();
       final auth = MockAuthService();
       stubLogout(auth, storage);
 
-      final container = ProviderContainer(
-        overrides: [
-          tokenStorageServiceProvider.overrideWithValue(storage),
-          authServiceProvider.overrideWithValue(auth),
-        ],
+      final notifier = AuthProviderNotifier(
+        auth,
+        storage,
+        OnboardingService(),
+        () async {},
+        () {},
       );
-      addTearDown(container.dispose);
+      addTearDown(notifier.dispose);
 
-      await container.read(authProvider.notifier).logout();
+      await Future<void>.delayed(Duration.zero);
+      await notifier.logout();
 
       expect(await storage.isAuthenticated(), isFalse);
-      verify(() => auth.logout()).called(1);
+      expect(notifier.state.isAuthenticated, isFalse);
+      await notifier.pendingBackgroundLogout;
+      verify(
+        () => auth.logout(
+          bearerToken: any(named: 'bearerToken'),
+          deviceToken: any(named: 'deviceToken'),
+        ),
+      ).called(1);
     });
 
     // TEST-022

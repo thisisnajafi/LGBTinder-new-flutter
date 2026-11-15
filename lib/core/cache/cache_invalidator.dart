@@ -82,12 +82,13 @@ class CacheInvalidator {
       );
     }
 
-    _resetInMemorySessionState();
+    resetInMemorySessionState();
 
     AppLogger.info('Private session cache purged', tag: 'cache_invalidator');
   }
 
-  void _resetInMemorySessionState() {
+  /// Synchronous in-memory provider resets (safe on the logout critical path).
+  void resetInMemorySessionState() {
     try {
       _ref.read(chatProvider.notifier).reset();
     } catch (e) {

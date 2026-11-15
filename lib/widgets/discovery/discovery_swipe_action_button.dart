@@ -9,17 +9,34 @@ import '../../core/utils/app_icons.dart';
 enum DiscoverySwipeActionType { rewind, dislike, superlike, like }
 
 /// Circular discover action button with gradient fill, border, and glow.
+///
+/// States:
+/// - enabled: full colour, press-scale and a light haptic on tap;
+/// - disabled ([onPressed] null): dimmed, not tappable;
+/// - [locked] (plan-gated): dimmed with a lock badge, still tappable so the
+///   caller can open the upgrade screen.
 class DiscoverySwipeActionButton extends StatefulWidget {
   const DiscoverySwipeActionButton({
     super.key,
     required this.type,
     required this.onPressed,
     this.size = 58,
+    this.locked = false,
   });
 
   final DiscoverySwipeActionType type;
   final VoidCallback? onPressed;
   final double size;
+
+  /// The action needs a higher plan. Shows a lock badge.
+  final bool locked;
+
+  /// Lock badge of a plan-gated action (tests).
+  @visibleForTesting
+  static const Key lockBadgeKey = ValueKey('discover-action-lock-badge');
+
+  /// Smallest tap area, whatever the visual [size].
+  static const double minTouchSize = 48;
 
   @override
   State<DiscoverySwipeActionButton> createState() =>
@@ -137,25 +154,38 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
 
   @override
   Widget build(BuildContext context) {
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
     final visuals = _visualsFor(context);
-    final touchSize = widget.size < 48 ? 48.0 : widget.size;
+    final touchSize = widget.size < DiscoverySwipeActionButton.minTouchSize
+        ? DiscoverySwipeActionButton.minTouchSize
+        : widget.size;
     final iconSize = widget.type == DiscoverySwipeActionType.superlike
         ? widget.size * 0.44
         : widget.size * 0.42;
 
     final enabled = widget.onPressed != null;
-    return Opacity(
-      opacity: enabled ? 1 : 0.4,
+    // Locked stays a little brighter than disabled: it is still tappable and
+    // its lock badge has to stay readable.
+    final opacity = !enabled ? 0.45 : (widget.locked ? 0.62 : 1.0);
+    // AnimatedOpacity fades through a render-object opacity, so the button
+    // is not rebuilt per frame and the change between states is smooth.
+    return AnimatedOpacity(
+      opacity: opacity,
+      duration: disableAnimations ? Duration.zero : AppAnimations.feedbackShort,
       child: Semantics(
       button: true,
       enabled: enabled,
       label: visuals.semanticLabel,
+      hint: widget.locked ? 'Locked. Upgrade to use.' : null,
       child: RepaintBoundary(
         child: SizedBox(
           width: touchSize,
           height: touchSize,
-          child: GestureDetector(
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (_) => _animatePressDown(disableAnimations),
             onTapCancel: () => _animateRelease(disableAnimations),
@@ -233,6 +263,35 @@ class _DiscoverySwipeActionButtonState extends State<DiscoverySwipeActionButton>
                 ),
               ),
             ),
+          ),
+              if (widget.locked)
+                PositionedDirectional(
+                  end: 0,
+                  top: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      key: DiscoverySwipeActionButton.lockBadgeKey,
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border.all(
+                          color: visuals.borderColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: AppSvgIcon(
+                          assetPath: AppIcons.lock,
+                          size: 10,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

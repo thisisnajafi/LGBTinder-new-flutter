@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -15,6 +14,11 @@ import '../../core/widgets/optimized_image.dart';
 ///
 /// Reserves aspect ratio so the 20×20 blur never causes layout shift
 /// (CHAT-IMG-002).
+///
+/// The placeholder is the 20×20 preview stretched with smooth filtering,
+/// which already reads as a blur. No `ImageFiltered` is used, so a photo
+/// bubble costs one image draw while scrolling instead of an offscreen blur
+/// pass.
 class ChatBubblePhoto extends StatelessWidget {
   final String imageUrl;
   final String? thumbnailUrl;
@@ -30,6 +34,10 @@ class ChatBubblePhoto extends StatelessWidget {
     this.aspectRatio,
     this.fit = BoxFit.cover,
   });
+
+  /// Stretched 20×20 preview shown until the photo is ready (tests).
+  @visibleForTesting
+  static const Key blurPlaceholderKey = ValueKey('chat-bubble-photo-blur');
 
   @override
   Widget build(BuildContext context) {
@@ -56,12 +64,20 @@ class ChatBubblePhoto extends StatelessWidget {
     required double width,
     required double height,
   }) {
+    final decodePx = ChatImageMemory.bubbleDecodePx(
+      logicalWidth: width,
+      logicalHeight: height,
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
+
     if (ChatLocalMedia.isLocalPath(imageUrl)) {
       return Image.file(
         File(ChatLocalMedia.toFilePath(imageUrl)),
         width: double.infinity,
         height: double.infinity,
         fit: fit,
+        // Camera originals are far larger than a bubble; decode at bubble size.
+        cacheWidth: decodePx,
         gaplessPlayback: true,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
           if (wasSynchronouslyLoaded) return child;
@@ -87,11 +103,7 @@ class ChatBubblePhoto extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       fit: fit,
-      memoryCacheWidth: ChatImageMemory.bubbleDecodePx(
-        logicalWidth: width,
-        logicalHeight: height,
-        devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
-      ),
+      memoryCacheWidth: decodePx,
       showDownloadProgress: false,
       placeholder: _blurFill(context),
       errorWidget: _blurFill(context),
@@ -101,20 +113,15 @@ class ChatBubblePhoto extends StatelessWidget {
   Widget _blurFill(BuildContext context) {
     final bytes = ChatImagePlaceholder.fromDataUri(placeholderDataUri);
     if (bytes != null) {
-      return ClipRect(
-        child: ImageFiltered(
-          imageFilter: ImageFilter.blur(
-            sigmaX: ChatImagePlaceholder.blurSigma,
-            sigmaY: ChatImagePlaceholder.blurSigma,
-          ),
-          child: Image.memory(
-            bytes,
-            fit: fit,
-            width: double.infinity,
-            height: double.infinity,
-            gaplessPlayback: true,
-          ),
-        ),
+      return Image.memory(
+        bytes,
+        key: ChatBubblePhoto.blurPlaceholderKey,
+        fit: fit,
+        width: double.infinity,
+        height: double.infinity,
+        gaplessPlayback: true,
+        excludeFromSemantics: true,
+        filterQuality: FilterQuality.medium,
       );
     }
 

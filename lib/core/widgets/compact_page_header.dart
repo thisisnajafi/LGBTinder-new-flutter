@@ -20,9 +20,30 @@ class CompactPageHeader extends StatelessWidget {
     this.action,
     this.actions = const [],
     this.onBack,
+    this.leading,
+    this.titleContent,
+    this.actionSpacing = actionGap,
+    this.contentPadding,
   });
 
+  /// Painted as the title, and always spoken as the header label.
   final String title;
+
+  /// Optional control before the title (Discover: the "View my profile"
+  /// avatar). Shown after the back button when both are set.
+  final Widget? leading;
+
+  /// Painted instead of the [title] text (Discover: greeting + first name).
+  /// Must fit one [minHeight] row. [title] is still the spoken label.
+  final Widget? titleContent;
+
+  /// Gap between trailing controls. Use 0 when each control already carries
+  /// its own padding (48 dp touch targets around 40 dp faces).
+  final double actionSpacing;
+
+  /// Inner padding of the bar. Defaults to [AppSpacing.spacingMD] on both
+  /// sides.
+  final EdgeInsetsDirectional? contentPadding;
 
   /// Spoken with the title. Not painted, so the bar stays one row.
   final String? subtitle;
@@ -127,9 +148,10 @@ class CompactPageHeader extends StatelessWidget {
                     height: minHeight,
                     width: double.infinity,
                     child: Padding(
-                      padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: AppSpacing.spacingMD,
-                      ),
+                      padding: contentPadding ??
+                          const EdgeInsetsDirectional.symmetric(
+                            horizontal: AppSpacing.spacingMD,
+                          ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -144,21 +166,27 @@ class CompactPageHeader extends StatelessWidget {
                             ),
                             const SizedBox(width: actionGap),
                           ],
+                          if (leading != null) ...[
+                            leading!,
+                            const SizedBox(width: actionGap),
+                          ],
                           Expanded(
                             child: ClampedTextScale(
                               child: KeyedSubtree(
                                 key: titleBlockKey,
-                                child: AppText(
-                                  title,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: titleColor,
-                                    height: 1.1,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                child: titleContent ??
+                                    AppText(
+                                      title,
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: titleColor,
+                                        height: 1.1,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                               ),
                             ),
                           ),
@@ -169,7 +197,8 @@ class CompactPageHeader extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 for (var i = 0; i < trailing.length; i++) ...[
-                                  if (i > 0) const SizedBox(width: actionGap),
+                                  if (i > 0 && actionSpacing > 0)
+                                    SizedBox(width: actionSpacing),
                                   trailing[i],
                                 ],
                               ],
@@ -198,6 +227,7 @@ class CompactHeaderIconButton extends StatelessWidget {
     this.tooltip,
     this.showBadge = false,
     this.mirrorInRtl = false,
+    this.touchTargetSize = touchSize,
   });
 
   final String iconPath;
@@ -209,7 +239,13 @@ class CompactHeaderIconButton extends StatelessWidget {
   /// Flips a directional glyph (back arrow) when the layout is RTL.
   final bool mirrorInRtl;
 
+  /// Side of the square tap area. The painted circle stays [faceSize].
+  final double touchTargetSize;
+
   static const double touchSize = 44;
+
+  /// Tap area for screens that require 48 dp targets (Discover).
+  static const double largeTouchSize = 48;
   static const double faceSize = 40;
   static const double iconSize = 20;
 
@@ -219,6 +255,7 @@ class CompactHeaderIconButton extends StatelessWidget {
       iconPath: iconPath,
       showBadge: showBadge,
       mirrorInRtl: mirrorInRtl,
+      touchTargetSize: touchTargetSize,
     );
     if (onPressed == null) {
       return Opacity(opacity: 0.4, child: face);
@@ -244,20 +281,25 @@ class CompactHeaderIconFace extends StatelessWidget {
     required this.iconPath,
     this.showBadge = false,
     this.mirrorInRtl = false,
+    this.touchTargetSize = CompactHeaderIconButton.touchSize,
   });
 
   final String iconPath;
   final bool showBadge;
   final bool mirrorInRtl;
+  final double touchTargetSize;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final rtl = Directionality.of(context) == TextDirection.rtl;
+    // Keep the unread dot on the rim of the circle whatever the tap area.
+    final badgeInset =
+        (touchTargetSize - CompactHeaderIconButton.faceSize) / 2 + 2;
 
     return SizedBox(
-      width: CompactHeaderIconButton.touchSize,
-      height: CompactHeaderIconButton.touchSize,
+      width: touchTargetSize,
+      height: touchTargetSize,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
@@ -285,8 +327,8 @@ class CompactHeaderIconFace extends StatelessWidget {
           ),
           if (showBadge)
             PositionedDirectional(
-              top: 4,
-              end: 4,
+              top: badgeInset,
+              end: badgeInset,
               child: RepaintBoundary(
                 child: Container(
                   width: 9,

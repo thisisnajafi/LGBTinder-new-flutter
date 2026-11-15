@@ -58,7 +58,11 @@ void main() {
     expect(ChatPresenceCopy.hasLastMessage('hey'), isTrue);
   });
 
-  testWidgets('stale online presence shows Last seen', (tester) async {
+  testWidgets('online stays Online until a presence event flips isOnline',
+      (tester) async {
+    // PresenceFreshness no longer locally expires heartbeats (RT-020); the
+    // offline event is what switches the label. A stale refreshedAt alone
+    // must not flip Online → Last seen (and must not need a 1s ticker).
     final now = DateTime(2026, 10, 15, 19, 0, 25);
     final seen = DateTime(2026, 10, 15, 19, 0, 0);
 
@@ -76,7 +80,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Online'), findsNothing);
-    expect(find.text('Last seen just now'), findsOneWidget);
+    expect(find.text('Online'), findsOneWidget);
+    expect(find.textContaining('Last seen'), findsNothing);
   });
 }

@@ -1,6 +1,4 @@
 // Widget: ChatListItem — REF-04 conversation row
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +9,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/utils/media_url.dart';
+import '../../core/widgets/frosted_placeholders.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/chat/providers/conversation_pin_cache_provider.dart';
@@ -360,25 +359,25 @@ class _MessagePreview extends StatelessWidget {
       return previewContent;
     }
 
-    return Stack(
-      alignment: Alignment.centerLeft,
+    // Looks like the blurred preview it replaces, without ImageFiltered:
+    // soft smudges that follow the hidden message's word lengths, so rows
+    // still differ from each other. No offscreen layer per row while
+    // scrolling, and none of the text is drawn or exposed.
+    return Row(
       children: [
-        ClipRect(
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-            child: previewContent,
+        Expanded(
+          child: FrostedTextPlaceholder(
+            text: previewText,
+            style: textStyle,
+            color: mutedColor,
           ),
         ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          child: AppSvgIcon(
-            key: ChatListItem.previewLockKey,
-            assetPath: AppIcons.lock,
-            size: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
+        const SizedBox(width: AppSpacing.spacingXS),
+        AppSvgIcon(
+          key: ChatListItem.previewLockKey,
+          assetPath: AppIcons.lock,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
         ),
       ],
     );

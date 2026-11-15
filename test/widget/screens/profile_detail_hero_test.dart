@@ -41,7 +41,16 @@ void main() {
     expect(find.byType(PageView), findsOneWidget);
     expect(find.byType(OptimizedImage), findsWidgets);
     expect(find.byType(BackdropFilter), findsNothing);
-    final image = tester.widget<OptimizedImage>(find.byType(OptimizedImage).first);
+    // The soft cover behind the hero is a tiny decode, not a blur pass.
+    expect(find.byType(ImageFiltered), findsNothing);
+    final image = tester.widget<OptimizedImage>(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('profile_photo_carousel')),
+            matching: find.byType(OptimizedImage),
+          )
+          .first,
+    );
     expect(image.size, ImageSize.small);
   });
 }

@@ -22,7 +22,6 @@ import '../shared/services/pusher_websocket_service.dart';
 import '../features/chat/providers/chat_list_preview_provider.dart';
 import '../core/utils/app_logger.dart';
 import '../core/location/location_providers.dart';
-import '../core/providers/api_providers.dart';
 import '../routes/home_tab_routes.dart';
 import '../features/calls/utils/full_screen_intent_gate.dart';
 import '../shared/services/pending_launch_route.dart';
@@ -256,7 +255,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final navBarReserve = AppBottomNavBar.bottomReserve(bottomInset);
 
-    ref.watch(connectivityServiceBindingProvider);
+    // Connectivity binding lives on ConnectivityBanner / connectivityProvider —
+    // do not watch it here (would rebuild the whole home shell).
 
     return PopScope(
       canPop: false,
@@ -281,8 +281,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                       for (var i = 0; i < HomeTabRoutes.tabCount; i++)
                         KeyedSubtree(
                           key: ValueKey('tab_$i'),
+                          // A hidden tab stays mounted, and IndexedStack
+                          // keeps its animations ticking off-screen. Mute
+                          // them so shimmer, pulses and the ambient
+                          // background stop costing frames until the tab is
+                          // shown again.
                           child: _mountedTabs.contains(i)
-                              ? _tabPage(i, currentIndex, profileUserId)
+                              ? TickerMode(
+                                  enabled: i == currentIndex,
+                                  child: _tabPage(
+                                    i,
+                                    currentIndex,
+                                    profileUserId,
+                                  ),
+                                )
                               : const SizedBox.shrink(),
                         ),
                     ],

@@ -929,12 +929,32 @@ class PushNotificationService {
   /// Logout cleanup: unsubscribe topics, delete the FCM token on this device
   /// and stop sending tokens to the backend until the next login.
   /// Call after the backend has been told to drop the token.
-  Future<void> clearOnLogout() async {
+  ///
+  /// [sessionSuperseded] returns true once a newer login exists. Logout is
+  /// optimistic, so this runs in the background and can overlap a re-login:
+  /// - superseded before the delete → nothing is touched;
+  /// - superseded while the delete was in flight → the new session's token
+  ///   was just invalidated, so fetch a fresh one and register it again.
+  Future<void> clearOnLogout({bool Function()? sessionSuperseded}) async {
+    bool superseded() => sessionSuperseded?.call() ?? false;
+    if (superseded()) return;
     for (final topic in _subscribedTopics.toList()) {
+      if (superseded()) return;
       await unsubscribeFromTopic(topic);
     }
+    if (superseded()) return;
     _subscribedTopics.clear();
     await deleteToken();
+    if (superseded()) {
+      AppLogger.info(
+        'Re-login raced the FCM token delete; registering a fresh token',
+        tag: 'Notifications',
+      );
+      if (_isInitialized) {
+        await _getFCMToken();
+      }
+      return;
+    }
     _apiService = null;
   }
 

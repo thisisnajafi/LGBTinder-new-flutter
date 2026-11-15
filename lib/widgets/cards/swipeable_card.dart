@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,14 +10,22 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/match_percentage_colors.dart';
 import '../../core/theme/spacing_constants.dart';
+import '../../core/utils/app_haptics.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/widgets/optimized_image.dart';
+import '../../features/discover/utils/discovery_image_prefetch.dart';
 import '../../shared/models/match_reason.dart';
 import '../ui/distance_tag.dart';
 import '../../core/responsive/responsive.dart';
 
 /// Online status indicator — functional color permitted by design spec.
 const Color kDiscoveryOnlineGreen = Color(0xFF22C55E);
+
+/// Distance from the card's top edge to the photo indicator.
+const double _kCardTopInset = 10;
+
+/// Distance from the card's side edges to overlays (chips, indicator).
+const double _kCardSideInset = 14;
 
 /// Profile card for discovery with photo overlay identity block.
 class SwipeableCard extends ConsumerStatefulWidget {
@@ -43,6 +50,9 @@ class SwipeableCard extends ConsumerStatefulWidget {
   final bool isBackgroundPreview;
   final bool hideBioMore;
 
+  /// When false (e.g. Discover tab off-screen), the photo carousel timer stops.
+  final bool carouselEnabled;
+
   const SwipeableCard({
     super.key,
     required this.userId,
@@ -65,6 +75,7 @@ class SwipeableCard extends ConsumerStatefulWidget {
     this.isExpanded = false,
     this.isBackgroundPreview = false,
     this.hideBioMore = false,
+    this.carouselEnabled = true,
   });
 
   static const double cardRadius = AppRadius.radiusXL;
@@ -139,7 +150,9 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
       reverseCurve: Curves.easeInCubic,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _scheduleImageCarousel();
+      if (!mounted) return;
+      _scheduleImageCarousel();
+      _precacheNeighbourPhoto();
     });
   }
 
@@ -153,15 +166,23 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
         oldWidget.avatarUrl != widget.avatarUrl) {
       _scheduleImageCarousel();
     }
-    if (oldWidget.isExpanded != widget.isExpanded) {
-      if (widget.isExpanded) {
+    if (oldWidget.isExpanded != widget.isExpanded ||
+        oldWidget.carouselEnabled != widget.carouselEnabled ||
+        oldWidget.isBackgroundPreview != widget.isBackgroundPreview) {
+      if (widget.isExpanded ||
+          !widget.carouselEnabled ||
+          widget.isBackgroundPreview) {
         _stopImageCarousel();
       } else {
         _scheduleImageCarousel();
       }
     }
+    if (oldWidget.isBackgroundPreview && !widget.isBackgroundPreview) {
+      // Promoted to the front: get the second photo ready.
+      _precacheNeighbourPhoto();
+    }
     if (oldWidget.isExpanded == widget.isExpanded) return;
-    final shouldAnimate = !MediaQuery.of(context).disableAnimations;
+    final shouldAnimate = !MediaQuery.disableAnimationsOf(context);
     if (!shouldAnimate) {
       _headerController.value = widget.isExpanded ? 1 : 0;
       return;
@@ -188,12 +209,17 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
 
   void _scheduleImageCarousel() {
     _stopImageCarousel();
-    if (!mounted || widget.isBackgroundPreview || widget.isExpanded) return;
+    if (!mounted ||
+        widget.isBackgroundPreview ||
+        widget.isExpanded ||
+        !widget.carouselEnabled) {
+      return;
+    }
 
     final count = _images.length;
     if (count <= 1) return;
 
-    if (MediaQuery.of(context).disableAnimations) return;
+    if (MediaQuery.disableAnimationsOf(context)) return;
 
     final generation = ++_carouselGeneration;
     _imageCarouselTimer = Timer.periodic(
@@ -203,7 +229,24 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
         setState(() {
           _currentImageIndex = (_currentImageIndex + 1) % count;
         });
+        _precacheNeighbourPhoto();
       },
+    );
+  }
+
+  /// Decodes the photo after the current one, at the size the card shows it,
+  /// so switching photos does not flash the placeholder.
+  void _precacheNeighbourPhoto() {
+    if (!mounted || widget.isBackgroundPreview) return;
+    final images = _images;
+    if (images.length <= 1) return;
+    final next = (_currentImageIndex + 1) % images.length;
+    unawaited(
+      DiscoveryImagePrefetch.precacheCardPhoto(
+        context,
+        images[next],
+        decodeWidth: SwipeableCard.photoDecodeWidth(context),
+      ),
     );
   }
 
@@ -215,11 +258,12 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
 
   void _cycleImage(int delta, int imageCount) {
     if (imageCount <= 1) return;
-    setState(() {
-      final nextIndex = (_currentImageIndex + delta).clamp(0, imageCount - 1);
-      _currentImageIndex = nextIndex;
-    });
+    final nextIndex = (_currentImageIndex + delta).clamp(0, imageCount - 1);
+    if (nextIndex == _currentImageIndex) return;
+    AppHaptics.selection();
+    setState(() => _currentImageIndex = nextIndex);
     _scheduleImageCarousel();
+    _precacheNeighbourPhoto();
   }
 
   List<String> get _images {
@@ -244,11 +288,15 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
   @override
   Widget build(BuildContext context) {
     final images = _images;
+    // Guard against a shorter photo list after a feed refresh.
+    if (_currentImageIndex >= images.length) _currentImageIndex = 0;
     final currentImage = images.isNotEmpty ? images[_currentImageIndex] : null;
-    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
     final displayName = widget.name.trim().isEmpty ? 'User' : widget.name.trim();
     final matchPct = widget.matchPercentage;
-    final cardReasons = widget.matchReasons.take(3).toList();
+    final hasMatchChip = matchPct != null && matchPct > 0;
+    final hasChips =
+        hasMatchChip || widget.isSuperliked || widget.matchReasons.isNotEmpty;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -305,6 +353,8 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                     left: 0,
                     right: 0,
                     bottom: 120,
+                    // A Row follows the text direction, so "previous" is on
+                    // the leading half in both LTR and RTL.
                     child: Row(
                       children: [
                         Expanded(
@@ -323,62 +373,35 @@ class _SwipeableCardState extends ConsumerState<SwipeableCard>
                     ),
                   ),
                 if (!widget.isBackgroundPreview) ...[
-                  if ((matchPct != null && matchPct > 0) || widget.isSuperliked)
-                    Positioned(
-                      top: 14,
-                      left: 14,
-                      right: 56,
-                      child: Wrap(
-                        spacing: AppSpacing.spacingXS,
-                        runSpacing: AppSpacing.spacingXS,
-                        children: [
-                          if (matchPct != null && matchPct > 0)
-                            _MatchPercentageBadge(percentage: matchPct),
-                          if (widget.isSuperliked)
-                            const _SuperlikedYouBadge(),
-                        ],
-                      ),
-                    ),
-                  if (cardReasons.isNotEmpty)
-                    Positioned(
-                      top: (matchPct != null && matchPct > 0) ||
-                              widget.isSuperliked
-                          ? 52
-                          : 14,
-                      left: 14,
-                      right: 56,
-                      child: _MatchReasonBadges(reasons: cardReasons),
-                    ),
                   if (images.length > 1)
-                    Positioned(
-                      right: 10,
-                      top: 0,
-                      bottom: 0,
-                      child: _PhotoStripIndicator(
-                        count: images.length,
-                        activeIndex: _currentImageIndex,
-                        disableAnimations: disableAnimations,
-                      ),
-                    ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: textBottomInset + AppSpacing.spacingXXXL,
-                    child: IgnorePointer(
-                      child: Center(
-                        child: Container(
-                          width: AppSpacing.spacingXXL,
-                          height: AppSpacing.spacingXS,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.55),
-                            borderRadius: BorderRadius.circular(
-                              AppRadius.radiusRound,
-                            ),
-                          ),
+                    PositionedDirectional(
+                      top: _kCardTopInset,
+                      start: _kCardSideInset,
+                      end: _kCardSideInset,
+                      child: IgnorePointer(
+                        child: _PhotoSegmentIndicator(
+                          count: images.length,
+                          activeIndex: _currentImageIndex,
                         ),
                       ),
                     ),
-                  ),
+                  if (hasChips)
+                    PositionedDirectional(
+                      top: images.length > 1
+                          ? _kCardTopInset +
+                              _PhotoSegmentIndicator.height +
+                              AppSpacing.spacingSM
+                          : _kCardSideInset,
+                      start: _kCardSideInset,
+                      end: _kCardSideInset,
+                      child: IgnorePointer(
+                        child: _CardChips(
+                          matchPercentage: hasMatchChip ? matchPct : null,
+                          isSuperliked: widget.isSuperliked,
+                          reasons: widget.matchReasons,
+                        ),
+                      ),
+                    ),
                   Positioned(
                     left: 16,
                     right: 16,
@@ -558,6 +581,12 @@ class _PhotoLayer extends StatelessWidget {
   }
 }
 
+/// Scrim over the photo: a short soft band at the top so the photo indicator
+/// and chips stay readable on bright photos, clear in the middle, and a
+/// smooth ramp to near-black under the name and bio.
+///
+/// One static gradient inside the card's repaint boundary: it is painted
+/// once, not while the card is dragged.
 class _PhotoGradientOverlay extends StatelessWidget {
   const _PhotoGradientOverlay();
 
@@ -568,13 +597,147 @@ class _PhotoGradientOverlay extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: const [0.0, 0.32, 0.58, 0.82, 1.0],
+          stops: const [0.0, 0.16, 0.44, 0.62, 0.80, 1.0],
           colors: [
+            Colors.black.withValues(alpha: 0.36),
             Colors.transparent,
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.28),
-            Colors.black.withValues(alpha: 0.62),
-            Colors.black.withValues(alpha: 0.92),
+            Colors.black.withValues(alpha: 0.30),
+            Colors.black.withValues(alpha: 0.64),
+            Colors.black.withValues(alpha: 0.90),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Chips at the top of the card: match percentage, "superliked you", and up
+/// to [maxReasons] match reasons. More reasons collapse into a "+N" chip.
+///
+/// Each row shrinks its chips (ellipsis) instead of wrapping, so the block is
+/// at most two rows whatever the text scale or card width.
+class _CardChips extends StatelessWidget {
+  const _CardChips({
+    required this.matchPercentage,
+    required this.isSuperliked,
+    required this.reasons,
+  });
+
+  final int? matchPercentage;
+  final bool isSuperliked;
+  final List<MatchReason> reasons;
+
+  static const int maxReasons = 2;
+  static const double _gap = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = reasons.take(maxReasons).toList();
+    final hidden = reasons.length - shown.length;
+    final pct = matchPercentage;
+    final hasFirstRow = pct != null || isSuperliked;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (hasFirstRow)
+          Row(
+            children: [
+              if (pct != null) Flexible(child: _MatchPercentageBadge(percentage: pct)),
+              if (isSuperliked) ...[
+                if (pct != null) const SizedBox(width: _gap),
+                const _SuperlikedYouBadge(),
+              ],
+            ],
+          ),
+        if (shown.isNotEmpty) ...[
+          if (hasFirstRow) const SizedBox(height: _gap),
+          Row(
+            children: [
+              for (var i = 0; i < shown.length; i++) ...[
+                if (i > 0) const SizedBox(width: _gap),
+                Flexible(
+                  child: _CardChip(
+                    iconPath: matchReasonIconPath(shown[i].type),
+                    label: shown[i].label,
+                  ),
+                ),
+              ],
+              if (hidden > 0) ...[
+                const SizedBox(width: _gap),
+                _CardChip(
+                  label: '+$hidden',
+                  semanticLabel: '$hidden more match reasons',
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// One pill on the card photo. All card chips share this shape, height and
+/// type style; only the fill differs.
+class _CardChip extends StatelessWidget {
+  const _CardChip({
+    required this.label,
+    this.iconPath,
+    this.fill,
+    this.foreground = Colors.white,
+    this.semanticLabel,
+  });
+
+  final String label;
+  final String? iconPath;
+
+  /// Defaults to a dark translucent fill that keeps white text above AA
+  /// contrast on any photo.
+  final Color? fill;
+  final Color foreground;
+  final String? semanticLabel;
+
+  static const double minHeight = 28;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: semanticLabel != null,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: minHeight),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: fill ?? Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: fill == null ? 0.16 : 0.28),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (iconPath != null) ...[
+              AppSvgIcon(assetPath: iconPath!, size: 14, color: foreground),
+              const SizedBox(width: 5),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -590,19 +753,23 @@ class _SuperlikedYouBadge extends StatelessWidget {
     return Semantics(
       label: 'Superliked you',
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.spacingXS),
+        width: _CardChip.minHeight,
+        height: _CardChip.minHeight,
         decoration: BoxDecoration(
-          color: AppColors.warningYellow.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+          color: AppColors.warningYellow.withValues(alpha: 0.94),
+          shape: BoxShape.circle,
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.28),
             width: 1,
           ),
         ),
-        child: const AppSvgIcon(
-          assetPath: AppIcons.star,
-          size: 14,
-          color: Colors.white,
+        child: const Center(
+          child: AppSvgIcon(
+            assetPath: AppIcons.star,
+            size: 14,
+            // Dark glyph: white on yellow does not reach 3:1.
+            color: Colors.black87,
+          ),
         ),
       ),
     );
@@ -616,131 +783,72 @@ class _MatchPercentageBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final color = MatchPercentageColors.colorFor(percentage);
+    // The band colours run from red to yellow to violet. White text fails
+    // AA on the yellow and green bands, so pick the text colour per band.
+    final foreground =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.light
+            ? Colors.black87
+            : Colors.white;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.28),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.35),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppSvgIcon(
-            assetPath: AppIcons.getIconPath('magic-star'),
-            size: 14,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 5),
-          Text(
-            'Match $percentage%',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
+    return _CardChip(
+      iconPath: AppIcons.getIconPath('magic-star'),
+      label: 'Match $percentage%',
+      fill: color.withValues(alpha: 0.94),
+      foreground: foreground,
     );
   }
 }
 
-class _MatchReasonBadges extends StatelessWidget {
-  const _MatchReasonBadges({required this.reasons});
-
-  final List<MatchReason> reasons;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: reasons.map((reason) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.52),
-            borderRadius: BorderRadius.circular(AppRadius.radiusLG),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.14),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppSvgIcon(
-                assetPath: matchReasonIconPath(reason.type),
-                size: 16,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                reason.label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _PhotoStripIndicator extends StatelessWidget {
-  const _PhotoStripIndicator({
+/// Thin segmented bar at the top of the card: one segment per photo, the
+/// current one solid.
+///
+/// Segments follow the text direction, so the first photo is on the leading
+/// side in RTL too, matching the tap zones.
+class _PhotoSegmentIndicator extends StatelessWidget {
+  const _PhotoSegmentIndicator({
     required this.count,
     required this.activeIndex,
-    required this.disableAnimations,
   });
 
   final int count;
   final int activeIndex;
-  final bool disableAnimations;
+
+  static const double height = 3;
+
+  /// More photos than this and the segments get too short to read; the bar
+  /// then shows a window around the current photo.
+  static const int maxSegments = 9;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final isActive = index == activeIndex;
-        return Padding(
-          padding: EdgeInsets.only(bottom: index < count - 1 ? 4 : 0),
-          child: AnimatedContainer(
-            duration: disableAnimations
-                ? Duration.zero
-                : AppAnimations.imageFadeIn,
-            curve: Curves.easeOutCubic,
-            width: 4,
-            height: isActive ? 28 : 8,
-            decoration: BoxDecoration(
-              color: isActive
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.40),
-              borderRadius: BorderRadius.circular(100),
-            ),
-          ),
-        );
-      }),
+    final visible = math.min(count, maxSegments);
+    final first = count <= maxSegments
+        ? 0
+        : (activeIndex - maxSegments ~/ 2).clamp(0, count - maxSegments);
+
+    return Semantics(
+      label: 'Photo ${activeIndex + 1} of $count',
+      child: SizedBox(
+        height: height,
+        child: Row(
+          children: [
+            for (var i = 0; i < visible; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: first + i == activeIndex
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.38),
+                    borderRadius: BorderRadius.circular(AppRadius.radiusRound),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -789,6 +897,25 @@ class _BottomTextBlock extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (openProfile != null) ...[
+                // Pull-up handle. It sits in the column, above the name, so
+                // it can never land on top of the text.
+                Center(
+                  child: ExcludeSemantics(
+                    child: Container(
+                      width: AppSpacing.spacingXXL,
+                      height: AppSpacing.spacingXS,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(
+                          AppRadius.radiusRound,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.spacingSM),
+              ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -880,7 +1007,7 @@ class _BottomTextBlock extends StatelessWidget {
                 const SizedBox(height: 8),
                 _BioPreview(
                   bio: trimmedBio,
-                  onMoreTap: openProfile,
+                  showMore: openProfile != null,
                 ),
               ],
             ],
@@ -891,48 +1018,44 @@ class _BottomTextBlock extends StatelessWidget {
   }
 }
 
+/// Bio teaser: at most two lines, cut with an ellipsis at a word boundary by
+/// the text layout. Long bios get a "more" label; the whole text block
+/// already opens the profile on tap, so the label needs no recognizer.
 class _BioPreview extends StatelessWidget {
   const _BioPreview({
     required this.bio,
-    required this.onMoreTap,
+    required this.showMore,
   });
 
   final String bio;
-  final VoidCallback? onMoreTap;
+  final bool showMore;
+
+  /// Bios longer than this rarely fit two lines on a phone card.
+  static const int longBioLength = 70;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: Colors.white.withValues(alpha: 0.82),
+      height: 1.35,
+    );
+    final text = AppText(bio, maxLines: 2, style: style);
+    if (!showMore || bio.length <= longBioLength) return text;
 
-    if (bio.length <= 60) {
-      return AppText(
-        bio,
-        maxLines: 3,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: Colors.white.withValues(alpha: 0.75),
-        ),
-      );
-    }
-
-    final preview = bio.substring(0, 60);
-    return Text.rich(
-      TextSpan(
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: Colors.white.withValues(alpha: 0.75),
-        ),
-        children: [
-          TextSpan(text: '$preview... '),
-          TextSpan(
-            text: 'more',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-            recognizer: TapGestureRecognizer()..onTap = onMoreTap,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(child: text),
+        const SizedBox(width: AppSpacing.spacingSM),
+        Text(
+          'more',
+          style: style?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
           ),
-        ],
-      ),
-      maxLines: 3,
+        ),
+      ],
     );
   }
 }

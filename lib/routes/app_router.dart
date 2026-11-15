@@ -547,14 +547,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'likes-received',
             name: 'likes-received',
             pageBuilder: (context, state) =>
-                slideFadePage(state, const LikesReceivedScreen()),
+                platformPredictivePage(state, const LikesReceivedScreen()),
           ),
           
           // Matches (inherits auth from parent)
           GoRoute(
             path: 'matches',
             name: 'matches',
-            pageBuilder: (context, state) => slideFadePage(state, const MatchesScreen()),
+            pageBuilder: (context, state) =>
+                platformPredictivePage(state, const MatchesScreen()),
           ),
 
           // Google Play Billing Test — debug/profile only (PERF-FEAT-PAY-009).

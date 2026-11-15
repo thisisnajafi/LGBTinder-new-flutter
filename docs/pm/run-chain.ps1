@@ -1,0 +1,5 @@
+﻿$f='E:\1 - laravel\1 - LGBTinder\lgbtindernew\docs\pm\run-agent.ps1'
+& $f -Name 'run1-logout-auto' -Model 'auto' -PromptFile 'docs/pm/prompts/01-optimistic-logout.md'
+& $f -Name 'run2-call-auto' -Model 'auto' -PromptFile 'docs/pm/prompts/02-call-end-black-screen.md'
+& $f -Name 'run3-smooth-auto' -Model 'auto' -PromptFile 'docs/pm/prompts/03-smoothness.md'
+'CHAIN_DONE' | Out-File 'E:\1 - laravel\1 - LGBTinder\lgbtindernew\docs\pm\logs\chain.done'

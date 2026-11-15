@@ -8,6 +8,7 @@ import '../domain/use_cases/get_call_use_case.dart';
 import '../domain/use_cases/accept_call_use_case.dart';
 import '../domain/use_cases/decline_call_use_case.dart';
 import '../domain/use_cases/end_call_use_case.dart';
+import '../utils/call_end_orchestrator.dart';
 import 'call_providers.dart';
 import '../../../core/errors/user_error_message.dart';
 
@@ -196,6 +197,16 @@ class CallNotifier extends StateNotifier<CallState> {
 
       return true;
     } catch (e) {
+      // Remote side already ended → 404 "not active" is success for our end.
+      if (CallEndOrchestrator.isInactiveEndSuccess(e)) {
+        state = state.copyWith(
+          activeCall: null,
+          callDuration: Duration.zero,
+          isEndingCall: false,
+          error: null,
+        );
+        return true;
+      }
       state = state.copyWith(
         isEndingCall: false,
         error: userErrorMessage(e),

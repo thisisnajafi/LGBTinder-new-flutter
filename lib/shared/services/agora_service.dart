@@ -812,34 +812,49 @@ class AgoraService {
   /// Return playback to the OS session so in-app media is not stuck on speaker.
   Future<void> restoreMediaAudioSession() async {
     final engine = _engine;
-    if (engine == null) return;
+    if (engine == null || _teardownInFlight) return;
+    // After leaveChannel the engine often rejects route changes with -3
+    // (not ready). That is expected during teardown — do not warn.
     try {
       await engine.setEnableSpeakerphone(false);
     } catch (e) {
-      AppLogger.warning(
-        'restore setEnableSpeakerphone failed',
-        tag: _tag,
-        error: e,
-      );
+      if (!_isBenignAgoraTeardownError(e)) {
+        AppLogger.warning(
+          'restore setEnableSpeakerphone failed',
+          tag: _tag,
+          error: e,
+        );
+      }
     }
     try {
       await engine.setDefaultAudioRouteToSpeakerphone(false);
     } catch (e) {
-      AppLogger.warning(
-        'restore setDefaultAudioRouteToSpeakerphone failed',
-        tag: _tag,
-        error: e,
-      );
+      if (!_isBenignAgoraTeardownError(e)) {
+        AppLogger.warning(
+          'restore setDefaultAudioRouteToSpeakerphone failed',
+          tag: _tag,
+          error: e,
+        );
+      }
     }
     try {
       await engine.setAudioScenario(AudioScenarioType.audioScenarioDefault);
     } catch (e) {
+      if (_isBenignAgoraTeardownError(e)) return;
       AppLogger.warning(
         'restore setAudioScenario failed',
         tag: _tag,
         error: e,
       );
     }
+  }
+
+  /// Agora ERR_NOT_READY (-3) / similar after leaveChannel during teardown.
+  static bool _isBenignAgoraTeardownError(Object error) {
+    final text = error.toString();
+    return text.contains('AgoraRtcException(-3)') ||
+        text.contains('code: -3') ||
+        RegExp(r'\(-3\)').hasMatch(text);
   }
 
   Future<void> toggleAudio(bool enabled) async {

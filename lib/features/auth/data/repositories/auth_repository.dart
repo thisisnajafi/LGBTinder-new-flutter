@@ -35,9 +35,12 @@ class AuthRepository {
     return await _authService.completeRegistration(request);
   }
 
-  /// Logout
-  Future<void> logout() async {
-    return await _authService.logout();
+  /// Best-effort remote logout (does not clear local tokens).
+  Future<void> logout({String? bearerToken, String? deviceToken}) async {
+    return await _authService.logout(
+      bearerToken: bearerToken,
+      deviceToken: deviceToken,
+    );
   }
 
   /// Send OTP for password reset

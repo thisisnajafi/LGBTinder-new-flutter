@@ -1,6 +1,4 @@
 // Widget: ChatHeader — premium conversation header
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -172,7 +170,8 @@ class ChatHeader extends ConsumerWidget {
   }
 }
 
-class _HeaderAvatar extends StatefulWidget {
+/// Avatar ring / online pip — rebuilt only when presence props change (no 1s ticker).
+class _HeaderAvatar extends StatelessWidget {
   const _HeaderAvatar({
     required this.imageUrl,
     required this.isOnline,
@@ -186,56 +185,13 @@ class _HeaderAvatar extends StatefulWidget {
   final bool isOfficial;
 
   @override
-  State<_HeaderAvatar> createState() => _HeaderAvatarState();
-}
-
-class _HeaderAvatarState extends State<_HeaderAvatar> {
-  Timer? _ticker;
-
-  @override
-  void initState() {
-    super.initState();
-    _syncTicker();
-  }
-
-  @override
-  void didUpdateWidget(_HeaderAvatar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncTicker();
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
-
-  bool get _online => PresenceFreshness.isEffectivelyOnline(
-        isOnline: widget.isOnline,
-        refreshedAt: widget.refreshedAt,
-        now: DateTime.now(),
-      );
-
-  void _syncTicker() {
-    if (!_online) {
-      _ticker?.cancel();
-      _ticker = null;
-      return;
-    }
-    _ticker ??= Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      if (!_online) {
-        _ticker?.cancel();
-        _ticker = null;
-      }
-      setState(() {});
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isOnline = _online;
+    final online = PresenceFreshness.isEffectivelyOnline(
+      isOnline: isOnline,
+      refreshedAt: refreshedAt,
+      now: DateTime.now(),
+    );
 
     return SizedBox(
       width: 48,
@@ -244,7 +200,7 @@ class _HeaderAvatarState extends State<_HeaderAvatar> {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          if (isOnline)
+          if (online)
             Container(
               width: 46,
               height: 46,
@@ -263,13 +219,13 @@ class _HeaderAvatarState extends State<_HeaderAvatar> {
             ),
             child: ClipOval(
               child: ChatPeerAvatar(
-                imageUrl: widget.imageUrl,
+                imageUrl: imageUrl,
                 size: 38,
-                isOfficial: widget.isOfficial,
+                isOfficial: isOfficial,
               ),
             ),
           ),
-          if (isOnline)
+          if (online)
             Positioned(
               right: 0,
               bottom: 0,

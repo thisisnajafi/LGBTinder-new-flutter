@@ -6,6 +6,7 @@ import 'package:lgbtindernew/core/providers/api_providers.dart';
 import 'package:lgbtindernew/core/theme/app_theme.dart';
 import 'package:lgbtindernew/features/auth/providers/auth_service_provider.dart';
 import 'package:lgbtindernew/features/payments/data/services/plan_limits_service.dart';
+import 'package:lgbtindernew/core/providers/startup_flow_provider.dart';
 import 'package:lgbtindernew/routes/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,7 +70,7 @@ Future<E2eAppHandle> pumpAuthenticatedE2eApp(
   );
 
   // Splash delay + skip network check-token (not available in widget tests).
-  markStartupFlowLeft();
+  markStartupFlowLeftForTest();
   app.router.go(AppRoutes.home);
   await tester.pump(const Duration(milliseconds: 700));
   await tester.pump(const Duration(milliseconds: 500));

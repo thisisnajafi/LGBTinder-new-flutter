@@ -18,7 +18,6 @@ import '../data/models/incoming_call_data.dart';
 import '../data/services/call_kit_service.dart';
 import '../data/services/callkit_pending_flusher.dart';
 import '../../../routes/app_router.dart';
-import '../pages/outgoing_call_page.dart';
 import '../presentation/widgets/call_permission_sheet.dart';
 import '../utils/call_busy_confirmation.dart';
 import '../utils/call_local_busy.dart';
@@ -63,16 +62,64 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
 
   bool get incomingPageOpen => _incomingPageOpen;
 
+  /// Calls this device already answered (in-app or CallKit).
+  final Set<String> _answeredCallIds = <String>{};
+
+  /// Calls that finished ringing here without an answer: declined, timed out,
+  /// cancelled by the caller, or rejected for a missing permission.
+  final Set<String> _settledCallIds = <String>{};
+
+  static const int _maxTrackedCallIds = 64;
+
+  static void _track(Set<String> ids, String callId) {
+    if (callId.isEmpty) return;
+    ids.add(callId);
+    while (ids.length > _maxTrackedCallIds) {
+      ids.remove(ids.first);
+    }
+  }
+
+  /// True once this device answered [callId]. The accept path then owns
+  /// navigation (it replaces the incoming route with the in-call page).
+  bool wasAnswered(String callId) =>
+      _acceptedCallId == callId || _answeredCallIds.contains(callId);
+
+  /// True when [callId] must not ring again on this device. The same call
+  /// can arrive up to three times (Pusher, FCM, CallKit restore); a copy
+  /// that lands after Accept / Decline / cancel is a ghost.
+  bool isClosed(String callId) =>
+      wasAnswered(callId) || _settledCallIds.contains(callId);
+
+  void _markSettled(String callId) => _track(_settledCallIds, callId);
+
   void markIncomingPageOpen(bool open) {
     if (_incomingPageOpen == open) return;
     _incomingPageOpen = open;
     ref.notifyListeners();
   }
 
+  /// [markIncomingPageOpen] `(false)` for `State.dispose`.
+  ///
+  /// Riverpod forbids notifying listeners while the widget tree is being
+  /// finalized: in debug builds the synchronous version threw inside
+  /// `dispose`, so `super.dispose()` never ran. The flag flips now (readers
+  /// see the truth at once) and listeners are told right after the frame.
+  void markIncomingPageClosedOnDispose() {
+    if (!_incomingPageOpen) return;
+    _incomingPageOpen = false;
+    scheduleMicrotask(() {
+      try {
+        ref.notifyListeners();
+      } catch (_) {
+        // Provider disposed in the meantime (logout / app teardown).
+      }
+    });
+  }
+
   /// Adopt a CallKit row that is still ringing. Does not start another
   /// ringtone or post a second native incoming UI.
   void adoptRinging(IncomingCallData data) {
-    if (_acceptedCallId == data.callId) return;
+    if (isClosed(data.callId)) return;
     if (state?.callId == data.callId) return;
     _autoDismissTimer?.cancel();
     state = data;
@@ -106,8 +153,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     final data = IncomingCallData.fromPayload(payload);
     if (data == null) return;
 
-    if (_acceptedCallId == data.callId ||
-        _pendingNavigation?.callId == data.callId) {
+    if (isClosed(data.callId) || _pendingNavigation?.callId == data.callId) {
       return;
     }
 
@@ -155,7 +201,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
         error: e,
       );
     }
-    if (state?.callId == data.callId || _acceptedCallId == data.callId) {
+    if (state?.callId == data.callId || isClosed(data.callId)) {
       return;
     }
     if (CallBusyConfirmation.serverConfirmsBusy(
@@ -167,7 +213,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       return;
     }
     await _dropStaleLocalCall();
-    if (state?.callId == data.callId || _acceptedCallId == data.callId) {
+    if (state?.callId == data.callId || isClosed(data.callId)) {
       return;
     }
     _showIncoming(data);
@@ -261,20 +307,13 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
         );
         return;
       }
-      // Push before clearing the banner. Clearing state unmounts the
-      // button context, and GoRouter.of(that context) is missing because
-      // the banner sits above the navigator.
-      ref.read(appRouterProvider).push(
-            activeCallLocation(
-              callId: int.parse(data.callId),
-              recipientId: data.callerId,
-              recipientName: data.callerName,
-              recipientAvatarUrl: data.callerAvatar,
-              type: data.isVideo
-                  ? OutgoingCallType.video
-                  : OutgoingCallType.voice,
-            ),
-          );
+      // Answered: a late duplicate (FCM after Pusher) or the persisted
+      // payload read on the next resume must not ring this call again.
+      _track(_answeredCallIds, data.callId);
+      IncomingCallHandler.clearPendingCallData();
+      // Replace the incoming route (do not push on top). A stacked incoming
+      // page with null state is an empty black screen after hang-up.
+      openActiveCallReplacingIncoming(ref.read(appRouterProvider), data);
       state = null;
       unawaited(SoundService.instance.stopCallSounds());
       unawaited(CallKitService.instance.endCall(data.callId));
@@ -296,6 +335,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     if (data != null && data.callId != callId) return;
 
     _autoDismissTimer?.cancel();
+    _markSettled(callId);
     if (data != null && data.callId == callId) {
       state = null;
     }
@@ -314,6 +354,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     if (data == null) return;
 
     _autoDismissTimer?.cancel();
+    _markSettled(data.callId);
     state = null;
     unawaited(SoundService.instance.stopCallSounds());
     IncomingCallHandler.clearPendingCallData();
@@ -391,6 +432,8 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     }
 
     _acceptedCallId = callId;
+    // A decline recorded for this id earlier must not hide the answer.
+    _settledCallIds.remove(callId);
     _autoDismissTimer?.cancel();
     unawaited(IncomingCallHandler.markAccepted(data));
 
@@ -462,8 +505,14 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       'Rejecting $callId after permission denial',
       tag: 'IncomingCall',
     );
+    _markSettled(callId);
     if (state?.callId == callId) {
       state = null;
+    }
+    // The payload was persisted when the call started ringing; left behind,
+    // the next resume would adopt it as a ringing call again.
+    if (IncomingCallHandler.dataForCallId(callId) != null) {
+      IncomingCallHandler.clearPendingCallData();
     }
     unawaited(SoundService.instance.stopCallSounds());
     try {
@@ -498,6 +547,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     }
 
     _autoDismissTimer?.cancel();
+    _markSettled(callId);
     unawaited(SoundService.instance.stopCallSounds());
     AppLogger.info(
       'rejectFromCallKit posting reject for $callId (state=${state?.callId})',
@@ -563,6 +613,16 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
   /// Caller hung up / call finished — stop ringtone and hide the banner.
   /// Does not call decline/end APIs (the remote side already did).
   Future<void> dismissRemote(String callId) async {
+    // The call is over on the server: a late duplicate invite or the
+    // persisted ringing payload must not bring the incoming UI back.
+    if (!wasAnswered(callId)) {
+      _markSettled(callId);
+    }
+    if (IncomingCallHandler.dataForCallId(callId) != null &&
+        !IncomingCallHandler.wasCallAccepted(callId)) {
+      IncomingCallHandler.clearPendingCallData();
+    }
+
     final data = state;
     if (data == null || data.callId != callId) {
       await CallKitService.instance.endCall(callId);
@@ -588,8 +648,9 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
       if (uri.path == AppRoutes.splash || uri.path.isEmpty) {
         return;
       }
-      if (uri.path == AppRoutes.outgoingCall &&
-          uri.queryParameters['callId'] == data.callId) {
+      // Stack-aware: the in-call page is pushed imperatively, so the URI
+      // above still names the page underneath it.
+      if (isActiveCallRouteOnStack(router, data.callId)) {
         _pendingNavigation = null;
         return;
       }
@@ -605,15 +666,7 @@ class IncomingCallNotifier extends Notifier<IncomingCallData?> {
     _pendingNavigation = null;
     IncomingCallHandler.clearPendingCallData();
 
-    router.push(
-      activeCallLocation(
-        callId: int.parse(data.callId),
-        recipientId: data.callerId,
-        recipientName: data.callerName,
-        recipientAvatarUrl: data.callerAvatar,
-        type: data.isVideo ? OutgoingCallType.video : OutgoingCallType.voice,
-      ),
-    );
+    openActiveCallReplacingIncoming(router, data);
   }
 }
 

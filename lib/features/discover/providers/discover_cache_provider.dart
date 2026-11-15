@@ -114,6 +114,45 @@ class DiscoverFeedSlice {
 /// Buffer threshold: fetch more when stack drops below this.
 const int kDiscoverStackBufferThreshold = 5;
 
+/// Whether an optimistic swipe whose request failed should give the card
+/// back.
+///
+/// Restored: server errors (5xx), timeouts (408), plan-limit rejections and
+/// unexpected exceptions. The action did not happen and a retry can work.
+///
+/// Not restored: offline errors (code 0; the page tells the user it will be
+/// sent on reconnect) and other 4xx answers such as "already liked" or
+/// "user not found", where the same swipe would fail again and the card
+/// would come back forever.
+bool shouldRestoreSwipeAfterFailure(Object error, {required bool isLimitError}) {
+  if (isLimitError) return true;
+  if (error is! ApiError) return true;
+  final code = error.code;
+  if (code == null) return true;
+  if (code == 0) return false;
+  return code >= 500 || code == 408;
+}
+
+/// [items] with the swipe on [userId] undone, or null when that user is not
+/// in the list or was never swiped.
+///
+/// The card keeps its place in the list. Everything before it was already
+/// swiped, so it becomes the front card again.
+List<CachedDiscoverItem>? restoreSwipedDiscoverItem(
+  List<CachedDiscoverItem> items,
+  int userId,
+) {
+  final idx = items.indexWhere((e) => e.profile.id == userId);
+  if (idx < 0) return null;
+  final item = items[idx];
+  if (item.interactionState == DiscoverInteractionState.none) return null;
+  return List<CachedDiscoverItem>.from(items)
+    ..[idx] = item.copyWith(
+      interactionState: DiscoverInteractionState.none,
+      syncStatus: DiscoverSyncStatus.synced,
+    );
+}
+
 /// Encodes discover feed JSON off the UI thread (used by [compute]).
 String encodeDiscoverFeedForCache(List<Map<String, dynamic>> raw) {
   return jsonEncode(<String, dynamic>{'list': raw});
@@ -352,6 +391,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function()? onLostMatch,
     void Function()? onSuperlikeSent,
     void Function()? onOfflineQueued,
+    void Function(Object error)? onSwipeRestored,
   }) {
     final idx = state.items.indexWhere((e) => e.profile.id == userId);
     if (idx < 0) return;
@@ -401,6 +441,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
         onLostMatch,
         onSuperlikeSent,
         onOfflineQueued,
+        onSwipeRestored,
       ),
     );
   }
@@ -417,6 +458,7 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
     void Function()? onLostMatch,
     void Function()? onSuperlikeSent,
     void Function()? onOfflineQueued,
+    void Function(Object error)? onSwipeRestored,
   ) async {
     try {
       switch (action) {
@@ -526,8 +568,48 @@ class DiscoverCacheNotifier extends StateNotifier<DiscoverCacheState> {
           onLimitError(err);
         }
       }
+      // The swipe was shown before the server answered. When the request
+      // failed for a reason a retry can fix, give the card back instead of
+      // silently dropping the action.
+      if (shouldRestoreSwipeAfterFailure(err, isLimitError: isLimit)) {
+        if (_restoreSwipedCard(userId)) {
+          // Limit errors already show their own dialog.
+          if (!isLimit) onSwipeRestored?.call(err);
+          return;
+        }
+      }
       _markSyncFailed(userId);
     }
+  }
+
+  /// Puts a swiped card back on the stack after its request failed.
+  ///
+  /// Returns false when the card is no longer in the feed.
+  bool _restoreSwipedCard(int userId) {
+    final restored = restoreSwipedDiscoverItem(state.items, userId);
+    if (restored == null) return false;
+    state = state.copyWith(
+      items: restored,
+      clearLastSwipe: state.lastSwipedUserId == userId,
+    );
+    _ref
+        .read(discoveryActedOnUserIdsProvider.notifier)
+        .update((ids) => ids.contains(userId) ? ({...ids}..remove(userId)) : ids);
+    unawaited(_persistState());
+    AppLogger.info(
+      'Restored card after failed swipe userId=$userId',
+      tag: 'DiscoverCache',
+    );
+    return true;
+  }
+
+  /// Replaces the feed with [profiles], all unswiped (tests).
+  @visibleForTesting
+  void debugSeedProfiles(List<DiscoveryProfile> profiles) {
+    state = DiscoverCacheState(
+      items: [for (final p in profiles) CachedDiscoverItem(profile: p)],
+      initialLoadComplete: true,
+    );
   }
 
   bool _isLimitError(dynamic e) {

@@ -2,14 +2,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lgbtindernew/core/providers/feature_flags_provider.dart';
 import 'package:lgbtindernew/pages/chat_list_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../helpers/test_helpers.dart';
+
+/// The page reads cached sessions through SharedPreferences, so the harness
+/// has to provide an (empty) instance. The default 800x600 test surface
+/// selects the tablet master/detail layout, so use a phone-sized one.
+Future<ProviderContainer> _container(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  final prefs = await SharedPreferences.getInstance();
+  final container = createTestContainer(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
 
 void main() {
   group('ChatListPage', () {
     testWidgets('should display chat list page with app bar', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
 
       // Act
       await tester.pumpWidget(
@@ -29,7 +47,7 @@ void main() {
 
     testWidgets('should display loading state initially', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
 
       // Act
       await tester.pumpWidget(
@@ -48,7 +66,7 @@ void main() {
 
     testWidgets('should display error state on error', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -66,7 +84,7 @@ void main() {
 
     testWidgets('should display empty state when no chats', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -84,7 +102,7 @@ void main() {
 
     testWidgets('should navigate to chat page when chat is tapped', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
       bool navigated = false;
 
       await tester.pumpWidget(
@@ -110,7 +128,7 @@ void main() {
 
     testWidgets('should display search functionality', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -128,7 +146,7 @@ void main() {
 
     testWidgets('should display notification badge when unread notifications exist', (WidgetTester tester) async {
       // Arrange
-      final container = createTestContainer();
+      final container = await _container(tester);
 
       await tester.pumpWidget(
         UncontrolledProviderScope(

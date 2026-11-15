@@ -85,6 +85,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    // Optimistic: logout() clears local session immediately; network is background.
     await ref.read(authProvider.notifier).logout();
     if (mounted) context.go(AppRoutes.welcome);
   }

@@ -58,17 +58,18 @@ class _DiscoverAmbientBackgroundState extends State<DiscoverAmbientBackground>
             color: Theme.of(context).scaffoldBackgroundColor,
           ),
         ),
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            return CustomPaint(
-              painter: _DiscoverParticlesPainter(
-                drift: _controller.value,
-                isDark: isDark,
-              ),
-              size: Size.infinite,
-            );
-          },
+        // The particles drift for as long as Discover is on screen. Their
+        // own layer keeps that repaint away from the page above them, and
+        // the painter listens to the controller directly, so no widget is
+        // rebuilt per frame.
+        RepaintBoundary(
+          child: CustomPaint(
+            painter: _DiscoverParticlesPainter(
+              drift: _controller,
+              isDark: isDark,
+            ),
+            size: Size.infinite,
+          ),
         ),
         widget.child,
       ],
@@ -78,11 +79,12 @@ class _DiscoverAmbientBackgroundState extends State<DiscoverAmbientBackground>
 
 class _DiscoverParticlesPainter extends CustomPainter {
   _DiscoverParticlesPainter({
-    required this.drift,
+    required Animation<double> drift,
     required this.isDark,
-  });
+  })  : _drift = drift,
+        super(repaint: drift);
 
-  final double drift;
+  final Animation<double> _drift;
   final bool isDark;
 
   static final _palette = [
@@ -95,6 +97,7 @@ class _DiscoverParticlesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final drift = _drift.value;
     final baseAlpha = isDark ? 0.14 : 0.10;
     final count = 28;
 
@@ -154,6 +157,6 @@ class _DiscoverParticlesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DiscoverParticlesPainter oldDelegate) {
-    return oldDelegate.drift != drift || oldDelegate.isDark != isDark;
+    return oldDelegate._drift != _drift || oldDelegate.isDark != isDark;
   }
 }

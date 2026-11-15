@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/config/agora_config.dart';
 import '../../../core/services/app_logger.dart';
@@ -49,6 +50,7 @@ import '../providers/call_providers.dart';
 import '../providers/live_call_ui_provider.dart';
 import '../providers/messenger_calls_provider.dart';
 import '../utils/call_conflict_resolver.dart';
+import '../utils/call_end_orchestrator.dart';
 import '../utils/call_rejoin_policy.dart';
 import '../utils/call_log_labels.dart';
 import '../utils/call_audio_route.dart';
@@ -132,6 +134,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   String? _backdropPhotoUrl;
   String? _localAvatarUrl;
   int _localUserId = 0;
+  GoRouter? _router;
 
   @override
   void initState() {
@@ -148,6 +151,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _router ??= GoRouter.of(context);
       final session = ref.read(activeCallSessionProvider);
       final resuming = ActiveCallLifecycle.shouldResume(
         pageCallId: widget.callId,
@@ -208,7 +212,16 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     }
   }
 
-  LiveCallUiNotifier get _liveUi => ref.read(liveCallUiProvider.notifier);
+  LiveCallUiNotifier get _liveUi =>
+      _liveUiNotifier ?? ref.read(liveCallUiProvider.notifier);
+
+  /// Captured notifiers stay valid after this page unmounts (timers, Agora
+  /// and CallKit callbacks can outlive the route); `ref` does not.
+  ActiveCallSessionNotifier get _session =>
+      _sessionNotifier ?? ref.read(activeCallSessionProvider.notifier);
+
+  AgoraRtcSessionNotifier get _rtc =>
+      _rtcNotifier ?? ref.read(agoraRtcSessionProvider.notifier);
 
   Future<void> _resolveCallPhotos() async {
     if (widget.recipientId <= 0) return;
@@ -372,10 +385,19 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   void _leaveCallUi() {
     _notifyServerOfLeave();
+    final callId = _callId > 0 ? _callId.toString() : null;
+    if (callId != null) {
+      CallEndOrchestrator.instance.markEnded(callId);
+    }
+    final router = _router;
+    if (router != null) {
+      leaveCallRoutes(router, callId: callId);
+      return;
+    }
     if (!mounted) return;
     leaveCallRoute(
       context,
-      callId: _callId > 0 ? _callId.toString() : null,
+      callId: callId,
     );
   }
 
@@ -415,7 +437,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   void _syncActiveSession() {
     if (_callId <= 0) return;
     try {
-      ref.read(activeCallSessionProvider.notifier).attach(_currentSession());
+      _session.attach(_currentSession());
     } catch (e) {
       AppLogger.warning(
         'attach active session failed',
@@ -427,7 +449,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   void _clearActiveSession() {
     try {
-      ref.read(activeCallSessionProvider.notifier).clearUiOnly();
+      _session.clearUiOnly();
     } catch (e) {
       AppLogger.warning(
         'clear active session failed',
@@ -441,7 +463,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     if (_leaving || _callId <= 0 || !_sessionConnected()) return;
     _preservingEngine = true;
     try {
-      ref.read(activeCallSessionProvider.notifier).minimize(_currentSession());
+      _session.minimize(_currentSession());
     } catch (e) {
       AppLogger.warning(
         'minimize active session failed',
@@ -467,7 +489,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         ConnectivityService.instance.onStateChange.listen(_onConnectivityState);
     _listenForCallEvents();
     try {
-      ref.read(activeCallSessionProvider.notifier).reveal();
+      _session.reveal();
     } catch (e) {
       AppLogger.warning(
         'reveal active session failed',
@@ -722,7 +744,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
         peerName: widget.recipientName,
         peerAvatar: widget.recipientAvatarUrl,
         isVideo: widget.type == OutgoingCallType.video,
-        onHangUp: _endCall,
+        onHangUp: _hangUpFromOngoingNotification,
       ),
     );
     if (mounted) {
@@ -988,6 +1010,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   void _onConnectivityState(NetworkConnectionState state) {
+    if (!mounted) return;
     if (state != NetworkConnectionState.connected) return;
     if (!_sessionConnected() || _leaving || !_agoraJoined || _giveUpStarted) return;
     final connection = ref.read(agoraRtcSessionProvider).connection;
@@ -1017,7 +1040,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
   }
 
   Future<void> _restoreLocalMedia() async {
-    if (_leaving || !_agoraJoined) return;
+    if (!mounted || _leaving || !_agoraJoined) return;
     await _agoraService.restoreLocalMedia(
       muted: ref.read(isMutedProvider),
       speakerOn: ref.read(isSpeakerOnProvider),
@@ -1035,7 +1058,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       return;
     }
     _cancelReconnectWatchdog();
-    final rtc = ref.read(agoraRtcSessionProvider.notifier);
+    final rtc = _rtc;
     rtc.setReconnectInFlight(true);
     AppLogger.info(
       'Call rejoin attempt ${_reconnect.attempts}/${CallReconnectPolicy.maxAttempts}',
@@ -1091,7 +1114,7 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     _giveUpStarted = true;
     _cancelReconnectWatchdog();
     _reconnect.markRetryFinished();
-    final rtc = ref.read(agoraRtcSessionProvider.notifier);
+    final rtc = _rtc;
     rtc.setReconnectInFlight(false);
     rtc.setConnection(CallRtcConnectionUi.failed);
     rtc.setUserFacingError(CallReconnectPolicy.lostMessage);
@@ -1113,10 +1136,18 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
 
   void _syncMessengerStatus(String status) {
     if (_callId <= 0) return;
-    ref.read(messengerCallsProvider.notifier).applyRemoteStatus(
-          callId: _callId,
-          status: status,
-        );
+    final messenger = _messengerNotifier ??
+        (mounted ? ref.read(messengerCallsProvider.notifier) : null);
+    if (messenger == null) return;
+    try {
+      messenger.applyRemoteStatus(callId: _callId, status: status);
+    } catch (e) {
+      AppLogger.warning(
+        'messenger status sync failed',
+        tag: 'outgoing_call_page',
+        error: e,
+      );
+    }
   }
 
   void _clearLocalActiveCall() {
@@ -1202,7 +1233,41 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     await SoundService.instance.playCallEnded();
   }
 
+  /// Hang Up on the Android ongoing-call notification.
+  ///
+  /// While the call is minimized this page is already unmounted, so its own
+  /// [_endCall] can neither post the end nor clear the session (the server
+  /// kept the call alive and the return banner stayed). The session provider
+  /// outlives the page and owns that teardown.
+  Future<void> _hangUpFromOngoingNotification() async {
+    if (mounted) {
+      await _endCall();
+      return;
+    }
+    final callId = _callId;
+    await _sessionNotifier?.hangUpFromSystem(
+      callIdOverride: callId > 0 ? callId : null,
+    );
+  }
+
+  /// The session provider ended this call while the page is still showing
+  /// (notification Hang Up, stale-call cleanup before a new invite). It has
+  /// already released Agora and told the server, so only the UI is left.
+  void _onEndedBySystem() {
+    if (_leaving) return;
+    _endPosted = true;
+    _onCallEnded(const {'status': 'ended'}, remote: false);
+  }
+
   Future<void> _endCall() async {
+    final callKey = _callId > 0 ? _callId.toString() : '';
+    if (!CallEndOrchestrator.instance.beginEnd(callKey)) {
+      // Another path already owns teardown; still leave UI if we are stuck.
+      if (!_leaving && mounted) {
+        _leaveCallUi();
+      }
+      return;
+    }
     if (_leaving) return;
     _leaving = true;
     _preservingEngine = false;
@@ -1219,22 +1284,43 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
       _syncMessengerStatus(connected ? 'ended' : 'missed');
     }
 
-    unawaited(_stopCallMedia());
-    unawaited(
-      _postEndIfNeeded(
-        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut),
-      ),
-    );
+    // Optimistic leave: summary / navigation first; media + API in background.
     _presentEndSummary(
       CallEndSummary.resolve(
         wasConnected: connected,
         connectionError: _connectionError,
       ),
     );
+    unawaited(_stopCallMedia());
+    unawaited(
+      _postEndIfNeeded(
+        reason: OutgoingCallEnd.reasonForLeave(ringTimedOut: _ringTimedOut),
+      ),
+    );
+  }
+
+  /// Lets the frame that removes [AgoraCallVideoLayer] finish before the
+  /// engine is released. Releasing while `AgoraVideoView` platform views are
+  /// still attached is what leaves a black surface / native crash behind.
+  ///
+  /// Every end path sets [_leaving] and rebuilds first, so one frame is
+  /// enough. Bounded, and skipped when no frame will be drawn (background).
+  Future<void> _awaitVideoViewsUnmounted() async {
+    if (widget.type != OutgoingCallType.video || !mounted) return;
+    final binding = WidgetsBinding.instance;
+    final lifecycle = binding.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+    try {
+      binding.scheduleFrame();
+      await binding.endOfFrame.timeout(const Duration(milliseconds: 300));
+    } catch (_) {
+      // No frame in time: release anyway rather than keep the mic/camera.
+    }
   }
 
   Future<void> _stopCallMedia() async {
     _durationTimer?.cancel();
+    await _awaitVideoViewsUnmounted();
     await _wakeLock.disable();
     try {
       await _agoraService.dispose();
@@ -1298,8 +1384,16 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
           'endCall API failed',
           tag: 'outgoing_call_page',
         );
+      } else if (_callId > 0) {
+        CallEndOrchestrator.instance.markEnded(_callId.toString());
       }
     } catch (e) {
+      if (CallEndOrchestrator.isInactiveEndSuccess(e)) {
+        if (_callId > 0) {
+          CallEndOrchestrator.instance.markEnded(_callId.toString());
+        }
+        return;
+      }
       _endPosted = false;
       AppLogger.warning(
         'endCall API failed',
@@ -1431,8 +1525,22 @@ class _OutgoingCallPageState extends ConsumerState<OutgoingCallPage>
     final connected = ref.watch(callStatusProvider);
     final isVideo = widget.type == OutgoingCallType.video;
     final engine = _agoraService.engine;
-    final showVideoLayer =
-        isVideo && _agoraJoined && engine != null && _channelName != null;
+    // `!_leaving`: the video views must be out of the tree before the
+    // engine is released (see [_awaitVideoViewsUnmounted]).
+    final showVideoLayer = isVideo &&
+        !_leaving &&
+        _agoraJoined &&
+        engine != null &&
+        _channelName != null;
+    ref.listen<ActiveCallSession?>(activeCallSessionProvider, (previous, next) {
+      if (previous == null || next != null) return;
+      if (_leaving || _preservingEngine || _callId <= 0) return;
+      if (previous.callId != _callId) return;
+      if (!CallEndOrchestrator.instance.isEndingOrEnded(_callId.toString())) {
+        return;
+      }
+      _onEndedBySystem();
+    });
     final topPad = MediaQuery.paddingOf(context).top;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final showRingChrome = !_leaving &&

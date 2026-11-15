@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lgbtindernew/core/theme/app_theme.dart';
+import 'package:lgbtindernew/core/widgets/frosted_placeholders.dart';
 import 'package:lgbtindernew/features/chat/providers/user_presence_cache_provider.dart';
 import 'package:lgbtindernew/features/chat/providers/chat_thread_providers.dart';
 import 'package:lgbtindernew/features/chat/utils/chat_presence_copy.dart';
@@ -110,6 +111,42 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.byKey(ChatListItem.previewLockKey), findsOneWidget);
+    // Frosted bars keep the blurred look without ImageFiltered on scroll
+    // rows (run3 smoothness, restored visually in run 6).
+    expect(find.byType(FrostedTextPlaceholder), findsOneWidget);
+    expect(find.byType(ImageFiltered), findsNothing);
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.text('secret preview'), findsNothing);
+    expect(find.textContaining('secret'), findsNothing);
+  });
+
+  testWidgets('locked preview fits in RTL at 1.3x text scale', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(320, 640),
+            textScaler: TextScaler.linear(1.3),
+          ),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: _app(
+              const ChatListItem(
+                userId: 7,
+                name: 'Alex',
+                lastMessage: 'a fairly long secret preview that would overflow',
+                hasPlan: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(FrostedTextPlaceholder), findsOneWidget);
     expect(find.byKey(ChatListItem.previewLockKey), findsOneWidget);
   });
 

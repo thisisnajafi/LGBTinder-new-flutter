@@ -10,6 +10,7 @@ import '../core/theme/spacing_constants.dart';
 import '../core/responsive/responsive.dart';
 import '../core/widgets/premium/premium_design_system.dart';
 import '../widgets/cards/card_stack_manager.dart';
+import '../widgets/cards/swipeable_card.dart';
 import '../widgets/cards/profile_detail_sheet.dart';
 import '../widgets/loading/skeleton_discovery.dart';
 import '../features/discover/providers/discover_cache_provider.dart';
@@ -31,7 +32,6 @@ import '../shared/services/error_handler_service.dart';
 import '../screens/discovery/filter_screen.dart';
 import '../features/payments/presentation/screens/superlike_packs_screen.dart';
 import '../core/utils/app_icons.dart';
-import '../widgets/discovery/discovery_swipe_action_button.dart';
 import '../widgets/discovery/superlike_message_sheet.dart';
 import '../widgets/discovery/superlike_packs_sheet.dart';
 import '../core/cache/session_cache_providers.dart';
@@ -41,13 +41,16 @@ import '../core/cache/cache_invalidator.dart';
 import '../core/cache/cache_manager.dart'
     show appCacheManagerProvider, notifyNewMatch;
 import '../core/services/app_logger.dart';
+import '../core/services/connectivity_service.dart';
+import '../core/providers/connectivity_provider.dart';
 import '../features/discover/widgets/discover_active_filters_bar.dart';
 import '../features/discover/widgets/discover_ambient_background.dart';
-import '../features/discover/widgets/discover_greeting_widget.dart';
+import '../features/discover/widgets/discover_action_bar.dart';
+import '../features/discover/widgets/discover_header.dart';
+import '../features/discover/widgets/discover_swipe_notice.dart';
 import '../core/location/location_providers.dart';
 import '../core/location/widgets/location_permission_sheet.dart';
 import '../core/location/data/models/user_location.dart';
-import '../features/discover/widgets/discover_passport_banner.dart';
 import '../core/location/passport_provider.dart';
 import '../routes/app_router.dart';
 import '../core/errors/user_error_message.dart';
@@ -93,6 +96,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     return merged.isEmpty ? null : merged;
   }
 
+  /// Message of the notice over the card (a swipe that was undone); null
+  /// when hidden.
+  final ValueNotifier<String?> _swipeNotice = ValueNotifier<String?>(null);
+  Timer? _swipeNoticeTimer;
+
   Future<void> _bootstrapDiscoverLocationAndRefresh() async {
     await runDiscoverLocationBootstrap(ref, context);
     if (!mounted) return;
@@ -115,6 +123,8 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   @override
   void dispose() {
     _filterApplyDebounce?.cancel();
+    _swipeNoticeTimer?.cancel();
+    _swipeNotice.dispose();
     _sheetController.dispose();
     super.dispose();
   }
@@ -372,7 +382,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
   Future<bool> _hasReachedSwipeLimit(PlanLimitsService service) async {
     final cached = service.getCachedLimits();
     if (cached != null) return cached.hasReachedLimit('swipes');
-    return service.hasReachedSwipeLimit();
+    // Limits are not cached yet (cold start). Do not hold the swipe for a
+    // network round trip: the server enforces the cap, and a rejected swipe
+    // gives the card back and shows the limit dialog. Warm the cache for
+    // the next swipe.
+    unawaited(
+      service.getPlanLimits().then<void>((_) {}, onError: (Object _) {}),
+    );
+    return false;
   }
 
   Future<bool> _hasReachedSuperlikeLimit(PlanLimitsService service) async {
@@ -602,6 +619,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               ),
             );
           },
+          onSwipeRestored: (_) {
+            if (!mounted) return;
+            _showSwipeRestoredToast(action);
+          },
         );
     ref
         .read(discoverCacheProvider.notifier)
@@ -609,6 +630,25 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           threshold: kDiscoverStackBufferThreshold,
           filters: _discoverQueryFilters(),
         );
+  }
+
+  /// The swipe was shown at once but the server did not take it; the card
+  /// is back on the stack. Says so without blocking the next swipe.
+  ///
+  /// Shown over the top of the card, not as a `SnackBar`: a snack bar sits
+  /// right on the action bar and would swallow taps on Like and Pass.
+  void _showSwipeRestoredToast(String action) {
+    final what = switch (action) {
+      'like' => 'like',
+      'superlike' => 'Super Like',
+      _ => 'pass',
+    };
+    _swipeNoticeTimer?.cancel();
+    _swipeNotice.value =
+        "Couldn't send your $what. The profile is back, try again.";
+    _swipeNoticeTimer = Timer(DiscoverSwipeNotice.hold, () {
+      _swipeNotice.value = null;
+    });
   }
 
   List<String> _profileImageUrls(DiscoveryProfile profile) {
@@ -721,6 +761,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         await Future<void>.delayed(Duration.zero);
         if (!mounted) return false;
         _cardStackKey.currentState?.beginSuperlikeExit();
+      } else if (fromRow) {
+        // A button has no drag behind it: play the same stamp and fly-out a
+        // swipe gets, so the action is visible before the next card.
+        _cardStackKey.currentState?.beginSwipeExit(action);
       }
       _applySwipeToCache(
         userId,
@@ -831,13 +875,43 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     return DateTime.now().difference(updated).inDays > 7;
   }
 
+  Future<void> _retryDiscoverFeed() async {
+    await ref
+        .read(discoverCacheProvider.notifier)
+        .refresh(filters: _discoverQueryFilters());
+  }
+
   _DiscoverEmptyConfig _emptyStateConfig(UserLocation? location) {
+    // Same wording and icon as the connectivity banner, so the two never
+    // tell different stories. Cached cards keep showing while offline; this
+    // only replaces the "nobody nearby" text, which would be wrong here.
+    final offline = ref.watch(
+      connectivityProvider.select(
+        (state) => state.valueOrNull == NetworkConnectionState.disconnected,
+      ),
+    );
+    if (offline) {
+      return _DiscoverEmptyConfig(
+        title: 'No internet connection',
+        subtitle:
+            "New people will load as soon as you're back online.",
+        primaryLabel: 'Try again',
+        primaryIconPath: AppIcons.refresh,
+        onPrimary: _retryDiscoverFeed,
+        secondaryLabel: 'Adjust filters',
+        secondaryIconPath: AppIcons.filter,
+        onSecondary: _openFilters,
+        iconPath: AppIcons.wifiOff,
+      );
+    }
+
     if (!_hasCoordinates(location)) {
       return _DiscoverEmptyConfig(
         title: 'Turn on location for nearby matches',
         subtitle:
             'Enable location so we can find people near you, or expand your search radius.',
         primaryLabel: 'Enable location',
+        primaryIconPath: AppIcons.location,
         onPrimary: _promptEnableLocation,
         secondaryLabel: 'Increase distance + retry',
         onSecondary: _expandRadiusAndRetry,
@@ -853,6 +927,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         subtitle:
             'Your location may be outdated. Update it or try a wider search radius.',
         primaryLabel: 'Update location',
+        primaryIconPath: AppIcons.refresh,
         onPrimary: _forceUpdateLocation,
         secondaryLabel: 'Increase distance + retry',
         onSecondary: _expandRadiusAndRetry,
@@ -871,6 +946,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         subtitle:
             'Upgrade your plan for more daily likes, or come back tomorrow.',
         primaryLabel: 'Upgrade',
+        primaryIconPath: AppIcons.crown,
         onPrimary: () {
           final cached =
               limits ?? ref.read(planLimitsServiceProvider).getCachedLimits();
@@ -898,6 +974,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
         title: "You're out of Super Likes",
         subtitle: 'Get a pack to stand out, or keep swiping with likes.',
         primaryLabel: 'Get Super Likes',
+        primaryIconPath: AppIcons.star,
         onPrimary: () {
           showSuperlikePacksSheet(
             context,
@@ -905,6 +982,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           );
         },
         secondaryLabel: 'Adjust filters',
+        secondaryIconPath: AppIcons.filter,
         onSecondary: _openFilters,
         iconPath: AppIcons.star,
       );
@@ -1071,9 +1149,9 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
 
     return [
       if (canUsePassport)
-        CompactHeaderIconButton(
+        DiscoverHeader.action(
           iconPath: AppIcons.map,
-          semanticLabel: 'Passport — change discovery location',
+          label: 'Passport — change discovery location',
           onPressed: _openPassport,
           showBadge: ref.watch(passportLocationProvider).active,
         ),
@@ -1084,17 +1162,17 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               (async) => (async.asData?.value ?? 0) > 0,
             ),
           );
-          return CompactHeaderIconButton(
+          return DiscoverHeader.action(
             iconPath: AppIcons.notification,
-            semanticLabel: 'Notifications',
+            label: 'Notifications',
             onPressed: () => context.go('${AppRoutes.home}/notifications'),
             showBadge: hasUnreadNotifications,
           );
         },
       ),
-      CompactHeaderIconButton(
+      DiscoverHeader.action(
         iconPath: AppIcons.filter,
-        semanticLabel: 'Open filters',
+        label: 'Open filters',
         onPressed: _openFilters,
         showBadge: (ref.watch(discoveryFiltersProvider)?.isNotEmpty ?? false),
       ),
@@ -1117,7 +1195,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
       _precacheSignature = precacheSignature;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        unawaited(DiscoveryImagePrefetch.precacheNextTwo(context, stack));
+        unawaited(
+          DiscoveryImagePrefetch.precacheNextTwo(
+            context,
+            stack,
+            // Same decode size as the card, so the card reads this copy.
+            decodeWidth: SwipeableCard.photoDecodeWidth(context),
+          ),
+        );
       });
     }
 
@@ -1128,9 +1213,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
           loading: () => _emptyStateConfig(null),
           error: (_, __) => _emptyStateConfig(null),
         );
+    // The bar is also shown (disabled) under the loading skeleton, so the
+    // card does not change size when the first profiles arrive.
     final showActionRow =
-        !showSkeleton &&
-        cards.isNotEmpty &&
+        (showSkeleton || cards.isNotEmpty) &&
         !_isProfileSheetOpen &&
         !emptyConfig.forceEmpty;
 
@@ -1149,20 +1235,21 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CompactPageHeader(
-                    title: 'Discover',
-                    actions: _buildHeaderActions(context),
-                  ),
-                  const SizedBox(height: AppSpacing.spacingSM),
+                  // One row: avatar, greeting and actions. The greeting
+                  // card that used to sit under the title bar is gone, so
+                  // the swipe card gets that height.
                   RepaintBoundary(
-                    child: DiscoverGreetingWidget(
-                      footer: passport.active
-                          ? DiscoverPassportInlineSection(
-                              passport: passport,
-                              isClearing: _isClearingPassport,
-                              onReturnHome: _returnFromPassport,
-                            )
-                          : null,
+                    child: DiscoverHeader(
+                      actions: _buildHeaderActions(context),
+                    ),
+                  ),
+                  // Passport, swipe quota and Upgrade as slim chips. Takes
+                  // only a small gap when there is nothing to show.
+                  RepaintBoundary(
+                    child: DiscoverStatusChips(
+                      passport: passport,
+                      isClearingPassport: _isClearingPassport,
+                      onReturnHome: _returnFromPassport,
                     ),
                   ),
                   DiscoverActiveFiltersBar(
@@ -1179,7 +1266,10 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(
-                            child: showSkeleton
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                            showSkeleton
                                 ? Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                       _kDiscoverHorizontalPadding,
@@ -1189,7 +1279,11 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                     ),
                                     child: const SkeletonDiscovery(),
                                   )
-                                : CardStackManager(
+                                // Drag frames re-composite this layer
+                                // only; the header and the action bar are
+                                // not repainted.
+                                : RepaintBoundary(
+                                  child: CardStackManager(
                                     key: _cardStackKey,
                                     cards: emptyConfig.forceEmpty
                                         ? const <Map<String, dynamic>>[]
@@ -1198,10 +1292,14 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                     onViewProfile: _handleCardTap,
                                     isSheetOpen: _isProfileSheetOpen,
                                     onSheetOpenChanged: _setProfileSheetOpen,
+                                    carouselEnabled: widget.selectedTabIndex ==
+                                            null ||
+                                        widget.selectedTabIndex ==
+                                            widget.discoveryTabIndex,
                                     horizontalPadding:
                                         _kDiscoverHorizontalPadding,
-                                    contentTopInset: AppSpacing.spacingSM,
-                                    contentBottomInset: AppSpacing.spacingSM,
+                                    contentTopInset: AppSpacing.spacingXS,
+                                    contentBottomInset: AppSpacing.spacingXS,
                                     isLoading: false,
                                     onRefresh: () async {
                                       await ref
@@ -1217,9 +1315,13 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                     emptySubtitle: emptyConfig.subtitle,
                                     emptyIconPath: emptyConfig.iconPath,
                                     emptyActionLabel: emptyConfig.primaryLabel,
+                                    emptyActionIconPath:
+                                        emptyConfig.primaryIconPath,
                                     onEmptyAction: emptyConfig.onPrimary,
                                     emptySecondaryActionLabel:
                                         emptyConfig.secondaryLabel,
+                                    emptySecondaryActionIconPath:
+                                        emptyConfig.secondaryIconPath,
                                     onEmptySecondaryAction:
                                         emptyConfig.onSecondary,
                                     emptyTertiaryActionLabel:
@@ -1227,20 +1329,38 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
                                     onEmptyTertiaryAction:
                                         emptyConfig.onTertiary,
                                   ),
+                                ),
+                                // Over the card, never over the action bar,
+                                // and it does not take touches.
+                                PositionedDirectional(
+                                  top: AppSpacing.spacingXXL,
+                                  start: _kDiscoverHorizontalPadding +
+                                      AppSpacing.spacingMD,
+                                  end: _kDiscoverHorizontalPadding +
+                                      AppSpacing.spacingMD,
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: DiscoverSwipeNotice(
+                                      message: _swipeNotice,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           if (showActionRow)
+                            // Inside the page SafeArea and above the bottom
+                            // navigation, so it never sits under either.
                             Padding(
                               padding: const EdgeInsets.fromLTRB(
                                 _kDiscoverHorizontalPadding,
                                 AppSpacing.spacingSM,
                                 _kDiscoverHorizontalPadding,
-                                AppSpacing.spacingXS,
+                                AppSpacing.spacingSM,
                               ),
                               child: RepaintBoundary(
-                                child: AnimatedOpacity(
-                                  opacity: _isSwipeInProgress ? 0.5 : 1.0,
-                                  duration: const Duration(milliseconds: 150),
-                                  child: _buildDiscoveryActionRow(),
+                                child: _buildDiscoveryActionRow(
+                                  enabled: !showSkeleton,
                                 ),
                               ),
                             ),
@@ -1259,7 +1379,7 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
     );
   }
 
-  Widget _buildDiscoveryActionRow() {
+  Widget _buildDiscoveryActionRow({required bool enabled}) {
     return Consumer(
       builder: (context, ref, _) {
         final rewindAllowed = ref.watch(
@@ -1267,58 +1387,15 @@ class _DiscoveryPageState extends ConsumerState<DiscoveryPage> {
             (async) => async.valueOrNull?.features.rewind == true,
           ),
         );
-        const actionSize = AppSpacing.spacingXXXL + AppSpacing.spacingSM;
-        final buttons = [
-          DiscoverySwipeActionButton(
-            type: DiscoverySwipeActionType.rewind,
-            size: AppSpacing.spacingXXXL,
-            onPressed: _isSwipeInProgress || !rewindAllowed
-                ? null
-                : _handleRewind,
-          ),
-          const SizedBox(width: AppSpacing.spacingLG),
-          DiscoverySwipeActionButton(
-            type: DiscoverySwipeActionType.dislike,
-            size: actionSize,
-            onPressed: _isSwipeInProgress
-                ? null
-                : () => _handleAction('dislike'),
-          ),
-          const SizedBox(width: AppSpacing.spacingXL),
-          DiscoverySwipeActionButton(
-            type: DiscoverySwipeActionType.superlike,
-            size: actionSize,
-            onPressed: _isSwipeInProgress
-                ? null
-                : () => _handleAction('superlike'),
-          ),
-          const SizedBox(width: AppSpacing.spacingXL),
-          DiscoverySwipeActionButton(
-            type: DiscoverySwipeActionType.like,
-            size: actionSize,
-            onPressed: _isSwipeInProgress ? null : () => _handleAction('like'),
-          ),
-        ];
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final row = Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: buttons,
-            );
-            if (constraints.maxWidth < 320) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: ResponsivePadding.horizontal(context),
-                child: row,
-              );
-            }
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: buttons,
-            );
-          },
+        final active = enabled && !_isSwipeInProgress;
+        return DiscoverActionBar(
+          // Plan-gated: stays tappable with a lock badge and opens the
+          // Rewind upgrade screen, instead of a dead, unexplained button.
+          rewindLocked: !rewindAllowed,
+          onRewind: active ? _handleRewind : null,
+          onPass: active ? () => _handleAction('dislike') : null,
+          onSuperlike: active ? () => _handleAction('superlike') : null,
+          onLike: active ? () => _handleAction('like') : null,
         );
       },
     );
@@ -1330,8 +1407,10 @@ class _DiscoverEmptyConfig {
     required this.title,
     required this.subtitle,
     required this.primaryLabel,
+    this.primaryIconPath,
     this.onPrimary,
     this.secondaryLabel,
+    this.secondaryIconPath,
     this.onSecondary,
     this.tertiaryLabel,
     this.onTertiary,
@@ -1342,8 +1421,10 @@ class _DiscoverEmptyConfig {
   final String title;
   final String subtitle;
   final String primaryLabel;
+  final String? primaryIconPath;
   final VoidCallback? onPrimary;
   final String? secondaryLabel;
+  final String? secondaryIconPath;
   final VoidCallback? onSecondary;
   final String? tertiaryLabel;
   final VoidCallback? onTertiary;

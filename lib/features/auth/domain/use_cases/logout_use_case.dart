@@ -7,13 +7,17 @@ class LogoutUseCase {
 
   LogoutUseCase(this._authRepository);
 
-  /// Execute logout use case
-  /// Clears all stored tokens and session data
-  Future<void> execute() async {
+  /// Execute logout use case.
+  /// Prefer [AuthProvider.logout] from UI — it is optimistic and single-pathed.
+  /// This use case only performs the best-effort remote revoke.
+  Future<void> execute({String? bearerToken, String? deviceToken}) async {
     try {
-      await _authRepository.logout();
+      await _authRepository.logout(
+        bearerToken: bearerToken,
+        deviceToken: deviceToken,
+      );
     } catch (e) {
-      // Re-throw exceptions to let UI handle logout failures
+      // Background / non-UI callers: surface errors to the caller.
       rethrow;
     }
   }

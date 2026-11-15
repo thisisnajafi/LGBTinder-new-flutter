@@ -32,7 +32,9 @@ import '../features/safety/data/models/block.dart';
 import '../shared/models/api_error.dart';
 import '../shared/services/error_handler_service.dart';
 import '../routes/app_router.dart';
+import '../core/utils/app_haptics.dart';
 import '../core/utils/app_icons.dart';
+import '../core/utils/optimistic_action.dart';
 import '../features/profile/presentation/widgets/other_user_profile/other_user_profile_view.dart';
 import '../features/profile/presentation/widgets/other_user_profile/profile_more_options_sheet.dart';
 import '../widgets/profile/profile_photo_source_sheet.dart';
@@ -57,6 +59,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _hasError = false;
   String? _errorMessage;
   UserProfile? _profile;
+
+  /// Like shown on the button. Set on tap, undone if the request fails.
+  bool _liked = false;
+  final OptimisticGate _likeGate = OptimisticGate();
+  final OptimisticGate _superlikeGate = OptimisticGate();
 
   @override
   void initState() {
@@ -129,12 +136,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _handleLike() async {
-    if (widget.userId == null) return;
-    
+    final userId = widget.userId;
+    if (userId == null || _liked || _likeGate.isBusy) return;
+
+    AppHaptics.light();
     try {
       final likesService = ref.read(likesServiceProvider);
-      final response = await likesService.likeUser(widget.userId!);
-      
+      // Optimistic: the button turns to "Liked" at once and is restored if
+      // the request fails.
+      final response = await _likeGate.run(
+        apply: () => setState(() => _liked = true),
+        commit: () => likesService.likeUser(userId),
+        rollback: () {
+          if (mounted) setState(() => _liked = false);
+        },
+      );
+      if (response == null) return;
+
       if (mounted) {
         if (response.isMatch) {
           unawaited(notifyNewMatch(ref));
@@ -168,12 +186,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _handleSuperlike() async {
-    if (widget.userId == null) return;
-    
+    final userId = widget.userId;
+    if (userId == null || _superlikeGate.isBusy) return;
+
     try {
       final likesService = ref.read(likesServiceProvider);
-      final response = await likesService.superlikeUser(widget.userId!);
-      
+      // Not optimistic (a superlike spends a limited balance); the gate only
+      // stops a double tap from spending two.
+      final response = await _superlikeGate.run(
+        apply: () {},
+        commit: () => likesService.superlikeUser(userId),
+        rollback: () {},
+      );
+      if (response == null) return;
+
       if (mounted) {
         if (response.isMatch) {
           unawaited(notifyNewMatch(ref));
@@ -563,6 +589,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               }
             : null,
         onLike: _handleLike,
+        isLiked: _liked,
         onSuperlike: _handleSuperlike,
         onMoreOptions: () => _showMoreOptions(context),
         onRefresh: _loadProfile,

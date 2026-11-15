@@ -8,6 +8,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/theme/typography.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/utils/image_decode_size.dart';
 import '../../features/chat/providers/chat_providers.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/profile/data/models/user_profile.dart';
@@ -304,6 +305,11 @@ class _ChatUserInfoPanelState extends ConsumerState<ChatUserInfoPanel> {
                       width: 72,
                       height: 96,
                       fit: BoxFit.cover,
+                      memCacheWidth: ImageDecodeSize.coverOf(
+                        context,
+                        width: 72,
+                        height: 96,
+                      ),
                       placeholder: (_, __) => Container(
                         width: 72,
                         height: 96,
