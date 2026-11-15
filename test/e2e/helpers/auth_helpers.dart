@@ -80,7 +80,13 @@ void stubResendVerification(MockAuthService auth) {
 }
 
 void stubLogout(MockAuthService auth, InMemoryTokenStorage storage) {
-  when(() => auth.logout()).thenAnswer((_) async {
+  when(() => auth.clearInMemoryAuthHeader()).thenReturn(null);
+  when(
+    () => auth.logout(
+      bearerToken: any(named: 'bearerToken'),
+      deviceToken: any(named: 'deviceToken'),
+    ),
+  ).thenAnswer((_) async {
     storage.seedUnauthenticated();
   });
 }

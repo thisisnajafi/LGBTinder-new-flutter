@@ -14,6 +14,38 @@ import 'retry_interceptor.dart';
 /// Max chars of response/request body to log; longer content is truncated.
 const int _kLogBodyMaxChars = 400;
 
+/// Request [Options.extra] key: skip token refresh + [UnauthorizedHandler] on 401.
+/// Used for best-effort background logout so a late 401 cannot bounce a new session.
+const String kSkipUnauthorizedHandlerExtra = 'skipUnauthorizedHandler';
+
+/// Keys redacted from API request body logs (never print secrets).
+const _kRedactedBodyKeys = {
+  'password',
+  'password_confirmation',
+  'token',
+  'refresh_token',
+  'access_token',
+  'id_token',
+  'authorization',
+};
+
+/// Returns a shallow copy of [body] with sensitive fields replaced by `***`.
+Map<String, dynamic>? redactSensitiveBody(Map? body) {
+  if (body == null || body.isEmpty) return null;
+  final out = <String, dynamic>{};
+  body.forEach((key, value) {
+    final k = key.toString();
+    if (_kRedactedBodyKeys.contains(k.toLowerCase())) {
+      out[k] = '***';
+    } else if (value is Map) {
+      out[k] = redactSensitiveBody(value) ?? value;
+    } else {
+      out[k] = value;
+    }
+  });
+  return out;
+}
+
 /// Summarizes response/request body for debug logs (avoids dumping full HTML or huge JSON).
 String _summarizeBody(dynamic data, {int maxChars = _kLogBodyMaxChars}) {
   if (data == null) return 'null';
@@ -103,7 +135,7 @@ class DioClient {
             final fd = options.data as FormData;
             requestExtra = '[multipart: ${fd.files.length} file(s)]';
           } else if (options.data is Map) {
-            requestBody = options.data as Map;
+            requestBody = redactSensitiveBody(options.data as Map);
           }
           AppLogger.apiRequest(
             options.method,
@@ -169,6 +201,11 @@ class DioClient {
             final requestOptions = error.requestOptions;
             final path = requestOptions.path;
             final body = _asStringKeyMap(error.response?.data);
+
+            // Background logout / explicit skip: never refresh or redirect.
+            if (requestOptions.extra[kSkipUnauthorizedHandlerExtra] == true) {
+              return handler.next(error);
+            }
 
             // Login/register: wrong credentials — do NOT redirect to welcome
             final isLoginOrRegisterRequest = path.contains('/auth/login') ||
@@ -247,6 +284,9 @@ class DioClient {
     }
 
     if (statusCode == 401) {
+      if (requestOptions.extra[kSkipUnauthorizedHandlerExtra] == true) {
+        return;
+      }
       final hadAuthToken = requestOptions.extra['had_auth_token'] == true;
       if (ApiError.shouldForceLogout(
         statusCode: statusCode,
