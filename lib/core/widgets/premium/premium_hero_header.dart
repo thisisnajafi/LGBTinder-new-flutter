@@ -1,12 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/border_radius_constants.dart';
 import '../../theme/spacing_constants.dart';
 import '../../utils/app_icons.dart';
-import '../profile_image_widget.dart';
+import '../../utils/media_url.dart';
+import '../frosted_placeholders.dart';
 
 /// Shared page header chrome from the other-user profile hero:
 /// rounded card, soft pink wash, optional blurred cover, circular back.
@@ -19,6 +18,7 @@ class PremiumHeroHeader extends StatelessWidget {
     this.inlineBack = true,
     this.transparentSides = false,
     this.overAmbientBackground = false,
+    this.ambientFrostColor,
     this.padding = const EdgeInsets.fromLTRB(
       AppSpacing.spacingLG,
       AppSpacing.spacingMD,
@@ -37,6 +37,14 @@ class PremiumHeroHeader extends StatelessWidget {
   final bool transparentSides;
   /// Lets a page wallpaper show through the capsule instead of a blurred cover.
   final bool overAmbientBackground;
+
+  /// Flat tint that stands in for the blurred page behind a glass capsule.
+  ///
+  /// Glass capsules are painted without a live backdrop blur: a blur behind
+  /// a header is recomputed on every frame the page below it scrolls. Pass
+  /// the page background colour so the wallpaper pattern stays hidden the
+  /// way the blur hid it. Defaults to the theme background.
+  final Color? ambientFrostColor;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
 
@@ -79,6 +87,7 @@ class PremiumHeroHeader extends StatelessWidget {
                   isDark: isDark,
                   glass: transparentSides,
                   overAmbientBackground: overAmbientBackground,
+                  frostColor: ambientFrostColor,
                 ),
               ),
               Positioned.fill(
@@ -183,13 +192,48 @@ class _HeroCoverWash extends StatelessWidget {
     required this.isDark,
     this.glass = false,
     this.overAmbientBackground = false,
+    this.frostColor,
   });
 
+  /// Decoded width of the cover photo. A few pixels stretched over the
+  /// header reads as a heavy blur without an offscreen blur pass.
+  static const int coverDecodeWidth = 12;
+
+  /// How much of the page behind a glass capsule the frost tint hides.
+  static const double frostOpacity = 0.9;
+
   final String? imageUrl;
+  final Color? frostColor;
   final bool isDark;
   /// Translucent frosted fill that covers the full capsule, including rounded ends.
   final bool glass;
   final bool overAmbientBackground;
+
+  static const Widget _accentFill = DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.accentGradientStart,
+          AppColors.accentViolet,
+          AppColors.accentPink,
+        ],
+      ),
+    ),
+  );
+
+  /// Cover photo as a soft colour wash ([loading] shows until it decodes).
+  Widget _softCover(Widget loading) {
+    return Transform.scale(
+      scale: 1.15,
+      child: FrostedImagePlaceholder(
+        imageUrl: MediaUrl.resolve(imageUrl) ?? imageUrl,
+        decodeWidth: coverDecodeWidth,
+        fallback: loading,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -252,24 +296,15 @@ class _HeroCoverWash extends StatelessWidget {
                   )!.withValues(alpha: 0.88),
                 ]);
 
+      final frost = frostColor ??
+          (isDark ? AppColors.backgroundDark : AppColors.backgroundLight);
       return Stack(
         fit: StackFit.expand,
         children: [
-          if (hasImage)
-            ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-              child: Transform.scale(
-                scale: 1.15,
-                child: ProfileImageWidget(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: const ColoredBox(color: Colors.transparent),
-          ),
+          // Stands in for the old live backdrop blur: the blurred wallpaper
+          // is a flat tint, so paint that tint instead of blurring per frame.
+          ColoredBox(color: frost.withValues(alpha: frostOpacity)),
+          if (hasImage) _softCover(const SizedBox.shrink()),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -286,31 +321,7 @@ class _HeroCoverWash extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (hasImage)
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-            child: Transform.scale(
-              scale: 1.15,
-              child: ProfileImageWidget(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-              ),
-            ),
-          )
-        else
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.accentGradientStart,
-                  AppColors.accentViolet,
-                  AppColors.accentPink,
-                ],
-              ),
-            ),
-          ),
+        if (hasImage) _softCover(_accentFill) else _accentFill,
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(

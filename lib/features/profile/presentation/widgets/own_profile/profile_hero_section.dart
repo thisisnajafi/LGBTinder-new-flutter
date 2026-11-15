@@ -48,6 +48,7 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
     this.onBack,
     this.onMessage,
     this.onLike,
+    this.isLiked = false,
     this.onMore,
     this.matchPercent,
     this.onPhotoTap,
@@ -73,6 +74,13 @@ class ProfileHeroSection extends ConsumerStatefulWidget {
   final VoidCallback? onBack;
   final VoidCallback? onMessage;
   final VoidCallback? onLike;
+
+  /// Viewer mode: shows the like button as already liked.
+  final bool isLiked;
+
+  /// Viewer-mode like button (tests).
+  @visibleForTesting
+  static const Key likeButtonKey = ValueKey('profile-hero-like-button');
   final VoidCallback? onMore;
   final int? matchPercent;
   final void Function(int index)? onPhotoTap;
@@ -549,8 +557,12 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
             const SizedBox(width: AppSpacing.spacingSM),
             Expanded(
               child: _QuickActionButton(
-                icon: AppIcons.heartOutline,
-                label: 'Like',
+                key: ProfileHeroSection.likeButtonKey,
+                icon: widget.isLiked
+                    ? AppIcons.getIconPath('heart', style: 'bold')
+                    : AppIcons.heartOutline,
+                label: widget.isLiked ? 'Liked' : 'Like',
+                accent: widget.isLiked ? AppColors.feedbackError : null,
                 onTap: widget.onLike!,
               ),
             ),
@@ -752,16 +764,21 @@ class _ProfileHeroSectionState extends ConsumerState<ProfileHeroSection> {
 
 class _QuickActionButton extends StatelessWidget {
   const _QuickActionButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
     this.isPrimary = false,
+    this.accent,
   });
 
   final String icon;
   final String label;
   final VoidCallback onTap;
   final bool isPrimary;
+
+  /// Icon tint for an active state (for example a sent like).
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
@@ -795,9 +812,10 @@ class _QuickActionButton extends StatelessWidget {
               size: 16,
               color: isPrimary
                   ? Colors.white
-                  : (isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight),
+                  : (accent ??
+                      (isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight)),
             ),
             const SizedBox(width: 6),
             Flexible(

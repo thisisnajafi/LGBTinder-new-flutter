@@ -8,6 +8,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/border_radius_constants.dart';
 import '../../../../../core/theme/spacing_constants.dart';
 import '../../../../../core/utils/app_icons.dart';
+import '../../../../../core/utils/image_decode_size.dart';
 import '../../../../../core/widgets/profile_age_badge.dart';
 import '../../../../../core/widgets/optimized_image.dart';
 import '../../../../../shared/models/user_tier.dart';
@@ -309,15 +310,23 @@ class _HeroPhoto extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 450),
-        child: CachedNetworkImage(
-          key: ValueKey<String>(urls[index]),
-          imageUrl: urls[index],
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Decode at the hero size instead of the full upload size.
+          final decodeWidth =
+              ImageDecodeSize.coverOfConstraints(context, constraints);
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 450),
+            child: CachedNetworkImage(
+              key: ValueKey<String>(urls[index]),
+              imageUrl: urls[index],
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              memCacheWidth: decodeWidth,
+            ),
+          );
+        },
       ),
     );
   }

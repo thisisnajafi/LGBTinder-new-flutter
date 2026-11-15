@@ -10,6 +10,7 @@ import '../../../../core/utils/app_date_time.dart';
 import '../../../../core/utils/app_haptics.dart';
 import '../../../../core/utils/app_icons.dart';
 import '../../../../core/widgets/avatar_widget.dart';
+import '../../../../core/widgets/frosted_placeholders.dart';
 import '../../../../core/responsive/responsive.dart';
 import '../../data/models/notification.dart' as app_models;
 import 'notification_visuals.dart';
@@ -28,6 +29,10 @@ class NotificationTile extends StatefulWidget {
     this.onMarkAsRead,
     this.onDelete,
   });
+
+  /// Frosted avatar shown for a plan-restricted like (tests).
+  @visibleForTesting
+  static const Key restrictedAvatarKey = ValueKey('notification-restricted-avatar');
 
   @override
   State<NotificationTile> createState() => _NotificationTileState();
@@ -155,8 +160,12 @@ class _NotificationTileState extends State<NotificationTile> {
         );
       }
       if (_restrictLikeIdentity) {
-        // Static gate (no ImageFiltered blur) — same reduce-motion look always.
-        return Container(
+        // Plan-restricted "who liked you": keep the blurred-photo look of
+        // the original design without ImageFiltered. The photo is decoded a
+        // few pixels wide and stretched, which reads as a heavy blur for the
+        // cost of a normal image draw. The icon shows while it loads, when
+        // there is no photo, and on error.
+        final gate = Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
@@ -169,6 +178,31 @@ class _NotificationTileState extends State<NotificationTile> {
               assetPath: AppIcons.getIconPath('profile-circle'),
               size: 24,
               color: accent,
+            ),
+          ),
+        );
+        if (imageUrl == null) return gate;
+        const ring = 2.0;
+        const inner = size - ring * 2;
+        return Container(
+          key: NotificationTile.restrictedAvatarKey,
+          width: size,
+          height: size,
+          padding: const EdgeInsets.all(ring),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                accent,
+                AppColors.accentViolet.withValues(alpha: 0.85),
+              ],
+            ),
+          ),
+          child: ClipOval(
+            child: FrostedImagePlaceholder(
+              imageUrl: imageUrl,
+              size: inner,
+              fallback: SizedBox(width: inner, height: inner, child: gate),
             ),
           ),
         );

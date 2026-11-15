@@ -14,6 +14,7 @@ import '../core/theme/border_radius_constants.dart';
 import '../core/theme/spacing_constants.dart';
 import '../core/theme/typography.dart';
 import '../core/utils/app_icons.dart';
+import '../core/utils/image_decode_size.dart';
 import '../core/utils/media_url.dart';
 import '../core/services/app_logger.dart';
 import '../features/chat/data/local/chat_info_cache.dart';
@@ -598,6 +599,16 @@ class _ChatConversationInfoPageState
                                 ),
                                 itemBuilder: (context, index) {
                                   final item = _sharedMedia[index];
+                                  // Square grid cell: decode at cell size.
+                                  final cell =
+                                      MediaQuery.sizeOf(context).width /
+                                          ResponsiveGrid.photoColumns(context);
+                                  final sharedMediaDecodeWidth =
+                                      ImageDecodeSize.coverOf(
+                                    context,
+                                    width: cell,
+                                    height: cell,
+                                  );
                                   return PremiumTapScale(
                                     onTap: () => _openMediaViewer(index),
                                     semanticLabel: 'Open shared media',
@@ -617,6 +628,7 @@ class _ChatConversationInfoPageState
                                               url: item.url,
                                             ),
                                             fit: BoxFit.cover,
+                                            memCacheWidth: sharedMediaDecodeWidth,
                                             placeholder: (_, __) => Container(
                                               color: borderColor,
                                             ),

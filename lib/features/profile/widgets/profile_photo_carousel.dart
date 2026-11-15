@@ -5,11 +5,11 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-import '../../../core/constants/animation_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/border_radius_constants.dart';
 import '../../../core/theme/spacing_constants.dart';
 import '../../../core/utils/app_icons.dart';
+import '../../../core/utils/image_decode_size.dart';
 
 /// Unused. Live carousel is ProfileHeroSection (prefetch + RepaintBoundary).
 class ProfilePhotoCarousel extends ConsumerStatefulWidget {
@@ -63,6 +63,16 @@ class _ProfilePhotoCarouselState extends ConsumerState<ProfilePhotoCarousel> {
     }
 
     final textTheme = Theme.of(context).textTheme;
+    // Decode at the carousel size instead of the full upload size. The
+    // zoomable gallery still loads the full image.
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final decodeWidth = ImageDecodeSize.coverOf(
+      context,
+      width: screenWidth,
+      height: widget.aspectRatio > 0
+          ? screenWidth / widget.aspectRatio
+          : screenWidth,
+    );
 
     return AspectRatio(
       aspectRatio: widget.aspectRatio,
@@ -89,6 +99,7 @@ class _ProfilePhotoCarouselState extends ConsumerState<ProfilePhotoCarousel> {
                     child: CachedNetworkImage(
                       imageUrl: widget.imageUrls[index],
                       fit: BoxFit.cover,
+                      memCacheWidth: decodeWidth,
                       placeholder: (_, __) => ColoredBox(
                         color: Theme.of(context).colorScheme.surface,
                       ),

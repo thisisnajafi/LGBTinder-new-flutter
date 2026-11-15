@@ -589,18 +589,25 @@ class AuthService {
     return fields;
   }
 
-  /// Best-effort server logout + local FCM cleanup.
+  /// Best-effort server logout (network only; touches no local state).
   ///
-  /// Does **not** clear secure-storage tokens — [AuthProvider] clears those
-  /// synchronously for optimistic logout. Pass [bearerToken] captured *before*
+  /// Does **not** clear secure-storage tokens or the local FCM token —
+  /// [AuthProvider] owns both (tokens on the critical path, FCM as an
+  /// epoch-guarded background step). Pass [bearerToken] captured *before*
   /// local clear; requests use that token explicitly and skip the global 401
   /// handler so a late failure cannot bounce a newly logged-in session.
   Future<void> logout({
     String? bearerToken,
     String? deviceToken,
   }) async {
-    final push = PushNotificationService();
-    final resolvedDeviceToken = deviceToken ?? push.fcmToken;
+    String? resolvedDeviceToken = deviceToken;
+    if (resolvedDeviceToken == null || resolvedDeviceToken.isEmpty) {
+      try {
+        resolvedDeviceToken = PushNotificationService().fcmToken;
+      } catch (_) {
+        // Firebase unavailable on this host.
+      }
+    }
     const timeout = Duration(seconds: 6);
     final token = bearerToken;
     final authOptions = (token != null && token.isNotEmpty)
@@ -645,11 +652,10 @@ class AuthService {
       }
     } catch (_) {
       // Background logout must never surface errors to the UI.
-    } finally {
-      try {
-        await push.clearOnLogout().timeout(timeout);
-      } catch (_) {}
     }
+    // Local FCM cleanup is owned by [AuthProviderNotifier] (epoch-guarded):
+    // doing it here ran after the network calls with no session check and
+    // could delete the push token a newer login had just registered.
   }
 
   /// Clears Dio's in-memory Authorization header (local logout critical path).

@@ -7,6 +7,7 @@ import '../../core/responsive/responsive.dart';
 import '../../core/theme/match_percentage_colors.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
+import '../../core/utils/image_decode_size.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../discovery/discovery_swipe_action_button.dart';
 import '../../shared/models/match_reason.dart';
@@ -548,11 +549,19 @@ class ProfileSheetContent extends StatelessWidget {
             ),
             itemCount: profile.imageUrls.length,
             itemBuilder: (context, index) {
+              // Square grid cell: decode at cell size, not the upload size.
+              final cell = MediaQuery.sizeOf(context).width /
+                  ResponsiveGrid.photoColumns(context);
               return ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.radiusSM),
                 child: CachedNetworkImage(
                   imageUrl: profile.imageUrls[index],
                   fit: BoxFit.cover,
+                  memCacheWidth: ImageDecodeSize.coverOf(
+                    context,
+                    width: cell,
+                    height: cell,
+                  ),
                 ),
               );
             },

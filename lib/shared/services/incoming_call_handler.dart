@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/app_logger.dart';
 import '../../features/calls/data/models/incoming_call_data.dart';
+import '../../features/calls/utils/call_ring_timeout.dart';
 
 /// Bridge for non-Riverpod services (FCM push handler).
 class IncomingCallBridge {
@@ -28,8 +29,13 @@ class IncomingCallHandler {
   static const _tag = 'IncomingCallHandler';
   static const _prefsPayloadKey = 'lgbtfinder_pending_incoming_call';
   static const _prefsAcceptedKey = 'lgbtfinder_pending_incoming_accepted';
+  static const _prefsShownAtKey = 'lgbtfinder_pending_incoming_shown_at';
 
   static Map<String, dynamic>? _pendingCallData;
+
+  /// Call id and first-seen time of the persisted ringing payload.
+  static String? _pendingCallId;
+  static int? _pendingShownAtMs;
   static bool _accepted = false;
   static String? _acceptedCallId;
 
@@ -79,6 +85,8 @@ class IncomingCallHandler {
 
   static void clearPendingCallData() {
     _pendingCallData = null;
+    _pendingCallId = null;
+    _pendingShownAtMs = null;
     _accepted = false;
     _acceptedCallId = null;
     persistClear();
@@ -91,8 +99,30 @@ class IncomingCallHandler {
     return IncomingCallData.fromPayload(data);
   }
 
+  /// Whether an unanswered payload first shown at [shownAtMs] can still be
+  /// ringing at [now]. The server stops ringing after [CallRingTimeout]; a
+  /// payload older than that (plus slack for clock / delivery delay) is a
+  /// leftover from a call that ended while the app was not running, and must
+  /// not come back as a ghost incoming screen on the next launch / resume.
+  static bool isRingingPayloadFresh(int? shownAtMs, {DateTime? now}) {
+    // Written by an older build without a timestamp: keep previous behavior.
+    if (shownAtMs == null || shownAtMs <= 0) return true;
+    final age = (now ?? DateTime.now()).millisecondsSinceEpoch - shownAtMs;
+    return age <= CallRingTimeout.duration.inMilliseconds + _ringingSlackMs;
+  }
+
+  static const int _ringingSlackMs = 15000;
+
   static Future<void> persistShow(IncomingCallData data) async {
+    final sameCall = _pendingCallId == data.callId;
     _pendingCallData = data.toExtras();
+    _pendingCallId = data.callId;
+    // The same call is persisted by Pusher, FCM and CallKit; keep the first
+    // sighting so a duplicate cannot extend how long it counts as ringing.
+    if (!sameCall || _pendingShownAtMs == null) {
+      _pendingShownAtMs = DateTime.now().millisecondsSinceEpoch;
+    }
+    final shownAt = _pendingShownAtMs!;
     if (_acceptedCallId != data.callId) {
       _accepted = false;
       _acceptedCallId = null;
@@ -100,6 +130,7 @@ class IncomingCallHandler {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsPayloadKey, jsonEncode(data.toExtras()));
+      await prefs.setInt(_prefsShownAtKey, shownAt);
       if (_acceptedCallId != data.callId) {
         await prefs.setBool(_prefsAcceptedKey, false);
       }
@@ -110,6 +141,7 @@ class IncomingCallHandler {
 
   static Future<void> markAccepted(IncomingCallData data) async {
     _pendingCallData = data.toExtras();
+    _pendingCallId = data.callId;
     _accepted = true;
     _acceptedCallId = data.callId;
     try {
@@ -126,6 +158,7 @@ class IncomingCallHandler {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefsPayloadKey);
       await prefs.remove(_prefsAcceptedKey);
+      await prefs.remove(_prefsShownAtKey);
     } catch (e) {
       AppLogger.warning('persistClear prefs failed', tag: _tag, error: e);
     }
@@ -146,6 +179,12 @@ class IncomingCallHandler {
       final data = IncomingCallData.fromPayload(memory) ??
           IncomingCallData.fromCallKitMap(memory);
       if (data != null) {
+        if (!_accepted &&
+            _pendingCallId == data.callId &&
+            !isRingingPayloadFresh(_pendingShownAtMs)) {
+          clearPendingCallData();
+          return null;
+        }
         return IncomingCallRestore(data: data, accepted: _accepted);
       }
     }
@@ -161,7 +200,18 @@ class IncomingCallHandler {
           IncomingCallData.fromPayload(map) ?? IncomingCallData.fromCallKitMap(map);
       if (data == null) return null;
       final accepted = prefs.getBool(_prefsAcceptedKey) ?? false;
+      final shownAt = prefs.getInt(_prefsShownAtKey);
+      if (!accepted && !isRingingPayloadFresh(shownAt)) {
+        AppLogger.info(
+          'Dropping stale ringing payload callId=${data.callId}',
+          tag: _tag,
+        );
+        clearPendingCallData();
+        return null;
+      }
       _pendingCallData = map;
+      _pendingCallId = data.callId;
+      _pendingShownAtMs = shownAt;
       _accepted = accepted;
       _acceptedCallId = accepted ? data.callId : null;
       return IncomingCallRestore(data: data, accepted: accepted);

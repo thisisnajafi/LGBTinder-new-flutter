@@ -74,7 +74,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.byType(ImageFiltered), findsOneWidget);
+    // Stretched 20x20 preview; no offscreen blur pass in a scroll item.
+    expect(find.byKey(ChatBubblePhoto.blurPlaceholderKey), findsWidgets);
+    expect(find.byType(ImageFiltered), findsNothing);
     final box = tester.getSize(find.byType(ChatBubblePhoto));
     expect(box.width, 240);
     expect(box.height, 180);

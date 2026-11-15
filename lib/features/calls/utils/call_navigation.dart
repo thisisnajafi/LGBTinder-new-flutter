@@ -273,16 +273,59 @@ void openActiveCallReplacingIncoming(
 }
 
 /// Re-opens the live call screen without joining Agora again.
+///
+/// Looks at the whole stack, not `currentConfiguration.uri`: the call page is
+/// pushed imperatively, so the URI still reports the page underneath and a
+/// second in-call page (second Agora join) would be stacked on top.
 void restoreActiveCallRoute(GoRouter router, ActiveCallSession session) {
-  final uri = router.routerDelegate.currentConfiguration.uri;
-  if (ActiveCallLifecycle.isCurrentCallRoute(
-    path: uri.path,
-    callIdQuery: uri.queryParameters['callId'],
-    sessionCallId: session.callId,
-  )) {
+  if (isActiveCallRouteOnStack(router, session.callId.toString())) {
     return;
   }
   router.push(session.routeLocation);
+}
+
+/// Top-most matched location, aware of imperatively pushed routes.
+String topCallStackPath(GoRouter router) => _topStackPath(router);
+
+/// True when an in-call page for [callId] is already on the navigator stack.
+bool isActiveCallRouteOnStack(GoRouter router, String callId) {
+  if (callId.isEmpty) return false;
+  try {
+    final config = router.routerDelegate.currentConfiguration;
+    for (final match in config.matches) {
+      if (match.matchedLocation != AppRoutes.outgoingCall) continue;
+      final uri = match is ImperativeRouteMatch ? match.matches.uri : config.uri;
+      if (uri.queryParameters['callId'] == callId) return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+/// Removes a full-screen incoming page that no longer has a call to show
+/// (declined, caller cancelled, ring timeout, permission denied).
+///
+/// Only pops while the *top* route is `/call/incoming`, so it can never pop
+/// the page underneath or a live in-call page. Returns true when it left.
+bool leaveIncomingCallRoute(
+  GoRouter router, {
+  String fallback = AppRoutes.home,
+}) {
+  var left = false;
+  const maxPops = 4;
+  for (var i = 0; i < maxPops; i++) {
+    if (_topStackPath(router) != AppRoutes.incomingCall) return left;
+    if (_callStackHasDeadSplash(router) || !router.canPop()) {
+      router.go(fallback);
+      return true;
+    }
+    router.pop();
+    left = true;
+  }
+  if (_topStackPath(router) == AppRoutes.incomingCall) {
+    router.go(fallback);
+    return true;
+  }
+  return left;
 }
 
 bool _stackContainsSplash(GoRouter router) {

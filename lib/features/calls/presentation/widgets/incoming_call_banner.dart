@@ -476,12 +476,9 @@ Future<void> _onMinimizedBannerTap(
     return;
   }
   final router = GoRouter.of(context);
-  final uri = router.routerDelegate.currentConfiguration.uri;
-  if (ActiveCallLifecycle.isCurrentCallRoute(
-    path: uri.path,
-    callIdQuery: uri.queryParameters['callId'],
-    sessionCallId: current.callId,
-  )) {
+  // Stack-aware: the call page is pushed imperatively, so the router URI
+  // still names the page underneath it.
+  if (isActiveCallRouteOnStack(router, current.callId.toString())) {
     ref.read(activeCallSessionProvider.notifier).reveal();
     return;
   }

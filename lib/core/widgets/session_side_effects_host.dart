@@ -16,6 +16,41 @@ import '../services/app_logger.dart';
 import '../utils/app_logger.dart' show authLog;
 import '../../routes/app_router.dart';
 
+/// Session expired (401): clear the local session, *then* open welcome.
+///
+/// The order is load-bearing. The route guard decides from the stored
+/// session, and welcome is an auth-entry route: opening it while the token is
+/// still stored is read as "signed-in user on the login screen" and
+/// redirected straight back to Home, where the user stayed with a dead
+/// session. [logout] is the optimistic one (local only, no network wait), so
+/// this adds no visible delay.
+@visibleForTesting
+Future<void> endSessionThenOpenWelcome({
+  required Future<void> Function() logout,
+  required void Function() openWelcome,
+}) async {
+  try {
+    await logout();
+  } catch (e, stack) {
+    AppLogger.warning(
+      'Silent logout after 401 failed',
+      tag: 'Auth',
+      error: e,
+    );
+    AppLogger.debug('Logout stack: $stack', tag: 'Auth');
+  }
+  try {
+    openWelcome();
+  } catch (e, stack) {
+    AppLogger.error(
+      'UnauthorizedHandler callback error',
+      tag: 'Auth',
+      error: e,
+      stackTrace: stack,
+    );
+  }
+}
+
 /// One-shot 401 / CallKit wiring via [ref.listen] (PERF-MAIN-002).
 ///
 /// Must not live in [MaterialApp] `build` — those callbacks are side effects.
@@ -64,29 +99,13 @@ class _SessionSideEffectsHostState extends ConsumerState<SessionSideEffectsHost>
       router.go(AppRoutes.accountBanned);
     });
     UnauthorizedHandler.setCallback(() {
-      authLog('401 Unauthorized: redirecting to welcome');
-      try {
-        router.go(AppRoutes.welcome);
-        Future.microtask(() async {
-          try {
-            await ref.read(authProvider.notifier).logout(silent: true);
-          } catch (e, stack) {
-            AppLogger.warning(
-              'Silent logout after 401 failed',
-              tag: 'Auth',
-              error: e,
-            );
-            AppLogger.debug('Logout stack: $stack', tag: 'Auth');
-          }
-        });
-      } catch (e, stack) {
-        AppLogger.error(
-          'UnauthorizedHandler callback error',
-          tag: 'Auth',
-          error: e,
-          stackTrace: stack,
-        );
-      }
+      authLog('401 Unauthorized: ending session, then welcome');
+      unawaited(
+        endSessionThenOpenWelcome(
+          logout: () => ref.read(authProvider.notifier).logout(silent: true),
+          openWelcome: () => router.go(AppRoutes.welcome),
+        ),
+      );
     });
     _attachCallKit();
   }

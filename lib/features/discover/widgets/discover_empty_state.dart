@@ -10,6 +10,10 @@ import '../../../core/widgets/premium/premium_design_system.dart';
 import '../../../widgets/buttons/gradient_button.dart';
 
 /// Empty discover stack with premium styling and configurable actions.
+///
+/// Up to three actions: a filled primary button, an outlined secondary
+/// button and a text tertiary action. Each is at least 48 dp tall. The card
+/// scrolls when it does not fit (small screens, large text).
 class DiscoverEmptyState extends StatelessWidget {
   const DiscoverEmptyState({
     super.key,
@@ -18,19 +22,35 @@ class DiscoverEmptyState extends StatelessWidget {
         'Check back soon or expand your filters to see more people',
     this.iconPath,
     this.primaryActionLabel = 'Adjust filters',
+    this.primaryActionIconPath,
     this.onPrimaryAction,
     this.secondaryActionLabel,
+    this.secondaryActionIconPath,
     this.onSecondaryAction,
     this.tertiaryActionLabel,
     this.onTertiaryAction,
   });
 
+  @visibleForTesting
+  static const Key primaryActionKey = ValueKey('discover-empty-primary');
+  @visibleForTesting
+  static const Key secondaryActionKey = ValueKey('discover-empty-secondary');
+  @visibleForTesting
+  static const Key tertiaryActionKey = ValueKey('discover-empty-tertiary');
+
   final String title;
   final String subtitle;
   final String? iconPath;
   final String primaryActionLabel;
+
+  /// Icon of the primary button. Defaults to the filter icon, which fits
+  /// the default "Adjust filters" label; pass one that matches the action.
+  final String? primaryActionIconPath;
   final VoidCallback? onPrimaryAction;
   final String? secondaryActionLabel;
+
+  /// Icon of the secondary button. Defaults to the location icon.
+  final String? secondaryActionIconPath;
   final VoidCallback? onSecondaryAction;
   final String? tertiaryActionLabel;
   final VoidCallback? onTertiaryAction;
@@ -100,8 +120,9 @@ class DiscoverEmptyState extends StatelessWidget {
                       SizedBox(height: gap),
                       if (onPrimaryAction != null)
                         GradientButton(
+                          key: primaryActionKey,
                           text: primaryActionLabel,
-                          iconPath: AppIcons.filter,
+                          iconPath: primaryActionIconPath ?? AppIcons.filter,
                           onPressed: onPrimaryAction,
                           isFullWidth: true,
                         ),
@@ -109,9 +130,13 @@ class DiscoverEmptyState extends StatelessWidget {
                           onSecondaryAction != null) ...[
                         const SizedBox(height: AppSpacing.spacingSM),
                         PremiumTapScale(
+                          key: secondaryActionKey,
                           onTap: onSecondaryAction!,
                           semanticLabel: secondaryActionLabel!,
-                          child: Container(
+                          // The label is already announced by the button;
+                          // without this it was read twice.
+                          child: ExcludeSemantics(
+                            child: Container(
                             width: double.infinity,
                             constraints: const BoxConstraints(minHeight: 48),
                             padding: const EdgeInsets.symmetric(
@@ -136,7 +161,8 @@ class DiscoverEmptyState extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 AppSvgIcon(
-                                  assetPath: AppIcons.location,
+                                  assetPath: secondaryActionIconPath ??
+                                      AppIcons.location,
                                   size: 18,
                                   color: AppColors.accentViolet,
                                 ),
@@ -155,15 +181,22 @@ class DiscoverEmptyState extends StatelessWidget {
                               ],
                             ),
                           ),
+                          ),
                         ),
                       ],
                       if (tertiaryActionLabel != null &&
                           onTertiaryAction != null) ...[
                         const SizedBox(height: AppSpacing.spacingSM),
                         PremiumTapScale(
+                          key: tertiaryActionKey,
                           onTap: onTertiaryAction!,
                           semanticLabel: tertiaryActionLabel!,
-                          child: Padding(
+                          child: ExcludeSemantics(
+                            child: Container(
+                            width: double.infinity,
+                            // Text-only action, but still a full 48 dp target.
+                            constraints: const BoxConstraints(minHeight: 48),
+                            alignment: Alignment.center,
                             padding: const EdgeInsets.symmetric(
                               vertical: AppSpacing.spacingXS,
                             ),
@@ -176,6 +209,7 @@ class DiscoverEmptyState extends StatelessWidget {
                               maxLines: 2,
                               textAlign: TextAlign.center,
                             ),
+                          ),
                           ),
                         ),
                       ],
@@ -230,13 +264,18 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
+    // The pulse runs for as long as the empty state is on screen. The
+    // boundaries keep it to a transform on an already painted layer, and
+    // keep the text and buttons around it from repainting with it.
+    return RepaintBoundary(
+      child: AnimatedBuilder(
       animation: _pulse,
       builder: (context, child) {
         final scale = widget.animate ? 0.96 + (_pulse.value * 0.06) : 1.0;
         return Transform.scale(scale: scale, child: child);
       },
-      child: Container(
+      child: RepaintBoundary(
+        child: Container(
         width: widget.dense ? 72 : 104,
         height: widget.dense ? 72 : 104,
         decoration: BoxDecoration(
@@ -277,6 +316,8 @@ class _EmptyIllustrationState extends State<_EmptyIllustration>
             ),
           ),
         ),
+      ),
+      ),
       ),
     );
   }

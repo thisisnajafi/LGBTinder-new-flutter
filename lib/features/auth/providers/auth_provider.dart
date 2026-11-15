@@ -69,11 +69,20 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
   final void Function() _onLogoutInMemoryReset;
   final GoogleAuthService? _googleAuthService;
 
+  /// Local FCM cleanup (topics + device token). Receives a `superseded`
+  /// probe so a re-login that races the token delete can re-register.
+  /// Null on hosts without Firebase (desktop / unit tests).
+  final Future<void> Function(bool Function() superseded)? _onLogoutPushCleanup;
+
   /// Bumped on every logout start and successful login so a late background
   /// logout cannot tear down a newer session.
   int _sessionEpoch = 0;
 
   bool _optimisticLogoutInFlight = false;
+
+  /// Raw (un-timed-out) background cache purge. [login] waits for it so a
+  /// purge that started before re-login can never delete the new user's data.
+  Future<void>? _backgroundPurge;
 
   /// Last scheduled background logout (for tests).
   @visibleForTesting
@@ -86,7 +95,9 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     this._onLogoutCachePurge,
     this._onLogoutInMemoryReset, {
     GoogleAuthService? googleAuthService,
+    Future<void> Function(bool Function() superseded)? onLogoutPushCleanup,
   })  : _googleAuthService = googleAuthService,
+        _onLogoutPushCleanup = onLogoutPushCleanup,
         super(AuthProviderState()) {
     // Defer so provider creation never blocks; avoids async work during first read
     Future.microtask(() => checkAuthStatus());
@@ -94,12 +105,16 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
 
   /// Check authentication status
   Future<void> checkAuthStatus() async {
+    // A logout / login that lands while storage is being read wins: this
+    // check must not resurrect (or wipe) the session it raced with.
+    final epochAtStart = _sessionEpoch;
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
       final isAuthenticated = await _tokenStorage.isAuthenticated();
       final hasCompletedOnboarding =
           await _onboardingService.isOnboardingCompleted();
+      if (_sessionEpoch != epochAtStart) return;
 
       if (!isAuthenticated) {
         state = state.copyWith(
@@ -112,6 +127,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       }
 
       final session = await _tokenStorage.getUserSession();
+      if (_sessionEpoch != epochAtStart) return;
       state = state.copyWith(
         isAuthenticated: true,
         user: session?.user,
@@ -127,6 +143,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
         error: e,
         stackTrace: stack,
       );
+      if (_sessionEpoch != epochAtStart) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: userErrorMessage(e),
@@ -141,6 +158,22 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     try {
       // Invalidate any in-flight background logout before purging for the new user.
       _sessionEpoch++;
+
+      // A background purge that already started cannot be cancelled. Let it
+      // finish first so it never runs past this point and deletes data that
+      // belongs to the session being created.
+      final inFlightPurge = _backgroundPurge;
+      if (inFlightPurge != null) {
+        try {
+          await inFlightPurge.timeout(_loginPurgeWait);
+        } catch (e) {
+          AppLogger.warning(
+            'Previous session purge still running at login',
+            tag: 'AuthProvider',
+            error: e,
+          );
+        }
+      }
 
       // Clear any prior user's chat and private cached data before starting a new session.
       await _onLogoutCachePurge();
@@ -187,26 +220,16 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       if (leftover == null || leftover.isEmpty) {
         return;
       }
+      // Another logout may have started while storage was being read.
+      if (_optimisticLogoutInFlight) return;
     }
 
     _optimisticLogoutInFlight = true;
     final epochAtStart = ++_sessionEpoch;
 
-    String? capturedToken;
-    String? capturedDeviceToken;
-    try {
-      capturedToken = await _tokenStorage.getAuthToken();
-      capturedDeviceToken = PushNotificationService().fcmToken;
-    } catch (e, stack) {
-      AppLogger.warning(
-        'Failed to capture logout credentials',
-        tag: 'AuthProvider',
-        error: e,
-      );
-      AppLogger.debug('Capture stack: $stack', tag: 'AuthProvider');
-    }
-
-    // Critical path: in-memory auth gone first so router/UI can leave immediately.
+    // Critical path, step 1 (synchronous — no await before this point for a
+    // signed-in user): in-memory auth is gone in the same microtask as the
+    // tap, so a second tap is a no-op and listeners leave immediately.
     state = AuthProviderState(
       isAuthenticated: false,
       isEmailVerified: false,
@@ -215,10 +238,40 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
       user: null,
       isLoading: false,
     );
-
     try {
       _authService.clearInMemoryAuthHeader();
-      await _tokenStorage.clearAllTokens();
+    } catch (e) {
+      AppLogger.warning(
+        'In-memory auth header clear failed',
+        tag: 'AuthProvider',
+        error: e,
+      );
+    }
+
+    // Step 2 (fast local storage only): capture what the server call needs,
+    // then drop the persisted session so route guards see "logged out".
+    String? capturedToken;
+    String? capturedDeviceToken;
+    try {
+      capturedToken =
+          await _tokenStorage.getAuthToken().timeout(_localStorageTimeout);
+    } catch (e, stack) {
+      AppLogger.warning(
+        'Failed to capture logout credentials',
+        tag: 'AuthProvider',
+        error: e,
+      );
+      AppLogger.debug('Capture stack: $stack', tag: 'AuthProvider');
+    }
+    try {
+      capturedDeviceToken = PushNotificationService().fcmToken;
+    } catch (_) {
+      // Firebase not available on this host (tests / desktop).
+    }
+
+    try {
+      // Bounded: a stuck keystore must not hold the UI on the old screen.
+      await _tokenStorage.clearAllTokens().timeout(_localStorageTimeout);
     } catch (e, stack) {
       AppLogger.error(
         'Local token clear failed',
@@ -273,8 +326,23 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     // Remote revoke used the captured token only; safe even after re-login.
     // Local teardown below must not run if a newer session exists.
     if (!await _mayContinueBackgroundCleanup(epochAtStart, capturedToken)) {
-      _optimisticLogoutInFlight = false;
+      _finishBackgroundLogout(epochAtStart);
       return;
+    }
+
+    // Local FCM token delete. It used to run unguarded inside the remote
+    // step; a re-login during a slow network then lost its push registration
+    // (no chat / incoming-call pushes for the whole new session).
+    final pushCleanup = _onLogoutPushCleanup;
+    if (pushCleanup != null) {
+      await _runGuardedStep('Push cleanup', stepTimeout, () async {
+        await pushCleanup(() => _sessionEpoch != epochAtStart);
+      });
+
+      if (!await _mayContinueBackgroundCleanup(epochAtStart, capturedToken)) {
+        _finishBackgroundLogout(epochAtStart);
+        return;
+      }
     }
 
     await _runGuardedStep('Google sign-out', stepTimeout, () async {
@@ -282,7 +350,7 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     });
 
     if (!await _mayContinueBackgroundCleanup(epochAtStart, capturedToken)) {
-      _optimisticLogoutInFlight = false;
+      _finishBackgroundLogout(epochAtStart);
       return;
     }
 
@@ -299,16 +367,42 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     }
 
     if (!await _mayContinueBackgroundCleanup(epochAtStart, capturedToken)) {
-      _optimisticLogoutInFlight = false;
+      _finishBackgroundLogout(epochAtStart);
       return;
     }
 
-    await _runGuardedStep('Cache purge', stepTimeout, () async {
-      await _onLogoutCachePurge();
+    await _runGuardedStep('Cache purge', stepTimeout, () {
+      // Keep the raw future: the step timeout stops *waiting*, it does not
+      // stop the purge. [login] awaits this before activating a new user.
+      final purge = Future<void>.sync(_onLogoutCachePurge);
+      _backgroundPurge = purge;
+      // Second future on purpose: errors surface through the guarded step,
+      // this branch only clears the handle.
+      unawaited(
+        purge.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+          if (identical(_backgroundPurge, purge)) _backgroundPurge = null;
+        }),
+      );
+      return purge;
     });
 
-    _optimisticLogoutInFlight = false;
+    _finishBackgroundLogout(epochAtStart);
   }
+
+  /// Only the newest logout may clear the in-flight flag; an older run that
+  /// finishes late must not re-open the double-tap guard of a newer one.
+  void _finishBackgroundLogout(int epochAtStart) {
+    if (_sessionEpoch == epochAtStart) {
+      _optimisticLogoutInFlight = false;
+    }
+  }
+
+  /// How long [login] waits for a purge the previous logout already started.
+  static const Duration _loginPurgeWait = Duration(seconds: 4);
+
+  /// Upper bound for each secure-storage step on the logout critical path
+  /// (normally a few milliseconds).
+  static const Duration _localStorageTimeout = Duration(seconds: 2);
 
   /// False when the user logged in again (epoch bump or different bearer token).
   Future<bool> _mayContinueBackgroundCleanup(
@@ -368,7 +462,11 @@ class AuthProviderNotifier extends StateNotifier<AuthProviderState> {
     }
   }
 
-  static bool get _supportsNativeCallTeardown {
+  static bool get _supportsNativeCallTeardown => supportsNativeSessionTeardown;
+
+  /// True on Android / iOS, where CallKit, Agora and Firebase Messaging have
+  /// real platform channels.
+  static bool get supportsNativeSessionTeardown {
     if (kIsWeb) return false;
     try {
       return Platform.isAndroid || Platform.isIOS;
@@ -420,5 +518,11 @@ final authProvider =
     () => invalidator.purgeAll(),
     () => invalidator.resetInMemorySessionState(),
     googleAuthService: googleAuth,
+    // Firebase Messaging only exists on mobile; desktop/widget tests would
+    // hang on the missing platform channel.
+    onLogoutPushCleanup: AuthProviderNotifier.supportsNativeSessionTeardown
+        ? (superseded) => PushNotificationService()
+            .clearOnLogout(sessionSuperseded: superseded)
+        : null,
   );
 });

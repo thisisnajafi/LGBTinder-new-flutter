@@ -50,27 +50,51 @@ class DiscoveryImagePrefetch {
     );
   }
 
+  /// Longest the Discover stack holds its skeleton for the front photo. After
+  /// that the card is shown anyway; it has its own photo placeholder.
+  static const Duration frontPhotoWait = Duration(milliseconds: 1500);
+
+  /// Replaces the disk-cache fetch in tests.
+  @visibleForTesting
+  static Future<void> Function(String url)? debugFetch;
+
+  /// Makes sure [url] is in the disk cache.
+  ///
+  /// A photo that is already cached and still valid is not requested again
+  /// (`getSingleFile`). `downloadFile` asks the server every time, which
+  /// re-fetched every photo of the stack on each swipe.
   static Future<void> prefetchUrl(
     String url, {
     LgbtfinderImageCacheManager? cacheManager,
   }) async {
     final trimmed = url.trim();
     if (trimmed.isEmpty) return;
-    final cache = cacheManager ?? LgbtfinderImageCacheManager();
     try {
-      await cache.downloadFile(trimmed);
+      final fetch = debugFetch;
+      if (fetch != null) {
+        await fetch(trimmed);
+      } else {
+        final cache = cacheManager ?? LgbtfinderImageCacheManager();
+        await cache.getSingleFile(trimmed);
+      }
     } catch (_) {
       // Non-fatal — UI still loads via CachedNetworkImage.
     }
+  }
+
+  /// First photo of the front card of [cards], or null when it has none.
+  static String? frontPhotoUrl(List<Map<String, dynamic>> cards) {
+    if (cards.isEmpty) return null;
+    final urls = urlsFromCardMap(cards.first);
+    return urls.isEmpty ? null : urls.first;
   }
 
   static Future<void> prefetchUrls(
     Iterable<String> urls, {
     LgbtfinderImageCacheManager? cacheManager,
   }) async {
-    final cache = cacheManager ?? LgbtfinderImageCacheManager();
     for (final url in urls) {
-      await prefetchUrl(url, cacheManager: cache);
+      await prefetchUrl(url, cacheManager: cacheManager);
     }
   }
 
@@ -81,14 +105,18 @@ class DiscoveryImagePrefetch {
   }) async {
     if (cards.isEmpty) return;
 
-    final cache = LgbtfinderImageCacheManager();
-    await prefetchUrls(urlsFromCardMap(cards.first), cacheManager: cache);
+    final frontUrls = urlsFromCardMap(cards.first);
+    final behindUrls = <String>[
+      for (var i = 1; i < visibleCount && i < cards.length; i++)
+        ...urlsFromCardMap(cards[i]).take(1),
+    ];
+    // Profiles without photos: nothing to fetch, so do not open the disk
+    // cache at all.
+    if (frontUrls.isEmpty && behindUrls.isEmpty) return;
 
-    for (var i = 1; i < visibleCount && i < cards.length; i++) {
-      final urls = urlsFromCardMap(cards[i]);
-      if (urls.isNotEmpty) {
-        await prefetchUrl(urls.first, cacheManager: cache);
-      }
+    await prefetchUrls(frontUrls);
+    for (final url in behindUrls) {
+      await prefetchUrl(url);
     }
   }
 
@@ -106,19 +134,54 @@ class DiscoveryImagePrefetch {
     return urls;
   }
 
+  /// Image provider with the same cache key the Discover card uses for a
+  /// photo decoded at [decodeWidth] pixels.
+  ///
+  /// The card shows photos through `CachedNetworkImage(memCacheWidth: w)`,
+  /// which stores them in Flutter's image cache as a [ResizeImage]. Warming
+  /// the cache with the plain provider decodes a second, full-size copy the
+  /// card never reads. Pass null for the full-size provider.
+  static ImageProvider<Object> cardPhotoProvider(String url, {int? decodeWidth}) {
+    return ResizeImage.resizeIfNeeded(
+      decodeWidth,
+      null,
+      lgbtfinderCachedImageProvider(url.trim()),
+    );
+  }
+
+  /// Decodes one card photo into Flutter's image cache so showing it later
+  /// (next photo tap, next card) does not flash a placeholder.
+  static Future<void> precacheCardPhoto(
+    BuildContext context,
+    String url, {
+    int? decodeWidth,
+  }) async {
+    if (!context.mounted || url.trim().isEmpty) return;
+    try {
+      await precacheImage(
+        cardPhotoProvider(url, decodeWidth: decodeWidth),
+        context,
+        // Non-fatal: the card still loads the photo itself.
+        onError: (_, __) {},
+      );
+    } catch (_) {
+      // Non-fatal — the card still loads via CachedNetworkImage.
+    }
+  }
+
   /// Decode the next two stack photos into Flutter's image cache
   /// (PERF-PAGE-DISCOVERY-002).
+  ///
+  /// Pass the card's [decodeWidth] (`SwipeableCard.photoDecodeWidth`) so the
+  /// decoded copy is the one the card reads.
   static Future<void> precacheNextTwo(
     BuildContext context,
-    List<DiscoveryProfile> stack,
-  ) async {
+    List<DiscoveryProfile> stack, {
+    int? decodeWidth,
+  }) async {
     if (!context.mounted) return;
     for (final url in nextCardPreviewUrls(stack)) {
-      try {
-        await precacheImage(lgbtfinderCachedImageProvider(url), context);
-      } catch (_) {
-        // Non-fatal — the card still loads via CachedNetworkImage.
-      }
+      await precacheCardPhoto(context, url, decodeWidth: decodeWidth);
       if (!context.mounted) return;
     }
   }
@@ -128,15 +191,14 @@ class DiscoveryImagePrefetch {
     Iterable<DiscoveryProfile> profiles, {
     int count = 5,
   }) async {
-    final cache = LgbtfinderImageCacheManager();
     var index = 0;
     for (final profile in profiles) {
       if (index >= count) break;
       final urls = urlsFromProfile(profile);
       if (index == 0) {
-        await prefetchUrls(urls, cacheManager: cache);
+        await prefetchUrls(urls);
       } else if (urls.isNotEmpty) {
-        await prefetchUrl(urls.first, cacheManager: cache);
+        await prefetchUrl(urls.first);
       }
       index++;
     }

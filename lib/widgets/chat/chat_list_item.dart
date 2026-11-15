@@ -9,6 +9,7 @@ import '../../core/theme/border_radius_constants.dart';
 import '../../core/theme/spacing_constants.dart';
 import '../../core/utils/app_icons.dart';
 import '../../core/utils/media_url.dart';
+import '../../core/widgets/frosted_placeholders.dart';
 import '../../core/widgets/premium/premium_design_system.dart';
 import '../../features/chat/providers/conversation_mute_cache_provider.dart';
 import '../../features/chat/providers/conversation_pin_cache_provider.dart';
@@ -358,20 +359,20 @@ class _MessagePreview extends StatelessWidget {
       return previewContent;
     }
 
-    // Static gate (no ImageFiltered blur) — same idea as message premium gate.
+    // Looks like the blurred preview it replaces, without ImageFiltered:
+    // soft smudges that follow the hidden message's word lengths, so rows
+    // still differ from each other. No offscreen layer per row while
+    // scrolling, and none of the text is drawn or exposed.
     return Row(
       children: [
         Expanded(
-          child: Text(
-            '············',
-            maxLines: 1,
-            overflow: TextOverflow.clip,
-            style: textStyle?.copyWith(
-              letterSpacing: 1.5,
-              color: mutedColor.withValues(alpha: 0.45),
-            ),
+          child: FrostedTextPlaceholder(
+            text: previewText,
+            style: textStyle,
+            color: mutedColor,
           ),
         ),
+        const SizedBox(width: AppSpacing.spacingXS),
         AppSvgIcon(
           key: ChatListItem.previewLockKey,
           assetPath: AppIcons.lock,

@@ -34,7 +34,6 @@ class ChatImagePlaceholder {
   static const int pixelSize = 20;
   /// Decoded memory cap for bubble photos (CHAT-IMG-003).
   static const int memCacheSize = 800;
-  static const double blurSigma = 12;
   static const double fallbackHeight = 200;
   static const double minHeight = 120;
   static const double maxHeight = 320;

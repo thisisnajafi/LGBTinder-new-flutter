@@ -25,6 +25,9 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
   final bool isMatched;
   final VoidCallback? onMessage;
   final VoidCallback? onLike;
+
+  /// Shows the like button as already liked.
+  final bool isLiked;
   final VoidCallback? onSuperlike;
   final VoidCallback? onShare;
   final VoidCallback? onMoreOptions;
@@ -48,6 +51,7 @@ class OtherUserProfileView extends ConsumerStatefulWidget {
     this.isMatched = false,
     this.onMessage,
     this.onLike,
+    this.isLiked = false,
     this.onSuperlike,
     this.onShare,
     this.onMoreOptions,
@@ -278,6 +282,7 @@ class _OtherUserProfileViewState extends ConsumerState<OtherUserProfileView> {
                   onBack: () => Navigator.maybePop(context),
                   onMessage: widget.onMessage,
                   onLike: widget.showInteractionActions ? widget.onLike : null,
+                  isLiked: widget.isLiked,
                   onMore: widget.onMoreOptions,
                   matchPercent: compatibility.matchPercent,
                   onPhotoTap: (index) => _openPhotoViewer(photoUrls, index),

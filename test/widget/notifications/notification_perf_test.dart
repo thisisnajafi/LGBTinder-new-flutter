@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lgbtindernew/core/widgets/avatar_widget.dart';
+import 'package:lgbtindernew/core/widgets/frosted_placeholders.dart';
 import 'package:lgbtindernew/core/widgets/optimized_image.dart';
 import 'package:lgbtindernew/features/notifications/data/models/notification.dart'
     as app_models;
@@ -44,7 +45,7 @@ void main() {
       expect(image.size, ImageSize.thumbnail);
     });
 
-    testWidgets('plan-restricted like uses static gate without ImageFiltered',
+    testWidgets('plan-restricted like shows a frosted photo, no ImageFiltered',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -57,6 +58,7 @@ void main() {
                   title: 'Someone liked you',
                   message: 'Upgrade to see who',
                   createdAt: DateTime(2026, 1, 1),
+                  userId: 9,
                   userImageUrl: 'https://example.com/b.jpg',
                   isPlanRestricted: true,
                   upgradeRequired: true,
@@ -67,6 +69,47 @@ void main() {
         ),
       );
 
+      expect(find.byType(ImageFiltered), findsNothing);
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.byKey(NotificationTile.restrictedAvatarKey), findsOneWidget);
+      // The liker's real avatar must never be drawn for a restricted like.
+      expect(find.byType(AvatarWidget), findsNothing);
+      final frosted = tester.widget<FrostedImagePlaceholder>(
+        find.byType(FrostedImagePlaceholder),
+      );
+      expect(frosted.imageUrl, 'https://example.com/b.jpg');
+      // A handful of pixels: colours survive, the face does not.
+      expect(frosted.decodeWidth, lessThanOrEqualTo(8));
+      final image = tester.widget<OptimizedImage>(find.byType(OptimizedImage));
+      expect(image.memoryCacheWidth, frosted.decodeWidth);
+    });
+
+    testWidgets('plan-restricted like without a photo keeps the icon gate',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: NotificationTile(
+                notification: app_models.Notification(
+                  id: 3,
+                  type: 'like_received',
+                  title: 'Someone liked you',
+                  message: 'Upgrade to see who',
+                  createdAt: DateTime(2026, 1, 1),
+                  userId: 9,
+                  isPlanRestricted: true,
+                  upgradeRequired: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(FrostedImagePlaceholder), findsNothing);
+      expect(find.byType(OptimizedImage), findsNothing);
       expect(find.byType(ImageFiltered), findsNothing);
     });
   });

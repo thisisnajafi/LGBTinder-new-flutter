@@ -18,7 +18,7 @@ const int _kLogBodyMaxChars = 400;
 /// Used for best-effort background logout so a late 401 cannot bounce a new session.
 const String kSkipUnauthorizedHandlerExtra = 'skipUnauthorizedHandler';
 
-/// Keys redacted from API request body logs (never print secrets).
+/// Keys redacted from API logs (never print secrets).
 const _kRedactedBodyKeys = {
   'password',
   'password_confirmation',
@@ -27,30 +27,78 @@ const _kRedactedBodyKeys = {
   'access_token',
   'id_token',
   'authorization',
+  'secret',
+  'otp',
 };
 
-/// Returns a shallow copy of [body] with sensitive fields replaced by `***`.
+/// True when a body field / header / query parameter named [key] must never
+/// reach the logs: exact matches above plus any `*password*`, `*_token`,
+/// `*secret*` or `authorization` variant (`current_password`,
+/// `profile_completion_token`, `device_token`, `client_secret`, …).
+bool isSensitiveLogKey(String key) {
+  final k = key.toLowerCase().replaceAll('-', '_');
+  if (_kRedactedBodyKeys.contains(k)) return true;
+  if (k.contains('password') || k.contains('secret')) return true;
+  if (k.contains('authorization')) return true;
+  if (k.endsWith('token') || k.endsWith('_otp')) return true;
+  return false;
+}
+
+/// Returns a copy of [body] with sensitive fields replaced by `***`
+/// (recurses into nested maps and lists).
 Map<String, dynamic>? redactSensitiveBody(Map? body) {
   if (body == null || body.isEmpty) return null;
   final out = <String, dynamic>{};
   body.forEach((key, value) {
     final k = key.toString();
-    if (_kRedactedBodyKeys.contains(k.toLowerCase())) {
+    if (isSensitiveLogKey(k)) {
       out[k] = '***';
-    } else if (value is Map) {
-      out[k] = redactSensitiveBody(value) ?? value;
     } else {
-      out[k] = value;
+      out[k] = _redactLogValue(value);
     }
   });
   return out;
+}
+
+dynamic _redactLogValue(dynamic value) {
+  if (value is Map) return redactSensitiveBody(value) ?? value;
+  if (value is List) return value.map(_redactLogValue).toList();
+  return value;
+}
+
+/// Masks sensitive query parameters (`?token=…`) in a logged URL.
+String redactSensitiveUrl(String url) {
+  final queryStart = url.indexOf('?');
+  if (queryStart < 0) return url;
+  try {
+    final uri = Uri.parse(url);
+    if (!uri.queryParametersAll.keys.any(isSensitiveLogKey)) return url;
+    final masked = <String, dynamic>{
+      for (final entry in uri.queryParametersAll.entries)
+        entry.key: isSensitiveLogKey(entry.key) ? '***' : entry.value,
+    };
+    return uri.replace(queryParameters: masked).toString();
+  } catch (_) {
+    // Unparseable URL: drop the query rather than risk printing a secret.
+    return '${url.substring(0, queryStart)}?***';
+  }
+}
+
+/// Bearer value of a request's `Authorization` header, if any.
+String? _bearerOf(RequestOptions options) {
+  final raw = options.headers['Authorization']?.toString().trim() ?? '';
+  if (raw.isEmpty) return null;
+  final value = raw.toLowerCase().startsWith('bearer ')
+      ? raw.substring(7).trim()
+      : raw;
+  return value.isEmpty ? null : value;
 }
 
 /// Summarizes response/request body for debug logs (avoids dumping full HTML or huge JSON).
 String _summarizeBody(dynamic data, {int maxChars = _kLogBodyMaxChars}) {
   if (data == null) return 'null';
   if (data is Map || data is List) {
-    final str = data.toString();
+    final str = _redactLogValue(data).toString();
     if (str.length <= maxChars) return str;
     return '${str.substring(0, maxChars)}... [${str.length} chars total]';
   }
@@ -127,8 +175,9 @@ class DioClient {
             }
           }
 
-          // Log request: full URI, body (summarized)
-          final uri = options.uri.toString();
+          // Log request: full URI, body (summarized). Headers are never
+          // logged, so the bearer token cannot leak from here.
+          final uri = redactSensitiveUrl(options.uri.toString());
           String? requestExtra;
           Map? requestBody;
           if (options.data is FormData) {
@@ -147,7 +196,7 @@ class DioClient {
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          final uri = response.requestOptions.uri.toString();
+          final uri = redactSensitiveUrl(response.requestOptions.uri.toString());
           final status = response.statusCode ?? 0;
           dynamic errorBody;
           if (status >= 400 && response.data != null) {
@@ -172,7 +221,7 @@ class DioClient {
           return handler.next(response);
         },
         onError: (error, handler) async {
-          final uri = error.requestOptions.uri.toString();
+          final uri = redactSensitiveUrl(error.requestOptions.uri.toString());
           final code = error.response?.statusCode ?? 0;
           final summary = error.response?.data != null
               ? _summarizeBody(error.response!.data, maxChars: 500)
@@ -191,8 +240,7 @@ class DioClient {
 
           final statusCode = error.response?.statusCode;
           if (statusCode == 403 && _isBannedAccount(_asStringKeyMap(error.response?.data))) {
-            clearAuthToken();
-            BannedHandler.invoke();
+            _notifyBanned(error.requestOptions);
             return handler.next(error);
           }
 
@@ -227,6 +275,24 @@ class DioClient {
               return handler.next(error);
             }
 
+            // A request sent by a previous session (optimistic logout, then
+            // another account logged in) must never be refreshed or retried
+            // with the new account's token, and must not end its session.
+            final failedBearer = _bearerOf(requestOptions);
+            if (failedBearer != null) {
+              try {
+                final current = await _tokenStorage.getAuthToken();
+                if (current != null &&
+                    current.isNotEmpty &&
+                    current != failedBearer &&
+                    current != _refreshedToken) {
+                  return handler.next(error);
+                }
+              } catch (_) {
+                // Storage unreadable: fall through to the normal 401 path.
+              }
+            }
+
             // Attempt token refresh
             try {
               final newToken = await _refreshTokenIfNeeded();
@@ -248,13 +314,13 @@ class DioClient {
               } else {
                 // Refresh failed, clear in-memory auth and notify (storage cleared in logout)
                 clearAuthToken();
-                _notifyUnauthorized();
+                _notifyUnauthorized(requestOptions);
                 return handler.next(error);
               }
             } catch (e) {
               // Refresh failed, clear in-memory auth and notify (storage cleared in logout)
               clearAuthToken();
-              _notifyUnauthorized();
+              _notifyUnauthorized(requestOptions);
               return handler.next(error);
             }
           }
@@ -278,8 +344,7 @@ class DioClient {
     final body = _asStringKeyMap(data);
 
     if (statusCode == 403 && _isBannedAccount(body)) {
-      clearAuthToken();
-      BannedHandler.invoke();
+      _notifyBanned(requestOptions);
       return;
     }
 
@@ -295,7 +360,7 @@ class DioClient {
         hadAuthTokenOnRequest: hadAuthToken,
       )) {
         clearAuthToken();
-        _notifyUnauthorized();
+        _notifyUnauthorized(requestOptions);
       }
     }
   }
@@ -338,12 +403,68 @@ class DioClient {
   }
 
   /// Notify app that user is unauthenticated (401). Schedules on UI thread.
-  void _notifyUnauthorized() {
+  ///
+  /// [request] is the call that failed. Logout is optimistic, so a request
+  /// sent by the previous session can come back 401 (its token was revoked)
+  /// after someone else has logged in. Only a 401 for the *current* session
+  /// may end it.
+  void _notifyUnauthorized(RequestOptions request) {
+    final failedBearer = _bearerOf(request);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final token = await _tokenStorage.getAuthToken();
-      if (token == null || token.isEmpty) return;
+      if (!shouldEndSessionFor(
+        failedRequestBearer: failedBearer,
+        currentToken: token,
+      )) {
+        return;
+      }
       UnauthorizedHandler.invoke();
     });
+  }
+
+  /// 403 banned: same stale-session rule as [_notifyUnauthorized].
+  void _notifyBanned(RequestOptions request) {
+    final failedBearer = _bearerOf(request);
+    if (failedBearer == null) {
+      clearAuthToken();
+      BannedHandler.invoke();
+      return;
+    }
+    unawaited(() async {
+      String? token;
+      try {
+        token = await _tokenStorage.getAuthToken();
+      } catch (_) {
+        token = null;
+      }
+      if (token != null && token.isNotEmpty && token != failedBearer) {
+        // A different account is signed in now; the ban belongs to the
+        // previous session.
+        return;
+      }
+      clearAuthToken();
+      BannedHandler.invoke();
+    }());
+  }
+
+  /// Whether a 401 on a request carrying [failedRequestBearer] should end
+  /// the session whose stored token is [currentToken].
+  ///
+  /// - no stored token → already logged out, nothing to end;
+  /// - the request carried a different token → it belonged to a previous
+  ///   session (optimistic logout + re-login), so the current one is kept.
+  @visibleForTesting
+  static bool shouldEndSessionFor({
+    required String? failedRequestBearer,
+    required String? currentToken,
+  }) {
+    if (currentToken == null || currentToken.isEmpty) return false;
+    if (failedRequestBearer != null &&
+        failedRequestBearer.isNotEmpty &&
+        failedRequestBearer != currentToken) {
+      return false;
+    }
+    return true;
   }
 
   /// Refresh token if needed (handles concurrent requests)
