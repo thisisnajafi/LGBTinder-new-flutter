@@ -16,10 +16,7 @@ class ChatHistoryCursor {
   final int beforeId;
   final DateTime? beforeCreatedAt;
 
-  const ChatHistoryCursor({
-    required this.beforeId,
-    this.beforeCreatedAt,
-  });
+  const ChatHistoryCursor({required this.beforeId, this.beforeCreatedAt});
 
   factory ChatHistoryCursor.fromJson(Map<String, dynamic> json) {
     return ChatHistoryCursor(
@@ -57,10 +54,10 @@ class ChatHistoryResult {
 /// Chat service for messaging functionality
 class ChatService {
   final ApiService _apiService;
-  final ChatDeliveredAckDeduper _deliveredAckDeduper = ChatDeliveredAckDeduper();
+  final ChatDeliveredAckDeduper _deliveredAckDeduper =
+      ChatDeliveredAckDeduper();
 
   ChatService(this._apiService);
-
 
   /// Get chat history with a specific user (includes `conversation_id` when available).
   Future<ChatHistoryResult> getChatHistory({
@@ -245,10 +242,7 @@ class ChatService {
   Future<Message> editMessage(int messageId, String text) async {
     final response = await _apiService.patch<Map<String, dynamic>>(
       ApiEndpoints.chatMessage,
-      data: {
-        'message_id': messageId,
-        'message': text,
-      },
+      data: {'message_id': messageId, 'message': text},
       fromJson: (json) => json as Map<String, dynamic>,
     );
     if (!response.isSuccess || response.data == null) {
@@ -282,10 +276,7 @@ class ChatService {
     try {
       final response = await _apiService.delete<Map<String, dynamic>>(
         ApiEndpoints.chatMessage,
-        data: {
-          'message_id': messageId,
-          'for_everyone': forEveryone,
-        },
+        data: {'message_id': messageId, 'for_everyone': forEveryone},
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
@@ -301,10 +292,7 @@ class ChatService {
   Future<void> setTypingStatus(int receiverId, bool isTyping) async {
     final response = await _apiService.post<void>(
       ApiEndpoints.chatTyping,
-      data: {
-        'receiver_id': receiverId,
-        'is_typing': isTyping,
-      },
+      data: {'receiver_id': receiverId, 'is_typing': isTyping},
     );
 
     if (!response.isSuccess) {
@@ -389,14 +377,14 @@ class ChatService {
   }
 
   /// Upload attachment for message
-  Future<MessageAttachment> uploadAttachment(String filePath, String filename) async {
+  Future<MessageAttachment> uploadAttachment(
+    String filePath,
+    String filename,
+  ) async {
     try {
       // Create multipart form data
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          filePath,
-          filename: filename,
-        ),
+        'file': await MultipartFile.fromFile(filePath, filename: filename),
       });
 
       final response = await _apiService.post<Map<String, dynamic>>(
@@ -433,7 +421,7 @@ class ChatService {
   }
 
   /// Enhanced send message with attachment support
-  /// 
+  ///
   /// FIXED: Task 2.3.1 & 2.3.2 - Updated to properly handle media uploads
   /// Backend expects multipart/form-data when sending media (image, video, voice)
   /// Send a sticker message.
@@ -602,7 +590,7 @@ class ChatService {
     throw Exception('Invalid voice upload response');
   }
 
-  /// 
+  ///
   /// [receiverId] - The ID of the user to send the message to
   /// [message] - Text content of the message (required for text type, optional for media)
   /// [messageType] - One of: 'text', 'image', 'video', 'voice', 'disappearing_image', 'disappearing_video', 'sticker'
@@ -610,7 +598,9 @@ class ChatService {
   /// [mediaDuration] - Duration in seconds (required for voice/video)
   /// [expiresInSeconds] - 1-60 seconds (required for disappearing media)
   /// [stickerId] - Required when messageType is 'sticker'
-  Future<Message> sendMessage(int receiverId, String message, {
+  Future<Message> sendMessage(
+    int receiverId,
+    String message, {
     String messageType = 'text',
     File? mediaFile,
     int? mediaDuration,
@@ -626,8 +616,12 @@ class ChatService {
     String? clientId,
   }) async {
     try {
+      // Text and sticker never carry file attachments (backend returns 422).
+      final allowsAttachment =
+          messageType != 'text' && messageType != 'sticker';
+
       // Use FormData for media uploads, regular JSON for text messages
-      if (mediaFile != null && messageType != 'text') {
+      if (mediaFile != null && allowsAttachment) {
         return await _sendMessageWithMedia(
           receiverId: receiverId,
           message: message,
@@ -638,26 +632,31 @@ class ChatService {
           clientId: clientId,
         );
       }
-      
-      // Text-only message
+
+      // Text-only / sticker / path-based media message
       final data = <String, dynamic>{
         'receiver_id': receiverId,
-        'message': (messageType == 'sticker' || messageType == 'profile_link') ? null : message,
+        'message': (messageType == 'sticker' || messageType == 'profile_link')
+            ? null
+            : message,
         'message_type': messageType,
         if (stickerId != null) 'sticker_id': stickerId,
         if (profileUserId != null) 'profile_user_id': profileUserId,
-        if (mediaPath != null) 'media_path': mediaPath,
-        if (mediaThumbnailPath != null) 'media_thumbnail_path': mediaThumbnailPath,
-        if (mediaWidth != null) 'media_width': mediaWidth,
-        if (mediaHeight != null) 'media_height': mediaHeight,
+        if (allowsAttachment && mediaPath != null) 'media_path': mediaPath,
+        if (allowsAttachment && mediaThumbnailPath != null)
+          'media_thumbnail_path': mediaThumbnailPath,
+        if (allowsAttachment && mediaWidth != null) 'media_width': mediaWidth,
+        if (allowsAttachment && mediaHeight != null)
+          'media_height': mediaHeight,
         if (expiresInSeconds != null) 'expires_in_seconds': expiresInSeconds,
-        if (mediaDuration != null) 'media_duration': mediaDuration,
+        if (allowsAttachment && mediaDuration != null)
+          'media_duration': mediaDuration,
         if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
         if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
       };
 
-      // Legacy attachment support (if attachment ID already exists)
-      if (attachment != null) {
+      // Legacy attachment support — never on text/sticker (422 on backend).
+      if (allowsAttachment && attachment != null) {
         data['attachment_id'] = attachment.id;
       }
 
@@ -681,9 +680,9 @@ class ChatService {
       rethrow;
     }
   }
-  
+
   /// Send message with media file using multipart/form-data
-  /// 
+  ///
   /// Backend validation (ChatController@sendMessage):
   /// - 'receiver_id' => required, must exist in users table
   /// - 'message' => required if message_type is text, nullable otherwise
@@ -702,7 +701,7 @@ class ChatService {
   }) async {
     try {
       final fileName = mediaFile.path.split('/').last;
-      
+
       final formData = FormData.fromMap({
         'receiver_id': receiverId,
         'message': message.isNotEmpty ? message : null,
@@ -935,4 +934,3 @@ class ChatService {
     return message.copyWith(clientId: clientId);
   }
 }
-
