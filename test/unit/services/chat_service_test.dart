@@ -5,7 +5,6 @@ import 'package:mockito/annotations.dart';
 import 'package:lgbtindernew/features/chat/data/services/chat_service.dart';
 import 'package:lgbtindernew/shared/services/api_service.dart';
 import 'package:lgbtindernew/features/chat/data/models/message.dart';
-import 'package:lgbtindernew/features/chat/data/models/send_message_request.dart';
 import 'package:lgbtindernew/shared/models/api_response.dart';
 
 import 'chat_service_test.mocks.dart';
@@ -51,7 +50,11 @@ void main() {
         ));
 
         // Act
-        final result = await chatService.sendMessage(request);
+        final result = await chatService.sendMessage(
+          request.receiverId,
+          request.message,
+          messageType: request.messageType,
+        );
 
         // Assert
         expect(result, isNotNull);
@@ -84,7 +87,11 @@ void main() {
 
         // Act & Assert
         expect(
-          () => chatService.sendMessage(request),
+          () => chatService.sendMessage(
+            request.receiverId,
+            request.message,
+            messageType: request.messageType,
+          ),
           throwsException,
         );
       });
@@ -119,6 +126,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: responseData,
@@ -134,9 +145,9 @@ void main() {
 
         // Assert
         expect(result, isNotNull);
-        expect(result.length, equals(2));
-        expect(result[0].message, equals('Hello!'));
-        expect(result[1].message, equals('Hi there!'));
+        expect(result.messages.length, equals(2));
+        expect(result.messages[0].message, equals('Hello!'));
+        expect(result.messages[1].message, equals('Hi there!'));
       });
 
       test('should return empty list when no messages', () async {
@@ -144,6 +155,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: {'data': []},
@@ -155,7 +170,7 @@ void main() {
 
         // Assert
         expect(result, isNotNull);
-        expect(result.isEmpty, isTrue);
+        expect(result.messages.isEmpty, isTrue);
       });
     });
 
@@ -165,12 +180,9 @@ void main() {
         final responseData = {
           'data': [
             {
-              'id': 1,
-              'user': {
-                'id': 123,
-                'first_name': 'John',
-                'last_name': 'Doe',
-              },
+              'id': 123,
+              'first_name': 'John',
+              'last_name': 'Doe',
               'last_message': {
                 'id': 1,
                 'message': 'Hello!',
@@ -181,8 +193,14 @@ void main() {
           ],
         };
 
-        when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
-            ApiResponse<dynamic>(
+        when(mockApiService.get<dynamic>(
+          any,
+          queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).thenAnswer((_) async => ApiResponse<dynamic>(
               status: true,
               data: responseData,
               message: 'Chat users retrieved',
@@ -194,7 +212,8 @@ void main() {
         // Assert
         expect(result, isNotNull);
         expect(result.length, equals(1));
-        expect(result[0].id, equals(1));
+        expect(result[0].userId, equals(123));
+        expect(result[0].firstName, equals('John'));
       });
     });
   });

@@ -101,12 +101,13 @@ class IncomingCallData {
             'Unknown')
         .toString();
 
-    final avatar = (data['caller_avatar'] ??
+    // Prefer the full primary photo over cropped avatar thumbs when both exist.
+    final avatar = (data['primary_image_url'] ??
+            callerMap?['primary_image_url'] ??
+            data['caller_avatar'] ??
             data['callerAvatar'] ??
             data['avatar_url'] ??
-            callerMap?['avatar_url'] ??
-            data['primary_image_url'] ??
-            callerMap?['primary_image_url'])
+            callerMap?['avatar_url'])
         ?.toString();
 
     return IncomingCallData(

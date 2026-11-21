@@ -5,7 +5,7 @@ import 'package:mockito/annotations.dart';
 import 'package:lgbtindernew/features/payments/data/services/payment_service.dart';
 import 'package:lgbtindernew/shared/services/api_service.dart';
 import 'package:lgbtindernew/features/payments/data/models/subscription_plan.dart';
-import 'package:lgbtindernew/features/payments/data/models/subscribe_request.dart';
+import 'package:lgbtindernew/features/payments/data/models/subscription_plan.dart';
 import 'package:lgbtindernew/shared/models/api_response.dart';
 
 import 'payment_service_test.mocks.dart';
@@ -47,7 +47,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Plans retrieved',
             ));
@@ -68,7 +68,7 @@ void main() {
         // Arrange
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: {'data': []},
               message: 'No plans',
             ));
@@ -102,7 +102,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Sub plans retrieved',
             ));
@@ -123,7 +123,7 @@ void main() {
         // Arrange
         final request = SubscribeRequest(
           planId: 1,
-          paymentMethod: 'stripe',
+          subPlanId: 1,
         );
 
         final responseData = {
@@ -139,7 +139,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Subscribed',
         ));
@@ -162,7 +162,7 @@ void main() {
         // Arrange
         final request = SubscribeRequest(
           planId: 1,
-          paymentMethod: 'stripe',
+          subPlanId: 1,
         );
 
         when(mockApiService.post<Map<String, dynamic>>(
@@ -170,7 +170,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Subscription failed',
         ));
@@ -198,7 +198,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Status retrieved',
         ));
@@ -218,7 +218,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Failed',
         ));

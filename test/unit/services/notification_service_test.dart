@@ -23,7 +23,7 @@ void main() {
       test('should return list of notifications on successful call', () async {
         // Arrange
         final responseData = {
-          'data': [
+          'notifications': [
             {
               'id': 1,
               'type': 'like',
@@ -41,13 +41,18 @@ void main() {
               'created_at': '2024-01-01T01:00:00Z',
             },
           ],
+          'unread_count': 1,
         };
 
-        when(mockApiService.get<dynamic>(
+        when(mockApiService.get<Map<String, dynamic>>(
           any,
           queryParameters: anyNamed('queryParameters'),
-        )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
+          status: true,
           data: responseData,
           message: 'Notifications retrieved',
         ));
@@ -57,21 +62,25 @@ void main() {
 
         // Assert
         expect(result, isNotNull);
-        expect(result.length, equals(2));
-        expect(result[0].id, equals(1));
-        expect(result[0].type, equals('like'));
-        expect(result[1].id, equals(2));
-        expect(result[1].type, equals('match'));
+        expect(result.notifications.length, equals(2));
+        expect(result.notifications[0].id, equals(1));
+        expect(result.notifications[0].type, equals('like'));
+        expect(result.notifications[1].id, equals(2));
+        expect(result.notifications[1].type, equals('match'));
       });
 
       test('should return empty list when no notifications', () async {
         // Arrange
-        when(mockApiService.get<dynamic>(
+        when(mockApiService.get<Map<String, dynamic>>(
           any,
           queryParameters: anyNamed('queryParameters'),
-        )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
-          data: {'data': []},
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
+          status: true,
+          data: {'notifications': []},
           message: 'No notifications',
         ));
 
@@ -80,17 +89,21 @@ void main() {
 
         // Assert
         expect(result, isNotNull);
-        expect(result.isEmpty, isTrue);
+        expect(result.notifications.isEmpty, isTrue);
       });
 
       test('should handle pagination parameters', () async {
         // Arrange
-        when(mockApiService.get<dynamic>(
+        when(mockApiService.get<Map<String, dynamic>>(
           any,
           queryParameters: anyNamed('queryParameters'),
-        )).thenAnswer((_) async => ApiResponse<dynamic>(
-          isSuccess: true,
-          data: {'data': []},
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
+          status: true,
+          data: {'notifications': []},
           message: 'Notifications retrieved',
         ));
 
@@ -98,14 +111,17 @@ void main() {
         await notificationService.getNotifications(page: 2, limit: 20);
 
         // Assert
-        verify(mockApiService.get<dynamic>(
+        final captured = verify(mockApiService.get<Map<String, dynamic>>(
           any,
-          queryParameters: argThat(
-            predicate<Map<String, dynamic>?>(
-              (params) => params?['page'] == 2 && params?['limit'] == 20,
-            ),
-          ),
-        )).called(1);
+          queryParameters: captureAnyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).captured;
+        final params = captured.single as Map<String, dynamic>;
+        expect(params['page'], 2);
+        expect(params['limit'], 20);
       });
     });
 
@@ -118,9 +134,13 @@ void main() {
 
         when(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Count retrieved',
         ));
@@ -140,9 +160,13 @@ void main() {
 
         when(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Count retrieved',
         ));
@@ -158,9 +182,13 @@ void main() {
         // Arrange
         when(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Failed',
         ));
@@ -182,7 +210,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'Marked as read',
         ));
@@ -205,7 +233,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Failed',
         ));
@@ -225,7 +253,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'All marked as read',
         ));
@@ -250,7 +278,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'Deleted',
         ));
@@ -273,7 +301,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Failed',
         ));

@@ -68,7 +68,6 @@ jobs:
 
       - name: Unit tests
         id: test
-        continue-on-error: true
         run: |
           set -o pipefail
           flutter test test/unit/ 2>&1 | tee test-output.log
@@ -102,6 +101,7 @@ jobs:
       apk_status: ${{ steps.build_apk.outcome }}
       aab_status: ${{ steps.build_aab.outcome }}
       build_duration: ${{ steps.build_timer.outputs.duration }}
+      has_keystore: ${{ steps.configure_signing.outputs.has_keystore }}
 
     steps:
       - name: Checkout repository
@@ -124,6 +124,7 @@ jobs:
         run: flutter pub get
 
       - name: Configure release signing
+        id: configure_signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -131,7 +132,8 @@ jobs:
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           if [[ -z "$ANDROID_KEYSTORE_BASE64" ]]; then
-            echo "No release keystore secret; CI will use debug signing."
+            echo "No release keystore secret; skipping Play-signed release builds."
+            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
@@ -141,9 +143,11 @@ jobs:
           keyAlias=${ANDROID_KEY_ALIAS}
           storeFile=upload-keystore.jks
           EOF
+          echo "has_keystore=true" >> "$GITHUB_OUTPUT"
 
       - name: Build split release APKs
         id: build_apk
+        if: steps.configure_signing.outputs.has_keystore == 'true'
         run: |
           START=$(date +%s)
           echo "start=${START}" >> "$GITHUB_ENV"
@@ -151,6 +155,7 @@ jobs:
 
       - name: Build release App Bundle
         id: build_aab
+        if: steps.configure_signing.outputs.has_keystore == 'true'
         run: flutter build appbundle --release
 
       - name: Record build duration
@@ -159,9 +164,14 @@ jobs:
         run: |
           END=$(date +%s)
           START="${{ env.start }}"
-          echo "duration=$((END - START))s" >> "$GITHUB_OUTPUT"
+          if [[ -z "$START" ]]; then
+            echo "duration=skipped" >> "$GITHUB_OUTPUT"
+          else
+            echo "duration=$((END - START))s" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Collect release artifacts
+        if: steps.configure_signing.outputs.has_keystore == 'true'
         run: |
           mkdir -p build/releases/apk build/releases/aab
           cp -v build/app/outputs/flutter-apk/app-*-release.apk build/releases/apk/ || true
@@ -169,6 +179,7 @@ jobs:
           ls -lhR build/releases/
 
       - name: Upload APK artifacts
+        if: steps.configure_signing.outputs.has_keystore == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
@@ -176,6 +187,7 @@ jobs:
           retention-days: 14
 
       - name: Upload App Bundle
+        if: steps.configure_signing.outputs.has_keystore == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: android-app-bundle
@@ -183,6 +195,7 @@ jobs:
           retention-days: 14
 
       - name: Upload build summary
+        if: steps.configure_signing.outputs.has_keystore == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: build-releases
@@ -193,6 +206,7 @@ jobs:
     name: API ${{ matrix.api-level }} (${{ matrix.android_version }})
     runs-on: ubuntu-latest
     needs: build-android
+    if: needs.build-android.outputs.has_keystore == 'true'
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -260,20 +274,35 @@ jobs:
         id: status
         run: |
           ANALYZE="${{ needs.analyze-and-test.outputs.analyze_status }}"
+          TESTS="${{ needs.analyze-and-test.outputs.test_status }}"
           BUILD_APK="${{ needs.build-android.outputs.apk_status }}"
           BUILD_AAB="${{ needs.build-android.outputs.aab_status }}"
+          HAS_KEYSTORE="${{ needs.build-android.outputs.has_keystore }}"
           COMPAT="${{ needs.compatibility-matrix.result }}"
 
-          if [[ "$BUILD_APK" == "success" && "$BUILD_AAB" == "success" && "$COMPAT" == "success" ]]; then
+          apk_ok=false
+          aab_ok=false
+          compat_ok=false
+          if [[ "$HAS_KEYSTORE" == "true" ]]; then
+            [[ "$BUILD_APK" == "success" ]] && apk_ok=true
+            [[ "$BUILD_AAB" == "success" ]] && aab_ok=true
+            [[ "$COMPAT" == "success" ]] && compat_ok=true
+          else
+            apk_ok=true
+            aab_ok=true
+            compat_ok=true
+          fi
+
+          if [[ "$TESTS" == "success" && "$apk_ok" == "true" && "$aab_ok" == "true" && "$compat_ok" == "true" ]]; then
             echo "overall=success" >> "$GITHUB_OUTPUT"
             echo "errors=none" >> "$GITHUB_OUTPUT"
           else
             echo "overall=failure" >> "$GITHUB_OUTPUT"
             ERRORS=""
-            [[ "$ANALYZE" != "success" ]] && ERRORS="${ERRORS}analyze "
-            [[ "$BUILD_APK" != "success" ]] && ERRORS="${ERRORS}apk "
-            [[ "$BUILD_AAB" != "success" ]] && ERRORS="${ERRORS}aab "
-            [[ "$COMPAT" != "success" ]] && ERRORS="${ERRORS}compatibility "
+            [[ "$TESTS" != "success" ]] && ERRORS="${ERRORS}tests "
+            [[ "$apk_ok" != "true" ]] && ERRORS="${ERRORS}apk "
+            [[ "$aab_ok" != "true" ]] && ERRORS="${ERRORS}aab "
+            [[ "$compat_ok" != "true" ]] && ERRORS="${ERRORS}compatibility "
             echo "errors=${ERRORS:-unknown failure}" >> "$GITHUB_OUTPUT"
           fi
 

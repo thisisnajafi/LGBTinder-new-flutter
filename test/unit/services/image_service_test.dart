@@ -26,20 +26,24 @@ void main() {
         // Arrange
         final imageFile = File('test_image.jpg');
         final responseData = {
-          'id': 1,
-          'image_url': 'https://example.com/image.jpg',
-          'is_primary': false,
-          'order': 1,
+          'images': [
+            {
+              'id': 1,
+              'url': 'https://example.com/image.jpg',
+            },
+          ],
         };
 
-        when(mockApiService.uploadFile<Map<String, dynamic>>(
+        when(mockApiService.uploadFiles<Map<String, dynamic>>(
           any,
           any,
           fieldName: anyNamed('fieldName'),
           fields: anyNamed('fields'),
           fromJson: anyNamed('fromJson'),
+          onSendProgress: anyNamed('onSendProgress'),
+          options: anyNamed('options'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Image uploaded',
         ));
@@ -51,12 +55,14 @@ void main() {
         expect(result, isNotNull);
         expect(result.id, equals(1));
         expect(result.imageUrl, equals('https://example.com/image.jpg'));
-        verify(mockApiService.uploadFile<Map<String, dynamic>>(
+        verify(mockApiService.uploadFiles<Map<String, dynamic>>(
           any,
           any,
           fieldName: anyNamed('fieldName'),
           fields: anyNamed('fields'),
           fromJson: anyNamed('fromJson'),
+          onSendProgress: anyNamed('onSendProgress'),
+          options: anyNamed('options'),
         )).called(1);
       });
 
@@ -64,14 +70,16 @@ void main() {
         // Arrange
         final imageFile = File('test_image.jpg');
 
-        when(mockApiService.uploadFile<Map<String, dynamic>>(
+        when(mockApiService.uploadFiles<Map<String, dynamic>>(
           any,
           any,
           fieldName: anyNamed('fieldName'),
           fields: anyNamed('fields'),
           fromJson: anyNamed('fromJson'),
+          onSendProgress: anyNamed('onSendProgress'),
+          options: anyNamed('options'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Upload failed',
         ));
@@ -93,7 +101,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'Image deleted',
         ));
@@ -116,7 +124,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Delete failed',
         ));
@@ -139,7 +147,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'Images reordered',
         ));
@@ -164,7 +172,7 @@ void main() {
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Reorder failed',
         ));
@@ -186,7 +194,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'Primary image set',
         ));
@@ -209,7 +217,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Set primary failed',
         ));

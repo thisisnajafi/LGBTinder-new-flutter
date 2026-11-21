@@ -1,4 +1,6 @@
 /// Unit tests for ApiService
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -12,6 +14,42 @@ import 'package:lgbtindernew/shared/models/api_response.dart';
 import 'package:lgbtindernew/shared/models/api_error.dart';
 
 import 'api_service_test.mocks.dart';
+
+
+class _ScriptedAdapter implements HttpClientAdapter {
+  _ScriptedAdapter({
+    this.statusCode = 200,
+    this.body = '{"status":true,"data":{"id":1}}',
+    this.throwable,
+  });
+
+  final int statusCode;
+  final String body;
+  final Object? throwable;
+  RequestOptions? lastRequest;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    lastRequest = options;
+    if (throwable != null) {
+      throw throwable!;
+    }
+    return ResponseBody.fromString(
+      body,
+      statusCode,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
 
 @GenerateMocks([
   DioClient,
@@ -109,12 +147,7 @@ void main() {
       final requestData = {'name': 'Test'};
       
       when(mockConnectivityService.isOnline).thenReturn(true);
-      when(mockDio.post(any, data: anyNamed('data'), options: anyNamed('options')))
-          .thenAnswer((_) async => Response(
-                data: {'status': true, 'data': {'id': 1}},
-                statusCode: 200,
-                requestOptions: RequestOptions(path: endpoint),
-              ));
+      mockDio.httpClientAdapter = _ScriptedAdapter();
 
       // Act
       final result = await apiService.post<Map<String, dynamic>>(
@@ -125,7 +158,7 @@ void main() {
 
       // Assert
       expect(result.isSuccess, isTrue);
-      verify(mockDio.post(any, data: anyNamed('data'), options: anyNamed('options'))).called(1);
+      expect(result.data?['id'], equals(1));
     });
 
     test('should queue request when offline', () async {
@@ -137,13 +170,14 @@ void main() {
       when(mockOfflineQueueService.queueRequest(any))
           .thenAnswer((_) async => Future.value());
 
-      // Act
-      await apiService.post<Map<String, dynamic>>(
-        endpoint,
-        data: requestData,
+      // Act & Assert — queued, then surfaced as a no-internet ApiError
+      await expectLater(
+        apiService.post<Map<String, dynamic>>(
+          endpoint,
+          data: requestData,
+        ),
+        throwsA(isA<ApiError>()),
       );
-
-      // Assert
       verify(mockOfflineQueueService.queueRequest(any)).called(1);
     });
   });
@@ -155,12 +189,9 @@ void main() {
       final requestData = {'name': 'Updated'};
       
       when(mockConnectivityService.isOnline).thenReturn(true);
-      when(mockDio.put(any, data: anyNamed('data'), options: anyNamed('options')))
-          .thenAnswer((_) async => Response(
-                data: {'status': true, 'data': {'id': 1, 'name': 'Updated'}},
-                statusCode: 200,
-                requestOptions: RequestOptions(path: endpoint),
-              ));
+      mockDio.httpClientAdapter = _ScriptedAdapter(
+        body: '{"status":true,"data":{"id":1,"name":"Updated"}}',
+      );
 
       // Act
       final result = await apiService.put<Map<String, dynamic>>(
@@ -171,7 +202,7 @@ void main() {
 
       // Assert
       expect(result.isSuccess, isTrue);
-      verify(mockDio.put(any, data: anyNamed('data'), options: anyNamed('options'))).called(1);
+      expect(result.data?['name'], equals('Updated'));
     });
   });
 
@@ -181,12 +212,7 @@ void main() {
       const endpoint = '/test/1';
       
       when(mockConnectivityService.isOnline).thenReturn(true);
-      when(mockDio.delete(any, options: anyNamed('options')))
-          .thenAnswer((_) async => Response(
-                data: {'status': true},
-                statusCode: 200,
-                requestOptions: RequestOptions(path: endpoint),
-              ));
+      mockDio.httpClientAdapter = _ScriptedAdapter(body: '{"status":true}');
 
       // Act
       final result = await apiService.delete<Map<String, dynamic>>(
@@ -196,7 +222,6 @@ void main() {
 
       // Assert
       expect(result.isSuccess, isTrue);
-      verify(mockDio.delete(any, options: anyNamed('options'))).called(1);
     });
   });
 
@@ -206,11 +231,13 @@ void main() {
       const endpoint = '/test';
       
       when(mockConnectivityService.isOnline).thenReturn(true);
-      when(mockDio.get(any, queryParameters: anyNamed('queryParameters'), options: anyNamed('options')))
-          .thenThrow(DioException(
-            requestOptions: RequestOptions(path: endpoint),
-            type: DioExceptionType.connectionTimeout,
-          ));
+      when(mockCacheService.getCached(any, any)).thenAnswer((_) async => null);
+      mockDio.httpClientAdapter = _ScriptedAdapter(
+        throwable: DioException(
+          requestOptions: RequestOptions(path: endpoint),
+          type: DioExceptionType.connectionTimeout,
+        ),
+      );
 
       // Act & Assert
       expect(
@@ -224,12 +251,11 @@ void main() {
       const endpoint = '/test';
       
       when(mockConnectivityService.isOnline).thenReturn(true);
-      when(mockDio.get(any, queryParameters: anyNamed('queryParameters'), options: anyNamed('options')))
-          .thenAnswer((_) async => Response(
-                data: {'message': 'Unauthorized'},
-                statusCode: 401,
-                requestOptions: RequestOptions(path: endpoint),
-              ));
+      when(mockCacheService.getCached(any, any)).thenAnswer((_) async => null);
+      mockDio.httpClientAdapter = _ScriptedAdapter(
+        statusCode: 401,
+        body: '{"message":"Unauthorized"}',
+      );
 
       // Act & Assert
       expect(

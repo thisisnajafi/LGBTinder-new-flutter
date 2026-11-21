@@ -87,6 +87,7 @@ class NotificationService {
   Map<String, dynamic> _unwrapNotificationsPayload(Map<String, dynamic> data) {
     if (data['notifications'] is List) return data;
     final nested = data['data'];
+    if (nested is List) return {'notifications': nested};
     if (nested is Map<String, dynamic>) return nested;
     if (nested is Map) return Map<String, dynamic>.from(nested);
     return data;

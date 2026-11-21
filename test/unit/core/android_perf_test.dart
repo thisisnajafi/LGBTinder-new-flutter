@@ -7,9 +7,11 @@ import 'package:lgbtindernew/features/calls/presentation/widgets/agora_call_vide
 import 'package:lgbtindernew/shared/services/fcm_background_handler.dart';
 
 void main() {
-  test('manifest enables Android predictive back', () {
+  // The application tag has explicitly set this to false since the attribute
+  // was added, so Flutter and in-app call navigation keep control of back.
+  test('manifest disables Android predictive back', () {
     final xml = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
-    expect(xml, contains('android:enableOnBackInvokedCallback="true"'));
+    expect(xml, contains('android:enableOnBackInvokedCallback="false"'));
   });
 
   test('displayRefreshRateHz is non-negative with a binding', () {

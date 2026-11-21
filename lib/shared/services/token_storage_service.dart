@@ -15,14 +15,18 @@ class TokenStorageService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userSessionKey = 'user_session';
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock_this_device,
-    ),
-  );
+  final FlutterSecureStorage _storage;
+
+  TokenStorageService({FlutterSecureStorage? storage})
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+              ),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+              ),
+            );
 
   /// Revision bumped on every token/session write so route guards can skip
   /// secure-storage reads when nothing changed (PERF-ROUTE-003).

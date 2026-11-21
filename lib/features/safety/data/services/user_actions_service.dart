@@ -73,11 +73,19 @@ class UserActionsService {
         ApiEndpoints.blockList,
       );
 
-      if (response.data is! Map<String, dynamic>) return [];
-      final data = response.data as Map<String, dynamic>;
-      final inner = data['data'] as Map<String, dynamic>?;
-      if (inner == null) return [];
-      final blockedUsers = inner['blocked_users'] as List<dynamic>?;
+      if (response.data is! Map) return [];
+      final data = Map<String, dynamic>.from(response.data as Map);
+      final inner = data['data'];
+      List<dynamic>? blockedUsers;
+      if (inner is Map) {
+        final innerMap = Map<String, dynamic>.from(inner);
+        blockedUsers = innerMap['blocked_users'] as List<dynamic>? ??
+            innerMap['data'] as List<dynamic>?;
+      } else if (inner is List) {
+        blockedUsers = inner;
+      } else {
+        blockedUsers = data['blocked_users'] as List<dynamic>?;
+      }
       if (blockedUsers == null) return [];
 
       return blockedUsers.map((item) {

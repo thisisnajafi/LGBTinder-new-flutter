@@ -92,6 +92,7 @@ void main() {
                     mediaUrl: '/tmp/missing-photo.jpg',
                     clientId: 'c1',
                     deliveryStatus: MessageDeliveryStatus.failed,
+                    onRetry: () {},
                   ),
                 ),
               ),
