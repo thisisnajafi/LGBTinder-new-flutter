@@ -101,17 +101,17 @@ void main() {
       test('should return list of blocked users on successful call', () async {
         // Arrange
         final responseData = {
-          'data': [
-            {
-              'id': 1,
-              'user': {
-                'id': 123,
+          'data': {
+            'blocked_users': [
+              {
+                'id': 1,
+                'user_id': 123,
                 'first_name': 'John',
                 'last_name': 'Doe',
+                'blocked_at': '2024-01-01T00:00:00Z',
               },
-              'blocked_at': '2024-01-01T00:00:00Z',
-            },
-          ],
+            ],
+          },
         };
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
@@ -135,7 +135,7 @@ void main() {
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
               status: true,
-              data: {'data': []},
+              data: {'data': {'blocked_users': []}},
               message: 'No blocked users',
             ));
 

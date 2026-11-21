@@ -1,133 +1,117 @@
 /// Unit tests for TokenStorageService
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lgbtindernew/shared/services/token_storage_service.dart';
 
-import 'token_storage_service_test.mocks.dart';
+class _InMemorySecureStorage extends Fake implements FlutterSecureStorage {
+  final Map<String, String> store = {};
 
-@GenerateMocks([FlutterSecureStorage])
+  @override
+  Future<void> write({
+    required String? key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (key == null) return;
+    if (value == null) {
+      store.remove(key);
+    } else {
+      store[key] = value;
+    }
+  }
+
+  @override
+  Future<String?> read({
+    required String? key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (key == null) return null;
+    return store[key];
+  }
+
+  @override
+  Future<void> delete({
+    required String? key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (key != null) {
+      store.remove(key);
+    }
+  }
+}
+
 void main() {
-  // Note: TokenStorageService uses FlutterSecureStorage which is platform-specific
-  // These tests may need to be adjusted for actual implementation
-  // For now, we'll test the logic without mocking FlutterSecureStorage directly
+  late _InMemorySecureStorage storage;
+  late TokenStorageService service;
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    storage = _InMemorySecureStorage();
+    service = TokenStorageService(storage: storage);
+  });
 
   group('TokenStorageService', () {
     test('isAuthenticated should return false when no token', () async {
-      // Arrange
-      final service = TokenStorageService();
-
-      // Act
-      // Clear any existing token first
       await service.clearAuthToken();
-      final result = await service.isAuthenticated();
-
-      // Assert
-      expect(result, isFalse);
+      expect(await service.isAuthenticated(), isFalse);
     });
 
     test('isAuthenticated should return true when token exists', () async {
-      // Arrange
-      final service = TokenStorageService();
-      const testToken = 'test_auth_token';
-
-      // Act
-      await service.saveAuthToken(testToken);
-      final result = await service.isAuthenticated();
-
-      // Assert
-      expect(result, isTrue);
-
-      // Cleanup
-      await service.clearAuthToken();
+      await service.saveAuthToken('test_auth_token');
+      expect(await service.isAuthenticated(), isTrue);
     });
 
     test('saveAuthToken and getAuthToken should work correctly', () async {
-      // Arrange
-      final service = TokenStorageService();
       const testToken = 'test_auth_token_123';
-
-      // Act
       await service.saveAuthToken(testToken);
-      final retrievedToken = await service.getAuthToken();
-
-      // Assert
-      expect(retrievedToken, equals(testToken));
-
-      // Cleanup
-      await service.clearAuthToken();
+      expect(await service.getAuthToken(), equals(testToken));
     });
 
     test('clearAuthToken should remove token', () async {
-      // Arrange
-      final service = TokenStorageService();
-      const testToken = 'test_auth_token';
-
-      // Act
-      await service.saveAuthToken(testToken);
+      await service.saveAuthToken('test_auth_token');
       await service.clearAuthToken();
-      final retrievedToken = await service.getAuthToken();
-
-      // Assert
-      expect(retrievedToken, isNull);
+      expect(await service.getAuthToken(), isNull);
     });
 
     test('clearAllTokens should remove all tokens', () async {
-      // Arrange
-      final service = TokenStorageService();
-      const authToken = 'test_auth_token';
-      const refreshToken = 'test_refresh_token';
-      const profileToken = 'test_profile_token';
-
-      // Act
-      await service.saveAuthToken(authToken);
-      await service.saveRefreshToken(refreshToken);
-      await service.saveProfileCompletionToken(profileToken);
+      await service.saveAuthToken('test_auth_token');
+      await service.saveRefreshToken('test_refresh_token');
+      await service.saveProfileCompletionToken('test_profile_token');
       await service.clearAllTokens();
 
-      // Assert
-      final auth = await service.getAuthToken();
-      final refresh = await service.getRefreshToken();
-      final profile = await service.getProfileCompletionToken();
-
-      expect(auth, isNull);
-      expect(refresh, isNull);
-      expect(profile, isNull);
+      expect(await service.getAuthToken(), isNull);
+      expect(await service.getRefreshToken(), isNull);
+      expect(await service.getProfileCompletionToken(), isNull);
     });
 
     test('saveRefreshToken and getRefreshToken should work correctly', () async {
-      // Arrange
-      final service = TokenStorageService();
       const testToken = 'test_refresh_token';
-
-      // Act
       await service.saveRefreshToken(testToken);
-      final retrievedToken = await service.getRefreshToken();
-
-      // Assert
-      expect(retrievedToken, equals(testToken));
-
-      // Cleanup
-      await service.clearAllTokens();
+      expect(await service.getRefreshToken(), equals(testToken));
     });
 
     test('saveProfileCompletionToken and getProfileCompletionToken should work correctly',
         () async {
-      // Arrange
-      final service = TokenStorageService();
       const testToken = 'test_profile_token';
-
-      // Act
       await service.saveProfileCompletionToken(testToken);
-      final retrievedToken = await service.getProfileCompletionToken();
-
-      // Assert
-      expect(retrievedToken, equals(testToken));
-
-      // Cleanup
-      await service.clearAllTokens();
+      expect(await service.getProfileCompletionToken(), equals(testToken));
     });
   });
 }
-

@@ -42,7 +42,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'User info retrieved',
         ));
@@ -65,7 +65,7 @@ void main() {
           any,
           fromJson: anyNamed('fromJson'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'User not found',
         ));

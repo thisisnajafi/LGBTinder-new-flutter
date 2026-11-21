@@ -36,7 +36,11 @@ void main() {
 
         when(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: true,
           data: responseData,
@@ -53,7 +57,11 @@ void main() {
         expect(result.lastName, equals('Doe'));
         verify(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).called(1);
       });
 
@@ -61,7 +69,11 @@ void main() {
         // Arrange
         when(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: false,
           data: null,
@@ -92,7 +104,11 @@ void main() {
 
         when(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: true,
           data: responseData,
@@ -108,7 +124,11 @@ void main() {
         expect(result.firstName, equals('Jane'));
         verify(mockApiService.get<Map<String, dynamic>>(
           any,
+          queryParameters: anyNamed('queryParameters'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).called(1);
       });
     });

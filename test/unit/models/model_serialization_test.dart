@@ -169,9 +169,9 @@ void main() {
         // Arrange
         final json = {
           'id': 1,
-          'user_id': 123,
+          'sender_id': 123,
           'message': 'Hello',
-          'type': 'text',
+          'message_type': 'text',
           'created_at': '2024-01-01T00:00:00Z',
           'is_read': false,
         };
@@ -182,12 +182,14 @@ void main() {
 
         // Assert
         expect(message.id, equals(1));
-        expect(message.userId, equals(123));
+        expect(message.senderId, equals(123));
         expect(message.message, equals('Hello'));
-        expect(message.type, equals('text'));
+        expect(message.messageType, equals('text'));
         expect(message.isRead, equals(false));
         expect(serialized['id'], equals(1));
+        expect(serialized['sender_id'], equals(123));
         expect(serialized['message'], equals('Hello'));
+        expect(serialized['message_type'], equals('text'));
       });
     });
 
@@ -210,9 +212,12 @@ void main() {
 
         // Assert
         expect(match.id, equals(1));
-        expect(match.user?.id, equals(123));
-        expect(match.user?.firstName, equals('Jane'));
+        expect(match.userId, equals(123));
+        expect(match.firstName, equals('Jane'));
+        expect(match.lastName, equals('Doe'));
         expect(serialized['id'], equals(1));
+        expect(serialized['user_id'], equals(123));
+        expect(serialized['first_name'], equals('Jane'));
       });
     });
 

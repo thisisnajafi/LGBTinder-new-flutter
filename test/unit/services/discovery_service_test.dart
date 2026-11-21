@@ -5,8 +5,36 @@ import 'package:mockito/annotations.dart';
 import 'package:lgbtindernew/features/discover/data/services/discovery_service.dart';
 import 'package:lgbtindernew/shared/services/api_service.dart';
 import 'package:lgbtindernew/shared/models/api_response.dart';
+import 'package:lgbtindernew/shared/services/cache_service.dart';
+import 'package:lgbtindernew/features/payments/data/services/plan_limits_service.dart';
+import 'package:lgbtindernew/features/payments/data/models/plan_limits.dart';
 
 import 'discovery_service_test.mocks.dart';
+
+
+class _FakeCacheService extends Fake implements CacheService {
+  @override
+  Future<T?> getCached<T>(
+    String key,
+    T Function(Map<String, dynamic>) fromJson, {
+    Duration? customExpiry,
+  }) async =>
+      null;
+
+  @override
+  Future<void> cacheData(
+    String key,
+    Map<String, dynamic> data, {
+    Duration duration = CacheDuration.defaultDuration,
+  }) async {}
+}
+
+class _FakePlanLimitsService extends Fake implements PlanLimitsService {
+  @override
+  Future<PlanLimits> getPlanLimits({bool forceRefresh = false}) async {
+    throw Exception('plan limits unused in this unit test');
+  }
+}
 
 @GenerateMocks([ApiService])
 void main() {
@@ -15,7 +43,11 @@ void main() {
 
   setUp(() {
     mockApiService = MockApiService();
-    discoveryService = DiscoveryService(mockApiService);
+    discoveryService = DiscoveryService(
+      mockApiService,
+      _FakeCacheService(),
+      _FakePlanLimitsService(),
+    );
   });
 
   group('DiscoveryService', () {
@@ -44,6 +76,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: responseData,
@@ -67,6 +103,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: {'data': []},
@@ -86,6 +126,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: {'data': []},
@@ -96,14 +140,17 @@ void main() {
         await discoveryService.getNearbySuggestions(page: 2, limit: 20);
 
         // Assert
-        verify(mockApiService.get<dynamic>(
+        final captured = verify(mockApiService.get<dynamic>(
           any,
-          queryParameters: argThat(
-            predicate<Map<String, dynamic>?>(
-              (params) => params?['page'] == 2 && params?['limit'] == 20,
-            ),
-          ),
-        )).called(1);
+          queryParameters: captureAnyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).captured;
+        final params = captured.single as Map<String, dynamic>;
+        expect(params['page'], 2);
+        expect(params['limit'], 20);
       });
     });
 
@@ -131,6 +178,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: responseData,
@@ -156,6 +207,10 @@ void main() {
         when(mockApiService.get<dynamic>(
           any,
           queryParameters: anyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
         )).thenAnswer((_) async => ApiResponse<dynamic>(
           status: true,
           data: {'data': []},
@@ -166,15 +221,17 @@ void main() {
         await discoveryService.getAdvancedMatches(filters: filters);
 
         // Assert
-        verify(mockApiService.get<dynamic>(
+        final captured = verify(mockApiService.get<dynamic>(
           any,
-          queryParameters: argThat(
-            predicate<Map<String, dynamic>?>(
-              (params) =>
-                  params?['min_age'] == 25 && params?['max_age'] == 35,
-            ),
-          ),
-        )).called(1);
+          queryParameters: captureAnyNamed('queryParameters'),
+          fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          useCache: anyNamed('useCache'),
+          forceRefresh: anyNamed('forceRefresh'),
+        )).captured;
+        final params = captured.single as Map<String, dynamic>;
+        expect(params['min_age'], 25);
+        expect(params['max_age'], 35);
       });
     });
   });

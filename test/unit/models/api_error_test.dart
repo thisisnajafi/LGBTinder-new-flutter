@@ -20,13 +20,24 @@ void main() {
       );
     });
 
-    test('returns true for 401 on protected routes', () {
+    test('returns true for 401 on protected routes when a token was sent', () {
+      expect(
+        ApiError.shouldForceLogout(
+          statusCode: 401,
+          requestPath: '/discover/feed',
+          hadAuthTokenOnRequest: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('returns false for 401 when the request had no auth token', () {
       expect(
         ApiError.shouldForceLogout(
           statusCode: 401,
           requestPath: '/discover/feed',
         ),
-        isTrue,
+        isFalse,
       );
     });
 
@@ -43,6 +54,7 @@ void main() {
           statusCode: 401,
           body: {'upgrade_required': true},
           requestPath: '/matches',
+          hadAuthTokenOnRequest: true,
         ),
         isFalse,
       );

@@ -34,8 +34,12 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Like sent',
         ));
@@ -51,6 +55,10 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).called(1);
       });
 
@@ -67,8 +75,12 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Like sent',
         ));
@@ -90,8 +102,12 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Like failed',
         ));
@@ -113,8 +129,12 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: {},
           message: 'Dislike sent',
         ));
@@ -127,6 +147,10 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).called(1);
       });
 
@@ -138,8 +162,12 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: false,
+          status: false,
           data: null,
           message: 'Dislike failed',
         ));
@@ -166,8 +194,12 @@ void main() {
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
-          isSuccess: true,
+          status: true,
           data: responseData,
           message: 'Superlike sent',
         ));
@@ -210,7 +242,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Matches retrieved',
             ));
@@ -229,7 +261,7 @@ void main() {
         // Arrange
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: {'data': []},
               message: 'No matches',
             ));

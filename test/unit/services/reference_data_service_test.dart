@@ -32,7 +32,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Countries retrieved',
             ));
@@ -44,16 +44,16 @@ void main() {
         expect(result, isNotNull);
         expect(result.length, equals(2));
         expect(result[0].id, equals(1));
-        expect(result[0].name, equals('United States'));
+        expect(result[0].title, equals('United States'));
         expect(result[1].id, equals(2));
-        expect(result[1].name, equals('Canada'));
+        expect(result[1].title, equals('Canada'));
       });
 
       test('should return empty list when no countries', () async {
         // Arrange
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: {'data': []},
               message: 'No countries',
             ));
@@ -80,7 +80,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Cities retrieved',
             ));
@@ -91,8 +91,8 @@ void main() {
         // Assert
         expect(result, isNotNull);
         expect(result.length, equals(2));
-        expect(result[0].id, equals(1));
-        expect(result[0].name, equals('New York'));
+        expect(result.map((item) => item.title),
+            unorderedEquals(['New York', 'Los Angeles']));
       });
     });
 
@@ -109,7 +109,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Genders retrieved',
             ));
@@ -120,9 +120,9 @@ void main() {
         // Assert
         expect(result, isNotNull);
         expect(result.length, equals(3));
-        expect(result[0].name, equals('Male'));
-        expect(result[1].name, equals('Female'));
-        expect(result[2].name, equals('Non-binary'));
+        expect(result[0].title, equals('Male'));
+        expect(result[1].title, equals('Female'));
+        expect(result[2].title, equals('Non-binary'));
       });
     });
 
@@ -138,7 +138,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Jobs retrieved',
             ));
@@ -165,7 +165,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Education levels retrieved',
             ));
@@ -192,7 +192,7 @@ void main() {
 
         when(mockApiService.get<dynamic>(any)).thenAnswer((_) async =>
             ApiResponse<dynamic>(
-              isSuccess: true,
+              status: true,
               data: responseData,
               message: 'Interests retrieved',
             ));

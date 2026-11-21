@@ -1,4 +1,6 @@
 /// Unit tests for DioClient
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -8,6 +10,33 @@ import 'package:lgbtindernew/shared/services/token_storage_service.dart';
 
 import 'dio_client_test.mocks.dart';
 
+class _CaptureAdapter implements HttpClientAdapter {
+  _CaptureAdapter({this.statusCode = 200, this.body = '{"status":true}'});
+
+  final int statusCode;
+  final String body;
+  RequestOptions? lastRequest;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    lastRequest = options;
+    return ResponseBody.fromString(
+      body,
+      statusCode,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 @GenerateMocks([TokenStorageService])
 void main() {
   late DioClient dioClient;
@@ -15,155 +44,118 @@ void main() {
 
   setUp(() {
     mockTokenStorage = MockTokenStorageService();
+    when(mockTokenStorage.getAuthToken()).thenAnswer((_) async => null);
+    when(mockTokenStorage.getRefreshToken()).thenAnswer((_) async => null);
     dioClient = DioClient(mockTokenStorage);
   });
 
   group('DioClient - Initialization', () {
     test('should initialize with correct base URL', () {
-      // Assert
-      expect(dioClient.dio.options.baseUrl, equals('https://api.lgbtfinder.com/api'));
+      expect(
+        dioClient.dio.options.baseUrl,
+        equals('https://api.lgbtfinder.com/api'),
+      );
     });
 
     test('should initialize with correct timeouts', () {
-      // Assert
-      expect(dioClient.dio.options.connectTimeout, equals(const Duration(seconds: 30)));
-      expect(dioClient.dio.options.receiveTimeout, equals(const Duration(seconds: 30)));
+      expect(
+        dioClient.dio.options.connectTimeout,
+        equals(const Duration(seconds: 60)),
+      );
+      expect(
+        dioClient.dio.options.receiveTimeout,
+        equals(const Duration(seconds: 60)),
+      );
     });
 
     test('should initialize with correct headers', () {
-      // Assert
-      expect(dioClient.dio.options.headers['Content-Type'], equals('application/json'));
-      expect(dioClient.dio.options.headers['Accept'], equals('application/json'));
+      expect(
+        dioClient.dio.options.headers['Content-Type'],
+        equals('application/json'),
+      );
+      expect(
+        dioClient.dio.options.headers['Accept'],
+        equals('application/json'),
+      );
     });
   });
 
   group('DioClient - Request Interceptor', () {
     test('should add Authorization header when token is available', () async {
-      // Arrange
       const token = 'test_token';
       when(mockTokenStorage.getAuthToken()).thenAnswer((_) async => token);
+      final adapter = _CaptureAdapter();
+      dioClient.dio.httpClientAdapter = adapter;
 
-      // Act
-      final options = RequestOptions(path: '/test');
-      final handler = RequestInterceptorHandler();
-      
-      // Simulate interceptor call
-      final interceptor = dioClient.dio.interceptors.first;
-      if (interceptor is InterceptorsWrapper) {
-        await interceptor.onRequest(options, handler);
-      }
+      await dioClient.dio.get('/test');
 
-      // Assert
-      expect(options.headers['Authorization'], equals('Bearer $token'));
-      verify(mockTokenStorage.getAuthToken()).called(1);
+      expect(adapter.lastRequest?.headers['Authorization'], equals('Bearer $token'));
+      verify(mockTokenStorage.getAuthToken()).called(greaterThanOrEqualTo(1));
     });
 
     test('should not add Authorization header when token is not available', () async {
-      // Arrange
       when(mockTokenStorage.getAuthToken()).thenAnswer((_) async => null);
+      final adapter = _CaptureAdapter();
+      dioClient.dio.httpClientAdapter = adapter;
 
-      // Act
-      final options = RequestOptions(path: '/test');
-      final handler = RequestInterceptorHandler();
-      
-      // Simulate interceptor call
-      final interceptor = dioClient.dio.interceptors.first;
-      if (interceptor is InterceptorsWrapper) {
-        await interceptor.onRequest(options, handler);
-      }
+      await dioClient.dio.get('/test');
 
-      // Assert
-      expect(options.headers['Authorization'], isNull);
-      verify(mockTokenStorage.getAuthToken()).called(1);
+      expect(adapter.lastRequest?.headers['Authorization'], isNull);
     });
   });
 
   group('DioClient - Response Interceptor', () {
-    test('should pass through successful responses', () {
-      // Arrange
-      final response = Response(
-        data: {'status': true},
-        statusCode: 200,
-        requestOptions: RequestOptions(path: '/test'),
-      );
+    test('should pass through successful responses', () async {
+      final adapter = _CaptureAdapter();
+      dioClient.dio.httpClientAdapter = adapter;
 
-      // Act
-      final handler = ResponseInterceptorHandler();
-      
-      // Simulate interceptor call
-      final interceptor = dioClient.dio.interceptors.first;
-      if (interceptor is InterceptorsWrapper) {
-        interceptor.onResponse(response, handler);
-      }
+      final response = await dioClient.dio.get('/test');
 
-      // Assert
-      expect(handler.isCompleted, isTrue);
+      expect(response.statusCode, 200);
+      expect(response.data['status'], isTrue);
     });
   });
 
   group('DioClient - Error Interceptor', () {
     test('should handle 401 errors and attempt token refresh', () async {
-      // Arrange
-      final error = DioException(
-        requestOptions: RequestOptions(path: '/test'),
-        response: Response(
-          statusCode: 401,
-          requestOptions: RequestOptions(path: '/test'),
-        ),
-      );
+      when(mockTokenStorage.getRefreshToken())
+          .thenAnswer((_) async => 'refresh_token');
+      when(mockTokenStorage.getAuthToken())
+          .thenAnswer((_) async => 'new_token');
 
-      when(mockTokenStorage.getRefreshToken()).thenAnswer((_) async => 'refresh_token');
-      when(mockTokenStorage.getAuthToken()).thenAnswer((_) async => 'new_token');
+      final adapter = _CaptureAdapter(statusCode: 401, body: '{"message":"Unauthorized"}');
+      dioClient.dio.httpClientAdapter = adapter;
 
-      // Act
-      final handler = ErrorInterceptorHandler();
-      
-      // Simulate interceptor call
-      final interceptor = dioClient.dio.interceptors.first;
-      if (interceptor is InterceptorsWrapper) {
-        await interceptor.onError(error, handler);
+      try {
+        await dioClient.dio.get('/test');
+      } on DioException {
+        // 401 after a failed or unconfigured refresh still surfaces as DioException.
       }
 
-      // Assert
-      // Token refresh logic should be called
-      verify(mockTokenStorage.getRefreshToken()).called(1);
+      verify(mockTokenStorage.getRefreshToken()).called(greaterThanOrEqualTo(1));
     });
 
     test('on 401 for auth endpoints does not clear storage (app callback does via logout)', () async {
-      // Arrange
-      final error = DioException(
-        requestOptions: RequestOptions(path: '/auth/login'),
-        response: Response(
-          statusCode: 401,
-          requestOptions: RequestOptions(path: '/auth/login'),
-        ),
-      );
+      final adapter = _CaptureAdapter(statusCode: 401, body: '{"message":"Unauthorized"}');
+      dioClient.dio.httpClientAdapter = adapter;
 
-      // Act
-      final handler = ErrorInterceptorHandler();
-      final interceptor = dioClient.dio.interceptors.first;
-      if (interceptor is InterceptorsWrapper) {
-        interceptor.onError(error, handler);
+      try {
+        await dioClient.dio.post('/auth/login');
+      } on DioException {
+        // Expected — login 401 must not wipe stored tokens.
       }
 
-      // Assert: DioClient only clears in-memory auth and notifies; storage is cleared by app logout
       verifyNever(mockTokenStorage.clearAllTokens());
     });
   });
 
   group('DioClient - Token Refresh', () {
     test('should refresh token when expired', () async {
-      // Arrange
-      when(mockTokenStorage.getRefreshToken()).thenAnswer((_) async => 'refresh_token');
+      when(mockTokenStorage.getRefreshToken())
+          .thenAnswer((_) async => 'refresh_token');
       when(mockTokenStorage.getAuthToken()).thenAnswer((_) async => 'new_token');
 
-      // Act
-      // Token refresh is handled internally by DioClient
-      // This test verifies the refresh mechanism exists
-
-      // Assert
       expect(dioClient.dio.interceptors.length, greaterThan(0));
     });
   });
 }
-

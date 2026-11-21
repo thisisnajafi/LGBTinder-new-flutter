@@ -40,30 +40,27 @@ void main() {
       test('should return RegisterResponse on successful registration', () async {
         // Arrange
         final request = RegisterRequest(
-          email: 'test@example.com',
-          password: 'password123',
           firstName: 'Test',
           lastName: 'User',
+          email: 'test@example.com',
+          password: 'password123',
+          passwordConfirmation: 'password123',
         );
 
         final responseData = {
-          'status': true,
-          'message': 'Registration successful',
-          'data': {
-            'user': {
-              'id': 1,
-              'email': 'test@example.com',
-              'first_name': 'Test',
-              'last_name': 'User',
-            },
-            'token': 'test_token',
-          },
+          'user_id': 1,
+          'email': 'test@example.com',
+          'email_sent': true,
         };
 
         when(mockApiService.post<Map<String, dynamic>>(
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: true,
           data: responseData,
@@ -75,27 +72,36 @@ void main() {
 
         // Assert
         expect(result, isNotNull);
-        expect(result.user.email, equals('test@example.com'));
+        expect(result.email, equals('test@example.com'));
         verify(mockApiService.post<Map<String, dynamic>>(
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).called(1);
       });
 
       test('should throw exception on failed registration', () async {
         // Arrange
         final request = RegisterRequest(
-          email: 'test@example.com',
-          password: 'password123',
           firstName: 'Test',
           lastName: 'User',
+          email: 'test@example.com',
+          password: 'password123',
+          passwordConfirmation: 'password123',
         );
 
         when(mockApiService.post<Map<String, dynamic>>(
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: false,
           data: null,
@@ -116,26 +122,29 @@ void main() {
         final request = LoginRequest(
           email: 'test@example.com',
           password: 'password123',
+          deviceName: 'test-device',
         );
 
         final responseData = {
-          'status': true,
-          'message': 'Login successful',
-          'data': {
-            'user': {
-              'id': 1,
-              'email': 'test@example.com',
-              'first_name': 'Test',
-              'last_name': 'User',
-            },
-            'token': 'test_token',
+          'user': {
+            'id': 1,
+            'email': 'test@example.com',
+            'first_name': 'Test',
+            'last_name': 'User',
           },
+          'token': 'test_token',
+          'profile_completed': true,
+          'user_state': 'ready_for_app',
         };
 
         when(mockApiService.post<Map<String, dynamic>>(
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: true,
           data: responseData,
@@ -149,7 +158,7 @@ void main() {
 
         // Assert
         expect(result, isNotNull);
-        expect(result.user.email, equals('test@example.com'));
+        expect(result.user?.email, equals('test@example.com'));
         verify(mockTokenStorage.saveAuthToken('test_token')).called(1);
       });
 
@@ -158,12 +167,17 @@ void main() {
         final request = LoginRequest(
           email: 'test@example.com',
           password: 'wrongpassword',
+          deviceName: 'test-device',
         );
 
         when(mockApiService.post<Map<String, dynamic>>(
           any,
           data: anyNamed('data'),
           fromJson: anyNamed('fromJson'),
+          options: anyNamed('options'),
+          queueIfOffline: anyNamed('queueIfOffline'),
+          deduplicateIdempotent: anyNamed('deduplicateIdempotent'),
+          retryConfig: anyNamed('retryConfig'),
         )).thenAnswer((_) async => ApiResponse<Map<String, dynamic>>(
           status: false,
           data: null,

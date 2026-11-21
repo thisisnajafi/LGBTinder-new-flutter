@@ -102,6 +102,7 @@ void main() {
         'remaining': 0,
         'is_unlimited': false,
       };
+      payload['limits'] = Map<String, dynamic>.from(payload['limits'] as Map);
       (payload['limits'] as Map)['swipes'] = {
         'daily_limit': 1,
         'is_unlimited': false,

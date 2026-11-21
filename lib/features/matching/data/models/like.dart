@@ -176,6 +176,7 @@ class SuperlikeIntroMessage {
 class LikeResponse {
   final bool isMatch;
   final match_models.Match? match;
+  final int? matchId;
   final String? message;
   final int? likedUserId;
   final int? superlikesRemaining;
@@ -185,6 +186,7 @@ class LikeResponse {
   LikeResponse({
     required this.isMatch,
     this.match,
+    this.matchId,
     this.message,
     this.likedUserId,
     this.superlikesRemaining,
@@ -195,11 +197,16 @@ class LikeResponse {
   factory LikeResponse.fromJson(Map<String, dynamic> json) {
     final subscriptionRaw = json['subscription'];
     final introRaw = json['intro_message'];
+    final match = json['match'] != null && json['match'] is Map
+          ? match_models.Match.fromJson(Map<String, dynamic>.from(json['match'] as Map))
+          : null;
+    final parsedMatchId = json['match_id'] != null
+          ? int.tryParse(json['match_id'].toString())
+          : null;
     return LikeResponse(
       isMatch: json['is_match'] == true || json['is_match'] == 1,
-      match: json['match'] != null && json['match'] is Map
-          ? match_models.Match.fromJson(Map<String, dynamic>.from(json['match'] as Map))
-          : null,
+      match: match,
+      matchId: parsedMatchId ?? match?.id,
       message: json['message']?.toString(),
       likedUserId: json['liked_user_id'] != null
           ? int.tryParse(json['liked_user_id'].toString())
